@@ -195,6 +195,10 @@ typedef struct {
   LOGICAL trans_inv; /* global equiv to -Mx,7,0x10000 */
   int tpcount;
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
+  // AOCC Begin
+  LOGICAL use_llvm_math_intrin; /* AOCC: use llvm math intrinsic instead of flang runtime */
+  LOGICAL func_args_alias;      /* assume function arguments are aliasing */
+  // AOCC End
 } FLG;
 
 extern FLG flg;

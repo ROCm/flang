@@ -12301,6 +12301,16 @@ process_formal_arguments(LL_ABI_Info *abi)
 static void
 print_arg_attributes(LL_ABI_ArgInfo *arg)
 {
+
+  // AOCC:Functions arguments are by default assumed to be not aliased
+  // with each other. As per the fortran 2003 standard specification
+  // document (NOTE 12.29 and NOTE 12.30 version: J3/04-007 May 10, 2004 11:07),
+  // the values in the overlapping region of arguments is unpredictable.
+  // Use option -func-args_alias to disable the same.
+  if (!flg.func_args_alias && arg->type->data_type == LL_PTR) {
+    print_token(" noalias");
+  }
+
   switch (arg->kind) {
   case LL_ARG_DIRECT:
   case LL_ARG_COERCE:

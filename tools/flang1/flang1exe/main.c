@@ -802,6 +802,7 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
                        false);
   register_string_arg(arg_parser, "cmdline", &(flg.cmdline), NULL);
+  register_boolean_arg(arg_parser, "func_args_alias", (bool *)&(flg.func_args_alias), false); // AOCC
 
   /* Set values form command line arguments */
   parse_arguments(arg_parser, argc, argv);

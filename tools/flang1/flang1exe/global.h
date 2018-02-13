@@ -215,6 +215,7 @@ typedef struct {
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
   int accmp;
   char *cmdline; /* command line used to invoke the compiler */
+  LOGICAL func_args_alias;      /* assume function arguments are aliasing */ // AOCC
 } FLG;
 
 extern FLG flg;

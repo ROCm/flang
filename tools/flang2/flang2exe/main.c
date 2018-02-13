@@ -606,6 +606,7 @@ init(int argc, char *argv[])
   register_integer_arg(arg_parser, "terse", &(flg.terse), 1);
   register_boolean_arg(arg_parser, "quad", (bool *)&(flg.quad), false);
   register_boolean_arg(arg_parser, "save", (bool *)&(flg.save), false);
+  register_boolean_arg(arg_parser, "func_args_alias", (bool *)&(flg.func_args_alias), false); // AOCC
   register_string_arg(arg_parser, "tp", &tp, NULL);
   register_integer_arg(arg_parser, "astype", &(flg.astype), 0);
   register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
@@ -613,6 +614,10 @@ init(int argc, char *argv[])
   register_integer_arg(arg_parser, "vect", &(vect_val), 0);
   register_string_arg(arg_parser, "cmdline", &(cmdline), NULL);
   register_boolean_arg(arg_parser, "debug", (bool *)&(flg.debug), false);
+  // AOCC Begin
+  register_boolean_arg(arg_parser, "use_llvm_math_intrin",
+      (bool *)&(flg.use_llvm_math_intrin), true);
+  // AOCC End
 
   /* Run argument parser */
   parse_arguments(arg_parser, argc, argv);
