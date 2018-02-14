@@ -3282,6 +3282,8 @@ leave_elemental_argument(int func_ast, int argnum)
 {
   if (A_TYPEG(func_ast) == A_INTR) {
     if (A_OPTYPEG(func_ast) == I_TRANSPOSE ||
+// AOCC TBD: add MAXLOC as well
+        (A_OPTYPEG(func_ast) == I_MINLOC && argnum == 2) ||
         (A_OPTYPEG(func_ast) == I_SPREAD && argnum == 0)) {
       return TRUE;
     }
@@ -5710,8 +5712,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       *doremove = TRUE;
     break;
   case I_MAXLOC:
-  case I_MINLOC:
       return ast;
+  case I_MINLOC: // AOCC
     /* simple cases only */
     if (dest) {
       if (A_TYPEG(dest) == A_SUBSCR) {
@@ -5720,7 +5722,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
           return ast;
       } else if (A_TYPEG(dest) != A_ID)
         return ast;
-    }
+    } else
+        return ast;
     if (doremove)
       *doremove = TRUE;
     break;
@@ -5818,8 +5821,9 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     dim = 0;
   }
 
-  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim > 1)
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim > 1) {
     return ast;
+  }
 
   if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
     return ast;
@@ -6323,7 +6327,35 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
 
           subscr = mk_cval(j + 1, astb.bnd.dtype);
           ast2 = mk_subscr(astsubscrtmp, &subscr, 1, dtyperes);
-          asn = mk_assn_stmt(ast2, A_DOVARG(DOs[j]), dtyperes);
+          // AOCC Begin
+          int lb = astb.base[DOs[j]].w5;
+          int ub = astb.base[DOs[j]].w6;
+          int st = astb.base[DOs[j]].w7;
+
+          int lbval = 0;
+          int ubval = 0;
+          int stval = 0;
+
+          if (lb != 0 && A_TYPEG(lb) == A_CNST)
+             lbval = get_int_cval(A_SPTRG(A_ALIASG(lb)));
+          if (ub != 0 && A_TYPEG(ub) == A_CNST)
+             ubval = get_int_cval(A_SPTRG(A_ALIASG(ub)));
+          if (st != 0 && A_TYPEG(st) == A_CNST)
+             stval = get_int_cval(A_SPTRG(A_ALIASG(st)));
+
+          if ( stval < 0 ) {
+             int constone     = mk_cval(1 , astb.bnd.dtype);
+             int lbplusoneexp = mk_binop(OP_ADD, constone, lb, astb.bnd.dtype);
+             int normalizeexp = mk_binop(OP_SUB, lbplusoneexp, A_DOVARG(DOs[j]), astb.bnd.dtype);
+             asn = mk_assn_stmt(ast2, normalizeexp, dtyperes);
+           } else {
+             int constone = mk_cval(1 , astb.bnd.dtype);
+             int indexexp = mk_binop(OP_ADD, constone, A_DOVARG(DOs[j]), astb.bnd.dtype);
+             int normalizeexp = mk_binop(OP_SUB, indexexp,lb, astb.bnd.dtype);
+             asn = mk_assn_stmt(ast2, normalizeexp, dtyperes);
+          }
+          // AOCC End
+
           std = add_stmt_before(asn, stdnext);
           STD_LINENO(std) = lineno;
           STD_LOCAL(std) = 1;
