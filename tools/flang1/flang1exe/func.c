@@ -5821,7 +5821,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     dim = 0;
   }
 
-  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim > 1) {
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim >= 1) {
     return ast;
   }
 
