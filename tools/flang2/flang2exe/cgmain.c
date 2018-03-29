@@ -1220,7 +1220,7 @@ cons_no_depchk_metadata(void)
     ll_extend_md_node(cpu_llvm_module, md, vectorize);
     cached_loop_metadata = md;
   }
-  return cached_loop_metadata;  
+  return cached_loop_metadata;
 }
 
 INLINE static bool
@@ -6127,7 +6127,7 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
    */
   del_store_instr = NULL;
   last_instr = NULL;
-  
+
   for (instr = llvm_info.last_instr; instr; instr = instr->prev) {
     if ((instr->i_name == I_STORE) && instr->ilix &&
         (ld_nme == ILI_OPND(instr->ilix, 3))) {
@@ -13130,4 +13130,41 @@ cg_fetch_clen_parampos(SPTR *len, int *param, SPTR sptr)
       }
   }
   *param = -1; /* param not found */
+}
+
+/**
+   \brief Process symbols with global lifetime and cons their metadata
+ */
+void
+process_global_lifetime_debug(void)
+{
+  return; // FIXME
+  static hashset_t sptrAdded; // should probably be moved to lldebug
+  if (!sptrAdded)
+    sptrAdded = hashset_alloc(hash_functions_strings);
+  if (cpu_llvm_module->debug_info && gbl.cmblks) {
+    LL_DebugInfo *db = cpu_llvm_module->debug_info;
+    SPTR sptr = gbl.cmblks;
+    for (; sptr > NOSYM; sptr = SYMLKG(sptr)) {
+      SPTR var;
+      const SPTR scope = SCOPEG(sptr);
+      if (scope > 0)
+        lldbg_emit_module_mdnode(db, scope);
+      for (var = CMEMFG(sptr); var > NOSYM; var = SYMLKG(var))
+        if ((!SNAME(var)) || strcmp(SNAME(var), SYMNAME(var))) {
+          const INT size = strlen(SYMNAME(scope)) + strlen(SYMNAME(var));
+          char *globalName = lldbg_alloc(size + 2);
+          char *savePtr;
+          sprintf(globalName, "%s/%s", SYMNAME(scope), SYMNAME(var));
+          if (hashset_lookup(sptrAdded, globalName))
+            continue;
+          printf("adding %s\n", globalName);
+          hashset_insert(sptrAdded, globalName);
+          savePtr = SNAME(var);
+          SNAME(var) = SYMNAME(var);
+          addDebugForGlobalVar(var, variable_offset_in_aggregate(var, 0));
+          SNAME(var) = savePtr;
+        }
+    }
+  }
 }
