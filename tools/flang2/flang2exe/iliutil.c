@@ -2478,100 +2478,80 @@ addarth(ILI *ilip)
   if (flg.use_llvm_math_intrin) {
     switch(opc) {
     case IL_DPOWD:
-      (void)mk_prototype("llvm.pow.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.pow.f64", 2, op1, op2);
+      (void)mk_prototype("pow", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "pow", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
       return ilix;
     case IL_FPOWF:
-      (void)mk_prototype("llvm.pow.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.pow.f32", 2, op1, op2);
+      (void)mk_prototype("powf", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "powf", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
       return ilix;
 
     case IL_FCOS:
-      (void)mk_prototype("llvm.cos.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.cos.f32", 1, op1);
+      (void)mk_prototype("cosf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "cosf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DCOS:
-      (void)mk_prototype("llvm.cos.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.cos.f64", 1, op1);
+      (void)mk_prototype("cos", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "cos", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     case IL_FSIN:
-      (void)mk_prototype("llvm.sin.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sin.f32", 1, op1);
+      (void)mk_prototype("sinf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "sinf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSIN:
-      (void)mk_prototype("llvm.sin.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sin.f64", 1, op1);
+      (void)mk_prototype("sin", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "sin", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     case IL_FSQRT:
-      (void)mk_prototype("llvm.sqrt.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
+      (void)mk_prototype("sqrtf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "sqrtf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSQRT:
-      (void)mk_prototype("llvm.sqrt.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sqrt.f64", 1, op1);
+      (void)mk_prototype("sqrt", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "sqrt", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     case IL_FEXP:
-      (void)mk_prototype("llvm.exp.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.exp.f32", 1, op1);
+      (void)mk_prototype("expf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "expf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DEXP:
-      (void)mk_prototype("llvm.exp.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.exp.f64", 1, op1);
+      (void)mk_prototype("exp", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "exp", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     case IL_FLOG:
-      (void)mk_prototype("llvm.log.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.log.f32", 1, op1);
+      (void)mk_prototype("logf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "logf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DLOG:
-      (void)mk_prototype("llvm.log.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.log.f64", 1, op1);
+      (void)mk_prototype("log", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "log", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     //log 10
     case IL_FLOG10:
-      (void)mk_prototype("llvm.log10.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.log10.f32", 1, op1);
+      (void)mk_prototype("log10f", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "log10f", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DLOG10:
-      (void)mk_prototype("llvm.log10.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.log10.f64", 1, op1);
+      (void)mk_prototype("log10", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "log10", 1, op1);
       return ad1altili(opc, op1, ilix);
 
     //fabs
     case IL_FABS:
-      (void)mk_prototype("llvm.fabs.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.fabs.f32", 1, op1);
+      (void)mk_prototype("fabsf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "fabsf", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DABS:
-      (void)mk_prototype("llvm.fabs.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.fabs.f64", 1, op1);
+      (void)mk_prototype("fabs", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "fabs", 1, op1);
       return ad1altili(opc, op1, ilix);
-
-    //fmin and fminf
-    case IL_FMIN:
-      (void)mk_prototype("llvm.minnum.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.minnum.f32", 2, op1, op2);
-      return ad2altili(opc, op1, op2, ilix);
-    case IL_DMIN:
-      (void)mk_prototype("llvm.minnum.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.minnum.f64", 2, op1, op2);
-      return ad2altili(opc, op1, op2, ilix);
-
-    //fmax
-    case IL_FMAX:
-      (void)mk_prototype("llvm.maxnum.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.maxnum.f32", 2, op1, op2);
-      return ad2altili(opc, op1, op2, ilix);
-    case IL_DMAX:
-      (void)mk_prototype("llvm.maxnum.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.maxnum.f64", 2, op1, op2);
-      return ad2altili(opc, op1, op2, ilix);
 
     default:
       break;
