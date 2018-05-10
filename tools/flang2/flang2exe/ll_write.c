@@ -916,7 +916,7 @@ static const MDTemplate Tmpl_DISubprogram[] = {
     {"function", ValueField},
     {"templateParams", NodeField},
     {"declaration", NodeField},
-    {"variables", NodeField},
+    {"retainedNodes", NodeField},
     {"scopeLine", UnsignedField}};
 
 static const MDTemplate Tmpl_DISubprogram_38[] = {
@@ -939,7 +939,7 @@ static const MDTemplate Tmpl_DISubprogram_38[] = {
     {"function", ValueField, FlgHidden},
     {"templateParams", NodeField},
     {"declaration", NodeField},
-    {"variables", NodeField},
+    {"retainedNodes", NodeField},
     {"scopeLine", UnsignedField}};
 
 /** "unit" was added in LLVM 3.9 for DISubprogram */
@@ -964,7 +964,7 @@ static const MDTemplate Tmpl_DISubprogram_39[] = {
     {"templateParams", NodeField},
     {"declaration", NodeField},
     {"unit", NodeField},
-    {"variables", NodeField},
+    {"retainedNodes", NodeField},
     {"scopeLine", UnsignedField}};
 
 static const MDTemplate Tmpl_DILexicalBlock[] = {
