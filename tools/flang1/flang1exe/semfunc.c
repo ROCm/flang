@@ -8780,7 +8780,13 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
-    goto gen_call;
+    // AOCC begin: avoiding generation of _mth_aint lib call instead
+    // handling it here
+      ast = ARG_AST(0);
+      ast = mk_convert(ast, DT_INT);
+      ast = mk_convert(ast, dtyper);
+      goto expr_val;
+    // AOCC end
 
   case PD_int:
     if (count < 1 || count > 2) {
@@ -10992,6 +10998,7 @@ call_e74_cnt:
   goto exit_;
 call_e74_arg:
   e74_arg(_e74_sym, _e74_pos, _e74_kwd);
+
 exit_:
   dont_issue_assumedsize_error = 0;
   EXPSTP(pdsym, 1); /* freeze predeclared */
