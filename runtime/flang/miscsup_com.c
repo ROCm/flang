@@ -2750,6 +2750,9 @@ ENTF90(TRIM, trim)
    *  If the target generates illegal alignment errors, need to not do
    *  int copies.  So, enable fast code for x8664 only for now.
    *
+  */
+// AOCC Begin
+// uncommented the below code to check performance impact
       i = CLEN(expr)-1;
       while (i >= 0 && CADR(expr)[i] == ' ')
           --i;
@@ -2758,7 +2761,9 @@ ENTF90(TRIM, trim)
       for (j = 0; j <= i; ++j)
           CADR(res)[j] = CADR(expr)[j];
       return i+1;
-  */
+// AOCC  End
+// AOCC commented the below code to check performance impact
+/*
   i = CLEN(expr);
   while (i > 0) {
     if (CADR(expr)[i - 1] != ' ') {
@@ -2798,6 +2803,8 @@ ENTF90(TRIM, trim)
     }
   }
   return 0;
+*/
+// AOCC  End
 }
 
 __INT_T
