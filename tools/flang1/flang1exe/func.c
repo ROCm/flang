@@ -3684,7 +3684,7 @@ allocate_lhs_if_needed(int lhs, int rhs, int std)
 }
 
 void
-rewrite_asn(int ast, int std, LOGICAL flag, int lc)
+rewrite_asn(int ast, int std, bool flag, int lc)
 {
   int rhs, lhs;
   int args;
