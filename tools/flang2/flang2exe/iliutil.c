@@ -34,6 +34,7 @@
 #include "outliner.h"
 #include "assem.h"
 #include "x86.h"
+#include "dtypeutl.h"
 #include "llutil.h"
 #include "llassem.h"
 #include "llmputil.h"
