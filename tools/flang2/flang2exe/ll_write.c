@@ -1248,7 +1248,7 @@ write_mdref(FILE *out, LL_Module *module, LL_MDRef rmdref,
     break;
 
   default:
-    interr("Invalid MDRef kind", LL_MDREF_kind(mdref), 4);
+    interr("Invalid MDRef kind", LL_MDREF_kind(mdref), ERR_Fatal);
   }
 }
 
@@ -1309,7 +1309,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
   case MDRef_String:
     assert(tmpl->type == StringField, "metadata elem should not be a string",
            tmpl->type, 4);
-    assert(value < module->mdstrings_count, "Bad string MDRef", value, 4);
+    assert(value < module->mdstrings_count, "Bad string MDRef", value, ERR_Fatal);
     if (!mandatory && strcmp(module->mdstrings[value], "!\"\"") == 0)
       return FALSE;
     /* The mdstrings[] entry is formatted as !"...". String the leading !. */
@@ -1317,7 +1317,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
     break;
 
   case MDRef_Constant:
-    assert(value < module->constants_count, "Bad constant MDRef", value, 4);
+    assert(value < module->constants_count, "Bad constant MDRef", value, ERR_Fatal);
     switch (tmpl->type) {
     case ValueField:
       fprintf(out, "%s%s: %s %s", prefix, tmpl->name,
@@ -1376,7 +1376,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
       break;
 
     case BoolField:
-      assert(value <= 1, "boolean value expected", value, 4);
+      assert(value <= 1, "boolean value expected", value, ERR_Fatal);
       fprintf(out, "%s%s: %s", prefix, tmpl->name, value ? "true" : "false");
       break;
 
@@ -1408,7 +1408,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
     break;
 
   default:
-    interr("Invalid MDRef kind", LL_MDREF_kind(mdref), 4);
+    interr("Invalid MDRef kind", LL_MDREF_kind(mdref), ERR_Fatal);
   }
 
   return TRUE;
@@ -1488,7 +1488,7 @@ get_metadata_name(enum LL_MDName name)
   case MD_nvvmir_version:
     return "!nvvmir.version";
   default:
-    interr("Unknown metadata name", name, 4);
+    interr("Unknown metadata name", name, ERR_Fatal);
   }
   return NULL;
 }
@@ -2026,7 +2026,7 @@ ll_write_global_objects(FILE *out, LLVMModuleRef module)
       fprintf(out, " alias ");
       break;
     default:
-      interr("ll_write_global_objects: invalid global kind", object->kind, 4);
+      interr("ll_write_global_objects: invalid global kind", object->kind, ERR_Fatal);
     }
 
     /* Print an initializer following the type. */
