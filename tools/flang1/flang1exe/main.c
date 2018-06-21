@@ -781,11 +781,8 @@ init(int argc, char *argv[])
   /* x flags */
   register_xflag_arg(arg_parser, "x", flg.x,
                      (sizeof(flg.x) / sizeof(flg.x[0])));
-// AOCC Begin
-// keeping the old behavior of small arrays.
   /* FIXME : temporary. Needs to be removed once the driver is updated */
-//  set_xflag(68, 1);
-// AOCC end
+  set_xflag(68, 1);
   register_yflag_arg(arg_parser, "y", flg.x);
   /* Debug flags */
   register_qflag_arg(arg_parser, "q", flg.dbg,
