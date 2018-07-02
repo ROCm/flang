@@ -301,7 +301,7 @@ semant3(int rednum, SST *top)
       if (sem.new_param_dt) {
         dtype = SST_DTYPEG(RHS(5));
         if (sem.new_param_dt == dtype && eq_dtype(DTYPEG(sptr1), dtype)) {
-          /* FS#21820: LHS is compatible with RHS. Use LHS PDT */
+          /* LHS is compatible with RHS. Use LHS PDT */
           SST_DTYPEP(RHS(5), DTYPEG(sptr1));
         }
       }
@@ -531,7 +531,7 @@ semant3(int rednum, SST *top)
           strcmp(SYMNAME(FVALG(sptr)), SYMNAME(gbl.currsub)) == 0 &&
           strcmp(SYMNAME(sptr), SYMNAME(gbl.currsub)) == 0 &&
           strcmp(SYMNAME(sptr), SYMNAME(FVALG(gbl.currsub))) == 0) {
-        /* FS#20696: replace with correct LHS symbol */
+        /* replace with correct LHS symbol */
         sptr = gbl.currsub;
         if (SST_IDG(RHS(2)) == S_LVALUE || SST_IDG(RHS(2)) == S_EXPR) {
           SST_LSYMP(RHS(2), sptr);
@@ -1545,10 +1545,10 @@ semant3(int rednum, SST *top)
     ast1 = SST_TMPG(RHS(2));
     ast2 = SST_ASTG(RHS(2));
     if (XBIT(54, 0x10)) {
-      rtlRtn = RTE_stop;
+      rtlRtn = RTE_stopa;
       goto pause_shared;
     }
-    rtlRtn = RTE_stop08;
+    rtlRtn = RTE_stop08a;
     sptr = sym_mkfunc(mkRteRtnNm(rtlRtn), DT_NONE);
     NODESCP(sptr, 1);
     ast = begin_call(A_CALL, sptr, 2);
@@ -1574,7 +1574,7 @@ semant3(int rednum, SST *top)
       errsev(87);
     }
   pause_shared:
-    sptr = sym_mkfunc(mkRteRtnNm(RTE_pause), DT_NONE);
+    sptr = sym_mkfunc(mkRteRtnNm(RTE_pausea), DT_NONE);
     NODESCP(sptr, 1);
     ast = begin_call(A_CALL, sptr, 1);
     add_arg(ast2);
