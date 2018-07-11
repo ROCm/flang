@@ -2500,6 +2500,15 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sin.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
 
+    case IL_FFLOOR:
+      (void)mk_prototype("llvm.floor.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.floor.f32", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    case IL_DFLOOR:
+      (void)mk_prototype("llvm.floor.f64", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.floor.f64", 1, op1);
+      return ad1altili(opc, op1, ilix);
+
     case IL_FSQRT:
       (void)mk_prototype("llvm.sqrt.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
