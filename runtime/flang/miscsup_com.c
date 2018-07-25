@@ -1,4 +1,12 @@
 /*
+ * Copyright (c) 2017 Advanced Micro Devices, Inc.
+ *
+ * Using x86 specific trim code to check performance impact
+ *
+ * Date of Modification: May 2018
+ */
+
+/*
  * Copyright (c) 1995-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

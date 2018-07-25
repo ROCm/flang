@@ -1,7 +1,11 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changed the metadata name as per llvm trunk.
  * Date of Modification: May 2018
  *
+ */
+/*
  * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

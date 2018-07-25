@@ -1,7 +1,13 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- * Date of Modification: May 2018
  *
+ * Use LLVM math intrinsics instead of using flang runtime math library
+ * Date of Modification: February 2018
+ *
+ * Lowering floor intrinsic to llvm calls.
+ * Date of Modification: July 2018
+ */
+/*
  * Copyright (c) 1993-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

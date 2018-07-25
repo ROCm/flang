@@ -1,7 +1,12 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- * Date of Modification: May 2018
  *
+ * Use llvm math intrinsic instead of flang runtime;
+ * assume function arguments are aliasing.
+ * Date of Modification: February 2018
+ *
+ */
+/*
  * Copyright (c) 1993-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
