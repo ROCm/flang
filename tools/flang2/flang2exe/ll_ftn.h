@@ -47,7 +47,7 @@ char *get_entret_arg_name(void);
 /**
    \brief ...
  */
-char *get_llvm_ifacenm(int sptr);
+char *get_llvm_ifacenm(SPTR sptr);
 
 /**
    \brief ...
@@ -153,5 +153,10 @@ void write_local_overlap(void);
    \brief ...
  */
 void write_master_entry_routine(void);
+
+/**
+   \brief ...
+ */
+bool need_charlen(DTYPE);
 
 #endif // LL_FTN_H_

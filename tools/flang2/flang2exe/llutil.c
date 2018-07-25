@@ -185,7 +185,7 @@ ll_add_func_proto(int sptr, unsigned flags, int nargs, int *args)
   abi->arg[0].type = fsig[0] = make_lltype_from_dtype(dtype);
   abi->arg[0].kind = LL_ARG_DIRECT;
   for (i = 0; i < nargs; ++i) {
-    abi->arg[1 + i].type = fsig[1 + i] = 
+    abi->arg[1 + i].type = fsig[1 + i] =
       make_lltype_from_dtype((DTYPE)args[i]); // ???
     abi->arg[1 + i].kind = LL_ARG_DIRECT;
   }
@@ -2091,9 +2091,13 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
         write_type(p->ll_type);
         print_space(1);
       }
-      print_token("c\"");
-      print_token(p->string);
-      print_token("\"");
+      if (p->ll_type->sub_types[0]->data_type == LL_I16) {
+          print_token(p->string);
+      } else {
+          print_token("c\"");
+          print_token(p->string);
+          print_token("\"");
+      }
     }
     break;
   case OT_CONSTSPTR:
@@ -2627,7 +2631,8 @@ write_def_values(OPERAND *def_op, LL_Type *type)
   case LL_ARRAY:
     print_token(type->str);
     if (def_op->ot_type == OT_CONSTSTRING && type->data_type == LL_ARRAY &&
-        type->sub_types[0]->data_type == LL_I8) {
+        (type->sub_types[0]->data_type == LL_I8 ||
+         type->sub_types[0]->data_type == LL_I16)) {
       print_token(" ");
       write_operand(def_op, "", FLG_OMIT_OP_TYPE);
       def_op = def_op->next;
@@ -4033,4 +4038,29 @@ get_ftn_hollerith_type(int sptr)
     }
   }
   return make_lltype_from_dtype(dtype);
+}
+
+LL_InstrListFlags
+ll_instr_flags_from_aop(ATOMIC_RMW_OP aop)
+{
+  switch (aop) {
+  default:
+    assert(false, "gen_llvm_atomicrmw_expr: unimplemented op", aop, ERR_Fatal);
+  case AOP_XCHG:
+    return ATOMIC_XCHG_FLAG;
+  case AOP_ADD:
+    return ATOMIC_ADD_FLAG;
+  case AOP_SUB:
+    return ATOMIC_SUB_FLAG;
+  case AOP_AND:
+    return ATOMIC_AND_FLAG;
+  case AOP_OR:
+    return ATOMIC_OR_FLAG;
+  case AOP_XOR:
+    return ATOMIC_XOR_FLAG;
+  case AOP_MIN:
+    return ATOMIC_MIN_FLAG;
+  case AOP_MAX:
+    return ATOMIC_MAX_FLAG;
+  }
 }

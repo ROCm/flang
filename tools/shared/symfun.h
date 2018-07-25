@@ -318,6 +318,10 @@ ST_GetterInstance(ENCLFUNCG, SPTR, EnclosingFunction)
 #undef ENCLFUNCG
 #define ENCLFUNCG(X) STGetEnclosingFunction(X)
 
+ST_GetterInstance(FVALG, SPTR, FValue)
+#undef FVALG
+#define FVALG(X) STGetFValue(X)
+
 ST_GetterInstance(INMODULEG, SPTR, InModule)
 #undef INMODULEG
 #define INMODULEG(X) STGetInModule(X)
@@ -329,6 +333,10 @@ ST_GetterInstance(MIDNUMG, SPTR, MidNum)
 ST_GetterInstance(ORIGDUMMYG, SPTR, OrigDummy)
 #undef ORIGDUMMYG
 #define ORIGDUMMYG(X) STGetOrigDummy(X)
+
+ST_GetterInstance(PSMEMG, SPTR, PsMem)
+#undef PSMEMG
+#define PSMEMG(X) STGetPsMem(X)
 
 ST_GetterInstance(SDSCG, SPTR, SDSC)
 #undef SDSCG

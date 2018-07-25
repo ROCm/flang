@@ -6285,9 +6285,9 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
           subscr = mk_cval(j + 1, astb.bnd.dtype);
           ast2 = mk_subscr(astsubscrtmp, &subscr, 1, dtyperes);
           // AOCC Begin
-          int lb = astb.base[DOs[j]].w5;
-          int ub = astb.base[DOs[j]].w6;
-          int st = astb.base[DOs[j]].w7;
+          int lb = astb.stg_base[DOs[j]].w5;
+          int ub = astb.stg_base[DOs[j]].w6;
+          int st = astb.stg_base[DOs[j]].w7;
 
           int lbval = 0;
           int ubval = 0;

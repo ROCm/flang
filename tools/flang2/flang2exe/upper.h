@@ -121,13 +121,14 @@
  *              --1.50
  *                All of 1.49 +
  *                Internal procedures passed as arguments and pointer targets
+ * 18.7         -- remove parsyms field and add parent for ST_BLOCK
  */
 
 #include "gbldefs.h"
 #include "semant.h"
 
 #define VersionMajor 1
-#define VersionMinor 50
+#define VersionMinor 51
 
 /**
    \brief ...
@@ -198,7 +199,7 @@ int IPA_safe(int sptr);
 /**
    \brief ...
  */
-int llvm_get_uplevel_newsptr(int oldsptr);
+SPTR llvm_get_uplevel_newsptr(int oldsptr);
 
 /**
    \brief ...

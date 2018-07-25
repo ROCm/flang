@@ -20,28 +20,26 @@
  * as arguments
  */
 
-#include "gbldefs.h"
+#include "outliner.h"
 #include "error.h"
-#include "global.h"
-#include "symtab.h"
 #include "semant.h"
 #include "llassem.h"
 #include "exputil.h"
 #include "ilmtp.h"
 #include "ilm.h"
-#include "ili.h"
 #include "expand.h"
 #include "kmpcutil.h"
-#include "outliner.h"
 #include "machreg.h"
 #include "mp.h"
 #include "ll_structure.h"
 #include "llmputil.h"
 #include "llutil.h"
 #include "dtypeutl.h"
+#include "ll_ftn.h"
 #include "cgllvm.h"
 #include <unistd.h>
 #include "regutil.h"
+#include "symfun.h"
 #if !defined(TARGET_WIN)
 #include <unistd.h>
 #endif
@@ -51,36 +49,37 @@
 extern LL_Module *cpu_llvm_module; /* To create ABI info for outlined funcs */
 FILE *par_file1 = NULL;
 FILE *par_file2 = NULL;
-FILE *par_curfile = NULL;          /* current tempfile for ilm rewrite */
+FILE *par_curfile = NULL; /* current tempfile for ilm rewrite */
 
 static FILE *savedILMFil = NULL;
 static char parFileNm1[MAX_PARFILE_LEN]; /* temp ilms file: pgipar1XXXXXX */
 static char parFileNm2[MAX_PARFILE_LEN]; /* temp ilms file: pgipar2XXXXXX */
-static bool hasILMRewrite = 0;     /* if set, tempfile is not empty. */
-static bool isRewritingILM = 0;    /* if set, write ilm to tempfile */
-static int funcCnt = 1;            /* keep track how many outlined region */
-static int llvmUniqueSym;          /* keep sptr of unique symbol */
+static bool hasILMRewrite = 0;           /* if set, tempfile is not empty. */
+static bool isRewritingILM = 0;          /* if set, write ilm to tempfile */
+static int funcCnt = 1;   /* keep track how many outlined region */
+static int llvmUniqueSym; /* keep sptr of unique symbol */
 static SPTR uplevelSym;
-static int gtid;
-static bool writeTaskdup;          /* if set, write IL_NOP to TASKDUP_FILE */
+static SPTR gtid;
+static bool writeTaskdup; /* if set, write IL_NOP to TASKDUP_FILE */
 static int pos;
 
 /* store taskdup ILMs */
 static struct taskdupSt {
-  ILM_T* file;
+  ILM_T *file;
   int sz;
   int avl;
 } taskdup;
 
 #define TASKDUP_FILE taskdup.file
-#define TASKDUP_SZ   taskdup.sz
-#define TASKDUP_AVL  taskdup.avl
+#define TASKDUP_SZ taskdup.sz
+#define TASKDUP_AVL taskdup.avl
 static void allocTaskdup(int);
 
 /* Forward decls */
 static void resetThreadprivate(void);
 
 #define DT_VOID_NONE DT_NONE
+#define USE_NEW_UPLEVEL_METHOD 1
 
 #define MXIDLEN 250
 
@@ -92,7 +91,7 @@ dumpUplevel(int uplevel_sptr)
   FILE *fp = gbl.dbgfil ? gbl.dbgfil : stdout;
 
   fprintf(fp, "********* UPLEVEL Struct *********\n");
-  for (i = DTY(DTYPEG(uplevel_sptr) + 1); i > NOSYM; i = SYMLKG(i))
+  for (i = DTyAlgTyMember(DTYPEG(uplevel_sptr)); i > NOSYM; i = SYMLKG(i))
     fprintf(fp, "==> %s %s\n", SYMNAME(i), stb.tynames[DTY(DTYPEG(i))]);
   fprintf(fp, "**********\n\n");
 }
@@ -108,8 +107,9 @@ dump_parsyms(int sptr)
          ERR_Fatal);
 
   up = llmp_get_uplevel(sptr);
-  fprintf(fp, "\n********** OUTLINING: Parallel Region "
-              "%d (%d shared variables) **********\n",
+  fprintf(fp,
+          "\n********** OUTLINING: Parallel Region "
+          "%d (%d shared variables) **********\n",
           sptr, up->vals_count);
 
   for (i = 0; i < up->vals_count; ++i) {
@@ -132,13 +132,36 @@ genNullArg()
   return ili;
 }
 
-/* Returns a dtype for arguments referenced by stblk_sptr */
-int
-ll_make_uplevel_type(int stblk_sptr)
+static ISZ_T
+ll_parent_vals_count(int stblk_sptr)
 {
-  int i, j, sz, dtype, nmems, psyms_idx, count, presptr;
+  const LLUplevel *up_parent;
+  const LLUplevel *up = llmp_get_uplevel(stblk_sptr);
+  ISZ_T sz = 0;
+  if (up && up->parent) {
+    up_parent = llmp_get_uplevel(up->parent);
+    while (up_parent) {
+      sz = sz + up_parent->vals_count;
+      if (up_parent->parent) {
+        up_parent = llmp_get_uplevel(up_parent->parent);
+      } else {
+        break;
+      }
+    }
+  }
+  return sz;
+}
+
+/* Returns a dtype for arguments referenced by stblk_sptr */
+DTYPE
+ll_make_uplevel_type(SPTR stblk_sptr)
+{
+  int i, j;
+  DTYPE dtype;
+  int nmems, psyms_idx, count, presptr;
   const LLUplevel *up;
   KMPC_ST_TYPE *meminfo = NULL;
+  ISZ_T sz;
 
   up = llmp_get_uplevel(stblk_sptr);
   count = nmems = up->vals_count;
@@ -146,20 +169,22 @@ ll_make_uplevel_type(int stblk_sptr)
   if (gbl.internal >= 1)
     nmems = nmems + 1;
 
-  /* Special case: No members (return null ptr) */
+    /* Special case: No members (return null ptr) */
+#if USE_NEW_UPLEVEL_METHOD
+#else
   if (!nmems)
     return DT_CPTR;
+#endif
 
   /* Add members */
-  meminfo = calloc(nmems, sizeof(KMPC_ST_TYPE));
-  sz = 0;
+  if (nmems)
+    meminfo = (KMPC_ST_TYPE *)calloc(nmems, sizeof(KMPC_ST_TYPE));
   i = 0;
   if (gbl.internal >= 1) {
     meminfo[i].name = strdup(SYMNAME(aux.curr_entry->display));
     meminfo[i].dtype = DT_CPTR;
     meminfo[i].byval = false;
     meminfo[i].psptr = aux.curr_entry->display;
-    sz += size_of(DT_CPTR);
     i++;
   }
   presptr = 0;
@@ -169,16 +194,19 @@ ll_make_uplevel_type(int stblk_sptr)
     meminfo[i].dtype = DT_CPTR;
     meminfo[i].byval = false;
     meminfo[i].psptr = sptr;
-    sz += size_of(DT_CPTR);
     ++i;
   }
-
-  dtype = ll_make_kmpc_struct_type(nmems, NULL, meminfo);
+  sz = 0;
+#if USE_NEW_UPLEVEL_METHOD
+  sz = ll_parent_vals_count(stblk_sptr) * size_of(DT_CPTR);
+#endif
+  dtype = ll_make_kmpc_struct_type(nmems, NULL, meminfo, sz);
 
   /* Cleanup */
   for (i = 0; i < nmems; ++i)
     free(meminfo[i].name);
-  free(meminfo);
+  if (meminfo)
+    free(meminfo);
   meminfo = NULL;
 
   return dtype;
@@ -212,7 +240,7 @@ ll_get_outlined_funcname(int fileno, int lineno)
   if (nmLen < nmSize) {
     if (nm)
       free(nm);
-    nm = malloc(nmSize);
+    nm = (char *)malloc(nmSize);
     nmLen = nmSize;
   }
   /* side-effect: global funcCnt incremented */
@@ -263,7 +291,7 @@ ll_make_outlined_gjsr(int func_sptr, int nargs, int arg1, int arg2, int arg3)
 }
 
 int
-ll_ad_outlined_func2(int result_opc, int call_opc, int sptr, int nargs,
+ll_ad_outlined_func2(ILI_OP result_opc, ILI_OP call_opc, int sptr, int nargs,
                      int *args)
 {
   int i, arg, rg, argl, ilix;
@@ -376,7 +404,7 @@ llMakeFtnOutlinedSignature(int func_sptr, int n_params,
        aux.dpdsc_size + n_params + 100);
 
   for (i = 0; i < n_params; ++i) {
-    int dtype = params[i].dtype;
+    DTYPE dtype = params[i].dtype;
     const int byval = params[i].byval;
 
     sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
@@ -404,19 +432,19 @@ update_acc_with_fn(int fnsptr)
 {
 }
 
-static int
-llGetSym(char *name, int dtype)
+static SPTR
+llGetSym(char *name, DTYPE dtype)
 {
-  int gtid;
+  SPTR gtid;
   if (!name)
-    return 0;
+    return SPTR_NULL;
   gtid = getsymbol(name);
   DTYPEP(gtid, dtype);
   SCP(gtid, SC_AUTO);
   ENCLFUNCP(gtid, GBL_CURRFUNC);
   STYPEP(gtid, ST_VAR);
-  CCSYMP(gtid,
-         1); /* to prevent llassem.c setting it to SC_STATIC for Fortran */
+  /* to prevent llassem.c setting it to SC_STATIC for Fortran */
+  CCSYMP(gtid, 1);
   return gtid;
 }
 
@@ -448,7 +476,7 @@ ll_get_gtid_val_ili(void)
   char *name;
 
   if (!gtid) {
-    name = malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
+    name = (char *)malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
     sprintf(name, "%s%s", "__gtid_", getsname(GBL_CURRFUNC));
     gtid = llGetSym(name, DT_INT);
     sym_is_refd(gtid);
@@ -467,7 +495,7 @@ ll_get_gtid_addr_ili(void)
   char *name;
 
   if (!gtid) {
-    name = malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
+    name = (char *)malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
     sprintf(name, "%s%s", "__gtid_", getsname(GBL_CURRFUNC));
     gtid = llGetSym(name, DT_INT);
     sym_is_refd(gtid);
@@ -481,13 +509,13 @@ static int
 llLoadGtid(void)
 {
   int ili, nme, rhs;
-  int gtid = ll_get_gtid();
+  SPTR gtid = ll_get_gtid();
 
   if (!gtid)
     return 0;
 
   if (gbl.outlined) {
-    int arg = ll_get_hostprog_arg(GBL_CURRFUNC, 1);
+    SPTR arg = ll_get_hostprog_arg(GBL_CURRFUNC, 1);
     int nme = addnme(NT_VAR, arg, 0, 0);
     int ili = ad_acon(arg, 0);
     if (!TASKFNG(GBL_CURRFUNC)) {
@@ -560,7 +588,7 @@ ll_make_sections_args(int lbSym, int ubSym, int stSym, int lastSym)
   static int args[9];
   int sptr;
 
-  args[8] = genNullArg();          /* i32* ident     */
+  args[8] = genNullArg();            /* i32* ident     */
   args[7] = ll_get_gtid_val_ili();   /* i32 tid        */
   args[6] = ad_icon(KMP_SCH_STATIC); /* i32 schedule   */
   args[5] = ad_acon(lastSym, 0);     /* i32* plastiter */
@@ -585,21 +613,17 @@ ll_make_sections_args(int lbSym, int ubSym, int stSym, int lastSym)
  * An outlined task is:      void (int32, void*); Return is ignored.
  */
 static const KMPC_ST_TYPE funcSig[3] = {
-  {NULL, DT_INT, false},
-  {NULL, DT_CPTR, false},
-  {NULL, DT_CPTR, false} /* Pass ptr directly */
+    {NULL, DT_INT, false},
+    {NULL, DT_CPTR, false},
+    {NULL, DT_CPTR, false} /* Pass ptr directly */
 };
 
 static const KMPC_ST_TYPE taskSig[2] = {
-  {NULL, DT_INT, true},
-  {NULL, DT_CPTR, false} /* Pass ptr directly */
+    {NULL, DT_INT, true}, {NULL, DT_CPTR, false} /* Pass ptr directly */
 };
 
 static const KMPC_ST_TYPE taskdupSig[3] = {
-  {NULL, DT_CPTR, false},
-  {NULL, DT_CPTR, false},
-  {NULL, DT_INT, true} 
-};
+    {NULL, DT_CPTR, false}, {NULL, DT_CPTR, false}, {NULL, DT_INT, true}};
 
 extern void
 setOutlinedPragma(int func_sptr, int saved)
@@ -611,7 +635,9 @@ makeOutlinedFunc(int stblk_sptr, int scope_sptr, bool is_task, bool istaskdup)
 {
   char *nm;
   LL_ABI_Info *abi;
-  int func_sptr, dtype, ret_dtype, n_args, param1, param2, param3;
+  int func_sptr, dtype;
+  DTYPE ret_dtype;
+  int n_args, param1, param2, param3;
   int count = 0;
   const KMPC_ST_TYPE *args;
 
@@ -622,7 +648,7 @@ makeOutlinedFunc(int stblk_sptr, int scope_sptr, bool is_task, bool istaskdup)
     n_args = 2;
   } else if (istaskdup) {
     args = taskdupSig;
-    n_args =  3;
+    n_args = 3;
   } else {
     args = funcSig;
     n_args = 3;
@@ -742,7 +768,7 @@ llGetILMLen(int ilmx)
   len = ilms[opcx].oprs + 1;
   if (IM_VAR(opcx))
     len += ILM_OPND(ilmpx, 1); /* include the number of
-                                       * variable operands */
+                                * variable operands */
   return len;
 }
 
@@ -751,7 +777,9 @@ llGetILMLen(int ilmx)
 static void
 llCollectSymbolInfo(ILM *ilmpx)
 {
-  int flen, len, opnd, sptr, opc, tpv;
+  int flen, len, opnd;
+  SPTR sptr;
+  int opc, tpv;
 
   opc = ILM_OPC(ilmpx);
   flen = len = ilms[opc].oprs + 1;
@@ -761,7 +789,7 @@ llCollectSymbolInfo(ILM *ilmpx)
   /* is this a variable reference */
   for (opnd = 1; opnd <= flen; ++opnd) {
     if (IM_OPRFLAG(opc, opnd) == OPR_SYM) {
-      sptr = ILM_OPND(ilmpx, opnd);
+      sptr = (SPTR)ILM_OPND(ilmpx, opnd); // ???
       if (sptr > 0 && sptr < stb.stg_avail) {
         switch (STYPEG(sptr)) {
         case ST_VAR:
@@ -803,7 +831,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
     if (ilmx == 0 || pos == 0 || pos < ilmx) {
       pos = ilmx;
       allocTaskdup(len);
-      memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)ilmpx, len*sizeof(ILM_T));
+      memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)ilmpx, len * sizeof(ILM_T));
       TASKDUP_AVL += len;
     }
   }
@@ -815,7 +843,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
    * write IL_NOP to outlined function.  One reason is that
    * we don't want to evaluate and set when see BMPPG/EMPPG
    */
-  if (writeTaskdup) { 
+  if (writeTaskdup) {
     if (len == 0)
       len = llGetILMLen(ilmx);
     if (ilmx == 0) {
@@ -828,7 +856,8 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
       while (len) {
         nw = fwrite((char *)&nop, sizeof(ILM_T), 1, par_curfile);
 #if DEBUG
-        assert(nw, "error write to temp file in ll_rewrite_ilms", nw, ERR_Fatal);
+        assert(nw, "error write to temp file in ll_rewrite_ilms", nw,
+               ERR_Fatal);
 #endif
         len--;
       };
@@ -850,7 +879,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
 #endif
     }
   }
-    return 1;
+  return 1;
 }
 
 /*
@@ -965,7 +994,7 @@ llWriteNopILM(int lineno, int ilmx, int len)
     if (tlen)
       allocTaskdup(tlen);
     while (tlen) {
-      memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)&nop, sizeof(ILM_T));
+      memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)&nop, sizeof(ILM_T));
       TASKDUP_AVL += 1;
       tlen--;
     };
@@ -978,9 +1007,9 @@ llWriteNopILM(int lineno, int ilmx, int len)
     len = llGetILMLen(ilmx);
   i = ilmx;
   while (len) {
-      nw = fwrite((char *)&nop, sizeof(ILM_T), 1, par_curfile);
+    nw = fwrite((char *)&nop, sizeof(ILM_T), 1, par_curfile);
 #if DEBUG
-      assert(nw, "error write to temp file in ll_rewrite_ilms", nw, ERR_Fatal);
+    assert(nw, "error write to temp file in ll_rewrite_ilms", nw, ERR_Fatal);
 #endif
     len--;
   };
@@ -1001,14 +1030,19 @@ ilm_outlined_pad_ilm(int curilm)
 /* Create a new local uplevel variable and perform a shallow copy of the
  * original uplevel_sptr to the new uplevel sptr.
  */
-static int
-cloneUplevel(int uplevel_sptr, int uplevel_stblk_sptr)
+static SPTR
+cloneUplevel(SPTR uplevel_sptr, SPTR uplevel_stblk_sptr)
 {
   int ilix, dest_nme;
   static int n;
-  const int uplevel_dtype = ll_make_uplevel_type(uplevel_stblk_sptr);
-  const int new_uplevel = getnewccsym('D', ++n, ST_STRUCT);
+  const DTYPE uplevel_dtype = ll_make_uplevel_type(uplevel_stblk_sptr);
+  const SPTR new_uplevel = getnewccsym('D', ++n, ST_STRUCT);
+#if USE_NEW_UPLEVEL_METHOD
+  ISZ_T count = ll_parent_vals_count(uplevel_stblk_sptr);
+  llmp_uplevel_set_dtype(llmp_get_uplevel(uplevel_stblk_sptr), uplevel_dtype);
+#else
   int count = llmp_get_uplevel(uplevel_stblk_sptr)->vals_count;
+#endif
 
   SCP(new_uplevel, SC_LOCAL);
   if (gbl.internal >= 1)
@@ -1024,18 +1058,16 @@ cloneUplevel(int uplevel_sptr, int uplevel_stblk_sptr)
                   addnme(NT_VAR, uplevel_sptr, 0, 0));
   } else {
     int ili = mk_address(uplevel_sptr);
-    int arg = mk_argasym(uplevel_sptr);
+    SPTR arg = mk_argasym(uplevel_sptr);
     ilix = ad2ili(IL_LDA, ili, addnme(NT_VAR, arg, 0, (INT)0));
   }
 
-    /* set alignment of last argument for GPU "align 8". */
-    if (DTY(uplevel_dtype) == TY_STRUCT)
-      DTY(uplevel_dtype + 4) = 7;
+  /* set alignment of last argument for GPU "align 8". */
+  if (DTY(uplevel_dtype) == TY_STRUCT)
+    DTySetAlgTyAlign(uplevel_dtype, 7);
 
-    if (DTY(DTYPEG(new_uplevel)) == TY_STRUCT)
-      DTY(DTYPEG(new_uplevel) + 4) = 7;
-
-
+  if (DTY(DTYPEG(new_uplevel)) == TY_STRUCT)
+    DTySetAlgTyAlign(DTYPEG(new_uplevel), 7);
 
   /* For C we have a homed argument, a pointer to a pointer to an uplevel.
    * This will dereference the pointer, we do not need to do this for Fortran.
@@ -1052,21 +1084,21 @@ cloneUplevel(int uplevel_sptr, int uplevel_stblk_sptr)
  */
   if (DTYPEG(uplevel_sptr) != DT_ADDR)
     if (TASKFNG(GBL_CURRFUNC)) {
-      ilix = ad2ili(IL_LDA, ilix, 0);  /* task[0] */
-      ilix = ad2ili(IL_LDA, ilix, 0);  /* *task[0] */
+      ilix = ad2ili(IL_LDA, ilix, 0); /* task[0] */
+      ilix = ad2ili(IL_LDA, ilix, 0); /* *task[0] */
     }
 
   /* Copy the uplevel to the local version of the uplevel */
   dest_nme = addnme(NT_VAR, new_uplevel, 0, 0);
   ilix = ad4ili(IL_SMOVEI, ilix, ad_acon(new_uplevel, 0),
-                count * TARGET_PTRSIZE, dest_nme);
+                ((int)count) * TARGET_PTRSIZE, dest_nme);
   chk_block(ilix);
 
   return new_uplevel;
 }
 
 static int
-loadCharLen(int lensym)
+loadCharLen(SPTR lensym)
 {
   int ilix = mk_address(lensym);
   if (DTYPEG(lensym) == DT_INT8)
@@ -1074,6 +1106,33 @@ loadCharLen(int lensym)
   else
     ilix = ad3ili(IL_LD, ilix, addnme(NT_VAR, lensym, 0, 0), MSZ_WORD);
   return ilix;
+}
+
+static void
+handle_nested_threadprivate(LLUplevel *parent, SPTR uplevel, int nme)
+{
+  int i, sym, ilix, addr, val;
+  SPTR sptr;
+  int offset;
+  if (parent && parent->vals_count) {
+    int count = parent->vals_count;
+    for (i = 0; i < parent->vals_count; ++i) {
+      sptr = (SPTR)parent->vals[i];
+      if (THREADG(sptr)) {
+        offset = ll_get_uplevel_offset(sptr);
+        sym = getThreadPrivateTp(sptr);
+        val = llGetThreadprivateAddr(sym);
+        if (TASKFNG(GBL_CURRFUNC) && DTYPEG(uplevel) == DT_ADDR) {
+          ilix = ad_acon(uplevel, 0);
+          addr = ad2ili(IL_LDA, ilix, nme);
+        } else {
+          addr = ad_acon(uplevel, offset);
+        }
+        ilix = ad4ili(IL_STA, val, addr, nme, MSZ_PTR);
+        chk_block(ilix);
+      }
+    }
+  }
 }
 
 /* Generate load instructions to load just the fields of the uplevel table for
@@ -1085,18 +1144,26 @@ loadCharLen(int lensym)
  * Returns the ili for the sequence of store ilis.
  */
 static int
-loadUplevelArgsForRegion(int uplevel, int base, int count,
-                             int uplevel_stblk_sptr)
+loadUplevelArgsForRegion(SPTR uplevel, int base, int count,
+                         int uplevel_stblk_sptr)
 {
-  int i, addr, ilix, offset, val, nme, encl, based, lensptr;
+  int i, addr, ilix, offset, val, nme, encl, based;
+  SPTR lensptr;
   bool do_load, byval;
+  ISZ_T addition;
+#if USE_NEW_UPLEVEL_METHOD
+  const LLUplevel *up = NULL;
+  if (llmp_has_uplevel(uplevel_stblk_sptr)) {
+    up = llmp_get_uplevel(uplevel_stblk_sptr);
+  }
+#else
   const LLUplevel *up = count ? llmp_get_uplevel(uplevel_stblk_sptr) : NULL;
-
+#endif
   offset = 0;
   nme = addnme(NT_VAR, uplevel, 0, 0);
   /* load display argument from host routine */
   if (gbl.internal >= 1) {
-    int sptr = aux.curr_entry->display;
+    SPTR sptr = aux.curr_entry->display;
     if (gbl.outlined) {
       ADDRTKNP(sptr, 1);
       val = mk_address(sptr);
@@ -1115,24 +1182,22 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
     offset += size_of(DT_CPTR);
   }
 
+#if USE_NEW_UPLEVEL_METHOD
+  addition = ll_parent_vals_count(uplevel_stblk_sptr) * size_of(DT_CPTR);
+  offset = offset + addition;
+#endif
+
   if (up)
     count = up->vals_count;
 
-  lensptr = 0;
+  lensptr = SPTR_NULL;
   byval = 0;
   for (i = 0; i < count; ++i) {
-    int sptr = up->vals[i];
+    SPTR sptr = (SPTR)up->vals[i]; // ???
 
     based = 0;
     if (!sptr && !lensptr) {
-      /* We put a placeholder in the front end for character
-       * len(CLENG) after its character sptr for assumed len
-       * or deferred char because CLENG may not be set
-       * until later in the backend.  We shouldn't have a
-       * problem for fixed len char because we
-       * can get its len from DTY(dtype+1).
-       */
-
+      // We put a placeholder in the front end for character len.
       offset += size_of(DT_CPTR);
       continue;
     }
@@ -1140,21 +1205,15 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
 /* Load the uplevel pointer and get the offset where the pointer to the
  * member should be placed.
  */
-
-    if (!lensptr &&
-        (DT_ASSNCHAR == DDTG(DTYPEG(sptr)) ||
-         DT_ASSCHAR == DDTG(DTYPEG(sptr)) ||
-         DT_DEFERNCHAR == DDTG(DTYPEG(sptr)) ||
-         DT_DEFERCHAR == DDTG(DTYPEG(sptr)) || DTY(DTYPEG(sptr)) == TY_CHAR)) {
+    if (!lensptr && need_charlen(DTYPEG(sptr))) {
       lensptr = CLENG(sptr);
     }
-
     if (lensptr && !sptr) {
       val = loadCharLen(lensptr);
       byval = 1;
       sptr = lensptr;
     } else if (SCG(sptr) == SC_DUMMY) {
-      int asym = mk_argasym(sptr);
+      SPTR asym = mk_argasym(sptr);
       int anme = addnme(NT_VAR, asym, 0, (INT)0);
       val = mk_address(sptr);
       val = ad2ili(IL_LDA, val, anme);
@@ -1172,7 +1231,7 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
       continue;
 #endif
       if (SCG(sptr) == SC_DUMMY) {
-        int asym = mk_argasym(sptr);
+        SPTR asym = mk_argasym(sptr);
         int anme = addnme(NT_VAR, asym, 0, (INT)0);
         val = mk_address(sptr);
         val = ad2ili(IL_LDA, val, anme);
@@ -1216,7 +1275,7 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
         if ((STYPEG(ENCLFUNCG(encl)) != ST_ENTRY))
         {
           offset += size_of(DT_CPTR);
-          lensptr = 0;
+          lensptr = SPTR_NULL;
           continue;
         }
       }
@@ -1257,7 +1316,7 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
           val = sel_iconv(val, 0);
           ilix = ad4ili(IL_ST, val, addr, nme, MSZ_WORD);
         }
-        lensptr = 0;
+        lensptr = SPTR_NULL;
         byval = 0;
       } else {
         ilix = ad4ili(IL_STA, val, addr, nme, MSZ_PTR);
@@ -1266,6 +1325,15 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
     }
     offset += size_of(DT_CPTR);
   }
+#if USE_NEW_UPLEVEL_METHOD
+  /* Special handling for threadprivate copyin, we need to copy the
+   * address of current master copy to its slaves.
+   */
+  if (count == 0) {
+    handle_nested_threadprivate(
+        llmp_outermost_uplevel((SPTR)uplevel_stblk_sptr), uplevel, nme);
+  }
+#endif
 
   return ad_acon(uplevel, 0);
 }
@@ -1279,11 +1347,13 @@ loadUplevelArgsForRegion(int uplevel, int base, int count,
  *
  */
 int
-ll_load_outlined_args(int scope_blk_sptr, int callee_sptr, bool clone)
+ll_load_outlined_args(int scope_blk_sptr, SPTR callee_sptr, bool clone)
 {
   LLUplevel *up;
-  int uplevel_dtype, uplevel, base, count, addr, val, ilix, newcount;
-  const int uplevel_blk_sptr = PARUPLEVELG(scope_blk_sptr);
+  DTYPE uplevel_dtype;
+  SPTR uplevel;
+  int base, count, addr, val, ilix, newcount;
+  const SPTR uplevel_blk_sptr = (SPTR)PARUPLEVELG(scope_blk_sptr); // ???
   static int n;
 
   /* If this is not the parent for a nest of funcs just return uplevel tbl ptr
@@ -1308,10 +1378,23 @@ ll_load_outlined_args(int scope_blk_sptr, int callee_sptr, bool clone)
     ll_process_routine_parameters(callee_sptr);
     sym_is_refd(callee_sptr);
     /* Clone: See comment in this function's description above. */
+#if USE_NEW_UPLEVEL_METHOD
+    if (ll_parent_vals_count(uplevel_blk_sptr) != 0) {
+      clone = 1;
+#else
     if (newcount) {
+#endif
       if (clone)
         uplevel = cloneUplevel(uplevel, uplevel_blk_sptr);
       uplevelSym = uplevel;
+    } else {
+      /* nothing to copy in parent */
+      uplevel_dtype = ll_make_uplevel_type(uplevel_blk_sptr);
+      uplevelSym = uplevel = getnewccsym('D', ++n, ST_STRUCT);
+      up = llmp_get_uplevel(uplevel_blk_sptr);
+      llmp_uplevel_set_dtype(up, uplevel_dtype);
+      DTYPEP(uplevel, uplevel_dtype);
+      SCP(uplevel, SC_PRIVATE);
     }
   } else { /* Else: is the parent and we need to create an uplevel table */
     if (newcount == 0) { /* No items to pass via uplevel, just pass null  */
@@ -1342,18 +1425,17 @@ ll_load_outlined_args(int scope_blk_sptr, int callee_sptr, bool clone)
     /* set alignment of last argument for GPU "align 8". It may not be the same
      * as uplevel if this is task */
     if (DTY(uplevel_dtype) == TY_STRUCT)
-      DTY(uplevel_dtype + 4) = 7;
+      DTySetAlgTyAlign(uplevel_dtype, 7);
 
     if (DTY(DTYPEG(uplevel)) == TY_STRUCT)
-      DTY(DTYPEG(uplevel) + 4) = 7;
+      DTySetAlgTyAlign(DTYPEG(uplevel), 7);
 
     /* Debug */
     if (DBGBIT(45, 0x8))
       dumpUplevel(uplevel);
   }
 
-  ilix =
-      loadUplevelArgsForRegion(uplevel, base, newcount, uplevel_blk_sptr);
+  ilix = loadUplevelArgsForRegion(uplevel, base, newcount, uplevel_blk_sptr);
   if (TASKFNG(GBL_CURRFUNC) && DTYPEG(uplevel) == DT_ADDR)
     ilix = ad2ili(IL_LDA, ilix, addnme(NT_VAR, uplevel, 0, 0));
 
@@ -1363,24 +1445,33 @@ ll_load_outlined_args(int scope_blk_sptr, int callee_sptr, bool clone)
 int
 ll_get_uplevel_offset(int sptr)
 {
-  int dtype, mem;
+  DTYPE dtype;
+  SPTR mem;
+
   if (gbl.outlined || ISTASKDUPG(GBL_CURRFUNC)) {
     int scope_sptr;
     int uplevel_stblk;
     LLUplevel *uplevel;
-    
+
     if (ISTASKDUPG(GBL_CURRFUNC)) {
       scope_sptr = OUTLINEDG(TASKDUPG(GBL_CURRFUNC));
     } else {
       scope_sptr = OUTLINEDG(GBL_CURRFUNC);
     }
     uplevel_stblk = PARUPLEVELG(scope_sptr);
+  redo:
     uplevel = llmp_get_uplevel(uplevel_stblk);
 
     dtype = uplevel->dtype;
-    for (mem = DTY(dtype + 1); mem > 1; mem = SYMLKG(mem))
+    for (mem = DTyAlgTyMember(dtype); mem > 1; mem = SYMLKG(mem))
       if (PAROFFSETG(mem) == sptr)
         return ADDRESSG(mem);
+#if USE_NEW_UPLEVEL_METHOD
+    if (uplevel->parent) {
+      uplevel_stblk = uplevel->parent;
+      goto redo;
+    }
+#endif
   }
 
   return ADDRESSG(sptr);
@@ -1390,11 +1481,12 @@ int
 ll_make_outlined_call(int func_sptr, int arg1, int arg2, int arg3)
 {
   int i, ilix, altili, argili;
-  int nargs = 3;
+  const int nargs = 3;
   char *funcname = SYMNAME(func_sptr);
 
-  argili = ad_aconi((ISZ_T)0);
-  ilix = ll_ad_outlined_func(0, IL_JSR, funcname, nargs, argili, argili, arg3);
+  argili = ad_aconi(0);
+  ilix = ll_ad_outlined_func(IL_NONE, IL_JSR, funcname, nargs, argili, argili,
+                             arg3);
 
   altili = ll_make_outlined_gjsr(func_sptr, nargs, argili, argili, arg3);
   ILI_ALT(ilix) = altili;
@@ -1403,17 +1495,18 @@ ll_make_outlined_call(int func_sptr, int arg1, int arg2, int arg3)
 }
 
 /* whicharg starts from 1 to narg - 1 */
-int
+SPTR
 ll_get_hostprog_arg(int func_sptr, int whicharg)
 {
-  int paramct, dpdscp, sym, uplevel, i, dtype;
+  int paramct, dpdscp;
+  SPTR sym;
+  int uplevel, i, dtype;
 
   paramct = PARAMCTG(func_sptr);
   dpdscp = DPDSCG(func_sptr);
 
-  sym = aux.dpdsc_base[dpdscp + (whicharg - 1)];
+  sym = (SPTR)aux.dpdsc_base[dpdscp + (whicharg - 1)]; // ???
   return sym;
-
 }
 
 int
@@ -1438,7 +1531,7 @@ ll_make_outlined_call2(int func_sptr, int uplevel_ili)
     arg2 = args[1] = mk_address(arg2);
   }
 
-  ilix = ll_ad_outlined_func2(0, IL_JSR, func_sptr, nargs, args);
+  ilix = ll_ad_outlined_func2(IL_NONE, IL_JSR, func_sptr, nargs, args);
 
   altili = ll_make_outlined_gjsr(func_sptr, nargs, arg1, arg2, arg3);
   ILI_ALT(ilix) = altili;
@@ -1451,15 +1544,15 @@ ll_make_outlined_call2(int func_sptr, int uplevel_ili)
  * task_sptr: Allocated kmpc task struct
  */
 int
-ll_make_outlined_task_call(int func_sptr, int task_sptr)
+ll_make_outlined_task_call(int func_sptr, SPTR task_sptr)
 {
   int altili, ilix;
   int arg1, arg2, args[2] = {0};
 
   arg1 = args[1] = ll_get_gtid_val_ili();
-  arg2 = args[0] = ad2ili(IL_LDA, ad_acon(task_sptr, 0),
-                          addnme(NT_VAR, task_sptr, 0, (INT)0));
-  ilix = ll_ad_outlined_func2(0, IL_JSR, func_sptr, 2, args);
+  arg2 = args[0] =
+      ad2ili(IL_LDA, ad_acon(task_sptr, 0), addnme(NT_VAR, task_sptr, 0, 0));
+  ilix = ll_ad_outlined_func2(IL_NONE, IL_JSR, func_sptr, 2, args);
 
   altili = ll_make_outlined_gjsr(func_sptr, 2, arg1, arg2, 0);
   ILI_ALT(ilix) = altili;
@@ -1480,12 +1573,12 @@ ll_set_outlined_currsub()
 {
   int scope_sptr;
   long gilmpos = ftell(gbl.ilmfil);
-  gbl.currsub = llReadILMHeader();
+  gbl.currsub = (SPTR)llReadILMHeader(); // ???
   scope_sptr = OUTLINEDG(gbl.currsub);
   if (scope_sptr && gbl.currsub)
     ENCLFUNCP(scope_sptr, PARENCLFUNCG(scope_sptr));
   gbl.rutype = RU_SUBR;
-  (void)fseek(gbl.ilmfil, gilmpos, 0);
+  fseek(gbl.ilmfil, gilmpos, 0);
 }
 
 /* should be call when the host program is done */
@@ -1500,7 +1593,7 @@ resetThreadprivate(void)
   gbl.threadprivate = NOSYM;
 }
 
-int
+SPTR
 ll_get_gtid(void)
 {
   return gtid;
@@ -1509,7 +1602,7 @@ ll_get_gtid(void)
 void
 ll_reset_gtid(void)
 {
-  gtid = 0;
+  gtid = SPTR_NULL;
 }
 
 void
@@ -1542,9 +1635,9 @@ ll_open_parfiles()
   par_file1 = fdopen(fd1, "w+");
   par_file2 = fdopen(fd2, "w+");
   if (!par_file1)
-    errfatal(4);
+    errfatal((error_code_t)4);
   if (!par_file2)
-    errfatal(4);
+    errfatal((error_code_t)4);
 }
 
 void
@@ -1561,13 +1654,13 @@ ll_unlink_parfiles()
 
 /* START: OUTLINING MCONCUR */
 void
-llvmSetExpbCurIlt()
+llvmSetExpbCurIlt(void)
 {
   expb.curilt = ILT_PREV(0);
 }
 
 int
-llvmGetExpbCurIlt()
+llvmGetExpbCurIlt(void)
 {
   return expb.curilt;
 }
@@ -1575,10 +1668,10 @@ llvmGetExpbCurIlt()
 int
 llvmAddConcurEntryBlk(int bih)
 {
-  int newbih, funcsptr, arg1, arg2, arg3, symdtype;
-  int display_temp, asym, ili_uplevel, nme, ili;
-  funcsptr = GBL_CURRFUNC;
-  display_temp = 0;
+  int newbih, arg1, arg2, arg3, symdtype;
+  int asym, ili_uplevel, nme, ili;
+  SPTR funcsptr = GBL_CURRFUNC;
+  SPTR display_temp = SPTR_NULL;
 
   /* add entry block */
   newbih = addnewbih(bih, bih, bih);
@@ -1597,7 +1690,7 @@ llvmAddConcurEntryBlk(int bih)
 
   reg_init(GBL_CURRFUNC);
 
-  aux.curr_entry->uplevel = ll_get_shared_arg(GBL_CURRFUNC);
+  aux.curr_entry->uplevel = (SPTR)ll_get_shared_arg(GBL_CURRFUNC); // ???
   asym = mk_argasym(aux.curr_entry->uplevel);
   ADDRESSP(asym, ADDRESSG(aux.curr_entry->uplevel)); /* propagate ADDRESS */
   MEMARGP(asym, 1);
@@ -1611,16 +1704,16 @@ llvmAddConcurEntryBlk(int bih)
     sym_is_refd(display_temp);
 
     ili = ad_acon(display_temp, 0);
-    nme = addnme(NT_VAR, display_temp, (INT)0, 0);
+    nme = addnme(NT_VAR, display_temp, 0, 0);
 
     ili_uplevel = mk_address(aux.curr_entry->uplevel);
-    nme = addnme(NT_VAR, aux.curr_entry->uplevel, (INT)0, 0);
+    nme = addnme(NT_VAR, aux.curr_entry->uplevel, 0, 0);
     ili_uplevel = ad2ili(IL_LDA, ili_uplevel, nme);
     ili_uplevel =
         ad2ili(IL_LDA, ili_uplevel, addnme(NT_IND, display_temp, nme, 0));
 
     ili = ad2ili(IL_LDA, ili, addnme(NT_IND, display_temp, nme, 0));
-    nme = addnme(NT_VAR, display_temp, (INT)0, 0);
+    nme = addnme(NT_VAR, display_temp, 0, 0);
     ili = ad3ili(IL_STA, ili_uplevel, ili, nme);
     expb.curilt = addilt(expb.curilt, ili);
     wrilts(newbih);
@@ -1657,15 +1750,15 @@ llvmAddConcurExitBlk(int bih)
  * write all ilms between IM_BTASKLOOP and IM_ETASKLOOP
  * to a taskdup routine.  Mostly use for firstprivate and
  * last iteration variables copy/constructor.
- * writeTaskdup is set when we see IM_BTASKLOOP and unset when 
+ * writeTaskdup is set when we see IM_BTASKLOOP and unset when
  * we see IM_TASKLOOPREG. It then will be set again after IM_ETASKLOOPREG
  * until IM_ETASKLOOP(C/C++ may have firstprivate initialization
- * later).  Currently only private data allocation & initialization 
+ * later).  Currently only private data allocation & initialization
  * are expected in those ilms.  In future, if there are other ilms
  * in the mix, the we may need to provide some delimits to mark
  * where to start write and end.
  */
- 
+
 void
 start_taskdup(int task_fnsptr, int curilm)
 {
@@ -1697,11 +1790,11 @@ start_taskdup(int task_fnsptr, int curilm)
     t2[5] = 0;
 
     allocTaskdup(6);
-    memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)t, 6 * sizeof(ILM_T));
+    memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)t, 6 * sizeof(ILM_T));
     TASKDUP_AVL += 6;
 
     allocTaskdup(5);
-    memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)t2, 5 * sizeof(ILM_T));
+    memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)t2, 5 * sizeof(ILM_T));
     TASKDUP_AVL += 5;
   }
   pos = 0;
@@ -1710,7 +1803,7 @@ start_taskdup(int task_fnsptr, int curilm)
   len = ilmb.ilmavl - (curilm + len);
   if (len) {
     allocTaskdup(4);
-    memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)t3, 4 * sizeof(ILM_T));
+    memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)t3, 4 * sizeof(ILM_T));
     TASKDUP_AVL += 4;
     llWriteNopILM(gbl.lineno, 0, noplen - 4);
   }
@@ -1760,7 +1853,7 @@ clearTaskdup()
 static void
 copyLastItr(int fnsptr, INT offset)
 {
-  ILM_T* ptr;
+  ILM_T *ptr;
   int offset_sptr;
   int total_ilms = 0;
   INT tmp[2];
@@ -1799,16 +1892,16 @@ finish_taskdup_routine(int curilm, int fnsptr, INT offset)
   t[2] = gbl.findex;
   t[3] = 5;
   t[4] = IM_END;
-  if (offset) { 
+  if (offset) {
     copyLastItr(fnsptr, offset);
   }
   /* write taskdup ilms to file */
   if (TASKDUP_AVL) {
     allocTaskdup(5);
-    memcpy((TASKDUP_FILE+TASKDUP_AVL), (char*)t, 5 * sizeof(ILM_T));
+    memcpy((TASKDUP_FILE + TASKDUP_AVL), (char *)t, 5 * sizeof(ILM_T));
     TASKDUP_AVL += 5;
- 
-    nw = fwrite((char*)TASKDUP_FILE, sizeof(ILM_T), TASKDUP_AVL, par_curfile);
+
+    nw = fwrite((char *)TASKDUP_FILE, sizeof(ILM_T), TASKDUP_AVL, par_curfile);
 #ifdef DEBUG
 #endif
   }
@@ -1818,12 +1911,11 @@ finish_taskdup_routine(int curilm, int fnsptr, INT offset)
   pos = 0;
 }
 
-
 static void
 allocTaskdup(int len)
 {
-  NEED((TASKDUP_AVL+len+20), TASKDUP_FILE, ILM_T, TASKDUP_SZ, 
-       (TASKDUP_AVL+len+20));
+  NEED((TASKDUP_AVL + len + 20), TASKDUP_FILE, ILM_T, TASKDUP_SZ,
+       (TASKDUP_AVL + len + 20));
 }
 
 /* END: TASKDUP routine */
@@ -1860,7 +1952,6 @@ llvm_ilms_rewrite_mode(void)
   return 0;
 }
 
-
 /* used by Fortran only.  If gbl.ilmfil points to tempfile, then
  * we are processing ILMs in that file.  This function is called
  * after we emit we call schedule of current function and we are
@@ -1873,5 +1964,4 @@ llProcessNextTmpfile()
   if (gbl.ilmfil == par_file1 || gbl.ilmfil == par_file2)
     return 0;
   return hasILMRewrite;
-
 }
