@@ -52,5 +52,4 @@ add_subdirectory(ompstub)
 
 add_subdirectory(flangrti)
 add_subdirectory(flang)
-add_subdirectory(libpgmath)
 add_subdirectory(flangmain)
