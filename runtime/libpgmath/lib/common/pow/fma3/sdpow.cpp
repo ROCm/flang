@@ -16,6 +16,31 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Implemented the minloc/maxloc inlining support
+ *
+ * Date of Modification: August 2018
+ *
+ */
+/*
+ * Copyright (c) 1994-2018, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 #if defined(TARGET_LINUX_POWER)
 #include "xmm2altivec.h"
 #elif defined(TARGET_LINUX_ARM64)
@@ -83,7 +108,7 @@ __m128d __internal_fast_int2dbl(__m128i a)
     __m128d const INT2DBL    = (__m128d)_mm_set1_epi64x(INT2DBL_D);
 
     __m128i t = _mm_xor_si128(INT2DBL_LO, a);
-    t = _mm_blend_epi32(INT2DBL_HI, t, H55_D); 
+    t = _mm_blend_epi32(INT2DBL_HI, t,  H55_D &0x0f); 
     return _mm_sub_sd((__m128d)t, INT2DBL);
 }
 
