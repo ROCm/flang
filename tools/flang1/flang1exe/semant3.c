@@ -355,6 +355,8 @@ semant3(int rednum, SST *top)
       /* check for assignment to array parameter */
       sptr = SST_SYMG(RHS(2));
       if (sptr) {
+        if (STYPEG(SCOPEG(sptr)) == ST_MODULE)
+          PARAMP(sptr, 0);
         if (STYPEG(sptr) == ST_ENTRY || STYPEG(sptr) == ST_PROC)
           /* avoid using PARAMG with these types of symbols --
            * PARAM overlays INMODULE.
@@ -5810,7 +5812,7 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   if (STYPEG(lhs_sptr) != 0) {
     /* Shadow any current instance of the association name. */
     lhs_sptr = insert_sym_first(lhs_sptr);
-  }
+  } 
 
   lhs_dtype = stmt_dtype > 0 ? stmt_dtype : rhs_dtype;
   if (is_array_dtype(lhs_dtype)) {
@@ -5927,6 +5929,17 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   get_static_descriptor(lhs_sptr);
   set_descriptor_rank(FALSE /* to reset the hidden API state :-P */);
   get_all_descriptors(lhs_sptr);
+  if (sem.parallel || sem.target || sem.task) {
+    if (SDSCG(lhs_sptr)) {
+      SCP(SDSCG(lhs_sptr), SC_PRIVATE);  
+    }
+    if (MIDNUMG(lhs_sptr)) {
+      SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);  
+    }
+    if (PTROFFG(lhs_sptr)) {
+      SCP(PTROFFG(lhs_sptr), SC_PRIVATE);  
+    }
+  }
 
   lhs_ast = mk_id(lhs_sptr); /* must follow descriptor creation */
   is_lhs_unl_poly = is_unl_poly(lhs_sptr);
@@ -5942,7 +5955,6 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
 #endif
     gen_init_unl_poly_desc(mk_id(SDSCG(lhs_sptr)), rhs_descriptor_ast);
   }
-
   if (set_up_a_pointer) {
     /* Construct association by means of a pointer to extant data, no
      * temporary */
