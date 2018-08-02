@@ -1502,10 +1502,6 @@ resolveImp(int dtype, tbpTask task, TBP *curr, char *impName)
     DTYPEP(curr->memSptr, DTYPEG(curr->impSptr));
   }
 
-  /* we don't want to assign class attribute for the abbreviated procedure definition.*/
-  if (!FVALG(curr->impSptr) || CLASSG(FVALG(curr->impSptr)))
-    CLASSP(curr->impSptr, 1);
-
   if (!curr->isExtern && IN_MODULE)
     INMODULEP(curr->impSptr, 1);
 
@@ -1677,6 +1673,7 @@ inheritTbps(int dtype, tbpTask task)
                       CNULL);
               } else {
                 curr2->isOverloaded = 1;
+                curr2->offset = curr->offset;
               }
               if ((curr->access != PRIVATE_ACCESS_TBP) &&
                   (curr2->access == PRIVATE_ACCESS_TBP ||
