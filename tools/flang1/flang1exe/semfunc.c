@@ -478,7 +478,7 @@ get_byval(int func_sptr, int param_sptr)
    c-_ptr->member
  */
 static int
-rewrite_cptr_references(int ast)
+rewrite_cptr_references(int ast, bool cassociated)
 {
   int past, mast;
   int new_ast = 0;
@@ -499,7 +499,8 @@ rewrite_cptr_references(int ast)
   default:
     /* no need to process further  all cases of possible
        nested C_PTR must be in cases above  */
-    return 0;
+    if (cassociated) mast=ast;
+    else return 0;
   }
 
   /* check for type C_PTR, C_FUNC_PTR, and process */
@@ -538,7 +539,7 @@ byvalue_ref_arg(SST *e1, int *dtype, int op, int func_sptr)
        */
       A_DTYPEP(SST_ASTG(e1), DT_PTR);
     } else {
-      new_ast = rewrite_cptr_references(SST_ASTG(e1));
+      new_ast = rewrite_cptr_references(SST_ASTG(e1),false);
       if (new_ast) {
         SST_ASTP(e1, new_ast);
         SST_IDP(e1, S_EXPR);
@@ -3570,7 +3571,7 @@ do_call:
                do not rewrite iso c_loc
              */
 
-            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp));
+            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp),false);
             ii++;
           } else if (pass_char_no_len(sptr, param_dummy)) {
             byvalue_ref_arg(sp, &dum, OP_REF, sptr);
@@ -3878,7 +3879,7 @@ ptrsubr_call(SST *stktop, ITEM *list)
                do not rewrite iso c_loc
              */
 
-            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp));
+            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp),false);
             ii++;
           } else if (pass_char_no_len(sptr, param_dummy)) {
             byvalue_ref_arg(sp, &dum, OP_REF, sptr);
@@ -5418,13 +5419,13 @@ _c_associated(SST *stkp, int count)
   lop = ARG_AST(0);
   if (!is_iso_cptr(A_DTYPEG(lop)))
     return 0;
-  lop = rewrite_cptr_references(lop);
+  lop = rewrite_cptr_references(lop, true);
   ARG_AST(0) = lop;
   if (count == 2) {
     rop = ARG_AST(1);
     if (!is_iso_cptr(A_DTYPEG(rop)))
       return 0;
-    rop = rewrite_cptr_references(rop);
+    rop = rewrite_cptr_references(rop, true);
     ARG_AST(1) = rop;
   }
   return 1;
