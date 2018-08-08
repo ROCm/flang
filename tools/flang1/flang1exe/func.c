@@ -3245,8 +3245,6 @@ leave_elemental_argument(int func_ast, int argnum)
 {
   if (A_TYPEG(func_ast) == A_INTR) {
     if (A_OPTYPEG(func_ast) == I_TRANSPOSE ||
-// AOCC TBD: add MAXLOC as well
-        (A_OPTYPEG(func_ast) == I_MINLOC && argnum == 2) ||
         (A_OPTYPEG(func_ast) == I_SPREAD && argnum == 0)) {
       return TRUE;
     }
