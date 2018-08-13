@@ -3243,6 +3243,7 @@ leave_elemental_argument(int func_ast, int argnum)
 {
   if (A_TYPEG(func_ast) == A_INTR) {
     if (A_OPTYPEG(func_ast) == I_TRANSPOSE ||
+        (A_OPTYPEG(func_ast) == I_MINLOC && argnum == 2) ||
         (A_OPTYPEG(func_ast) == I_SPREAD && argnum == 0)) {
       return TRUE;
     }
@@ -3292,6 +3293,20 @@ copy_scalar_intent_in(int arg, int dummy_sptr, int std)
   return mk_id(newsptr);
 } /* copy_scalar_intent_in */
 
+// AOCC Begin
+static bool 
+can_inline_minloc(int dest) {
+  if (dest) {
+    if (A_TYPEG(dest) == A_SUBSCR) {
+      int shape = A_SHAPEG(dest);
+      if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+        return false;
+    } else if (A_TYPEG(dest) != A_ID)
+      return false;
+  } else return false;
+  return true;
+}
+// AOCC End
 /*
  * rewrite arguments of a function or subroutine call
  */
@@ -3457,7 +3472,17 @@ rewrite_sub_args(int arg_ast, int lc)
        * leave the elemental expressions in place, don't assign
        * to a temp.  They will be expanded when the transpose or spread
        * are inlined */
-      if (leave_elemental_argument(arg_ast, i)) {
+      // AOCC Begin
+      bool inline_minloc=false;
+      if  (A_OPTYPEG(arg_ast) == I_MINLOC) {
+        bool inline_minloc = can_inline_minloc(arg_gbl.lhs);
+        if (inline_minloc && leave_elemental_argument(arg_ast, i)) {
+          ARGT_ARG(newargt, i) = arg;
+          continue;
+        }
+      }
+      // AOCC End
+      else if (leave_elemental_argument(arg_ast, i)) {
         ARGT_ARG(newargt, i) = arg;
         continue;
       }
@@ -3646,8 +3671,12 @@ rewrite_sub_ast(int ast, int lc)
       return ast;
     args = rewrite_sub_args(ast, lc);
 
+   
     /* try again to inline it */
-    ast = inline_reduction_f90(ast, 0, lc, NULL);
+    if (A_OPTYPEG(ast) == I_MINLOC)
+      ast = inline_reduction_f90(ast, arg_gbl.lhs, lc, NULL);
+    else
+      ast = inline_reduction_f90(ast, 0, lc, NULL);
     l = rewrite_func_ast(ast, args, 0);
     return l;
   case A_ICALL:
@@ -5670,17 +5699,12 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     break;
   case I_MAXLOC:
       return ast;
-  case I_MINLOC: // AOCC
+  case I_MINLOC: 
     /* simple cases only */
-    if (dest) {
-      if (A_TYPEG(dest) == A_SUBSCR) {
-        shape = A_SHAPEG(dest);
-        if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
-          return ast;
-      } else if (A_TYPEG(dest) != A_ID)
-        return ast;
-    } else
-        return ast;
+    // AOCC Begin
+    if (!can_inline_minloc(dest))
+    // AOCC End
+      return ast;
     if (doremove)
       *doremove = TRUE;
     break;
