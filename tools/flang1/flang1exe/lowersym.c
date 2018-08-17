@@ -108,6 +108,9 @@ has_opt_args(SPTR sptr)
 {
  int i, psptr, nargs, dpdsc; 
  
+  // AOCC . Temporily reverting the change to add new 
+  // arguments for character arguments. 
+  return true;
   if (STYPEG(sptr) != ST_ENTRY && STYPEG(sptr) != ST_PROC) {
     return false;
   }
