@@ -82,6 +82,8 @@ static int inline_reduction_craft(int, int, int);
 
 static void nop_dealloc(int, int);
 static void handle_shift(int s);
+static LOGICAL contains_any_call(int astx);
+
 
 /*------ Argument & Expression Rewriting ----------*/
 int
@@ -3295,15 +3297,57 @@ copy_scalar_intent_in(int arg, int dummy_sptr, int std)
 
 // AOCC Begin
 static bool 
-can_inline_minloc(int dest) {
-  if (dest) {
-    if (A_TYPEG(dest) == A_SUBSCR) {
-      int shape = A_SHAPEG(dest);
-      if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+can_inline_minloc(int dest, int args) {
+
+int srcarray = ARGT_ARG(args, 0);
+int astdim = ARGT_ARG(args, 1);
+int mask = ARGT_ARG(args, 2);
+
+int dim = 0;
+
+  if (!dest) return false;
+  if (A_DTYPEG(dest) == A_SUBSCR) {
+       return false;
+     int shape = A_SHAPEG(dest);
+     if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return false;
+  } else if (A_TYPEG(dest) != A_ID) return false;
+
+  if (arg_gbl.inforall)
+      if (contiguous_section_array(srcarray))
         return false;
-    } else if (A_TYPEG(dest) != A_ID)
-      return false;
-  } else return false;
+
+  if (astdim) {
+   if (A_TYPEG(astdim) != A_CNST) {
+     return false;
+   }
+    dim = get_int_cval(A_SPTRG(astdim));
+  }
+
+  if (dim >= 1) {
+    return false;
+  }
+  if (mask) {
+   if (A_TYPEG(mask) == A_CNST) {
+    int mval = get_int_cval(A_SPTRG(mask));
+    if (mval == 0) return false;
+   }
+  }
+
+  if (dim >= 1) {
+    return false;
+  }
+
+  if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
+    return false;
+  }
+  if (mask && contains_any_call(mask)) return false;
+
+  if (!srcarray) return false;
+
+  if (contains_any_call(srcarray))
+    return false;
+   
   return true;
 }
 // AOCC End
@@ -3475,7 +3519,7 @@ rewrite_sub_args(int arg_ast, int lc)
       // AOCC Begin
       bool inline_minloc=false;
       if  (A_OPTYPEG(arg_ast) == I_MINLOC) {
-        bool inline_minloc = can_inline_minloc(arg_gbl.lhs);
+        bool inline_minloc = can_inline_minloc(arg_gbl.lhs, argt);
         if (inline_minloc && leave_elemental_argument(arg_ast, i)) {
           ARGT_ARG(newargt, i) = arg;
           continue;
@@ -5702,7 +5746,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_MINLOC: 
     /* simple cases only */
     // AOCC Begin
-    if (!can_inline_minloc(dest))
+    if (!can_inline_minloc(dest, A_ARGSG(ast)))
     // AOCC End
       return ast;
     if (doremove)
@@ -5736,6 +5780,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_MAXLOC:
   case I_MINLOC:
     dtypeval = DDTG(A_DTYPEG(ARGT_ARG(args, 0)));
+    if (DTYG(dtypeval) == TY_CHAR || DTYG(dtypeval) == TY_NCHAR)
+      return ast;
   /* fall through */
   case I_MAXVAL:
   case I_MINVAL:
