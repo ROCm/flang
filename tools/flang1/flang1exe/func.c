@@ -3299,13 +3299,14 @@ copy_scalar_intent_in(int arg, int dummy_sptr, int std)
 static bool 
 can_inline_minloc(int dest, int args) {
 
-int srcarray = ARGT_ARG(args, 0);
-int astdim = ARGT_ARG(args, 1);
-int mask = ARGT_ARG(args, 2);
-
-int dim = 0;
+  int dim = 0;
+  int srcarray = ARGT_ARG(args, 0);
+  int astdim = ARGT_ARG(args, 1);
+  int mask = ARGT_ARG(args, 2);
 
   if (!dest) return false;
+  if (!srcarray) return false;
+
   if (A_DTYPEG(dest) == A_SUBSCR) {
        return false;
      int shape = A_SHAPEG(dest);
@@ -3327,23 +3328,12 @@ int dim = 0;
   if (dim >= 1) {
     return false;
   }
-  if (mask) {
-   if (A_TYPEG(mask) == A_CNST) {
-    int mval = get_int_cval(A_SPTRG(mask));
-    if (mval == 0) return false;
-   }
-  }
-
-  if (dim >= 1) {
-    return false;
-  }
 
   if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
     return false;
   }
-  if (mask && contains_any_call(mask)) return false;
 
-  if (!srcarray) return false;
+  if (mask && contains_any_call(mask)) return false;
 
   if (contains_any_call(srcarray))
     return false;
