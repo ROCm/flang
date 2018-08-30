@@ -3,7 +3,7 @@
  *
  * Implemented the minloc/maxloc inlining support
  *
- * Date of Modification: February 2018
+ * Date of Modification: August 2018
  *
  */
 /*
