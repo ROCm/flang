@@ -8788,11 +8788,14 @@ ref_pd(SST *stktop, ITEM *list)
       dtyper = get_array_dtype(1, dtyper);
     // AOCC begin: avoiding generation of _mth_aint lib call instead
     // handling it here
+    if (pdtype == PD_aint) {
       ast = ARG_AST(0);
       ast = mk_convert(ast, DT_INT);
       ast = mk_convert(ast, dtyper);
       goto expr_val;
     // AOCC end
+    }
+    goto gen_call;
 
   case PD_int:
     if (count < 1 || count > 2) {

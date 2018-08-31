@@ -5894,6 +5894,23 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       }
     }
   }
+
+  stdnext = arg_gbl.std;
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dest) {
+    // incase of zero sized arrays and when mask is all false return 0
+    dtsclr = DDTG(dtyperes);
+    newast = mk_cval(0, dtyperes);
+    asn = mk_assn_stmt(dest, newast, dtsclr);
+    std = add_stmt_before(asn, stdnext);
+
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+  }
+
   ast2 = convert_subscript_in_expr(srcarray);
   home = convert_subscript(home);
   if (mask) {
@@ -5917,7 +5934,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   ndim = ASD_NDIM(asd); /* MORE ndim and nbrloops are NOT the same!!! */
   nbrloops = SHD_NDIM(shape);
 
-  stdnext = arg_gbl.std;
   lineno = STD_LINENO(stdnext);
 
   if (A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) {
