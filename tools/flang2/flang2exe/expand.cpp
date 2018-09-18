@@ -2545,7 +2545,7 @@ create_ref(SPTR sym, int *pnmex, int basenm, int baseilix, int *pclen,
           ilix = ad3ili(IL_AADD, ili1, ili2, 0);
         }
 #endif /* TARGET_WIN */
-        else if (flg.smp && SCG(sym) == SC_CMBLK && IS_THREAD_TP(sym)) {
+        else if (SCG(sym) == SC_CMBLK && IS_THREAD_TP(sym)) {
           /*
            * BASE is of a member which is in a threadprivate common.
            * generate an indirection using the threadprivate common's
