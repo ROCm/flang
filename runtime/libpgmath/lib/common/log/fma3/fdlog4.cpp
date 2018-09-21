@@ -16,14 +16,6 @@
  */
 
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Implemented the minloc/maxloc inlining support
- *
- * Date of Modification: August 2018
- *
- */
-/*
  * Copyright (c) 1994-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,7 +51,7 @@ __m256d __internal_fast_int2dbl(__m256i a)
     __m256d const INT2DBL    = (__m256d)_mm256_set1_epi64x(INT2DBL_D);
 
     __m256i t = _mm256_xor_si256(INT2DBL_LO, a);
-    t = _mm256_blend_epi32(INT2DBL_HI, t,  H55_D); 
+    t = _mm256_blend_epi32(INT2DBL_HI, t, 0x55);
     return _mm256_sub_pd((__m256d)t, INT2DBL);
 }
 

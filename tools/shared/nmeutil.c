@@ -488,15 +488,10 @@ add_rpct_nme(int orig_nme, int rpct_loop)
 
 } /* end add_rpct_nme( int orig_nme, int rpct_loop ) */
 
-/** \brief Add NME routine with no subscripts
- *
- *  enter nme into the NME area; use add_arrnme but add a subscript
- *  field of 0 and an inlarr field of false.
- */
-int
+SPTR
 addnme(NT_KIND type, SPTR insym, int nm, ISZ_T cnst)
 {
-  return add_arrnme(type, insym, nm, cnst, 0, false);
+  return (SPTR) add_arrnme(type, insym, nm, cnst, 0, false);
 }
 
 int
@@ -702,7 +697,7 @@ basenme_is_static(int nme)
  * Returns the base symbol of a reference given its names entry -- returns 0 if
  * unknown.
  */
-int
+SPTR
 basesym_of(int nme)
 {
   while (true) {
@@ -714,13 +709,13 @@ basesym_of(int nme)
       nme = NME_NM(nme);
       break;
     case NT_VAR:
-      return NME_SYM(nme);
+      return (SPTR)NME_SYM(nme); // ???
     default:
       goto not_found;
     }
   }
 not_found:
-  return 0;
+  return SPTR_NULL;
 }
 
 /** \brief Return the base nme of a reference given its names entry;

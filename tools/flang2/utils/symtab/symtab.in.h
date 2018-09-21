@@ -343,14 +343,16 @@ char *getprint(int sptr);
 char *parmprint(int sptr);
 
 /**
-   \brief ...
+   \brief Add a new symbol with same name as an existing symbol
+   \param oldsptr symbol to duplicate
  */
-int adddupsym(int oldsptr);
+SPTR adddupsym(SPTR oldsptr);
 
 /**
-   \brief ...
+   \brief Add a new symbol with given name
+   \param name  the symbol's name
  */
-int addnewsym(char *name);
+SPTR addnewsym(const char *name);
 
 /**
    \brief ...
@@ -378,7 +380,7 @@ SPTR getccssym_sc(char *pfx, int n, SYMTYPE stype, SC_KIND sc);
 /**
    \brief ...
  */
-int getccsym_copy(int oldsptr);
+SPTR getccsym_copy(SPTR oldsptr);
 
 /**
    \brief create (or possibly reuse) a compiler created symbol whose name is of
@@ -418,7 +420,7 @@ SPTR getnewccsym(int letter, int n, SYMTYPE stype);
 /**
    \brief ...
  */
-int get_semaphore(void);
+SPTR get_semaphore(void);
 
 /**
    \brief Enter character constant into symbol table
@@ -466,22 +468,22 @@ SPTR get_vcon_scalar(INT sclr, DTYPE dtype);
 /**
    \brief ...
  */
-int insert_sym_first(int first);
+SPTR insert_sym_first(SPTR first);
 
 /**
    \brief ...
  */
-int insert_sym(SPTR first);
+SPTR insert_sym(SPTR first);
 
 /**
    \brief ...
  */
-int mk_prototype(char *name, char *attr, DTYPE resdt, int nargs, ...);
+SPTR mk_prototype(char *name, char *attr, DTYPE resdt, int nargs, ...);
 
 /**
    \brief ...
  */
-int mk_prototype_llvm(char *name, char *attr, DTYPE resdt, int nargs, ...);
+SPTR mk_prototype_llvm(char *name, char *attr, DTYPE resdt, int nargs, ...);
 
 /**
    \brief ...

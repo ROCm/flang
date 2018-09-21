@@ -75,21 +75,21 @@ typedef struct {
  * table and let alpha() do the rest.  (NOTE that 0 is returned by
  * keyword() if a name is not found in a keyword table).
  */
-#define TKF_BLOCK -1
-#define TKF_DOUBLE -2
-#define TKF_GO -3
-#define TKF_SELECT -4
-#define TKF_NO -5
-#define TKF_ARRAY -6
-#define TKF_ENDBLOCK -7
-#define TKF_ATOMIC -8
-#define TKF_DOWHILE -9
-#define TKF_DOCONCURRENT -10
-#define TKF_TARGETENTER -11
-#define TKF_TARGETEXIT -12
-#define TKF_CANCELLATION -13
-#define TKF_DISTPAR -14
-#define TKF_ENDDISTPAR -15
+#define TKF_ARRAY -1
+#define TKF_ATOMIC -2
+#define TKF_CANCELLATION -3
+#define TKF_DISTPAR -4
+#define TKF_DOCONCURRENT -5
+#define TKF_DOUBLE -6
+#define TKF_DOWHILE -7
+#define TKF_ENDDISTPAR -8
+#define TKF_GO -9
+#define TKF_NO -10
+#define TKF_SELECT -11
+#define TKF_TARGETENTER -12
+#define TKF_TARGETEXIT -13
+#define TKF_BLOCK -14
+#define TKF_ENDBLOCK -15
 
 static KWORD t1[] = {         /* normal keyword table */
                      {"", 0}, /* a keyword index must be nonzero */
@@ -115,6 +115,7 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"close", TK_CLOSE},
                      {"common", TK_COMMON},
                      {"complex", TK_COMPLEX},
+                     {"concurrent", TK_CONCURRENT},
                      {"contains", TK_CONTAINS},
                      {"contiguous", TK_CONTIGUOUS},
                      {"continue", TK_CONTINUE},
@@ -122,8 +123,10 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"data", TK_DATA},
                      {"deallocate", TK_DEALLOCATE},
                      {"decode", TK_DECODE},
+                     {"default", TK_DEFAULT},
                      {"dimension", TK_DIMENSION},
                      {"do", TK_DO},
+                     {"doconcurrent", TKF_DOCONCURRENT},
                      {"double", TKF_DOUBLE},
                      {"doublecomplex", TK_DBLECMPLX},
                      {"doubleprecision", TK_DBLEPREC},
@@ -182,6 +185,8 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"intent", TK_INTENT},
                      {"interface", TK_INTERFACE},
                      {"intrinsic", TK_INTRINSIC},
+                     {"local", TK_LOCAL},
+                     {"local_init", TK_LOCAL_INIT},
                      {"logical", TK_LOGICAL},
                      {"map", TK_MAP},
                      {"module", TK_MODULE},
@@ -189,6 +194,7 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"ncharacter", TK_NCHARACTER},
                      {"no", TKF_NO},
                      {"non_intrinsic", TK_NON_INTRINSIC},
+                     {"none", TK_NONE},
                      {"nopass", TK_NOPASS},
                      {"nosequence", TK_NOSEQUENCE},
                      {"nullify", TK_NULLIFY},
@@ -217,6 +223,7 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"selectcase", TK_SELECTCASE},
                      {"selecttype", TK_SELECTTYPE},
                      {"sequence", TK_SEQUENCE},
+                     {"shared", TK_SHARED},
                      {"stop", TK_STOP},
                      {"structure", TK_STRUCTURE},
                      {"submodule", TK_SUBMODULE},
@@ -363,6 +370,7 @@ static KWORD t5[] = {
     {"capture", TK_CAPTURE},
     {"chunk", TK_CHUNK},
     {"collapse", TK_COLLAPSE},
+    {"compare", TK_COMPARE},
     {"copyin", TK_COPYIN},
     {"copyprivate", TK_COPYPRIVATE},
     {"default", TK_DEFAULT},
@@ -549,6 +557,11 @@ static KWORD t11[] = {
     {"nowait", TK_NOWAIT},
 };
 
+static KWORD t12[] = {
+    {"", 0}, /* a keyword index must be nonzero */
+    {"compare", TK_PGICOMPARE},
+};
+
 /* ****  NOTE -- each of these must appear in a call to init_ktable() in
  *               scan_init().
  */
@@ -562,6 +575,7 @@ static KTABLE deckw = {sizeof(t7) / sizeof(KWORD), &t7[0]};
 static KTABLE pragma_kw = {sizeof(t8) / sizeof(KWORD), &t8[0]};
 static KTABLE ppragma_kw = {sizeof(t9) / sizeof(KWORD), &t9[0]};
 static KTABLE kernel_kw = {sizeof(t11) / sizeof(KWORD), &t11[0]};
+static KTABLE pgi_kw = {sizeof(t12) / sizeof(KWORD), &t12[0]};
 
 /* char classification macros */
 

@@ -62,7 +62,7 @@ enum LL_LinkageType {
   LL_NO_LINKAGE
 };
 
-enum LL_BaseDataType {
+typedef enum LL_BaseDataType {
   LL_NOTYPE = 0,
   LL_LABEL,
   LL_METADATA,
@@ -89,7 +89,7 @@ enum LL_BaseDataType {
   LL_VECTOR,
   LL_STRUCT,
   LL_FUNCTION
-};
+} LL_BaseDataType;
 
 typedef enum LL_AddressSpace { LL_AddrSp_Default = 0 } LL_AddressSpace_t;
 
@@ -97,7 +97,7 @@ typedef enum LL_AddressSpace { LL_AddrSp_Default = 0 } LL_AddressSpace_t;
    \brief Calling conventions.
    See the LLVM source file include/llvm/IR/CallingConv.h for the complete list.
  */
-enum LL_CallConv {
+typedef enum LL_CallConv {
   LL_CallConv_C = 0, /**< This is the default. */
   LL_CallConv_Fast = 8,
   LL_CallConv_Cold = 9,
@@ -120,7 +120,7 @@ enum LL_CallConv {
   /* SPIR */
   LL_CallConv_SPIR_FUNC = 75,
   LL_CallConv_SPIR_KERNEL = 76
-};
+} LL_CallConv;
 
 /**
    \brief Supported LLVM IR versions.
@@ -142,6 +142,7 @@ typedef enum LL_IRVersion {
   LL_Version_4_0 = 40,
   LL_Version_5_0 = 50,
   LL_Version_6_0 = 60,
+  LL_Version_7_0 = 70,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -150,7 +151,8 @@ LL_IRVersion get_llvm_version(void);
 typedef enum LL_DWARFVersion {
   LL_DWARF_Version_2,
   LL_DWARF_Version_3,
-  LL_DWARF_Version_4
+  LL_DWARF_Version_4,
+  LL_DWARF_Version_5
 } LL_DWARFVersion;
 
 /* If flang is built with LLVM from github:flang-compiler/llvm, then one can
@@ -353,6 +355,15 @@ ll_feature_debug_info_ver38(const LL_IRFeatures *feature)
   return feature->version >= LL_Version_3_8;
 }
 
+/**
+   \brief Version 7.0 debug metadata
+ */
+INLINE static bool
+ll_feature_debug_info_ver70(const LL_IRFeatures *feature)
+{
+  return feature->version >= LL_Version_7_0;
+}
+
 INLINE static bool
 ll_feature_use_distinct_metadata(const LL_IRFeatures *feature)
 {
@@ -439,6 +450,7 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 #define ll_feature_debug_info_subrange_needs_count(f) \
   ((f)->version >= LL_Version_3_7)
 #define ll_feature_debug_info_ver38(f) ((f)->version >= LL_Version_3_8)
+#define ll_feature_debug_info_ver70(f) ((f)->version >= LL_Version_7_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
 #define ll_feature_subprogram_not_in_cu(f) ((f)->version >= LL_Version_3_9)
 #define ll_feature_from_global_to_md(f) ((f)->version >= LL_Version_4_0)
