@@ -108,7 +108,7 @@ __m128d __internal_fast_int2dbl(__m128i a)
     __m128d const INT2DBL    = (__m128d)_mm_set1_epi64x(INT2DBL_D);
 
     __m128i t = _mm_xor_si128(INT2DBL_LO, a);
-    t = _mm_blend_epi32(INT2DBL_HI, t,  H55_D &0x0f); 
+    t = _mm_blend_epi32(INT2DBL_HI, t, 0x5);
     return _mm_sub_sd((__m128d)t, INT2DBL);
 }
 

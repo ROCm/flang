@@ -12504,6 +12504,7 @@ int
 is_cseili_opcode(ILI_OP opc)
 {
   switch (opc) {
+  case IL_CSE:
   case IL_CSEIR:
   case IL_CSESP:
   case IL_CSEDP:
