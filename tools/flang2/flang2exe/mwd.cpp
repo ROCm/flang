@@ -1096,6 +1096,18 @@ dsym(int sptr)
     putnsym("sdsc", SDSCG(0));
     SDSCP(0, 0);
 #endif
+#ifdef OMPACCDEVSYMG
+      putbit("ompaccel", OMPACCDEVSYMG(0));
+      OMPACCDEVSYMP(0, 0);
+#endif
+#ifdef OMPACCSHMEMG
+      putbit("ompaccel-shmem", OMPACCSHMEMG(0));
+      OMPACCSHMEMP(0, 0);
+#endif
+#ifdef OMPACCSTRUCTG
+      putbit("ompaccel-tgtstruct", OMPACCSTRUCTG(0));
+      OMPACCSTRUCTP(0, 0);
+#endif
 #ifdef ENCLFUNCG
     putnsym("enclfunc", ENCLFUNCG(0));
     ENCLFUNCP(0, 0);
@@ -1705,6 +1717,14 @@ dsym(int sptr)
 #ifdef ACCROUTG
     putnzint("accrout", ACCROUTG(0));
     ACCROUTP(0, 0);
+#endif
+#ifdef OMPACCFUNCDEVG
+      putbit("ompaccel-devicefunc", OMPACCFUNCDEVG(0));
+      OMPACCFUNCDEVP(0, 0);
+#endif
+#ifdef OMPACCFUNCKERNELG
+      putbit("ompaccel-kernelfunc", OMPACCFUNCKERNELG(0));
+      OMPACCFUNCKERNELP(0, 0);
 #endif
 #ifdef IPAINFOG
     putnzint("ipainfo", IPAINFOG(0));
@@ -2437,7 +2457,7 @@ dgbl(void)
   putnzint("gbl.func_count", mbl.func_count);
   mbl.func_count = 0;
   putnzint("gbl.rutype=", mbl.rutype);
-  mbl.rutype = (RUTYPE)0; // ??? no 0 value defined
+  mbl.rutype = (RUTYPE)0; // no 0 value defined
   putnzint("gbl.funcline=", mbl.funcline);
   mbl.funcline = 0;
   putnzint("gbl.threadprivate=", mbl.threadprivate);
@@ -3078,8 +3098,8 @@ dumpdtype(DTYPE dtype)
     putint("numdim", numdim);
     putnzint("scheck", AD_SCHECK(ad));
     putnsym("zbase", (SPTR) AD_ZBASE(ad)); // ???
-    putnsym("numelm", (SPTR) AD_NUMELM(ad)); // ???
-    putnsym("sdsc", (SPTR) AD_SDSC(ad)); // ???
+    putnsym("numelm", AD_NUMELM(ad));
+    putnsym("sdsc", AD_SDSC(ad));
     if (numdim >= 1 && numdim <= 7) {
       int i;
       for (i = 0; i < numdim; ++i) {
