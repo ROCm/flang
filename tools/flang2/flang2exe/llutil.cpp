@@ -2125,7 +2125,12 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
     if (p->flags & OPF_NULL_TYPE) {
       if (!(flags & FLG_OMIT_OP_TYPE))
         write_type(p->ll_type);
-      print_token(" null");
+      // AOCC: when pointer is initialized with a value, it is made as i64 type
+      // initialize it with 0
+      if (!(strcmp(p->ll_type->str,"i64")))
+         print_token(" 0");
+      else
+         print_token(" null");
     } else {
       assert(p->ll_type, "write_operand(): no type when expected", 0, ERR_Fatal);
       if (!(flags & FLG_OMIT_OP_TYPE)) {

@@ -435,6 +435,7 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
       break;
     }
     do {
+      bool initptrwithnull = true;
       if (DTY(tdtype) != TY_PTR && DTY(tdtype) != TY_STRUCT) {
         if (*ptrcnt) {
           if (!first_data)
@@ -548,8 +549,13 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
           fprintf(ASMFIL, ", ");
         *ptrcnt = *ptrcnt + 1;
         *i8cnt = 0;
-        *cptr = put_next_member(*cptr);
+        initptrwithnull = true;
+        // AOCC: if a f77 pointer is initialized with int value,we mark it as i64 type
+        // null pointer initialization need to be changed to 0 initialization
+        if (*cptr && (!strncmp(*cptr,"i64",3) || (!strncmp(*cptr,", i64",5))))
+          initptrwithnull = false;
 
+        *cptr = put_next_member(*cptr);
         if (DBGBIT(5, 32)) {
           fprintf(gbl.dbgfil,
                   "emit_init:put_addr first_data:%d i8cnt:%ld ptrcnt:%d\n",
@@ -559,7 +565,7 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
           put_addr(SPTR_NULL, tconval, DT_NONE);
         } else {
           put_addr(SymConval1((SPTR)tconval), CONVAL2G(tconval),
-                   DT_NONE); // ???
+                   DT_NONE,initptrwithnull); // ???
         }
         break;
 
@@ -969,7 +975,7 @@ gen_ptr_offset_val(int offset, LL_Type *ret_type, char *ptr_nm)
    \endverbatim
  */
 void
-put_addr(SPTR sptr, ISZ_T off, DTYPE dtype)
+put_addr(SPTR sptr, ISZ_T off, DTYPE dtype, bool initptrwithnull)
 {
   const char *name, *elem_type;
   bool is_static_or_common_block_var, in_fortran;
@@ -1029,11 +1035,16 @@ put_addr(SPTR sptr, ISZ_T off, DTYPE dtype)
         LL_Value *ll_offset = gen_ptr_offset_val(off, ll_type, SNAME(sptr));
         fprintf(ASMFIL, "%s", ll_offset->data);
       }
-    } else
-      fprintf(ASMFIL, "null");
-  } else if (off == 0)
-    fprintf(ASMFIL, "null");
-  else
+    } else {
+        // AOCC: if a f77 pointer is initialized with int value,we mark it as i64 type
+        // null pointer initialization need to be changed to 0 initialization
+      initptrwithnull?fprintf(ASMFIL, "null"):fprintf(ASMFIL, "0");
+    }
+  } else if (off == 0) {
+        // AOCC: if a f77 pointer is initialized with int value,we mark it as i64 type
+        // null pointer initialization need to be changed to 0 initialization
+      initptrwithnull?fprintf(ASMFIL, "null"):fprintf(ASMFIL, "0");
+  } else
     fprintf(ASMFIL, "%ld", (long)off);
 }
 

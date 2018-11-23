@@ -772,7 +772,7 @@ get_struct_from_dsrt(SPTR sptr, DSRT *dsrtp, ISZ_T size, int *align8,
             }
             if (!first_data)
               strcat(buf, ", ");
-            strcat(buf, "i8* ");
+            strcat(buf, "i64 ");
             ptrcnt++;
           } else if (size_of_item) {
             if (ptrcnt || !i8cnt) {
