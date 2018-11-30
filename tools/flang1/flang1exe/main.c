@@ -20,6 +20,38 @@
  *
  */
 
+//===----------------------------------------------------------------------===//
+//====  Copyright (c) 2015 Advanced Micro Devices, Inc.  All rights reserved.
+//
+//               Developed by: Advanced Micro Devices, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// with the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// Redistributions of source code must retain the above copyright notice, this
+// list of conditions and the following disclaimers.
+//
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimers in the documentation
+// and/or other materials provided with the distribution.
+//
+// Neither the names of Advanced Micro Devices, Inc., nor the names of its
+// contributors may be used to endorse or promote products derived from this
+// Software without specific prior written permission.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+// THE SOFTWARE.
+//===----------------------------------------------------------------------===//
+//
 /** \file main.c
     \brief main program and initialization routines for fortran front-end
 */
@@ -815,6 +847,10 @@ init(int argc, char *argv[])
   register_string_arg(arg_parser, "cmdline", &(flg.cmdline), NULL);
   register_boolean_arg(arg_parser, "func_args_alias", 
                        (bool *)&(flg.func_args_alias), false); // AOCC
+  // AOCC begin
+  register_boolean_arg(arg_parser, "allow_gnu_extensions",
+                       (bool *)&(flg.allow_gnu_extensions), false);
+  // AOCC end
   register_boolean_arg(arg_parser, "es", (bool *)&(flg.es), false);
   register_boolean_arg(arg_parser, "pp", (bool *)&(flg.p), false);
 

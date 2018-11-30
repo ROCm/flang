@@ -14,6 +14,38 @@
  * limitations under the License.
  *
  */
+//===----------------------------------------------------------------------===//
+//====  Copyright (c) 2015 Advanced Micro Devices, Inc.  All rights reserved.
+//
+//               Developed by: Advanced Micro Devices, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// with the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// Redistributions of source code must retain the above copyright notice, this
+// list of conditions and the following disclaimers.
+//
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimers in the documentation
+// and/or other materials provided with the distribution.
+//
+// Neither the names of Advanced Micro Devices, Inc., nor the names of its
+// contributors may be used to endorse or promote products derived from this
+// Software without specific prior written permission.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+// THE SOFTWARE.
+//===----------------------------------------------------------------------===//
+//
 
 /** \file
     \brief Fortran module support.
@@ -46,6 +78,9 @@ typedef enum {
   IEEE_FEATURES_MOD,        /* ieee_features module */
   ISO_FORTRAN_ENV,          /* iso_fortan_env module */
   NML_MOD,                  /* namelist */
+  // AOCC begin
+  GNU_EXT_MOD,              /* gnu extensions module */
+  // AOCC end
   FIRST_USER_MODULE,        /* beginning of use modules */
   MODULE_ID_MAX = 0x7fffffff,
 } MODULE_ID;
@@ -458,6 +493,13 @@ apply_use_stmts(void)
       exportb.iso_fortran_env_library = TRUE;
     apply_use(ISO_FORTRAN_ENV);
   }
+
+  // AOCC begin
+  if (usedb.base[GNU_EXT_MOD].module) {
+    /* use gnu ext module */
+    apply_use(GNU_EXT_MOD);
+  }
+  // AOCC end
 
   for (m_id = FIRST_USER_MODULE; m_id < usedb.avl; m_id++) {
     apply_use(m_id);
@@ -876,6 +918,31 @@ add_predefined_ieeearith_module(void)
   }
 }
 
+// AOCC begin
+// Returns true if it is not a user module.
+int is_inbuilt_module(const char* name) {
+  if (name == NULL || strcmp(name, "") == 0)
+      return 0;
+  if (strcmp(name, "iso_c_binding") == 0) {
+    return 1;
+  } else if (strcmp(name, "ieee_arithmetic") == 0) {
+    return 1;
+  } else if (strcmp(name, "ieee_arithmetic_la") == 0) {
+    return 1;
+  } else if (strcmp(name, "ieee_exceptions") == 0) {
+    return 1;
+  } else if (strcmp(name, "ieee_features") == 0) {
+    return 1;
+  } else if (strcmp(name, "iso_fortran_env") == 0) {
+    return 1;
+  } else if (strcmp(name, "gnu_extensions") == 0) {
+    return 1;
+  }
+
+  return 0;
+}
+// AOCC end
+
 /** \brief Begin processing a USE statement.
  * \a use - sym ptr of module identifer in use statement
  * Find or create an entry in usedb for it and set 'module_id' to the index.
@@ -931,6 +998,10 @@ open_module(SPTR use)
     module_id = IEEE_FEATURES_MOD;
   } else if (strcmp(name, "iso_fortran_env") == 0) {
     module_id = ISO_FORTRAN_ENV;
+  // AOCC begin
+  } else if (strcmp(name, "gnu_extensions") == 0) {
+    module_id = GNU_EXT_MOD;
+  // AOCC end
   } else {
     module_id = usedb.avl++;
   }

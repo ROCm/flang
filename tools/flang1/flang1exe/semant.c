@@ -14,6 +14,38 @@
  * limitations under the License.
  *
  */
+//===----------------------------------------------------------------------===//
+//====  Copyright (c) 2015 Advanced Micro Devices, Inc.  All rights reserved.
+//
+//               Developed by: Advanced Micro Devices, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// with the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// Redistributions of source code must retain the above copyright notice, this
+// list of conditions and the following disclaimers.
+//
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimers in the documentation
+// and/or other materials provided with the distribution.
+//
+// Neither the names of Advanced Micro Devices, Inc., nor the names of its
+// contributors may be used to endorse or promote products derived from this
+// Software without specific prior written permission.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+// THE SOFTWARE.
+//===----------------------------------------------------------------------===//
+//
 
 /**
     \file
@@ -427,6 +459,25 @@ static void _do_iface(int, int);
 static void fix_iface(int);
 static void fix_iface0();
 
+// AOCC Begin
+static int
+import_mk_newsym(char *name, int stype)
+{
+  int sptr;
+
+  sptr = getsymbol(name);
+  /* if this is ST_UNKNOWN, or is a MODULE and we want a MODULE, use it.
+   * otherwise, insert a new symbol */
+  if (STYPEG(sptr) != ST_UNKNOWN &&
+      (STYPEG(sptr) != ST_MODULE || stype != ST_MODULE))
+    sptr = insert_sym(sptr);
+  STYPEP(sptr, stype);
+  SCOPEP(sptr, 0);
+
+  return sptr;
+}
+// AOCC End
+
 /** \brief Initialize semantic analyzer for new user subprogram unit.
  */
 void
@@ -650,6 +701,18 @@ semant_init(int noparse)
     if (gbl.internal)
       restore_host_state(4);
   }
+
+  // AOCC begin
+  if (flg.allow_gnu_extensions && is_inbuilt_module(SYMNAME(sem.mod_sym)) == 0) {
+    int module_sym = import_mk_newsym("gnu_extensions", ST_MODULE);
+    push_scope_level(module_sym, SCOPE_USE);
+    init_use_stmts();
+    open_module(module_sym);
+    add_use_stmt();
+    apply_use_stmts();
+    close_module();
+  }
+  // AOCC End
 }
 
 /* for each SC_DUMMY parameter that is passed by value,
@@ -776,6 +839,7 @@ end_subprogram_checks()
 
 static int restored = 0;
 
+
 /** \brief Semantic actions - part 1.
     \param rednum reduction number
     \param top    top of stack after reduction
@@ -830,6 +894,7 @@ semant1(int rednum, SST *top)
   int newpolicyidx;
   int newshapeid;
   int idptemp, newsubidx;
+
 
   switch (rednum) {
 
