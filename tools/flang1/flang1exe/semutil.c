@@ -1969,6 +1969,7 @@ mkvarref(SST *stktop, ITEM *list)
       goto add_base;
 
     case ST_PROC:
+    case ST_MODPROC:
       if (FVALG(sptr) == 0 && DTYPEG(sptr) == 0) {
         error(84, 3, gbl.lineno, SYMNAME(sptr),
               "- attempt to use a SUBROUTINE as a FUNCTION");
