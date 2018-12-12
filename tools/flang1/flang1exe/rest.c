@@ -2521,12 +2521,18 @@ handle_seq_section(int entry, int arr, int loc, int std, int *retval,
   if (DTY(topdtype) == TY_ARRAY)
     topdtype = DTY(topdtype + 1);
 
+// AOCC: contiguous attribute handling doesnt work correctly
+// with openifs. currenlty disabling the same. The problem
+// is with state%T, state%V and state%U arrays of state_type.
+
+#if 0
   if (simplewholearray && CONTIGATTRG(arraysptr)) {
     *retval = arr;
     *descr = DESCRG(arraysptr) > NOSYM ?
       check_member(arrayast, mk_id(DESCRG(arraysptr))) : 0;
     return;
   }
+#endif
 
   /* whole array with no distribution */
   if (!is_seq_pointer
