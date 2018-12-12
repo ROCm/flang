@@ -3680,12 +3680,10 @@ lower_symbol(int sptr)
       putbit("internref", 0);
     } else {
       putbit("uplevel", 1);
-      if (INTERNREFG(sptr)) {
+      if (INTERNREFG(sptr))
         putbit("internref", 1);
-      }
-      else {
+      else
         putbit("internref", 0);
-      }
     }
     putbit("ptrsafe", PTRSAFEG(sptr));
     putbit("thread", THREADG(sptr));

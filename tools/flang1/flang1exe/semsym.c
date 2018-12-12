@@ -545,6 +545,7 @@ set_internref_flag(int sptr)
 {
   INTERNREFP(sptr, 1);
   if (DTY(DTYPEG(sptr)) == TY_ARRAY || POINTERG(sptr) || ALLOCATTRG(sptr) ||
+// AOCC: changes to support character arrays as subroutine internal variables
      (DTY(DTYPEG(sptr)) == TY_CHAR || DTY(DTYPEG(sptr)) == TY_NCHAR) ||
       IS_PROC_DUMMYG(sptr)) {
     int descr, sdsc, midnum;
@@ -558,12 +559,13 @@ set_internref_flag(int sptr)
     if (midnum)
       INTERNREFP(midnum, 1);
   }
+  // AOCC: changes to support character arrays as subroutine internal variables
   if (DTY(DTYPEG(sptr)) == TY_CHAR || DTY(DTYPEG(sptr)) == TY_NCHAR ) {
    if (ADJLENG(sptr)) {
       int cvlen = CVLENG(sptr);
       if (cvlen) INTERNREFP(cvlen, 1);
    }
-  }   
+  }
   if (DTY(DTYPEG(sptr)) == TY_ARRAY ) {
     ADSC *ad;
     ad = AD_DPTR(DTYPEG(sptr));
