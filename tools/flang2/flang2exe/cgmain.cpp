@@ -9243,14 +9243,6 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     mask_ili = ILI_OPND(ilix, 3);
     op_lltype = make_lltype_from_dtype(ili_get_vect_dtype(lhs_ili));
 
-    if ((*vect_lltype->sub_types)->data_type !=
-        (*op_lltype->sub_types)->data_type) {
-      assert(
-          0,
-          "VPERMUTE: result and operand dtypes must have matching base type.",
-          0, ERR_Severe);
-    }
-
     op1 = gen_llvm_expr(lhs_ili, op_lltype);
     if (ILI_OPC(rhs_ili) == IL_NULL) /* a don't care, generate an undef */
       op1->next = make_undef_op(op1->ll_type);
@@ -10347,7 +10339,7 @@ needDebugInfoFilt(SPTR sptr)
     return true;
   /* Fortran case needs to be revisited when we start to support debug, for now
    * just the obvious case */
-  return (!CCSYMG(sptr) || (DCLDG(sptr) && (STYPEG(sptr) == ST_ARRAY)));
+  return (!CCSYMG(sptr) || DCLDG(sptr));
 }
 #ifdef OMP_OFFLOAD_LLVM
 INLINE static bool
@@ -11682,8 +11674,13 @@ gen_acon_expr(int ilix, LL_Type *expected_type)
     return make_constval_op(make_int_lltype(ptrbits), val[1], val[0]);
   }
   sym_is_refd(sptr);
-  process_sptr_offset(sptr, variable_offset_in_aggregate(
-                                sptr, ACONOFFG(opnd) < 0 ? 0 : ACONOFFG(opnd)));
+  /* In case of non-struct, e.g. a Fortran array may have ACON as sptr + offset,
+   * the "offset" works with "bound" and "index" together to calculate the 
+   * addresses of array elements. However, when generating debug metadata, the
+   * "offset" is not needed in the !DIExpression of the array variable. The
+   * array variable's location always starts from the beginning/first element. */
+  idx = (STYPEG(sptr) == ST_ARRAY || ACONOFFG(opnd) < 0) ? 0 : ACONOFFG(opnd);
+  process_sptr_offset(sptr, variable_offset_in_aggregate(sptr, idx));
   idx = ACONOFFG(opnd); /* byte offset */
 
   ty1 = make_lltype_from_dtype(DT_ADDR);
