@@ -1,12 +1,4 @@
 /*
- * Copyright (c) 2017 Advanced Micro Devices, Inc.
- *
- * Using x86 specific trim code to check performance impact
- *
- * Date of Modification: May 2018
- */
-
-/*
  * Copyright (c) 1995-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2880,9 +2872,6 @@ ENTF90(TRIMA, trima)
    *  If the target generates illegal alignment errors, need to not do
    *  int copies.  So, enable fast code for x8664 only for now.
    *
-  */
-// AOCC Begin
-// uncommented the below code to check performance impact
       i = CLEN(expr)-1;
       while (i >= 0 && CADR(expr)[i] == ' ')
           --i;
@@ -2891,9 +2880,7 @@ ENTF90(TRIMA, trima)
       for (j = 0; j <= i; ++j)
           CADR(res)[j] = CADR(expr)[j];
       return i+1;
-// AOCC  End
-// AOCC commented the below code to check performance impact
-/*
+  */
   i = CLEN(expr);
   while (i > 0) {
     if (CADR(expr)[i - 1] != ' ') {
@@ -2939,8 +2926,6 @@ ENTF90(TRIMA, trima)
     }
   }
   return 0;
-*/
-// AOCC  End
 }
 /* 32 bit CLEN version */
 __INT_T
