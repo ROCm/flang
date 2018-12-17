@@ -816,6 +816,9 @@ init(int argc, char *argv[])
   /* x flags */
   register_xflag_arg(arg_parser, "x", flg.x,
                      (sizeof(flg.x) / sizeof(flg.x[0])));
+  /* AOCC: z flags */
+  register_xflag_arg(arg_parser, "z", flg.z,
+                     (sizeof(flg.z) / sizeof(flg.z[0])));
   /* FIXME : temporary. Needs to be removed once the driver is updated */
   //set_xflag(68, 1);
   register_yflag_arg(arg_parser, "y", flg.x);

@@ -56,6 +56,7 @@ FLG flg = {
     FALSE, /* not terse for summary, etc. */
     '_',   /* default is to change '$' to '_' */
     {0},   /*  x flags  */
+    {0},   /*  z flags */
     FALSE, /*  don't quad align "unconstrained objects" ; use natural
               alignment */
     FALSE, /* anno - default to no annotation of .s files */

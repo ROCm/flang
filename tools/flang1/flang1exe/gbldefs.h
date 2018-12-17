@@ -51,6 +51,7 @@
 #define GBL_SIZE_T_FORMAT "zu"
 
 #define XBIT(n, m) (flg.x[n] & m)
+#define ZBIT(n, m) (flg.z[n] & m)
 #define F77OUTPUT XBIT(49, 0x80)
 /* This x-bit controls the insertion of scope labels. On by default. */
 #define XBIT_USE_SCOPE_LABELS !XBIT(198, 0x40000)
