@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,28 @@
  * limitations under the License.
  *
  */
-/** \file
- * \brief Convert 64-bit ints to/from legacy big-endian 2-word form.
- */
 
-#include "legacy-ints.h"
+#include "mthdecls.h"
+#if     defined(__SSE4_1__) || defined(__AVX__)
+#include    <immintrin.h>
+#endif
 
-void
-bgitoi64(int64_t v, DBLINT64 res)
+#if     defined(__AVX__)
+float
+__mth_i_floor_avx(float x)
 {
-  res[0] = v >> 32;
-  res[1] = v;
+  return _mm_cvtss_f32(_mm_floor_ss(_mm_set1_ps(x), _mm_set1_ps(x)));
 }
-
-int64_t
-i64tobgi(DBLINT64 v)
+#elif   defined(__SSE4_1__)
+float
+__mth_i_floor_sse(float x)
 {
-  int64_t x = ((int64_t) v[0] << 32) | (uint32_t) v[1];
-  return x;
+  return _mm_cvtss_f32(_mm_floor_ss(_mm_set1_ps(x), _mm_set1_ps(x)));
 }
+#else
+float
+__mth_i_floor(float x)
+{
+  return floorf(x);
+}
+#endif
