@@ -1986,6 +1986,12 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
     ilmtpl = (ILMMAC *)&ilmtp[pattern];
 
     newili.opc = (ILI_OP)ilmtpl->opc; /* get ili opcode */ // ???
+    // initialize newili
+    newili.opnd[0] = 0;
+    newili.opnd[1] = 0; /* cause some FREE ili have two opnds (target dep)*/
+    newili.opnd[2] = 0;
+    newili.opnd[3] = 0;
+    newili.opnd[4] = 0;
 
     /* Loop for each operand in this ili template */
     for (i = 0, noprs = ilis[newili.opc].oprs; noprs > 0; ++i, --noprs) {
