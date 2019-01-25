@@ -4,7 +4,7 @@
  *
  */
 /*
- * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7209,6 +7209,9 @@ have_masked_intrinsic(int ilix)
   case IL_VDPOWIS:
   case IL_VRSQRT:
   case IL_VRCP:
+  case IL_VFLOOR:
+  case IL_VCEIL:
+  case IL_VAINT:
     mask = ILI_OPND(ilix, IL_OPRS(vopc) - 1); /* get potential mask */
     if (ILI_OPC(mask) != IL_NULL) {
       /* have mask */
@@ -7691,6 +7694,12 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_JSR:
   case IL_JSRA:
     /*  ILI_ALT may be IL_GJSR/IL_GJSRA */
+    break;
+  case IL_FFLOOR:
+  case IL_DFLOOR:
+  case IL_FCEIL:
+  case IL_DCEIL:
+    /* let floor/ceil have their own processing so we can use llvm intrinsics */
     break;
   case IL_VSIN:
   case IL_VCOS:
@@ -9003,6 +9012,30 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_IABS:
   case IL_KABS:
     operand = gen_abs_expr(ilix);
+    break;
+  case IL_FFLOOR:
+    operand = gen_call_llvm_intrinsic(
+        "floor.f32",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
+        make_lltype_from_dtype(DT_FLOAT), NULL, I_PICALL);
+    break;
+  case IL_DFLOOR:
+    operand = gen_call_llvm_intrinsic(
+        "floor.f64",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
+        make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
+    break;
+  case IL_FCEIL:
+    operand = gen_call_llvm_intrinsic(
+        "ceil.f32",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
+        make_lltype_from_dtype(DT_FLOAT), NULL, I_PICALL);
+    break;
+  case IL_DCEIL:
+    operand = gen_call_llvm_intrinsic(
+        "ceil.f64",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
+        make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
   case IL_IMIN:
   case IL_UIMIN:
