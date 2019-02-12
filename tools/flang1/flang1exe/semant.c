@@ -459,25 +459,6 @@ static void _do_iface(int, int);
 static void fix_iface(int);
 static void fix_iface0();
 
-// AOCC Begin
-static int
-import_mk_newsym(char *name, int stype)
-{
-  int sptr;
-
-  sptr = getsymbol(name);
-  /* if this is ST_UNKNOWN, or is a MODULE and we want a MODULE, use it.
-   * otherwise, insert a new symbol */
-  if (STYPEG(sptr) != ST_UNKNOWN &&
-      (STYPEG(sptr) != ST_MODULE || stype != ST_MODULE))
-    sptr = insert_sym(sptr);
-  STYPEP(sptr, stype);
-  SCOPEP(sptr, 0);
-
-  return sptr;
-}
-// AOCC End
-
 /** \brief Initialize semantic analyzer for new user subprogram unit.
  */
 void
@@ -701,18 +682,6 @@ semant_init(int noparse)
     if (gbl.internal)
       restore_host_state(4);
   }
-
-  // AOCC begin
-  if (flg.allow_gnu_extensions && is_inbuilt_module(SYMNAME(sem.mod_sym)) == 0) {
-    int module_sym = import_mk_newsym("gnu_extensions", ST_MODULE);
-    push_scope_level(module_sym, SCOPE_USE);
-    init_use_stmts();
-    open_module(module_sym);
-    add_use_stmt();
-    apply_use_stmts();
-    close_module();
-  }
-  // AOCC End
 }
 
 /* for each SC_DUMMY parameter that is passed by value,
@@ -931,6 +900,17 @@ semant1(int rednum, SST *top)
     sem.is_hpf = scn.is_hpf;
     sem.alloc_std = 0;
     sem.p_dealloc_delete = NULL;
+
+    // AOCC begin
+    if (gbl.currsub != 0 && sem.pgphase > PHASE_USE) {
+      if (flg.allow_gnu_extensions &&
+          is_inbuilt_module(SYMNAME(sem.mod_sym)) == 0) {
+      apply_gnu_ext();
+      apply_use_stmts();
+      }
+    }
+    // AOCC end
+
     if (sem.pgphase == PHASE_USE) {
       switch (scn.stmtyp) {
       case TK_USE:

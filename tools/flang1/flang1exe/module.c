@@ -441,6 +441,34 @@ add_only(int listitem, int save_sem_scope_level)
   return listitem;
 }
 
+// AOCC begin
+static int
+import_mk_newsym(char *name, int stype)
+{
+  int sptr;
+
+  sptr = getsymbol(name);
+  /* if this is ST_UNKNOWN, or is a MODULE and we want a MODULE, use it.
+   * otherwise, insert a new symbol */
+  if (STYPEG(sptr) != ST_UNKNOWN &&
+      (STYPEG(sptr) != ST_MODULE || stype != ST_MODULE))
+    sptr = insert_sym(sptr);
+  STYPEP(sptr, stype);
+  SCOPEP(sptr, 0);
+
+  return sptr;
+}
+
+void apply_gnu_ext(void)
+{
+  /* use gnu ext module */
+  init_use_stmts();
+  int module_sym = import_mk_newsym("gnu_extensions", ST_MODULE);
+  open_module(module_sym);
+  add_use_stmt();
+}
+// AOCC end
+
 /* We're at the beginning of the statement after a sequence of USE statements.
  * Apply the use statements seen.
  * Clean up after processing the sequence of USE statements.
@@ -493,7 +521,6 @@ apply_use_stmts(void)
       exportb.iso_fortran_env_library = TRUE;
     apply_use(ISO_FORTRAN_ENV);
   }
-
   // AOCC begin
   if (usedb.base[GNU_EXT_MOD].module) {
     /* use gnu ext module */
