@@ -43,6 +43,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
 # THE SOFTWARE.
 #===----------------------------------------------------------------------===#
+#
+# AMD Support for DNORM intrinsic
+# Date of Modification: 21st February 2019
+#===----------------------------------------------------------------------===#
 
 
 enable_language(C ASM Fortran) # Enable assembly and Fortran
@@ -359,6 +363,7 @@ SET(FTN_SUPPORT_DESC_DEP
   descFioUtil.c
   descIntrins.c
   dist.c
+  dnormreal.c
   dynam.c
   eoshift.c
   fill.c

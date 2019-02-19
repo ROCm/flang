@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /**
   \file
   \brief Routines used by lower.c for lowering to ILMs
@@ -2922,6 +2931,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_ALL:
   case I_ANY:
   case I_COUNT:
+  // AOCC Begin
+  case I_NORM2:
+  // AOCC End
   case I_DOT_PRODUCT:
   case I_MATMUL:
   case I_MATMUL_TRANSPOSE:
@@ -4358,6 +4370,9 @@ lower_intrinsic(int ast)
   case I_ALL:
   case I_ANY:
   case I_COUNT:
+  // AOCC Begin
+  case I_NORM2:
+  // AOCC End
   case I_DOT_PRODUCT:
   case I_MATMUL:
   case I_MATMUL_TRANSPOSE:

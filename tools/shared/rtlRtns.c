@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /** \file Provides the front-end access to the run time library structure
  *  defined  in rte_rtns.h
  */
@@ -262,6 +271,13 @@ FtnRteRtn ftnRtlRtns[] = {
     {"nearestx", "", false, ""},
     {"nlena", "", true, ""},
     {"nlentrim", "", false, ""},
+    // AOCC Begin
+    // Enable i8 descriptor to access the dims in library
+    {"norm2_real4", "", true, ""},
+    {"norm2_real4_dim", "", true, ""},
+    {"norm2_real8", "", true, ""},
+    {"norm2_real8_dim", "", true, ""},
+    // AOCC End
     {"nrepeat", "", false, ""},
     {"nscan", "", false, "k"},
     {"nstr_copy", "", false, ""},

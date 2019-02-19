@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 #ifndef FORTRAN_RTLRTNS_H_
 #define FORTRAN_RTLRTNS_H_
 
@@ -267,6 +276,13 @@ typedef enum {
   RTE_nearestx,
   RTE_nlena,
   RTE_nlentrim,
+  // AOCC Begin
+  // Order should match the order in ftnRtlRtns[]
+  RTE_norm2_real4,
+  RTE_norm2_real4_dim,
+  RTE_norm2_real8,
+  RTE_norm2_real8_dim,
+  // AOCC End
   RTE_nrepeat,
   RTE_nscan,
   RTE_nstr_copy,

@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /**
  *  \file
  *  \brief Symbol initialization for Fortran
@@ -1541,6 +1550,9 @@ const char *SyminiFE90::init_names0[] = {
     "any",
     "compl",
     "count",
+    // APCC Begin
+    "norm2",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -2059,6 +2071,9 @@ const char *SyminiFE90::init_names1[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "norm2",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -2578,6 +2593,9 @@ const char *SyminiFE90::init_names2[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "norm2",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -3150,6 +3168,9 @@ const char *SyminiFE90::init_names3[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "norm2",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",

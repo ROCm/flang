@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /**
     \file
     \brief Optimizer submodule responsible for performing flow analysis
@@ -697,6 +706,9 @@ bld_ud(int ast, int *dummy)
     case I_MAXVAL:
     case I_MINVAL:
     case I_CSHIFT:
+    // AOCC Begin
+    case I_NORM2:
+    // AOCC Begin
     case I_DOT_PRODUCT:
     case I_EOSHIFT:
     case I_MAXLOC:

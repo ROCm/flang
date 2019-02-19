@@ -23,6 +23,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /** \file
     \brief Fortran front-end utility routines used by Semantic Analyzer to
            process functions, subroutines, predeclareds, etc.
@@ -5780,6 +5789,49 @@ ref_pd(SST *stktop, ITEM *list)
       XFR_ARGAST(1);
     }
     break;
+
+  // AOCC Begin
+  // Pre-Defined function norm2()
+  case PD_norm2:
+
+    if (!XBIT(255, 0x01)) {
+      char buf[64];
+      sprintf(buf, "norm2 is supported only in f2008, use Hx,255,0x01 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    // Allow only one argument for now
+    if (count != 1) {
+      E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+    // Evaluate all the arguments, and create them
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    shape1 = SST_SHAPEG(ARG_STK(0));
+    int rank = SHD_NDIM(shape1);
+    // First argument alwys should be array
+    if ( DTY(dtype1) != TY_ARRAY) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    // When dim is specified, return vlaue is an array
+    if (rank > 1 && count > 1) {
+      dtyper = SST_DTYPEG(ARG_STK(0));
+    }
+
+    // Set return type to match the element type of arg1
+    if (DTYG(dtype1) == TY_REAL)
+      dtyper = DT_REAL4;
+
+    if (DTYG(dtype1) == TY_DBLE)
+      dtyper = DT_REAL8;
+
+    argt_count = count;
+    break;
+  // AOCC End
   case PD_dotproduct:
     if (!XBIT(49, 0x40)) /* if xbit set, CM fortran intrinsics allowed */
       goto bad_args;

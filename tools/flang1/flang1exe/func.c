@@ -23,6 +23,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ */
+
 /**
    \file
    \brief rewrite function args, etc
@@ -73,6 +82,9 @@ static int rewrite_sub_ast(int, int);
 static int mk_result_sptr(int, int, int *, int, int, int *);
 static LOGICAL take_out_user_def_func(int);
 static int matmul(int, int, int);
+// AOCC Begin
+static int emit_norm2(int, int, int);
+// AOOC End
 static int mmul(int, int, int); /* fast matmul */
 static int reshape(int, int, int);
 static int _reshape(int, DTYPE, int);
@@ -2062,6 +2074,12 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     ARGT_ARG(newargt, 1) = srcarray;
     ARGT_ARG(newargt, 2) = ARGT_ARG(func_args, 1);
     goto ret_new;
+
+  // AOCC Begin
+  case I_NORM2:  /* norm2(array[, dim]) */
+    return emit_norm2(func_ast, func_args, lhs);
+  // AOCC End
+
   case I_EOSHIFT: /* eoshift(array, shift, [boundary, dim]); */
     if (A_SHAPEG(ARGT_ARG(func_args, 1)))
       goto eoshiftcall; /* shift not a scalar */
@@ -4513,6 +4531,9 @@ search_conform_array(int ast, int flag)
       case I_MAXVAL:
       case I_MINVAL:
       case I_DOT_PRODUCT:
+      // AOCC Begin
+      case I_NORM2:
+      // AOCC End
       case I_ALL:
       case I_ANY:
       case I_COUNT:
@@ -6646,6 +6667,88 @@ subscript_lhs(int arr, int *subs, int dim, DTYPE dtype, int origlhs,
   ast = replace_ast_subtree(origlhs, destref, ast);
   return ast;
 }
+
+// AOCC Begin
+/*
+ * Emit AST for PD_NORM2
+ *
+ * func_ast: A_FUNC
+ * func_args: rewritten args
+ */
+
+static int
+emit_norm2(int func_ast, int func_args, int lhs) {
+
+  int nargs;
+  int srcarray;
+  int newargt;
+  int temp_sclr;
+  int retval;
+  int newsym;
+  char *name;
+  int ast;
+  int arg1, arg2;
+  int shape;
+  int rank;
+  int temp_arr;
+  int subscr[MAXSUBS];
+  int lhs_ast;
+
+  nargs = 3;
+
+  arg1 = ARGT_ARG(func_args, 0);
+  check_arg_isalloc(arg1);
+  if (ARGT_ARG(func_args, 1) == 0)
+    nargs--;
+  DTYPE dtype = A_DTYPEG(func_ast);
+  FtnRtlEnum rtlRtn;
+
+  // Define the return type, based on which fucnton name is formed.
+  switch (DTY(A_DTYPEG(func_ast))) {
+    case TY_REAL:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real4_dim;
+      else
+        rtlRtn = RTE_norm2_real4;
+      break;
+
+    case TY_DBLE:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real8_dim;
+      else
+        rtlRtn = RTE_norm2_real8;
+      break;
+    default:
+      error(456, 3, gbl.lineno, CNULL, CNULL);
+  }
+
+  newargt = mk_argt(nargs);
+  srcarray = ARGT_ARG(func_args, 0);
+  ARGT_ARG(newargt, 1) = srcarray;
+  if (nargs == 3) {
+    // Not suported yet.
+    // Should not reach here
+    // Create lhs array to hold the result
+    assert(0, "norm2 for two arguments not supported : should not reach here",
+           2, func_ast);
+  }
+  else {
+    // Create a scalar variable to store the result.
+    temp_sclr = sym_get_scalar("tmp", "r", dtype);
+    retval = mk_id(temp_sclr);
+    ARGT_ARG(newargt, 0) = retval;
+  }
+
+  name = mkRteRtnNm(rtlRtn);
+  newsym = sym_mkfunc(name, DT_NONE);
+
+  ast = mk_func_node(A_ICALL, mk_id(newsym), nargs, newargt);
+  A_OPTYPEP(ast, A_OPTYPEG(func_ast));
+  add_stmt_before(ast, arg_gbl.std);
+  return retval;
+}
+// AOCC End
+
 
 /*
  * func_ast: A_FUNC or A_INTR

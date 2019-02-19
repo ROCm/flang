@@ -14,6 +14,14 @@
 .\" * limitations under the License.
 .\" *
 .\" */
+.\"/*
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Support for DNORM intrinsic
+.\" *
+.\" * Date of Modification: 21st February 2019
+.\" *
+.\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
 .sp
@@ -1128,6 +1136,8 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT elemental --
 .PD COUNT - -
 .AT transformational mask *dim
+.PD NORM2 - -
+.AT transformational array *dim
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -

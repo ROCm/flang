@@ -14,6 +14,14 @@
 .\" * limitations under the License.
 .\" *
 .\" */
+.\"/*
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Support for DNORM intrinsic
+.\" *
+.\" * Date of Modification: 21st February 2019
+.\" *
+.\" */
 .NS 18 "Other Compiler Switches"
 .nr ii 8
 
@@ -5447,3 +5455,8 @@ Init libomptarget library in the main instead of constructor.
 Enable codegne for push loop trip count for libomptarget runtime.
 .XB 0x40:
 Enable codegen for spmd kernel init.
+
+.XF "255:"
+Enable various f2008 features
+.XB 0x01:
+Enable norm2 support.
