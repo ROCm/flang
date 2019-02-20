@@ -3341,6 +3341,8 @@ can_inline_minloc(int dest, int args) {
      return false;
    }
     dim = get_int_cval(A_SPTRG(astdim));
+  } else {
+    return false;
   }
 
   if (dim >= 1) {
@@ -6390,9 +6392,9 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
           subscr = mk_cval(j + 1, astb.bnd.dtype);
           ast2 = mk_subscr(astsubscrtmp, &subscr, 1, dtyperes);
           // AOCC Begin
-          int lb = astb.stg_base[DOs[j]].w5;
-          int ub = astb.stg_base[DOs[j]].w6;
-          int st = astb.stg_base[DOs[j]].w7;
+          int lb = A_M1G(DOs[j]);
+          int ub = A_M2G(DOs[j]);
+          int st = A_M3G(DOs[j]);
 
           int lbval = 0;
           int ubval = 0;
