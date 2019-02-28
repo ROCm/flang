@@ -3325,6 +3325,9 @@ can_inline_minloc(int dest, int args) {
   if (!dest) return false;
   if (!srcarray) return false;
 
+  int shape = A_SHAPEG(dest);
+  if (!shape) return false;
+
   if (A_DTYPEG(dest) == A_SUBSCR) {
        return false;
      int shape = A_SHAPEG(dest);
@@ -3341,8 +3344,6 @@ can_inline_minloc(int dest, int args) {
      return false;
    }
     dim = get_int_cval(A_SPTRG(astdim));
-  } else {
-    return false;
   }
 
   if (dim >= 1) {
