@@ -41,6 +41,13 @@ typedef enum SPTR {
   SPTR_MAX = 67108864 /* Maximum allowed value */
 } SPTR;
 
+// AOCC begin
+typedef enum {
+  STD_UNKNOWN, /* default */
+  F2008
+} FORTRAN_STD;
+// AOCC end
+
 #ifdef __cplusplus
 // Enable symbol table traversals to work.
 static inline void operator++(SPTR &s)
@@ -222,6 +229,8 @@ typedef struct {
   // AOCC Begin
   LOGICAL use_llvm_math_intrin; /* AOCC: use llvm math intrinsic instead of flang runtime */
   LOGICAL func_args_alias;      /* assume function arguments are aliasing */
+  char *std_string; /* input string arg of -std= */
+  FORTRAN_STD std;
   // AOCC End
 } FLG;
 

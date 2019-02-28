@@ -663,6 +663,7 @@ init(int argc, char *argv[])
   // AOCC Begin
   register_boolean_arg(arg_parser, "use_llvm_math_intrin",
       (bool *)&(flg.use_llvm_math_intrin), true);
+  register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   // AOCC End
 
   /* Run argument parser */
@@ -709,6 +710,16 @@ init(int argc, char *argv[])
       flg.recursive = false;
     }
   }
+  // AOCC begin
+  /* setting the fortran standard */
+  if (strcmp(flg.std_string, "f2008") == 0) {
+    flg.std = F2008;
+  } else if (strcmp(flg.std_string, "unknown") == 0) {
+    flg.std = STD_UNKNOWN;
+  } else {
+    interr("Erroneous -std option", 0, ERR_Fatal);
+  }
+  // AOCC end
 
   /* Free memory */
   destroy_arg_parser(&arg_parser);

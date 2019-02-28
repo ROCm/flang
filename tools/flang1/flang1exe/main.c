@@ -856,6 +856,7 @@ init(int argc, char *argv[])
   // AOCC begin
   register_boolean_arg(arg_parser, "allow_gnu_extensions",
                        (bool *)&(flg.allow_gnu_extensions), false);
+  register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   // AOCC end
   register_boolean_arg(arg_parser, "es", (bool *)&(flg.es), false);
   register_boolean_arg(arg_parser, "pp", (bool *)&(flg.p), false);
@@ -885,6 +886,17 @@ init(int argc, char *argv[])
       }
     }
   }
+
+  // AOCC begin
+  /* setting the fortran standard */
+  if (strcmp(flg.std_string, "f2008") == 0) {
+    flg.std = F2008;
+  } else if (strcmp(flg.std_string, "unknown") == 0) {
+    flg.std = STD_UNKNOWN;
+  } else {
+    interr("Erroneous -std option", 0, ERR_Fatal);
+  }
+  // AOCC end
 
   /* Set preporocessor and Fortran source form
    * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
