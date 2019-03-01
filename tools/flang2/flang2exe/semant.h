@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for transpose intrinsic during initialization
+ *
+ * Date of Modification: 1st March 2019
+ *
+ */
+
 #ifndef SEMANT_H_
 #define SEMANT_H_
 
@@ -432,6 +441,7 @@ struct CONST {
 #define AC_I_minloc 53
 #define AC_I_minval 54
 #define AC_I_scale 55
+#define AC_I_transpose 56 // AOCC
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 
 typedef struct {  /* STRUCTURE stack entries */
