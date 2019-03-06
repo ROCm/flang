@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Modification for output splitting
+ *
+ * Date of Modification: 6th February 2019
+ *
+ */
+
 /* clang-format off */
 
 /** \file
@@ -828,16 +837,35 @@ write_item(char *p, int len)
              /*	split lines if necessary; watch for the case where a long
                  character item is the first item for the record.  */
 
-      if (byte_cnt && ((fcb->reclen && newlen > fcb->reclen) ||
-                       (!fcb->reclen && newlen > 79))) {
-        ret_err = write_record();
-        if (ret_err)
-          return ret_err;
-        if (FWRITE(" ", 1, 1, fcb->fp) != 1)
-          return __io_errno();
-        newlen = len + 1;
-        record_written = FALSE;
+      // AOCC Begin
+      const char *wrap_output = getenv("FLANG_WRAP_MESSAGE_OUTPUT");
+      if (wrap_output && strcmp(wrap_output, "no") == 0) {
+        if (byte_cnt && (fcb->reclen && newlen > fcb->reclen)) {
+          ret_err = write_record();
+          if (ret_err)
+            return ret_err;
+          if (FWRITE(" ", 1, 1, fcb->fp) != 1)
+            return __io_errno();
+          newlen = len + 1;
+          record_written = FALSE;
+        }
       }
+      else {
+      // AOCC End
+          if (byte_cnt && ((fcb->reclen && newlen > fcb->reclen) ||
+                         (!fcb->reclen && newlen > 79))) {
+          ret_err = write_record();
+          if (ret_err)
+            return ret_err;
+          if (FWRITE(" ", 1, 1, fcb->fp) != 1)
+            return __io_errno();
+          newlen = len + 1;
+          record_written = FALSE;
+        }
+      // AOCC Begin
+      }
+      // AOCC End
+
       if (len && FWRITE(p, len, 1, fcb->fp) != 1)
         return __io_errno();
     }
