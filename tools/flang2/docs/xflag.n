@@ -5456,7 +5456,7 @@ Enable codegne for push loop trip count for libomptarget runtime.
 .XB 0x40:
 Enable codegen for spmd kernel init.
 
-.XF "255:"
+.XF "235:"
 Enable various f2008 features
 .XB 0x01:
 Enable norm2 support.

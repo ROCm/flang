@@ -5794,9 +5794,9 @@ ref_pd(SST *stktop, ITEM *list)
   // Pre-Defined function norm2()
   case PD_norm2:
 
-    if (!XBIT(255, 0x01)) {
+    if (!XBIT(235, 0x01)) {
       char buf[64];
-      sprintf(buf, "norm2 is supported only in f2008, use Hx,255,0x01 to enable\n");
+      sprintf(buf, "norm2 is supported only in f2008, use Hx,235,0x01 to enable\n");
       error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
     }
     // Allow only one argument for now
