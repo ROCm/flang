@@ -2702,8 +2702,7 @@ write_instructions(LL_Module *module)
       print_tmp_name(instrs->tmps);
       print_token(" = ");
       print_token(llvm_instr_names[i_name]);
-      if ((!flg.ieee || XBIT(216, 1)) &&
-        (llvm_info.curr_instr->flags & FAST_MATH_FLAG))
+      if ((!flg.ieee) || XBIT(216, 1))
         switch (i_name) {
         case I_FADD:
           if (XBIT(216, 2))
