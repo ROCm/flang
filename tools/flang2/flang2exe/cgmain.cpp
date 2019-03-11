@@ -19,6 +19,15 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for ivdep directive
+ *
+ * Date of Modification: 11th march 2019
+ *
+ */
+
 
 /**
    \file
@@ -54,6 +63,9 @@
 #include "ccffinfo.h"
 #include "main.h"
 #include "symfun.h"
+// AOCC Begin
+#include "direct.h"
+// AOCC End
 
 #ifdef OMP_OFFLOAD_LLVM
 #include "ompaccel.h"
@@ -1314,6 +1326,10 @@ schedule(void)
   SPTR func_sptr = GBL_CURRFUNC;
   LL_Module *current_module = cpu_llvm_module;
   bool first = true;
+  // AOCC Begin
+  int i;
+  LPPRG *lpprg;
+  // AOCC End
 
   funcId++;
   assign_fortran_storage_classes();
@@ -1515,6 +1531,11 @@ restartConcur:
       merge_next_block = false;
     }
 
+    // AOCC Begin
+    // clear the global flag set from last iteration
+    clear_rw_nodepchk();
+    // AOCC End
+
     if (XBIT(183, 0x10000000)) {
       if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
           (!ignore_simd_block(bih))) {
@@ -1524,6 +1545,45 @@ restartConcur:
         clear_rw_nodepchk();
       }
     }
+
+    // AOCC Begin
+    /** \brief Flang codegen support for !dir$ ivdep
+     *
+     * Following piece of code is added for handling ivdep directive. This
+     * pragma instructs the compiler to ignore assumed vector dependencies.
+     * Flang handles this pragma with a flag depchk in directives structure.
+     * By default this flag is set, indicating that always do dependency checks
+     * for the loop. Whenever Flang1 encounters !dir$ ivdep, it resets the
+     * depchk flag from 1 to 0. This is change is reflected in directive
+     * section of ilm file. Flang2 captures the change/addition in directive
+     * section and reset's the corresponding depchk flag. With the following
+     * code we capture the reset of depcheck flag and add nodepchke metadata
+     * to all load/store instructions in the scope of the pragma. This metadata
+     * will be captured by llvm::Loop::isAnnotatedParallel().
+     *
+     * The approach
+     * STEP 1 : Check if there are any loop pragmas
+     * STEP 2 : Iterate through avaibale pragmas
+     * STEP 2a: Check if depchk flag for current pragma is reset.
+     *          By default this flag is set for all pragmas
+     * STEP 2b: If the current pragma scope is within current range
+     *          Enable global flag to add  nodepcheck metadata
+     * STEP 2c: Stop if we find any nodepcheck pragma for current scope.
+     */
+    if (direct.lpg.avail > 1) {
+      for (i = 1; i < direct.lpg.avail; i++) {
+        lpprg = direct.lpg.stgb + i;
+        if (!direct.lpg.stgb->dirset.depchk) {
+          if ( BIH_LINENO(bih) >= lpprg->beg_line &&
+               BIH_LINENO(bih) <= lpprg->end_line) {
+            mark_rw_nodepchk(bih);
+            // Once we found right pragma, stop
+            break;
+          }
+        }
+      }
+    }
+    // AOCC End
 
     for (ilt = BIH_ILTFIRST(bih); ilt; ilt = ILT_NEXT(ilt)) {
       if (BIH_EN(bih) && ilt == BIH_ILTFIRST(bih)) {
