@@ -2544,13 +2544,16 @@ handle_seq_section(int entry, int arr, int loc, int std, int *retval,
   if (DTY(topdtype) == TY_ARRAY)
     topdtype = DTY(topdtype + 1);
 
-// AOCC: contiguous attribute handling doesnt work correctly
-// with openifs. currenlty disabling the same. The problem
-// is with state%T, state%V and state%U arrays of state_type.
-
-#if 0
-  if (simplewholearray && CONTIGATTRG(arraysptr)) {
-    *retval = arr;
+  if (simplewholearray && !is_pointer && CONTIGATTRG(arraysptr)) {
+    /* Note: The call to first_element() uses the descriptor of the declared
+     * dtype of arr which is fine for simple regular arrays. But it does not 
+     * work for pointers since a pointer's descriptor can change depending on 
+     * the pointer target. Typically this is accomplished by creating a section
+     * descriptor first (i.e., call mk_descr_from_section()) which takes into 
+     * account the runtime shape of the pointer target. We handle this and
+     * other pointer cases below. 
+     */ 
+    *retval = first_element(arr); 
     *descr = DESCRG(arraysptr) > NOSYM ?
       check_member(arrayast, mk_id(DESCRG(arraysptr))) : 0;
     return;

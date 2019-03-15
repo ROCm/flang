@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2592,7 +2592,7 @@ make_def(DTYPE dtype, int sptr, int rank, char *name, int flags)
   new_def->dtype = dtype;
   new_def->ll_type = NULL;
   new_def->sptr = sptr;
-  new_def->sptr = rank;
+  new_def->rank = rank;
   new_def->flags = flags;
   new_def->printed = 0;
   new_def->name = name;
@@ -3384,13 +3384,13 @@ add_init_subzero_consts(DTYPE dtype, OPERAND *cur_op, ISZ_T *offset,
       }
     }
     if (address < lastoffset) {
-      if (mem > NOSYM) {
+      if (mem == NOSYM || ADDRESSG(mem) == lastoffset) {
+        cur_op = add_init_pad(cur_op, lastoffset - address);
+        address = lastoffset;
+      } else {
         address = 0;
         cur_op = add_init_subzero_consts(DTYPEG(mem), cur_op, &address,
                                          lastoffset - ADDRESSG(mem));
-      } else {
-        cur_op = add_init_pad(cur_op, lastoffset - address);
-        address = lastoffset;
       }
     }
     *offset = address;

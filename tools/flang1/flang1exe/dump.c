@@ -3339,6 +3339,8 @@ dsym(int sptr)
     HIDDENP(0, 0);
     putbit("inmodule", INMODULEG(0));
     INMODULEP(0, 0);
+    putbit("ancestor", ANCESTORG(0));
+    ANCESTORP(0, 0);
     putbit("internal", INTERNALG(0));
     INTERNALP(0, 0);
     putbit("mscall", MSCALLG(0));
@@ -3484,6 +3486,8 @@ dsym(int sptr)
     DINITP(0, 0);
     putbit("needmod", NEEDMODG(0));
     NEEDMODP(0, 0);
+    putbit("ancestor", ANCESTORG(0));
+    ANCESTORP(0, 0);
     putbit("typd", TYPDG(0));
     TYPDP(0, 0);
     putbit("visit", VISITG(0));
@@ -3567,6 +3571,8 @@ dsym(int sptr)
     INDEPP(0, 0);
     putbit("inmodule", INMODULEG(0));
     INMODULEP(0, 0);
+    putbit("ancestor", ANCESTORG(0));
+    ANCESTORP(0, 0);
     putbit("internal", INTERNALG(0));
     INTERNALP(0, 0);
 #ifdef L3FG
@@ -3847,6 +3853,10 @@ dsym(int sptr)
     putnsym("slnk", SLNKG(0));
     SLNKP(0, 0);
     putline();
+#ifdef CONSTANTG
+    putbit("constant", CONSTANTG(0));
+    CONSTANTP(0, 0);
+#endif
     putbit("dcld", DCLDG(0));
     DCLDP(0, 0);
     putbit("end", ENDG(0));

@@ -35,6 +35,7 @@
 #include "fih.h"
 #include "dpm_out.h"
 #include "rtlRtns.h"
+#include "sharedefs.h"
 
 #include "llmputil.h"
 
@@ -69,20 +70,12 @@ static int curr_findex;
 int *lower_argument;
 int lower_argument_size;
 
-/** \brief pointer from each 'member' to the 'parent' structure type symbol */
-int *lower_member_parent;
-
-/** \brief When one symbol must be replaced by another, set its value here */
-int *lower_symbol_replace;
-
-/* linked list of pointer or allocatable variables whose
+/* header of linked list of pointer or allocatable variables whose
  * pointer/offset/descriptors need to be initialized */
-static int *lower_pointer_list;
 static int lower_pointer_list_head;
 
-/* linked list of pointer/offset/section descriptors in the order they
+/* head of linked list of pointer/offset/section descriptors in the order they
  * need to be given addresses */
-static int *lower_refd_list;
 static int lower_refd_list_head;
 
 /* size of private area needed for private descriptors & their pointer &
@@ -100,23 +93,21 @@ static bool has_opt_args(SPTR sptr);
 static void lower_fileinfo_llvm();
 static LOGICAL llvm_iface_flag = FALSE;
 static void stb_lower_sym_header();
+static void check_debug_alias(SPTR sptr);
 
-/** \brief 
+/** \brief
  * ASSCHAR = -1 assumed size character
- * ADJCHAR = -2 backend maps to DT_ASSCHAR 
+ * ADJCHAR = -2 backend maps to DT_ASSCHAR
  * DEFERCHAR = -3 deferred-length character */
 enum LEN {ASSCHAR = -1, ADJCHAR = -2, DEFERCHAR = -3};
 
-/** \brief Returns true if the procedure (sptr) has optional arguments. 
+/** \brief Returns true if the procedure (sptr) has optional arguments.
  */
 static bool
 has_opt_args(SPTR sptr)
 {
  int i, psptr, nargs, dpdsc; 
  
-  // AOCC . Temporily reverting the change to add new 
-  // arguments for character arguments. 
-  return true;
   if (STYPEG(sptr) != ST_ENTRY && STYPEG(sptr) != ST_PROC) {
     return false;
   }
@@ -301,7 +292,7 @@ lower_make_all_descriptors(void)
               if (!stp)
                 stp = sym_get_ptr(sptr);
               SCP(stp, SC_DUMMY);
-              MIDNUMP(sptr, stp); 
+              MIDNUMP(sptr, stp);
             }
           }
           if (!POINTERG(sptr)) {
@@ -465,22 +456,22 @@ remove_list(int list, int sym)
 static void
 push_lower_refd_list(int sym)
 {
-  if (lower_refd_list[sym]) {
+  if (LOWER_REFD_LIST(sym)) {
     int l, prev;
     prev = 0;
-    for (l = lower_refd_list_head; l > NOSYM; l = lower_refd_list[l]) {
+    for (l = lower_refd_list_head; l > NOSYM; l = LOWER_REFD_LIST(l)) {
       if (l == sym) {
         if (prev) {
-          lower_refd_list[prev] = lower_refd_list[sym];
+          LOWER_REFD_LIST(prev) = LOWER_REFD_LIST(sym);
         } else {
-          lower_refd_list_head = lower_refd_list[sym];
+          lower_refd_list_head = LOWER_REFD_LIST(sym);
         }
         break;
       }
       prev = l;
     }
   }
-  lower_refd_list[sym] = lower_refd_list_head;
+  LOWER_REFD_LIST(sym) = lower_refd_list_head;
   lower_refd_list_head = sym;
 } /* push_lower_refd_list */
 
@@ -1039,7 +1030,7 @@ lower_prepare_symbols()
            * and first descriptor word are initially zero;
            * keep a list of the symbols */
           if (ptr >= stb.firstusym) {
-            lower_pointer_list[sptr] = lower_pointer_list_head;
+            LOWER_POINTER_LIST(sptr) = lower_pointer_list_head;
             lower_pointer_list_head = sptr;
           }
         }
@@ -1133,6 +1124,10 @@ lower_finish_symbols(void)
       if (ENCLFUNCG(sptr) == 0 || ENCLFUNCG(sptr) == gbl.currsub) {
         lower_visit_symbol(sptr);
       }
+      /* if this is a type descriptor for mod object file, export it */
+      else if (SDSCG(sptr) && CLASSG(SDSCG(sptr)) && !PARENTG(sptr)) {
+        lower_visit_symbol(sptr);
+      }
       break;
     case ST_ARRAY:
     case ST_VAR:
@@ -1146,7 +1141,7 @@ lower_finish_symbols(void)
         break;
       if (!flg.debug && !XBIT(57, 0x20) && gbl.internal != 1)
         break;
-      if (sptr < lowersym.oldsymavl && lower_symbol_replace[sptr])
+      if (LOWER_SYMBOL_REPLACE(sptr))
         break;
 
       lower_visit_symbol(sptr);
@@ -1177,7 +1172,7 @@ lower_pointer_init(void)
 {
   int sptr;
   for (sptr = lower_pointer_list_head; sptr > 0;
-       sptr = lower_pointer_list[sptr]) {
+       sptr = LOWER_POINTER_LIST(sptr)) {
     int ptr, off, desc;
     int lilm, rilm;
       if (STYPEG(sptr) != ST_MEMBER &&
@@ -1317,23 +1312,13 @@ lower_init_sym(void)
   lowersym.sched_dtype = 0;
   lowersym.scheds_dtype = 0;
 
-  NEW(lower_member_parent, int, stb.stg_avail);
-  BZERO(lower_member_parent, int, stb.stg_avail);
-
-  NEW(lower_symbol_replace, int, stb.stg_avail);
-  BZERO(lower_symbol_replace, int, stb.stg_avail);
-
-  NEW(lower_pointer_list, int, stb.stg_avail);
-  BZERO(lower_pointer_list, int, stb.stg_avail);
+  STG_ALLOC_SIDECAR(stb, lsymlists);
   lower_pointer_list_head = -1;
-
-  NEW(lower_refd_list, int, stb.stg_avail);
-  BZERO(lower_refd_list, int, stb.stg_avail);
   lower_refd_list_head = NOSYM;
   lower_prepare_symbols();
 
   private_addr = 0;
-  for (sym = lower_refd_list_head; sym > NOSYM; sym = lower_refd_list[sym]) {
+  for (sym = lower_refd_list_head; sym > NOSYM; sym = LOWER_REFD_LIST(sym)) {
     if (SCG(sym) != SC_PRIVATE)
       sym_is_refd(sym);
     else {
@@ -1387,7 +1372,7 @@ lower_init_sym(void)
             DTYPEG(fval) == DTYPEG(fvalsame)) {
           /* esame is the earlier entry point, make ent use the
            * FVAL of esame */
-          lower_symbol_replace[fval] = fvalsame;
+          LOWER_SYMBOL_REPLACE(fval) = fvalsame;
           FVALP(ent, fvalsame);
           break; /* leave inner loop */
         }
@@ -1417,14 +1402,7 @@ lower_finish_sym(void)
   lower_argument_size = 0;
   FREE(stack);
   stack = NULL;
-  FREE(lower_refd_list);
-  lower_refd_list = NULL;
-  FREE(lower_pointer_list);
-  lower_pointer_list = NULL;
-  FREE(lower_member_parent);
-  lower_member_parent = NULL;
-  FREE(lower_symbol_replace);
-  lower_symbol_replace = NULL;
+  STG_DELETE_SIDECAR(stb, lsymlists);
   FREE(datatype_output);
   datatype_output = NULL;
   FREE(datatype_used);
@@ -1920,19 +1898,19 @@ void
 lower_visit_symbol(int sptr)
 {
   int socptr, dtype, params, i, fval, inmod, stype, parsyms;
-  if (sptr < lowersym.oldsymavl && lower_symbol_replace[sptr]) {
-    lower_visit_symbol(lower_symbol_replace[sptr]);
+  if (LOWER_SYMBOL_REPLACE(sptr)) {
+    lower_visit_symbol(LOWER_SYMBOL_REPLACE(sptr));
     lerror("visit symbol %s(%d) which was replaced by %s(%d)", SYMNAME(sptr),
-           sptr, SYMNAME(lower_symbol_replace[sptr]),
-           lower_symbol_replace[sptr]);
+           sptr, SYMNAME(LOWER_SYMBOL_REPLACE(sptr)),
+           LOWER_SYMBOL_REPLACE(sptr));
     return;
   }
   if (VISITG(sptr))
     return;
 
   if ((STYPEG(sptr) == ST_ALIAS || STYPEG(sptr) == ST_PROC ||
-      STYPEG(sptr) == ST_ENTRY) && 
-      SEPARATEMPG(sptr) && 
+      STYPEG(sptr) == ST_ENTRY) &&
+      SEPARATEMPG(sptr) &&
       STYPEG(SCOPEG(sptr)) == ST_MODULE)
     INMODULEP(sptr, 1);
 
@@ -2216,7 +2194,7 @@ lower_outer_symbols(void)
     case ST_STRUCT:
     case ST_PLIST:
       if (!IGNOREG(sptr) &&
-          (sptr >= lowersym.oldsymavl || lower_symbol_replace[sptr] == 0))
+          (LOWER_SYMBOL_REPLACE(sptr) == 0))
         lower_visit_symbol(sptr);
       break;
     default:
@@ -3134,8 +3112,8 @@ lower_namelist_plists(void)
       /* export all symbols in the namelist */
       for (member = CMEMFG(sptr); member; member = NML_NEXT(member)) {
         int sptr = NML_SPTR(member);
-        if (sptr < lowersym.oldsymavl && lower_symbol_replace[sptr]) {
-          sptr = lower_symbol_replace[sptr];
+        if (LOWER_SYMBOL_REPLACE(sptr)) {
+          sptr = LOWER_SYMBOL_REPLACE(sptr);
         }
         lower_visit_symbol(sptr);
       }
@@ -3576,8 +3554,8 @@ lower_symbol(int sptr)
   sc = SCG(sptr);
 
   if ((STYPEG(sptr) == ST_ALIAS || STYPEG(sptr) == ST_PROC ||
-      STYPEG(sptr) == ST_ENTRY) && 
-      SEPARATEMPG(sptr) && 
+      STYPEG(sptr) == ST_ENTRY) &&
+      SEPARATEMPG(sptr) &&
       STYPEG(SCOPEG(sptr)) == ST_MODULE)
     INMODULEP(sptr, 1);
 
@@ -3718,6 +3696,8 @@ lower_symbol(int sptr)
 #endif
       putsym("link", SYMLKG(sptr));
     putsym("midnum", MIDNUMG(sptr));
+    if (flg.debug)
+      check_debug_alias(sptr);
     if (sc == SC_DUMMY) {
       int a;
       a = NEWARGG(sptr);
@@ -4047,7 +4027,7 @@ lower_symbol(int sptr)
       putbit("vararg", VARARGG(sptr));
       putbit("has_opts", 0);
       putbit("parref", PARREFG(sptr));
-      /* 
+      /*
        * emit this bit only if emitting ST_MODULE as ST_PROC
        * this conversion happens in putstype()
        */
@@ -4284,15 +4264,32 @@ lower_symbol(int sptr)
 
   case ST_MODPROC:
     /* fake a procedure */
+    putsym("altname", 0);
     putbit("ccsym", 0);
     putbit("decl", 0);
+    putval("dll", 0);
+    putbit("dllexportmod", 0);
+    putval("cmode", 0);
     putbit("func", 0);
+    putsym("inmodule", 0);
+    putbit("mscall", 0);
+    putbit("needmod", 0);
     putbit("pure", 0);
     putbit("ref", 0);
+    putbit("passbyval", 0);
+    putbit("passbyref", 0);
+    putbit("cstructret", 0);
+    putbit("sdscsafe", 0);
+    putbit("stdcall", 0);
+    putbit("decorate", 0);
+    putbit("cref", 0);
+    putbit("nomixedstrlen", 0);
     putbit("typed", 0);
     putbit("recursive", 0);
     putval("returnval", 0);
     putbit("Cfunc", 0);
+    putbit("uplevel", 0);
+    putbit("internref", 0);
     putval("rout", 0);
     putval("paramcount", 0);
     putval("vtoff", 0);
@@ -4308,6 +4305,7 @@ lower_symbol(int sptr)
     putbit("vararg", 0);
     putbit("has_opts", 0);
     putbit("parref", 0);
+    putbit("is_interface", 0);
     strip = 1;
     break;
 
@@ -4880,7 +4878,7 @@ lower_symbols(void)
 
     /* Unfreeze intrinsics for re/use in internal routines.
      *
-     * This isn't quite right.  It favors declarations in an internal routine 
+     * This isn't quite right.  It favors declarations in an internal routine
      * at the possible expense of cases where a host routine declaration
      * should be accessible in an internal routine.  It might be useful to
      * have multiple freeze bits, such as one for a host routine and one
@@ -5082,11 +5080,11 @@ lower_fill_member_parent(void)
         /* look through the linked list of members;
          * make each member point back to this tag */
         for (s = DTY(dtype + 1); s > NOSYM; s = SYMLKG(s)) {
-          if (lower_member_parent[s]) {
+          if (LOWER_MEMBER_PARENT(s)) {
             lerror("symbol %s (%d) appears in two anonymous structs",
                    SYMNAME(s), s);
           }
-          lower_member_parent[s] = sptr;
+          LOWER_MEMBER_PARENT(s) = sptr;
         }
       }
       break;
@@ -5539,5 +5537,45 @@ uncouple_callee_args()
   FREE(save_dpdsc);
   save_dpdsc = NULL;
   save_dpdsc_cnt = 0;
+}
+
+/**
+   \brief Inspect a common block variable symbol to see if it has a alias 
+   name, if YES, write to ilm file with attribute "has_alias" be 1 and
+   followed by the length and name of the alias; if NO, put 0 to "has_alias".
+ */
+static void
+check_debug_alias(SPTR sptr)
+{
+  if (gbl.rutype != RU_BDATA && STYPEG(sptr) == ST_VAR && SCG(sptr) == SC_CMBLK) {
+    /* Create debug info for restricted import of module variables
+     * and renaming of module variables */
+    if (HASHLKG(sptr)) {
+      if (STYPEG(HASHLKG(sptr)) == ST_ALIAS &&
+          !strcmp(SYMNAME(sptr), SYMNAME(HASHLKG(sptr)))) {
+        putbit("has_alias", 1);
+        fprintf(lowersym.lowerfile, " %d:%s",
+                strlen(SYMNAME(sptr)), SYMNAME(HASHLKG(sptr)));
+      } else {
+        SPTR candidate = sptr;
+        while (candidate) {
+          if (dbgref_symbol.altname[candidate] && 
+              SYMLKG(dbgref_symbol.altname[candidate]->sptr) == sptr)
+            break;
+          candidate = HASHLKG(candidate);
+        }
+        if (candidate) {
+          putbit("has_alias", 1);
+          fprintf(lowersym.lowerfile, " %d:%s",
+                  strlen(SYMNAME(dbgref_symbol.altname[candidate]->sptr)),
+                  SYMNAME(dbgref_symbol.altname[candidate]->sptr));
+        } else {
+          putbit("has_alias", 0);
+        }
+      }
+    } else {
+      putbit("has_alias", 0);
+    }
+  }
 }
 

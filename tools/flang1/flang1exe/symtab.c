@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 1994-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1020,7 +1020,7 @@ getprint(int sptr)
     break;
   case TY_REAL:
     num[0] = CONVAL2G(sptr);
-    cprintf(b, "%17.10e", num);
+    cprintf(b, "%17.10e", (INT*)(size_t)(num[0]));
     break;
 
   case TY_DBLE:
@@ -1038,11 +1038,11 @@ getprint(int sptr)
 
   case TY_CMPLX:
     num[0] = CONVAL1G(sptr);
-    cprintf(b, "%17.10e", num);
+    cprintf(b, "%17.10e", (INT*)(size_t)(num[0]));
     b[17] = ',';
     b[18] = ' ';
     num[0] = CONVAL2G(sptr);
-    cprintf(&b[19], "%17.10e", num);
+    cprintf(&b[19], "%17.10e", (INT*)(size_t)(num[0]));
     break;
 
   case TY_DCMPLX:
@@ -3461,9 +3461,17 @@ convert_2dollar_signs_to_hyphen(char *name) {
  */
 bool 
 is_used_by_submod(SPTR sym1, SPTR sym2) {
-  return STYPEG(ENCLFUNCG(sym1)) == ST_MODULE && 
-         STYPEG(SCOPEG(sym2)) == ST_MODULE &&
-         SCOPEG(sym2) == ANCESTORG(ENCLFUNCG(sym1));
+  if (SCOPEG(sym2) == sym1 && 
+      STYPEG(ENCLFUNCG(sym1)) == ST_MODULE && 
+      STYPEG(SCOPEG(sym2)) == ST_MODULE &&
+      SCOPEG(sym2) == ANCESTORG(ENCLFUNCG(sym1)))
+     return true;
+
+  /* when sym2 is defined in the common block of parent module of submodule sym1 */
+  if (SCG(sym2) == SC_CMBLK)
+    return SCOPEG(CMBLKG(sym2)) == ANCESTORG(ENCLFUNCG(sym1));
+
+  return false;
 }
 
 /** \brief Emit variable type mismatch errors for either subprogram argument variables 

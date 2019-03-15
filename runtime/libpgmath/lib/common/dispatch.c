@@ -52,6 +52,35 @@
  *
  */
 
+#if     defined(TARGET_WIN_X8664)
+/*
+ * Defining CPP object macro _NO_CRT_STDIO_INLINE prevents the Visual Studio
+ * header files from generating local versions of printf(), fprintf() and
+ * others.
+ */
+
+#define _NO_CRT_STDIO_INLINE
+
+/*
+ * The Windows system header files are missing the argument list in the
+ * following function declarations.  Without the argument list, albeit void,
+ * dispatch.c cannot be compiled with the vectorcall ABI.
+ *
+ * Open Tools 10:
+ *  I_RpcMgmtEnableDedicatedThreadPool
+ * Visual Studio 2015:
+ *  EnableMouseInPointerForThread
+ *  GetThreadDpiHostingBehavior
+ */
+
+#define I_RpcMgmtEnableDedicatedThreadPool(...) \
+        I_RpcMgmtEnableDedicatedThreadPool(void)
+#define EnableMouseInPointerForThread(...)      \
+        EnableMouseInPointerForThread(void)
+#define GetThreadDpiHostingBehavior(...)        \
+        GetThreadDpiHostingBehavior(void)
+#endif
+
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
@@ -87,6 +116,12 @@
 
 #if defined(TARGET_LINUX_X8664) || defined(TARGET_OSX_X8664) || defined(TARGET_WIN_X8664)
 #include "x86id.h"
+#endif
+
+#if     defined(TARGET_WIN_X8664)
+#undef  I_RpcMgmtEnableDedicatedThreadPool
+#undef  EnableMouseInPointerForThread
+#undef  GetThreadDpiHostingBehavior
 #endif
 
 /*
@@ -1435,6 +1470,6 @@ main()
 static void
 __pgmath_abort(int ierr, char *s)
 {
-  printf("pgmath_abort:%s", s);
+  fprintf(stderr, "__pgmath_abort:%s", s);
   exit(ierr);
 }
