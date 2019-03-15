@@ -1040,32 +1040,6 @@ static const MDTemplate Tmpl_DISubprogram_39[] = {
   { "scopeLine",                UnsignedField }
 };
 
-/** "unit" was added in LLVM 3.9 for DISubprogram */
-static const MDTemplate Tmpl_DISubprogram_39[] = {
-  { "DISubprogram", TF, 21 },
-  { "tag",                      DWTagField, FlgHidden },
-  { "file",                     NodeField },
-  { "scope",                    NodeField },
-  { "name",                     StringField },
-  { "displayName",              StringField, FlgHidden },
-  { "linkageName",              StringField },
-  { "line",                     UnsignedField },
-  { "type",                     NodeField },
-  { "isLocal",                  BoolField },
-  { "isDefinition",             BoolField },
-  { "virtuality",               DWVirtualityField },
-  { "virtualIndex",             UnsignedField },
-  { "containingType",           NodeField },
-  { "flags",                    UnsignedField }, /* TBD: DIFlag... */
-  { "isOptimized",              BoolField },
-  { "function",                 ValueField, FlgHidden },
-  { "templateParams",           NodeField },
-  { "declaration",              NodeField },
-  { "unit",                     NodeField },
-  { "retainedNodes",                NodeField },
-  { "scopeLine",                UnsignedField }
-};
-
 static const MDTemplate Tmpl_DILexicalBlock[] = {
   { "DILexicalBlock", TF, 6 },
   { "tag",                      DWTagField, FlgHidden },
