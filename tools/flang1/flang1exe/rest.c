@@ -2558,7 +2558,6 @@ handle_seq_section(int entry, int arr, int loc, int std, int *retval,
       check_member(arrayast, mk_id(DESCRG(arraysptr))) : 0;
     return;
   }
-#endif
 
   /* whole array with no distribution */
   if (!is_seq_pointer
