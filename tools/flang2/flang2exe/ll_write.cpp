@@ -985,7 +985,7 @@ static const MDTemplate Tmpl_DISubprogram[] = {
   { "function",                 ValueField },
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
-  {"retainedNodes",             NodeField},
+  { "retainedNodes",            NodeField},
   { "scopeLine",                UnsignedField }
 };
 
@@ -1013,10 +1013,6 @@ static const MDTemplate Tmpl_DISubprogram_70[] = {
 };
 
 static const MDTemplate Tmpl_DISubprogram_38[] = {
-    {"scopeLine", UnsignedField}};
-
-/** "unit" was added in LLVM 3.9 for DISubprogram */
-static const MDTemplate Tmpl_DISubprogram_39[] = {
   { "DISubprogram", TF, 20 },
   { "tag",                      DWTagField, FlgHidden },
   { "file",                     NodeField },
@@ -1036,6 +1032,32 @@ static const MDTemplate Tmpl_DISubprogram_39[] = {
   { "function",                 ValueField, FlgHidden },
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
+  { "retainedNodes",                NodeField },
+  { "scopeLine",                UnsignedField }
+};
+
+/** "unit" was added in LLVM 3.9 for DISubprogram */
+static const MDTemplate Tmpl_DISubprogram_39[] = {
+  { "DISubprogram", TF, 21 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "file",                     NodeField },
+  { "scope",                    NodeField },
+  { "name",                     StringField },
+  { "displayName",              StringField, FlgHidden },
+  { "linkageName",              StringField },
+  { "line",                     UnsignedField },
+  { "type",                     NodeField },
+  { "isLocal",                  BoolField },
+  { "isDefinition",             BoolField },
+  { "virtuality",               DWVirtualityField },
+  { "virtualIndex",             UnsignedField },
+  { "containingType",           NodeField },
+  { "flags",                    UnsignedField }, /* TBD: DIFlag... */
+  { "isOptimized",              BoolField },
+  { "function",                 ValueField, FlgHidden },
+  { "templateParams",           NodeField },
+  { "declaration",              NodeField },
+  { "unit",                     NodeField },
   { "retainedNodes",                NodeField },
   { "scopeLine",                UnsignedField }
 };
@@ -1074,13 +1096,9 @@ static const MDTemplate Tmpl_DIExpression[] = {
 
 static const MDTemplate Tmpl_DILocalVariable[] = {
   { "DILocalVariable", TF, 9 },
-  { "tag",                      DWTagField },
   { "scope",                    NodeField },
-  { "name",                     StringField },
   { "arg",                      UnsignedField },
-  { "file",                     NodeField },
   { "line",                     UnsignedField },
-  { "type",                     NodeField },
   { "flags",                    UnsignedField }, /* TBD: DIFlag... */
   { "inlinedAt",                UnsignedField }  /* TBD: NodeField */
 };
