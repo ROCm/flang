@@ -4530,7 +4530,7 @@ errorstop_shared:
              itemp = itemp->next) {
           SST *stkp;
 
-          if (sem.arrdim.ndim >= 7) {
+          if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
             error(47, 3, gbl.lineno, CNULL, CNULL);
             alloc_error = TRUE;
             break;

@@ -92,7 +92,7 @@ ast_init(void)
     assert(astb.asd.stg_base, "ast_init: no room for ASD", astb.asd.stg_size, 4);
 #endif
   }
-  BZERO(astb.asd.hash, int, 7);
+  BZERO(astb.asd.hash, int, MAXSUBS); /* AOCC */
   astb.asd.stg_base[0] = 0;
   astb.asd.stg_avail = 1;
 
@@ -103,7 +103,7 @@ ast_init(void)
     assert(astb.shd.stg_base, "ast_init: no room for SHD", astb.shd.stg_size, 4);
 #endif
   } else
-    BZERO(astb.shd.hash, int, 7);
+    BZERO(astb.shd.hash, int, MAXSUBS); /* AOCC */
   astb.shd.stg_base[0].lwb = 0;
   astb.shd.stg_base[0].upb = 0;
   astb.shd.stg_base[0].stride = 0;
@@ -1836,8 +1836,8 @@ mk_asd(int *subs, int numdim)
 {
   int i;
   int asd;
-  assert(numdim > 0 && numdim <= MAXSUBS, "mk_subscr: bad numdim", numdim,
-         ERR_Fatal);
+  assert(is_legal_numdim(numdim), "mk_subscr: bad numdim", numdim,
+         ERR_Fatal); /* AOCC */
   /* search the existing ASDs with the same number of dimensions */
   for (asd = astb.asd.hash[numdim - 1]; asd != 0; asd = ASD_NEXT(asd)) {
     for (i = 0; i < numdim; i++) {
@@ -2044,7 +2044,7 @@ mkshape(DTYPE dtype)
   if (DTY(dtype) != TY_ARRAY)
     return 0;
   numdim = ADD_NUMDIM(dtype);
-  if (numdim > 7 || numdim < 1) {
+  if (!is_legal_numdim(numdim)) { /* AOCC */
     interr("mkshape: bad numdim", numdim, 3);
     numdim = 1;
     add_shape_rank(numdim);
@@ -2082,7 +2082,7 @@ mk_mem_ptr_shape(int parent, int mem, DTYPE dtype)
   if (DTY(dtype) != TY_ARRAY)
     return 0;
   numdim = ADD_NUMDIM(dtype);
-  if (numdim > 7 || numdim < 1) {
+  if (!is_legal_numdim(numdim)) { /* AOCC */
     interr("mkshape: bad numdim", numdim, 3);
     numdim = 1;
     add_shape_rank(numdim);
@@ -4300,7 +4300,7 @@ ast_rewrite(int ast)
       changes = TRUE;
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "ast_rewrite: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "ast_rewrite: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i) {
       sub = ast_rewrite((int)ASD_SUBS(asd, i));
       if (sub != ASD_SUBS(asd, i))
@@ -5204,7 +5204,7 @@ ast_clear_repl(int ast)
     ast_clear_repl((int)A_LOPG(ast));
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "ast_clear_repl: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "ast_clear_repl: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i)
       ast_clear_repl((int)ASD_SUBS(asd, i));
     break;

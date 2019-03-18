@@ -76,7 +76,7 @@
 #define MAX_FILENAME_LEN 256
 
 /* maximum number of array subscripts */
-#define MAXSUBS 7
+#define MAXSUBS 15 /* AOCC */
 
 typedef int8_t INT8;
 typedef int16_t INT16;

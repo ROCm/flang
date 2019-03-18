@@ -236,6 +236,26 @@ typedef struct {
 
 extern FLG flg;
 
+// AOCC start
+
+// Returns the maximum dimension allowed by considering -std option.
+// (There are checks, for eg "<dim-spec> :: = : | *" handlers in
+// semant.c that only checks for maxdim.)
+static unsigned get_legal_maxdim() {
+  if (flg.std == F2008)
+    return 15;
+  return 7;
+}
+
+// return true if numdim is legal by considering -std option
+static bool is_legal_numdim(int numdim) {
+  if (numdim > 0 && numdim <= get_legal_maxdim())
+    return true;
+
+  return false;
+}
+// AOCC end
+
 #define IEEE_CMP (flg.ieee || !XBIT(15, 0x8000000))
 
 #endif // GLOBAL_H_

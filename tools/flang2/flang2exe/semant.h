@@ -619,7 +619,7 @@ typedef struct {
     int uptype;
     ISZ_T lowb;
     ISZ_T upb;
-  } bounds[7];
+  } bounds[MAXSUBS]; /* AOCC */
   struct {       /* mark assumed size and adjustable arrays */
     int ndim;    /* number of dimensions */
     int assumsz; /*  0, not assumed size

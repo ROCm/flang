@@ -3717,7 +3717,7 @@ rewrite_sub_ast(int ast, int lc)
     dtype = A_DTYPEG(ast);
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "rewrite_sub_ast: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "rewrite_sub_ast: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i) {
       l = rewrite_sub_ast(ASD_SUBS(asd, i), lc);
       subs[i] = l;

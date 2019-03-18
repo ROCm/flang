@@ -6500,7 +6500,7 @@ lower_data_stmts(void)
       if (okaddr) {
         fprintf(lower_ilm_file, "Init Label:%d\n", dinitval);
       } else {
-        int dest, src, subs[7], ent, ast;
+        int dest, src, subs[MAXSUBS], ent, ast; /* AOCC */
         if (size_of(DT_PTR) == size_of(DT_INT8)) {
           int v[4], sptr;
           v[2] = v[3] = 0;

@@ -29,6 +29,7 @@
  * semant.
  */
 
+#include "gbldefs.h" /* AOCC */
 #include "dinit.h"
 #include "dinitutl.h"
 #include "dtypeutl.h"
@@ -85,7 +86,7 @@ static CONST const_err;
 
 static int substr_len; /* length of char substring being init'd */
 
-#define MAXDIMS 7
+#define MAXDIMS MAXSUBS /* AOCC */
 #define MAXDEPTH 8
 static DOSTACK dostack[MAXDEPTH];
 static DOSTACK *top;
@@ -1893,12 +1894,12 @@ static struct {
     ISZ_T lowb;
     ISZ_T upb;
     ISZ_T stride;
-  } sub[7];
+  } sub[MAXSUBS]; /* AOCC */
   struct {
     ISZ_T lowb;
     ISZ_T upb;
     ISZ_T mplyr;
-  } dim[7];
+  } dim[MAXSUBS]; /* AOCC */
 } sb;
 
 static ISZ_T
@@ -2087,7 +2088,7 @@ eval_const_array_triple_section(CONST *curr_e)
     }
     sb.sub[ndims].stride = get_ival(v->dtype, v->u1.conval);
 
-    if (++ndims >= 7) {
+    if (++ndims >= get_legal_maxdim()) { /* AOCC */
       interr("initialization expression: too many dimensions\n", 0, ERR_Severe);
       return CONST_ERR(dtype);
     }
@@ -3987,10 +3988,12 @@ eval_reshape(CONST *arg, DTYPE dtype, LOGICAL transpose) // AOCC
   int *new_index;
   int src_sz, dest_sz;
   int rank;
-  int order[7];
-  int lwb[7];
-  int upb[7];
-  int mult[7];
+  // AOCC begin
+  int order[MAXSUBS];
+  int lwb[MAXSUBS];
+  int upb[MAXSUBS];
+  int mult[MAXSUBS];
+  // AOCC end
   int i;
   int count;
   int sz;

@@ -499,7 +499,7 @@ semantio(int rednum, SST *top)
   int ast1, ast2, ast3;
   int dim; /* dimension # of the index variable */
   int asd; /* array subscript descriptor */
-  int subs[7];
+  int subs[MAXSUBS]; // AOCC
   int numdim;
   int sptr1;
   int nelems;
@@ -1310,7 +1310,7 @@ semantio(int rednum, SST *top)
           int shape, forall, triplet_list, n, lb, ub, st, newast;
           int index_var, triplet, dovar, list, lc, sym, triple;
           ITEM *arglist, *p;
-          int subs[7], std;
+          int subs[MAXSUBS], std; // AOCC
           int i;
           if (fmttyp == FT_UNFORMATTED) {
             argcnt = 4;
@@ -4243,7 +4243,7 @@ copy_replic_sect_to_tmp(int array_ast)
   int asn, std, tmp_ast, tmp_sptr;
   int dtype;
   int eldtype;
-  int subscr[7];
+  int subscr[MAXSUBS]; // AOCC
 
   /* allocate(tmp(...))
    * tmp = array
@@ -5254,7 +5254,7 @@ static int
 replace_vector_subscript(int ast, int indexast)
 {
   int oldl, newl, oldr, newr, nargs, argt, i, changes, argtnew, sptr;
-  int asd, nsubs, subs[7], lb;
+  int asd, nsubs, subs[MAXSUBS], lb; // AOCC
   int dtype;
 
   if (ast == 0)
@@ -5399,7 +5399,7 @@ add_iolptrs(int dtype, SST *in_stkptr, int *mndscp)
   int j, numdim, numdimm;
   int derived_dtype, dtypem;
   int mem_id;
-  int subs[7], rsubs[7];
+  int subs[MAXSUBS], rsubs[MAXSUBS]; // AOCC
   SST *stkptr;
   ADSC *ad;
   SST tmpstk;

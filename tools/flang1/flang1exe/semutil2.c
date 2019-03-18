@@ -1413,7 +1413,7 @@ size_of_array(DTYPE dtype)
       if (DTY(dtype + 2) != 0) {
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim < 1 || numdim > 7) {
+        if (!is_legal_numdim(numdim)) { /* AOCC */
           interr("extent_of: bad numdim", 0, 1);
           numdim = 0;
         }
@@ -2219,7 +2219,7 @@ init_constructf90()
 {
   int i;
 
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < MAXDIMS; i++) { // AOCC
     acs.element_cnt[i] = 0;     /* # of individual constructor items  */
     acs.indx[i] = astb.bnd.one; /* subscript of first element */
     acs.indx_tmpid[i] = 0;      /* no subscripting temporary yet */
@@ -6782,7 +6782,7 @@ build_array_list(ASTLIST *list, int ast, DTYPE dtype, int sptr)
       break;
     asd = A_ASDG(ast);
     ndim = ASD_NDIM(asd);
-    assert(ndim <= 7, "build_array_list, >7 dimensions", ndim, 3);
+    assert(ndim <= get_legal_maxdim(), "build_array_list, > allowed dimensions", ndim, 3); /* AOCC */
     assert(A_SHAPEG(A_LOPG(ast)), "build_array_list, shapeless array", 0, 3);
     for (i = 0; i < ndim; ++i) {
       int ss;
@@ -10540,7 +10540,7 @@ eval_const_array_triple_section(ACL *curr_e)
 
     sb.sub[ndims].stride = get_ival(v->dtype, v->conval);
 
-    if (++ndims >= 7) {
+    if (++ndims >= get_legal_maxdim()) { /* AOCC */
       interr("initialization expression: too many dimensions\n", 0, 3);
       return 0;
     }

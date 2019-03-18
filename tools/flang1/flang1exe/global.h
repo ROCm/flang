@@ -193,7 +193,7 @@ typedef struct {
 #define MAXCPUS 256
 
 /* Max number of dimensions.  F'2008 requires 15,  Intel is 31. */
-#define MAXRANK 7
+#define MAXRANK 15 /* AOCC */
 
 extern GBL gbl;
 #define GBL_CURRFUNC gbl.currsub
@@ -273,5 +273,25 @@ typedef struct {
 } FLG;
 
 extern FLG flg;
+
+// AOCC start
+
+// Returns the maximum dimension allowed by considering -std option.
+// (There are checks, for eg "<dim-spec> :: = : | *" handlers in
+// semant.c that only depends on maxdim.)
+static unsigned get_legal_maxdim() {
+  if (flg.std == F2008)
+    return 15;
+  return 7;
+}
+
+// return true if numdim is legal by considering -std option
+static bool is_legal_numdim(int numdim) {
+  if (numdim > 0 && numdim <= get_legal_maxdim())
+    return true;
+
+  return false;
+}
+// AOCC end
 
 #endif

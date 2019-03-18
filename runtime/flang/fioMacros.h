@@ -516,7 +516,7 @@ extern int __fort_entry_mflag;
 
 /* maximum number of fortran array dimensions */
 
-#define MAXDIMS 7
+#define MAXDIMS 15 /* AOCC */
 
 /* generic all-dimensions bit mask */
 

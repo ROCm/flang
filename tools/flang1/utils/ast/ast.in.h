@@ -300,14 +300,14 @@ typedef struct {
     int     ptr0c;	/* 'predefined' ast for non-present character I/O spec*/
     struct {
 	STG_MEMBERS(int);
-	int     hash[7];  /* max # of dimensions */
+	int     hash[MAXSUBS];  /* AOCC: max # of dimensions */
     } asd;
     STG_DECLARE(std, STD);
     STG_DECLARE(astli, ASTLI);
     STG_DECLARE(argt, int);
     struct {
 	STG_MEMBERS(SHD);
-	int     hash[7];  /* max # of dimensions */
+	int     hash[MAXSUBS];  /* AOCC: max # of dimensions */
     } shd;
     STG_DECLARE(comstr, char);
     UINT16      implicit[55];  /* implicit dtypes:

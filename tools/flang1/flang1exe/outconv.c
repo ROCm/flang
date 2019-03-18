@@ -3324,7 +3324,7 @@ is_same_mask_in_fused(int std, int *pos)
   int list1, listp;
   int isptr;
   int i;
-  int reverse[7];
+  int reverse[MAXSUBS]; // AOCC
   int n;
   CTYPE *ct;
   int max;
@@ -3417,7 +3417,7 @@ conv_forall(int std)
   int nd;
   CTYPE *ct;
   int i;
-  int revers[7];
+  int revers[MAXSUBS]; // AOCC
   int pos, cnt;
   LOGICAL samemask;
   int lhs_sptr, lhs_ast;
@@ -3780,7 +3780,7 @@ get_temp_forall2(int forall_ast, int subscr_ast, int alloc_stmt,
                  int dealloc_stmt, int dty, int ast_dty)
 {
   int sptr, astd, dstd, asd;
-  int subscr[MAXSUBS];
+  int subscr[MAXSUBS]; // AOCC
   int par, ndim, lp, std, ast, ast2, i, fg, forloop, fg2, lp2;
   int save_sc;
   int dtype = dty ? dty : (DDTG(A_DTYPEG(ast_dty)));
@@ -4694,7 +4694,7 @@ position_finder(int forall, int ast)
   int list1, listp;
   int isptr;
   int i;
-  int reverse[7];
+  int reverse[MAXSUBS]; // AOCC
   int n;
   int pos;
 
@@ -5439,7 +5439,7 @@ _linearize_func(int ast, int *dummy)
         continue;
       }
       if (needs_linearization(sptr) && use_offset(sptr)) {
-        int subscr[7];
+        int subscr[MAXSUBS]; // AOCC
         if (param && POINTERG(param)) {
           subscr[0] = astb.i1;
         } else if ((STYPEG(sptr) != ST_MEMBER || POINTERG(sptr)) &&

@@ -556,7 +556,7 @@ inline_stds(int stdStart, int stdLast, int iLevels, int level)
 static int
 inline_ast(int std, int ast, int iLevels, int level)
 {
-  int astNewl, astNewr, astNew, vastSubs[7], astNewu, astNews, astNewc;
+  int astNewl, astNewr, astNew, vastSubs[MAXSUBS], astNewu, astNews, astNewc; // AOCC
   int asd, sptrEntry;
   int nsubs, sub;
   int sptrRet;
@@ -1053,7 +1053,7 @@ copy_inargs(int sptrEntry, int astCall, int stdstart, int stdlast)
   int sptrCall, sptrDummy, sptrCopy, sptrBnd;
   int nargs, arg;
   int argtNew;
-  int astArg, astCopy, ast, astl, astu, asts, vastSubs[7], astBnd, astAlloc;
+  int astArg, astCopy, ast, astl, astu, asts, vastSubs[MAXSUBS], astBnd, astAlloc; // AOCC
   int shd;
   int dtyp;
   int ndims, dim;
@@ -1311,7 +1311,7 @@ promote_assumsz_arg(int sptrDummy, int astArg)
 {
   int asd;
   int nsubs, sub;
-  int astl, astu, vastSubs[7], ast;
+  int astl, astu, vastSubs[MAXSUBS], ast; // AOCC
   int dtyp;
   int dtypeDummy, nsubsDummy, sptr, dtype;
 
@@ -1367,7 +1367,7 @@ allocate_adjarrs(int stdstart, int stdlast)
 {
   int sptr;
   int ndims, dim;
-  int vastSubs[7], astArr, ast, astAlloc, astl, astu;
+  int vastSubs[MAXSUBS], astArr, ast, astAlloc, astl, astu; // AOCC
   int std1 = STD_PREV(stdstart), std2 = stdlast;
 
   for (sptr = sptrHigh; sptr < stb.stg_avail; sptr++)
@@ -1384,7 +1384,7 @@ allocate_array(int sptr, int stdstart, int stdlast)
 {
   ADSC *ad;
   int sptrBnd;
-  int vastSubs[7], astArr, ast, astAlloc, astl, astu;
+  int vastSubs[MAXSUBS], astArr, ast, astAlloc, astl, astu; // AOCC
   int std1 = STD_PREV(stdstart), std2 = stdlast;
   int ndims, dim;
 
@@ -1544,7 +1544,7 @@ static int
 replace_parms(int ast, void *extra_arg)
 {
   int iar;
-  int astLop, astNew, astSS, astSub, vastSubs[7], ast1;
+  int astLop, astNew, astSS, astSub, vastSubs[MAXSUBS], ast1; // AOCC
   int sptr, dtypeOld, dtypeNew, memOld, memNew, astMemNew;
   int asd, asdSS;
   int ndims, dim;
@@ -1637,7 +1637,7 @@ replace_parms(int ast, void *extra_arg)
     bChanged |= astNew != astLop;
     ast1 = ast;
     if (astSS && ASD_NDIM(asdSS) != ndims) {
-      int nSubs[7], i, j;
+      int nSubs[MAXSUBS], i, j; // AOCC
       bChanged = 1;
       j = 0;
       ndims = ASD_NDIM(asdSS);
@@ -1739,7 +1739,7 @@ rewrite_inlined_args(int astCall, int sptrEntry, int stdstart, int stdlast)
   int sptrDummy, sptrArg, sptr, dtype;
   int shd;
   int ndims, dim;
-  int vastSubs[7];
+  int vastSubs[MAXSUBS]; // AOCC
   ADSC *adDummy, *adArg, *ad;
 
   /* Initialize the argument replacement table. */
@@ -1908,7 +1908,7 @@ replace_arg(int astDummy, int astAct)
   int rankAct, dimAct, dim, rankDummy;
   int asdAct, asdDummy;
   int ast, astl, astu, asts, astSub, ast1;
-  int vastSubs[7];
+  int vastSubs[MAXSUBS]; // AOCC
   int shd, shdDummy;
   int dtyp, needsubscripts;
   ADSC *adDummy;

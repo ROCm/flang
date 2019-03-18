@@ -601,7 +601,7 @@ ll_convert_array_dtype(LL_Module *module, DTYPE dtype, int addrspace)
 
     type = ll_convert_dtype(module, ddtype);
 
-    if (numdim >= 1 && numdim <= 7) {
+    if (is_legal_numdim(numdim)) { // AOCC
       /* Create nested LLVM arrays. */
       int i;
       for (i = 0; i < numdim; i++)
@@ -4036,7 +4036,7 @@ get_ftn_cbind_lltype(SPTR sptr)
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
         d = AD_NUMELM(ad);
-        if (numdim >= 1 && numdim <= 7) {
+        if (is_legal_numdim(numdim)) { // AOCC
           if (d == 0 || STYPEG(d) != ST_CONST) {
             if (XBIT(68, 0x1))
               d = AD_NUMELM(ad) = stb.k1;

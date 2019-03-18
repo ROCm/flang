@@ -2513,7 +2513,7 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
         align[1] = (alignment(dtype) + 1) * 8;
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim >= 1 && numdim <= 7) {
+        if (is_legal_numdim(numdim)) { /* AOCC */
           for (i = 0; i < numdim; ++i) {
             SPTR lower_bnd = AD_LWBD(ad, i);
             SPTR upper_bnd = AD_UPBD(ad, i);

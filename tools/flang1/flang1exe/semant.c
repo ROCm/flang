@@ -866,7 +866,6 @@ semant1(int rednum, SST *top)
   int newshapeid;
   int idptemp, newsubidx;
 
-
   switch (rednum) {
 
   /* ------------------------------------------------------------------ */
@@ -5964,11 +5963,10 @@ semant1(int rednum, SST *top)
     rhstop = 1;
     SST_IDP(RHS(1), S_STAR);
   dim_spec:
-    if (sem.arrdim.ndim >= 7) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }
-
     /* check upper bound expression */
     constarraysize = 1;
     arraysize = 0;
@@ -6031,7 +6029,6 @@ semant1(int rednum, SST *top)
     }
 
     /* check lower bound expression */
-
     if (rhstop == 1) { /* set default lower bound */
       sem.bounds[sem.arrdim.ndim].lowtype = S_CONST;
       sem.bounds[sem.arrdim.ndim].lowb = 1;
@@ -6085,7 +6082,7 @@ semant1(int rednum, SST *top)
    *      <dim spec> ::= : |
    */
   case DIM_SPEC4:
-    if (sem.arrdim.ndim >= 7) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }
@@ -6097,7 +6094,7 @@ semant1(int rednum, SST *top)
    *      <dim spec> ::= <expression> :
    */
   case DIM_SPEC5:
-    if (sem.arrdim.ndim >= 7) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }

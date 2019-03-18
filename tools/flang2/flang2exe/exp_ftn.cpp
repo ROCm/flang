@@ -19,6 +19,7 @@
  * \brief Fortran-specific expander routines
  */
 
+#include "gbldefs.h" /* AOCC */
 #include "exp_ftn.h"
 #include "exputil.h"
 #include "exp_rte.h"
@@ -1426,7 +1427,7 @@ static struct {
   int elmsz;    /* ili of actual element size (type ir) */
   DTYPE eldt;     /* data type of element */
   int nsubs;    /* number of subscripts */
-  int sub[7];   /* ili for each (actual) subscript */
+  int sub[MAXSUBS];   /* AOCC: ili for each (actual) subscript */
   int finalnme; /* final NME */
 } subscr;
 
@@ -1447,7 +1448,7 @@ compute_subscr(ILM *ilmp, bool bigobj)
   ISZ_T coffset;
   int any_kr;
   int sub_1;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
 
   subscr.nsubs = ILM_OPND(ilmp, 1);
 #if DEBUG
@@ -2951,7 +2952,7 @@ exp_array(ILM_OP opc, ILM *ilmp, int curilm)
 #endif
 
   if (XBIT(125, 0x10000)) {
-    int subs[7], i;
+    int subs[MAXSUBS], i; /* AOCC */
     int arrilm;
     DTYPE dtype;
     SPTR sym;

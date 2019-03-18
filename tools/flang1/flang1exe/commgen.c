@@ -187,7 +187,7 @@ generate_hallobnds(int ast)
   int newalloc, newdealloc, deallocstd;
   int i;
   int asd, ndim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int arr;
   int std;
   int nd;
@@ -227,7 +227,7 @@ generate_sect(int ast)
   int sptr;
   int i;
   int asd, ndim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int arr;
   int std;
   int nd;
@@ -395,7 +395,7 @@ generate_gather(int ast)
   int vsub, nvsub, vsub_ast;
   int vsubstd, nvsubstd, sectvsub, sectnvsub;
   int nvsub_ast, vsub_sec_ast, nvsub_sec_ast;
-  int vec[7], vecsec[7], permute[7];
+  int vec[MAXSUBS], vecsec[MAXSUBS], permute[MAXSUBS]; /* AOCC */
   int array_sec_ast, result_sec_ast, result_ast, array_ast;
   int vflag, pflag, nvec, nper;
   int vdim, pdim;
@@ -595,7 +595,7 @@ generate_shift(int ast)
   int asn;
   int ns, ps;
   int align;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int type, boundary;
   int atp;
 
@@ -1159,7 +1159,7 @@ generate_hcycliclp(int ast)
   u = mk_default_int(A_UPBDG(itriple));
   if (normalize_bounds(sptr_lhs)) {
     dim = get_int_cval(A_SPTRG(A_DIMG(ast))) - 1;
-    assert(0 <= dim && dim < 7, "generate_hcycliclp: bad dim", dim, 4);
+    assert(is_legal_numdim(dim), "generate_hcycliclp: bad dim", dim, 4); /* AOCC */
     l = sub_lbnd(DTYPEG(sptr_lhs), dim, l, astmem);
     u = sub_lbnd(DTYPEG(sptr_lhs), dim, u, astmem);
   }
@@ -1440,7 +1440,7 @@ rhs_cyclic(int ast, int std, int ifexpr)
   int forall;
   int asd;
   int ndim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int sptr, align;
 
   a = ast;
@@ -1667,7 +1667,7 @@ inline_hlocalizebnds(int i1, int i2, int lb, int ub, int sptr_lhs, int descr,
 
   assert(A_TYPEG(i1) == A_ID, "inline_hlocalizebnds: not A_ID", i1, 4);
   assert(A_TYPEG(i2) == A_ID, "inline_hlocalizebnds: not A_ID", i2, 4);
-  assert(dim >= 0 && dim <= 7, "inline_hlocalizebnds: illegal dim", dim, 4);
+  assert(is_legal_numdim(dim), "inline_hlocalizebnds: illegal dim", dim, 4); /* AOCC */
 
   /* find array lower and upper bound */
   lb = mk_default_int(lb);
@@ -1766,7 +1766,7 @@ pointer_squeezer(int ast)
   int dtype;
   int asd;
   int numdim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int arg;
   int argt;
   int argcnt;
@@ -1861,7 +1861,7 @@ pointer_squeezer(int ast)
       }
       break;
     }
-    assert(numdim > 0 && numdim <= 7, "pointer_squeezer: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "pointer_squeezer: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i) {
       int t;
       l = pointer_squeezer((int)ASD_SUBS(asd, i));

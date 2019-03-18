@@ -184,7 +184,7 @@ typedef struct {/* info on a shd item read from file */
     int lwb;
     int upb;
     int stride;
-  } shp[7];
+  } shp[MAXSUBS]; // AOCC
 } SHDITEM;
 
 typedef struct {     /* info on argt item read from file */
@@ -198,7 +198,7 @@ typedef struct {     /* info on ASD item read from file */
   int old;           /* old asd index */
   LOGICAL installed; /* this entry has been processed */
   int ndim;          /* number of dimensions */
-  int subs[7];       /* subscripts */
+  int subs[MAXSUBS];       /* AOCC: subscripts */
 } ASDITEM;
 
 typedef struct {     /* info on astli list read file */
