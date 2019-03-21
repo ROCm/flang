@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 1997-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2305,6 +2305,8 @@ lower_function(int ast)
 /*                       prefix:  J    K                                   */
 #define in_J_K 0x0530000
 /*                       prefix:  none      A      D                       */
+#define in_R_D 0x0003300
+/*                       prefix:            R      D                       */
 #define in_r_D 0x0001300
 /*                       prefix:            R      D       C     CD        */
 #define in_R_D_C_CD 0x0001333
@@ -2635,6 +2637,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_ANINT:
   case I_DNINT:
 
+  case I_CEILING:
+  case I_FLOOR:
+
   case I_CONJG:
   case I_DCONJG:
 
@@ -2882,8 +2887,6 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_SIZE:
   case I_LBOUND:
   case I_UBOUND:
-  case I_CEILING:
-  case I_FLOOR:
   case I_MODULO:
   case I_EXPONENT:
   case I_FRACTION:
@@ -3083,6 +3086,7 @@ lower_intrinsic(int ast)
   nargs = A_ARGCNTG(ast);
   args = A_ARGSG(ast);
   intr = A_OPTYPEG(ast);
+
   if (intr != NEW_INTRIN) {
     symfunc = EXTSYMG(intast_sym[intr]);
   } else {
@@ -3120,6 +3124,8 @@ lower_intrinsic(int ast)
   case I_DINT:
   case I_ANINT:
   case I_DNINT:
+  case I_FLOOR:
+  case I_CEILING:
     nargs = 1;
   }
   if (argdtype >= 0) {
@@ -3757,6 +3763,15 @@ lower_intrinsic(int ast)
     }
     break;
 
+  case I_CEILING:
+    dtype = A_NDTYPEG(ast);
+    ilm = intrin_name("CEIL", ast, in_R_D);
+    break;
+  case I_FLOOR:
+    dtype = A_NDTYPEG(ast);
+    ilm = intrin_name("FLOOR", ast, in_R_D);
+    break;
+
   case I_AINT:
   case I_DINT:
     dtype = A_NDTYPEG(ast);
@@ -4070,21 +4085,6 @@ lower_intrinsic(int ast)
     plower("C", symfunc);
     A_ILMP(ast, ilm);
     return ilm;
-
-  case I_CEILING:
-  case I_FLOOR:
-    /*
-     * see semfunc.c for the spelling of the function name.
-     */
-    dtype = A_NDTYPEG(ast);
-    symfunc = A_SPTRG(A_LOPG(ast));
-    for (i = 0; i < nargs; ++i) {
-      ilm = lower_ilm(ARGT_ARG(args, i));
-      ilm = plower("oi", "DPVAL", ilm);
-      intrinsic_args[i] = ilm;
-    }
-    ilm = plower("onsm", ltyped("FUNC", dtype), nargs, symfunc);
-    break;
 
   case I_MODULO:
     /*
