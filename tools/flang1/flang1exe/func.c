@@ -3325,15 +3325,14 @@ can_inline_minloc(int dest, int args) {
   if (!dest) return false;
   if (!srcarray) return false;
 
-  int shape = A_SHAPEG(dest);
-  if (!shape) return false;
-
-  if (A_DTYPEG(dest) == A_SUBSCR) {
-       return false;
+  if (A_TYPEG(dest) == A_SUBSCR) {
      int shape = A_SHAPEG(dest);
+     if (!shape) return false;
      if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
        return false;
-  } else if (A_TYPEG(dest) != A_ID) return false;
+  } else if (A_TYPEG(dest) != A_ID) {
+   return false;
+  }
 
   if (arg_gbl.inforall)
       if (contiguous_section_array(srcarray))
@@ -3347,7 +3346,14 @@ can_inline_minloc(int dest, int args) {
   }
 
   if (dim >= 1) {
-    return false;
+     if (A_TYPEG(dest) == A_SUBSCR) {
+       int shape = A_SHAPEG(dest);
+       if (!shape) return false;
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return false;
+     } else if (A_TYPEG(dest) != A_ID) {
+       return false;
+     }
   }
 
   if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
@@ -5869,8 +5875,15 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     dim = 0;
   }
 
-  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim >= 1) {
-    return ast;
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC)) {
+    if (A_TYPEG(dest) == A_SUBSCR) {
+       int shape = A_SHAPEG(dest);
+       if (!shape) return false;
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return ast;
+    } else if (A_TYPEG(dest) != A_ID) {
+       return ast;
+    }
   }
 
   if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
