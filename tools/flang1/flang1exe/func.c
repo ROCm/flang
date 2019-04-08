@@ -3324,20 +3324,14 @@ can_inline_minloc(int dest, int args) {
 
   if (!dest) return false;
   if (!srcarray) return false;
-
   if (A_TYPEG(dest) == A_SUBSCR) {
-     int shape = A_SHAPEG(dest);
-     if (!shape) return false;
-     if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       int shape = A_SHAPEG(dest);
+       if (!shape) return false;
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
        return false;
-  } else if (A_TYPEG(dest) == A_ID) {
-    int sptr = A_SPTRG(dest);
-    if (is_array_type(sptr)) {
-     int shape = A_SHAPEG(dest);
-     if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
-       return false;
-    }
-  } else return false;
+   } else if (A_TYPEG(dest) != A_ID) {
+          return false;
+   }
 
   if (arg_gbl.inforall)
       if (contiguous_section_array(srcarray))
@@ -3351,7 +3345,6 @@ can_inline_minloc(int dest, int args) {
   }
 
   if (dim >= 1) {
-     if (A_DTYPEG(dest) == TY_ARRAY) return false;
      if (A_TYPEG(dest) == A_SUBSCR) {
        int shape = A_SHAPEG(dest);
        if (!shape) return false;
@@ -5886,7 +5879,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     dim = 0;
   }
 
-  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC)) {
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim >= 1) {
     if (A_TYPEG(dest) == A_SUBSCR) {
        int shape = A_SHAPEG(dest);
        if (!shape) return ast;
