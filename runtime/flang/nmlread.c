@@ -1715,6 +1715,10 @@ eval(int v, char *loc_addr)
   __POINT_T new_ndims;
   __POINT_T actual_ndims;
 
+  // AOCC BEGIN
+  F90_Desc* sd;
+  // AOCC END
+
   if (v > vrf_cur) {
 
     descp = VRF_DESCP(v - 1);
@@ -1763,6 +1767,13 @@ eval(int v, char *loc_addr)
       offset *= I8(siz_of)(descp);
       new_addr += offset;
     }
+    // AOCC BEGIN
+    else if (descp->ndims == -1 && sb.ndims == 1) {
+      sd = get_descriptor(descp);
+      new_addr = I8(__fort_local_address)((*(char **)sb.loc_addr), sd,
+                                          (__INT_T *)&sb.sect[0].lwb);
+    }
+    // AOCC END
     break;
 
   case VRF_SECTION:
