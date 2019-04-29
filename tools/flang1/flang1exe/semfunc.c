@@ -10597,7 +10597,9 @@ ref_pd(SST *stktop, ITEM *list)
         sptr = A_SPTRG(ast);
       }
       if (sptr) {
-        if (POINTERG(sptr) || ALLOCG(sptr) || CLASSG(sptr) || ASSUMSHPG(sptr) ||
+        // AOCC Begin - Removed pointer restriction
+        if (ALLOCG(sptr) || CLASSG(sptr) || ASSUMSHPG(sptr) ||
+        // AOCC end
             ASUMSZG(sptr) ||
             (DTY(DTYPEG(sptr)) == TY_DERIVED &&
              !(CFUNCG(DTY(DTYPEG(sptr) + 3)) || is_iso_cptr(DTYPEG(sptr)) ||
