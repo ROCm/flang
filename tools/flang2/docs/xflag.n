@@ -179,6 +179,8 @@ describe when loops can not be parallelized
 For PFO.
 .XB 0x80000:
 For PRE.
+.XB 0x100000:
+warn if using uninitialized variables.
 
 .XF "2:" 
 Used to turn on various non-standard optimizations

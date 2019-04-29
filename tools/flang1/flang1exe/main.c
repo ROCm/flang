@@ -253,8 +253,17 @@ main(int argc, char *argv[])
     } else {
       TR(DNAME " PARSER begins\n")
       parser(); /* parse and do semantic analysis */
+
+      /* AOCC begin */
+      /* to be used at a later call for checking inherited symbols from parent
+       * subprogram to child subprogram (if any). This is used by
+       * warn_uninit_use() */
+      if (XBIT(1, 0x100000))
+        remember_curr_symcnt();
+      /* AOCC end */
       set_tag();
     }
+
     gbl.func_count++;
     ccff_open_unit_f90();
     if (gbl.internal <= 1) {
@@ -453,6 +462,13 @@ main(int argc, char *argv[])
           convert_forall();
           DUMP("convert-forall");
           TR1("- after convert_forall");
+
+          /* AOCC begin */
+          /* We want to have all forall constructs to be in do-loop form so that
+           * we can fetch their "dovars" easily */
+          if (XBIT(1, 0x100000))
+            warn_uninit_use();
+          /* AOCC end */
 
           TR(DNAME " CONVERT_OUTPUT begins\n");
           convert_output();
