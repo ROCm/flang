@@ -388,7 +388,8 @@
 <ideqc list> ::= <ideqc list> , <ident> <init beg> <expression> |
                 <ident> <init beg> <expression>
 
-<init beg> ::= =
+<init beg> ::= = |
+               '=>'
 
 <vxeqc list> ::= <vxeqc list> , <ident> = <expression> |
                 <ident> = <expression>

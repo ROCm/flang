@@ -75,7 +75,6 @@
 
 #include "atomic_common.h"
 
-
 static void gen_dinit(int, SST *);
 static void pop_subprogram(void);
 
@@ -6488,6 +6487,9 @@ semant1(int rednum, SST *top)
    *	<init beg> ::= =
    */
   case INIT_BEG1:
+  /* AOCC begin */
+  case INIT_BEG2:
+  /* AOCC end */
     sem.dinit_data = TRUE;
     break;
 
@@ -9047,6 +9049,19 @@ semant1(int rednum, SST *top)
             goto entity_decl_end;
           }
         }
+
+        /* AOCC begin */
+        if (flg.std == F2008) {
+          /* null() pointer declarations are skipped here */
+          if (POINTERG(sptr) && SST_ASTG(RHS(3)) != A_FUNC) {
+            ast = assign_pointer(RHS(1), RHS(3));
+            add_stmt(ast);
+            SST_ASTP(RHS(1), ast);
+            goto entity_decl_end;
+          }
+        }
+        /* AOCC end */
+
         construct_acl_for_sst(RHS(3), DTYPEG(SST_SYMG(RHS(1))));
         if (!SST_ACLG(RHS(3))) {
           goto entity_decl_end;
