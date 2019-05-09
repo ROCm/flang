@@ -40,7 +40,7 @@ typedef enum LL_Op {
   LL_ICMP,     LL_FCMP,        LL_BR,       LL_UBR,          LL_SELECT,
   LL_GEP,      LL_BITCAST,     LL_INTTOPTR, LL_PTRTOINT,     LL_ALLOCA,
   LL_TEXTCALL, LL_UNREACHABLE, LL_SWITCH,   LL_EXTRACTVALUE, LL_INSERTVALUE,
-  LL_ATOMICRMW, LL_CMPXCHG, LL_NONE
+  LL_ATOMICRMW, LL_CMPXCHG,    LL_ASM,	LL_NONE
 } LL_Op;
 
 /* clang-format on */
@@ -153,6 +153,7 @@ typedef enum LL_IRVersion {
   LL_Version_5_0 = 50,
   LL_Version_6_0 = 60,
   LL_Version_7_0 = 70,
+  LL_Version_8_0 = 80,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -374,6 +375,15 @@ ll_feature_debug_info_ver70(const LL_IRFeatures *feature)
   return feature->version >= LL_Version_7_0;
 }
 
+/**
+   \brief Version 8.0 debug metadata
+ */
+INLINE static bool
+ll_feature_debug_info_ver80(const LL_IRFeatures *feature)
+{
+  return feature->version >= LL_Version_8_0;
+}
+
 INLINE static bool
 ll_feature_use_distinct_metadata(const LL_IRFeatures *feature)
 {
@@ -461,6 +471,7 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
   ((f)->version >= LL_Version_3_7)
 #define ll_feature_debug_info_ver38(f) ((f)->version >= LL_Version_3_8)
 #define ll_feature_debug_info_ver70(f) ((f)->version >= LL_Version_7_0)
+#define ll_feature_debug_info_ver80(f) ((f)->version >= LL_Version_8_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
 #define ll_feature_subprogram_not_in_cu(f) ((f)->version >= LL_Version_3_9)
 #define ll_feature_from_global_to_md(f) ((f)->version >= LL_Version_4_0)
@@ -644,6 +655,8 @@ typedef enum LL_DW_OP_t {
   LL_DW_OP_NONE, /**< bogus value */
   LL_DW_OP_deref,
   LL_DW_OP_plus,
+  LL_DW_OP_minus,
+  LL_DW_OP_dup,
   LL_DW_OP_LLVM_fragment,
   LL_DW_OP_swap,
   LL_DW_OP_xderef,
@@ -701,6 +714,10 @@ typedef struct LL_Value {
 /* The flags below are only valid when VAL_IS_PARAM is set. */
 #define VAL_IS_BYVAL_PARAM 0x10
 #define VAL_IS_NOALIAS_PARAM 0x20
+/* the variables appear within the inline asm output list */
+#define VAL_IS_ASM_OUTPUT    0x40
+/* the variables appear within the inline asm input list */
+#define VAL_IS_ASM_INPUT    0x80
 #define VAL_IS_KERNEL_REF 0x1000
 
 /**

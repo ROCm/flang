@@ -2070,7 +2070,7 @@ static inline void warn_if_var_uninit(int ast_stmt, int ast_var, int curr_lineno
   std = A_STDG(ast_stmt);
 
   if (is_sptr_init_status_decideable(sptr) && !is_var_initialized(sptr)) {
-    error(1212, 2, curr_lineno, SYMNAME(sptr),
+    error(1216, 2, curr_lineno, SYMNAME(sptr),
         SYMNAME(gbl.currsub));
   }
 }

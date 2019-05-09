@@ -407,6 +407,25 @@ ll_write_instruction(FILE *out, LL_Instruction *inst, LL_Module *module, int no_
   print_branch_target = 0;
   opname = get_op_name(inst->op);
   switch (inst->op) {
+  case LL_ASM: {
+    if(inst->num_operands==2) {
+      fprintf(out, "%scall void asm sideeffect \"%s\", \"\"()", SPACES,
+            inst->operands[1]->data);
+    } else {
+      int noperands = inst->num_operands;
+      fprintf(out, "%s%s = call %s asm sideeffect \"%s\", \"%s\"", SPACES,
+            inst->operands[0]->data, inst->operands[0]->type_struct->str, 
+            inst->operands[1]->data, inst->operands[2]->data);
+      fprintf(out, "(");
+      for(i=3; i<noperands; i++) {
+        fprintf(out, "%s %s", inst->operands[i]->type_struct->str, inst->operands[i]->data);
+        if(i<(noperands-1))
+          fprintf(out, ",");
+      }
+      fprintf(out, ")");
+    }
+  }
+  break;
   case LL_ATOMICRMW: {
     const char *atomicopr;
     const char *memorder;
@@ -1128,7 +1147,7 @@ static const MDTemplate Tmpl_DILocalVariable_embedded_argnum[] = {
 };
 
 static const MDTemplate Tmpl_DIGlobalVariable[] = {
-  { "DIGlobalVariable", TF, 13 },
+  { "DIGlobalVariable", TF, 14 },
   { "tag",                      DWTagField, FlgHidden },
   { "unused",                   NodeField, FlgHidden },
   { "scope",                    NodeField },
@@ -1141,16 +1160,17 @@ static const MDTemplate Tmpl_DIGlobalVariable[] = {
   { "isLocal",                  BoolField },
   { "isDefinition",             BoolField },
   { "variable",                 ValueField },
+  { "flags",                    UnsignedField },
   { "addrspace",                UnsignedField, FlgOptional } /* nvvm extension */
                                                             /* Missing: declaration */
 };
 
 static const MDTemplate Tmpl_DIGlobalVariable4[] = {
-  { "DIGlobalVariable", TF, 12 },
+  { "DIGlobalVariable", TF, 13 },
   { "tag",                      DWTagField, FlgHidden },
   { "unused",                   NodeField, FlgHidden },
   { "scope",                    NodeField },
-  { "name",                     StringField },
+  { "name",                     StringField, FlgMandatory },
   { "displayName",              StringField, FlgHidden },
   { "linkageName",              StringField },
   { "file",                     NodeField },
@@ -1158,6 +1178,7 @@ static const MDTemplate Tmpl_DIGlobalVariable4[] = {
   { "type",                     NodeField },
   { "isLocal",                  BoolField },
   { "isDefinition",             BoolField },
+  { "flags",                    UnsignedField },
   { "addrspace",                UnsignedField, FlgOptional } /* nvvm extension */
 };
 
@@ -2030,6 +2051,10 @@ ll_dw_op_to_name(LL_DW_OP_t op)
     return "DW_OP_deref";
   case LL_DW_OP_plus:
     return "DW_OP_plus";
+  case LL_DW_OP_minus:
+    return "DW_OP_minus";
+  case LL_DW_OP_dup:
+    return "DW_OP_dup";
   case LL_DW_OP_LLVM_fragment:
     return "DW_OP_LLVM_fragment";
   case LL_DW_OP_swap:

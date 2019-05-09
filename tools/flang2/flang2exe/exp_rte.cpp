@@ -2285,7 +2285,7 @@ exp_end_ret:
   }
 
   /* emit any mp initialization for the function & its entries */
-  exp_mp_func_prologue();
+  exp_mp_func_prologue(true);
 
   if (!XBIT(121, 0x01) ||                  /* -Mnoframe isn't specified */
       (flg.debug && !XBIT(123, 0x400)) ||  /* -debug is set */
@@ -3146,8 +3146,18 @@ get_chain_pointer_closure(SPTR sdsc)
   }
   nme = addnme(NT_VAR, sdsc, 0, 0);
   if (SCG(sdsc) != SC_DUMMY) {
-    cp = ad_acon(sdsc, cp_offset);
-    cp = ad2ili(IL_LDA, cp, nme);
+    if (PARREFG(sdsc)) {
+      /**
+       * In LLVM, pointer descriptor is not visible in the outlined func.
+       * Use mk_address() which fetches the uplevel ref
+       */ 
+      int addr = mk_address(sdsc);
+      int ili = ad2ili(IL_LDA, addr, nme);
+      cp = ad3ili(IL_AADD, ili, ad_aconi(cp_offset), 0);
+    } else {
+      cp = ad_acon(sdsc, cp_offset);
+      cp = ad2ili(IL_LDA, cp, nme);
+    }
   } else {
     SPTR asym = mk_argasym(sdsc);
     int addr = mk_address(sdsc);

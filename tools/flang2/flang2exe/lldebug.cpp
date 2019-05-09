@@ -167,6 +167,8 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                                 int findex, bool is_reference,
                                 bool skip_first_dim,
                                 bool skipDataDependentTypes);
+static LL_MDRef lldbg_fwd_local_variable(LL_DebugInfo *db, int sptr, int findex,
+                                         int emit_dummy_as_local);
 static void lldbg_emit_imported_entity(LL_DebugInfo *db, SPTR entity_sptr,
                                        SPTR func_sptr, IMPORT_TYPE entity_type);
 /* ---------------------------------------------------------------------- */
@@ -507,7 +509,7 @@ lldbg_create_global_variable_mdnode(LL_DebugInfo *db, LL_MDRef context,
                                     LL_MDRef def_context, int line,
                                     LL_MDRef type_mdnode, int is_local,
                                     int is_definition, LL_Value *var_ptr,
-                                    int addrspace, ISZ_T off)
+                                    int addrspace, int flags, ISZ_T off)
 {
   LLMD_Builder mdb = llmd_init(db->module);
   LL_MDRef cur_mdnode;
@@ -524,6 +526,8 @@ lldbg_create_global_variable_mdnode(LL_DebugInfo *db, LL_MDRef context,
   llmd_add_md(mdb, type_mdnode);
   llmd_add_i32(mdb, is_local);
   llmd_add_i32(mdb, is_definition);
+  if (ll_feature_debug_info_ver70(&db->module->ir))
+    llmd_add_i32(mdb, flags);
   if (!ll_feature_from_global_to_md(&db->module->ir))
     llmd_add_md(mdb, ll_get_md_value(db->module, var_ptr));
   if (addrspace >= 0)
@@ -1092,6 +1096,48 @@ lldbg_create_ftn_subrange_mdnode(LL_DebugInfo *db, ISZ_T clb, LL_MDRef lbv,
     llmd_add_md(mdb, ubv);
     llmd_add_md(mdb, emit_deref_expression_mdnode(db));
   }
+  return llmd_finish(mdb);
+}
+
+#define F90_DESC_SIZE 10 /* num of fields of Struct F90_Desc */
+#define F90_DESCDIM_SIZE 6 /* num of fields of Struct F90_DescDim */
+/* Create subrange mdnode based on array descriptor */
+static LL_MDRef
+lldbg_create_ftn_subrange_via_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
+                                   int rank)
+{
+  LL_MDRef array_desc_mdnode, lbnd_expr_mdnode, ubnd_expr_mdnode;
+  const int lbnd_offset = 8 * (F90_DESC_SIZE + rank * F90_DESCDIM_SIZE);
+  const int extent_offset = lbnd_offset + 8;
+  const unsigned v1 = lldbg_encode_expression_arg(LL_DW_OP_int, lbnd_offset);
+  const unsigned v2 = lldbg_encode_expression_arg(LL_DW_OP_int, extent_offset);
+  const unsigned one = lldbg_encode_expression_arg(LL_DW_OP_int, 1);
+  const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus_uconst, 0);
+  const unsigned dup = lldbg_encode_expression_arg(LL_DW_OP_dup, 0);
+  const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
+  const unsigned swap = lldbg_encode_expression_arg(LL_DW_OP_swap, 0);
+  const unsigned plus = lldbg_encode_expression_arg(LL_DW_OP_plus, 0);
+  const unsigned minus = lldbg_encode_expression_arg(LL_DW_OP_minus, 0);
+  const unsigned constu = lldbg_encode_expression_arg(LL_DW_OP_constu, 0);
+
+  array_desc_mdnode = ll_get_global_debug(cpu_llvm_module, SDSCG(sptr));
+  if (LL_MDREF_IS_NULL(array_desc_mdnode)) {
+    array_desc_mdnode = lldbg_fwd_local_variable(db, SDSCG(sptr), findex, false);
+  }
+  lbnd_expr_mdnode = lldbg_emit_expression_mdnode(db, 3, add, v1, deref);
+  ubnd_expr_mdnode =
+      lldbg_emit_expression_mdnode(db, 12, dup, add, v1, deref, swap, add, v2,
+                                   deref, plus, constu, one, minus);
+
+  LLMD_Builder mdb = llmd_init(db->module);
+  llmd_set_class(mdb, LL_DIFortranSubrange);
+  llmd_add_i32(mdb, make_dwtag(db, DW_TAG_subrange_type));
+  llmd_add_i64(mdb, 0);
+  llmd_add_i64(mdb, 0);
+  llmd_add_md(mdb, array_desc_mdnode);
+  llmd_add_md(mdb, lbnd_expr_mdnode);
+  llmd_add_md(mdb, array_desc_mdnode);
+  llmd_add_md(mdb, ubnd_expr_mdnode);
   return llmd_finish(mdb);
 }
 
@@ -2477,8 +2523,26 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
         return type_mdnode;
       }
       switch (DTY(dtype)) {
-      case TY_PTR:
-        type_mdnode = lldbg_emit_type(db, DTySeqTyElement(dtype), sptr, findex,
+      case TY_PTR: {
+        /* Fortran arrays with SDSC and MIDNUM attributes have the type of either
+         * Pointer to FortranArrayType or FortranArrayType.
+         */
+        if (ftn_array_need_debug_info(sptr)) {
+          SPTR array_sptr = (SPTR)REVMIDLNKG(sptr);
+          type_mdnode = lldbg_emit_type(db, DTYPEG(array_sptr), array_sptr, findex,
+                                        false, false, false);
+          /* Emit FortranArrayType instead of pointer to FortranArrayType
+           * to workaround a known gdb bug not able to debug array bounds.
+           * i.e.
+           * 1) On POWER, gdb 7.x fails to read array bounds either w/ or
+           * w/o the pointer type layer; gdb 8.x only works w/o the pointer
+           * type layer.
+           * 2) On X86, gdb 7.x works either w/ or w/o the pointer type layer,
+           * however, gdb 8.x only works w/o the pointer type layer.
+           */
+          return type_mdnode;
+        }
+          type_mdnode = lldbg_emit_type(db, DTySeqTyElement(dtype), sptr, findex,
                                       false, false, false);
         sz = (ZSIZEOF(dtype) * 8);
         align[1] = ((alignment(dtype) + 1) * 8);
@@ -2491,6 +2555,7 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
               type_mdnode);
           dtype_array_check_set(db, dtype, type_mdnode);
         break;
+      }
 
       case TY_PFUNC:
       case TY_PROC:
@@ -2521,11 +2586,17 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
               // use PGI metadata extensions
               LL_MDRef lbv;
               LL_MDRef ubv;
-              const ISZ_T M = 1ul << ((sizeof(ISZ_T) * 8) - 1);
-              init_subrange_bound(db, &lb, &lbv, lower_bnd, 1, findex);
-              init_subrange_bound(db, &ub, &ubv, upper_bnd, M, findex);
-              subscript_mdnode =
-                  lldbg_create_ftn_subrange_mdnode(db, lb, lbv, ub, ubv);
+              if (SDSCG(sptr) && MIDNUMG(sptr) && (gbl.rutype != RU_BDATA)) {
+                /* Create subrange mdnode based on array descriptor */
+                subscript_mdnode =
+                    lldbg_create_ftn_subrange_via_sdsc(db, findex, sptr, i);
+              } else {
+                const ISZ_T M = 1ul << ((sizeof(ISZ_T) * 8) - 1);
+                init_subrange_bound(db, &lb, &lbv, lower_bnd, 1, findex);
+                init_subrange_bound(db, &ub, &ubv, upper_bnd, M, findex);
+                subscript_mdnode =
+                    lldbg_create_ftn_subrange_mdnode(db, lb, lbv, ub, ubv);
+              }
               llmd_add_md(mdb, subscript_mdnode);
             } else {
               // cons the old debug metadata
@@ -2677,7 +2748,7 @@ lldbg_emit_global_variable(LL_DebugInfo *db, SPTR sptr, ISZ_T off, int findex,
   is_local = (sc == SC_STATIC);
   mdref = lldbg_create_global_variable_mdnode(
       db, scope_mdnode, display_name, SYMNAME(sptr), "", file_mdnode, decl_line,
-      type_mdnode, is_local, DEFDG(sptr) || (sc != SC_EXTERN), value, -1, off);
+      type_mdnode, is_local, DEFDG(sptr) || (sc != SC_EXTERN), value, -1, 0, off);
   if (!LL_MDREF_IS_NULL(mdref)) {
     LL_ObjToDbgList **listp = llassem_get_objtodbg_list(sptr);
     if (listp) {
@@ -2844,7 +2915,7 @@ lldbg_emit_local_variable(LL_DebugInfo *db, SPTR sptr, int findex,
            "lldbg_emit_local_variable: parameter not in param stack for sptr ",
            sptr, ERR_Fatal);
   } else {
-    const int flags = set_dilocalvariable_flags(sptr);
+    int flags = set_dilocalvariable_flags(sptr);
     BLKINFO *blk_info = get_lexical_block_info(db, sptr, true);
     LL_MDRef fwd;
     hash_data_t val;
@@ -2853,6 +2924,15 @@ lldbg_emit_local_variable(LL_DebugInfo *db, SPTR sptr, int findex,
       hashmap_erase(db->module->mdnodes_fwdvars, INT2HKEY(sptr), NULL);
     } else {
       fwd = ll_get_md_null();
+    }
+    if (ftn_array_need_debug_info(sptr)) {
+      SPTR array_sptr =(SPTR)REVMIDLNKG(sptr);
+      /* Overwrite the symname and flags to represent the user defined array
+       * instead of a compiler generated symbol of array pointer.
+       */
+      symname = (char *)lldbg_alloc(strlen(SYMNAME(array_sptr)) + 1);
+      strcpy(symname, SYMNAME(array_sptr));
+      flags = 0;
     }
     var_mdnode = lldbg_create_local_variable_mdnode(
         db, DW_TAG_auto_variable, blk_info->mdnode, symname, file_mdnode, 0, 0,
@@ -3125,6 +3205,7 @@ lldbg_create_cmblk_gv_mdnode(LL_DebugInfo *db, LL_MDRef cmnblk_mdnode,
   ISZ_T sz, lb, ub, dim_ele;
   DTYPE elem_dtype;
   LLMD_Builder mdb = llmd_init(db->module);
+  const char *display_name;
 
   elem_dtype = DT_BINT;
   sz = SIZEG(sptr);
@@ -3141,9 +3222,15 @@ lldbg_create_cmblk_gv_mdnode(LL_DebugInfo *db, LL_MDRef cmnblk_mdnode,
   subscripts_mdnode = llmd_finish(mdb);
   type_mdnode = lldbg_create_array_type_mdnode(
       db, ll_get_md_null(), 0, sz, align, elem_type_mdnode, subscripts_mdnode);
+#ifdef FLANG_LLVM_EXTENSIONS
+  if (ll_feature_debug_info_ver70(&db->module->ir) && !XBIT(183, 0x40000000))
+    display_name = "";
+  else
+#endif
+    display_name = SYMNAME(sptr);
   mdref = lldbg_create_global_variable_mdnode(
-      db, cmnblk_mdnode, SYMNAME(sptr), SYMNAME(sptr), "", ll_get_md_null(),
-      DECLLINEG(sptr), type_mdnode, 0, 1, NULL, -1, 0);
+      db, cmnblk_mdnode, display_name, SYMNAME(sptr), "", ll_get_md_null(),
+      DECLLINEG(sptr), type_mdnode, 0, 1, NULL, -1, DIFLAG_ARTIFICIAL, 0);
   ll_add_global_debug(db->module, sptr, mdref);
   return mdref;
 }
