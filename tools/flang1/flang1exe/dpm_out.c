@@ -1285,6 +1285,12 @@ _wrap_symbol(int sptr, int memberast, int basesptr)
   case TY_ARRAY:
     /* if an unused symbol from the containing routine, skip it */
     if (gbl.internal > 1 && !INTERNALG(sptr)) {
+      // AOCC BEGIN
+      // Do not assume that the array descriptor is initialized
+      // for the derived type members.
+      if (STYPEG(sptr) == ST_MEMBER)
+        SDSCINITP(DESCRG(sptr),0);
+      // AOCC END
       if (DESCRG(sptr) && SDSCINITG(DESCRG(sptr)) &&
           (arrd = SECDSCG(DESCRG(sptr))) && SCOPEG(arrd) == SCOPEG(sptr) &&
           STYPEG(SCOPEG(sptr)) != ST_MODULE) {
@@ -1298,7 +1304,11 @@ _wrap_symbol(int sptr, int memberast, int basesptr)
           SCOPEG(arrd) == SCOPEG(gbl.currsub) &&
           STYPEG(SCOPEG(sptr)) == ST_MODULE) {
         change_mk_id(DESCRG(sptr), arrd);
-        return;
+        // AOCC BEGIN
+        // Derived type members still need to be initialized.
+        if (STYPEG(sptr) != ST_MEMBER)
+        // AOCC END
+          return;
       }
     }
     /* if a variable or array, this was handled by allocate_one_auto */
