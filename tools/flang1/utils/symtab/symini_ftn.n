@@ -1098,6 +1098,15 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .\" ---------------------
 .\" Predeclared Functions
 .\" ---------------------
+.PD BGE - -
+.AT elemental i j
+.PD BGT - -
+.AT elemental i j
+.PD BLE - -
+.AT elemental i j
+.PD BLT - -
+.AT elemental i j
+
 .PD REAL - -
 .AT elemental a *kind
 .PD CMPLX - -
@@ -1844,14 +1853,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i
 .H7 .TRAILZ - -
 .AT elemental i
-.H7 .BGE - -
-.AT elemental i j
-.H7 .BGT - -
-.AT elemental i j
-.H7 .BLE - -
-.AT elemental i j
-.H7 .BLT - -
-.AT elemental i j
 .H7 .MASKL - -
 .AT elemental i *kind
 .H7 .MASKR - -

@@ -22,6 +22,11 @@
  *
  * Date of Modification: 21st February 2019
  *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -76,6 +81,9 @@ typedef enum {
   RTE_auto_dealloc,
   RTE_auto_deallocm,
   RTE_auto_deallocp,
+  /* AOCC begin */
+  RTE_bitcmp,
+  /* AOCC end */
   RTE_c_f_procptr,
   RTE_c_f_ptr,
   RTE_calloc03a,

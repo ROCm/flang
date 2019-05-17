@@ -30,6 +30,11 @@
  *
  * Date of Modification: 21st February 2019
  *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
  */
 
 /**
@@ -1894,6 +1899,47 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
        * is just a function call
        */
       goto ret_norm;
+
+    /* AOCC begin */
+    case I_BGE:
+    case I_BGT:
+    case I_BLE:
+    case I_BLT: {
+      FtnRtlEnum bitcmp_rtlRtn = RTE_bitcmp;
+
+      char *bitcmp_name = mkRteRtnNm(bitcmp_rtlRtn);
+      int bitcmp_sptr = sym_mkfunc(bitcmp_name, DT_INT);
+
+      int bitcmp_argt = mk_argt(4);
+
+      ARGT_ARG(bitcmp_argt, 0) = ARGT_ARG(func_args, 0);
+      ARGT_ARG(bitcmp_argt, 1) = ARGT_ARG(func_args, 1);
+
+      int bits_in_arg0 = bits_in(A_DTYPEG(ARGT_ARG(bitcmp_argt, 0)));
+      int bits_in_arg1 = bits_in(A_DTYPEG(ARGT_ARG(bitcmp_argt, 1)));
+      ARGT_ARG(bitcmp_argt, 2) = mk_cval1(bits_in_arg0, DT_INT);
+      ARGT_ARG(bitcmp_argt, 3) = mk_cval1(bits_in_arg1, DT_INT);
+
+      int bitcmp_func = mk_func_node(A_FUNC, mk_id(bitcmp_sptr), 4, bitcmp_argt);
+      A_OPTYPEP(bitcmp_func, A_OPTYPEG(func_ast));
+
+      int bitcmp_temp_result = mk_id(sym_get_scalar("bitcmp_tmp", "i", DT_INT));
+      int bitcmp_assign = mk_assn_stmt(bitcmp_temp_result, bitcmp_func, DT_INT);
+      add_stmt_before(bitcmp_assign, arg_gbl.std);
+
+      int ret_ast;
+      switch (optype) {
+        case I_BGE:
+          return mk_binop(OP_GE,  bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BGT:
+          return mk_binop(OP_GT, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BLE:
+          return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BLT:
+          return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+      }
+                }
+    /* AOCC end */
     default:
       if (INKINDG(A_SPTRG(A_LOPG(func_ast))) == IK_ELEMENTAL)
         goto ret_norm;

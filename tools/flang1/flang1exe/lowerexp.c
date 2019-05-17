@@ -2850,6 +2850,14 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_LLT:
     return -1;
 
+  /* AOCC begin */
+  case I_BGE:
+  case I_BGT:
+  case I_BLE:
+  case I_BLT:
+    return -1;
+  /* AOCC end */
+
   case I_LOC:
   case I_C_FUNLOC:
   case I_C_LOC:
@@ -4348,6 +4356,13 @@ lower_intrinsic(int ast)
   case I_IDATE:
   case I_TIME:
   case I_MVBITS:
+
+  /* AOCC begin */
+  case I_BGE:
+  case I_BGT:
+  case I_BLE:
+  case I_BLT:
+  /* AOCC end */
 
   case I_SECNDS:
   case I_DATE_AND_TIME:

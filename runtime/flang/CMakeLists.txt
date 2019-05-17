@@ -46,6 +46,9 @@
 #
 # AMD Support for DNORM intrinsic
 # Date of Modification: 21st February 2019
+#
+# [AMD] Support for Bit Sequence Comparsion intrinsic
+# Month of Modification: May 2019
 #===----------------------------------------------------------------------===#
 
 
@@ -354,6 +357,7 @@ SET(FTN_SUPPORT_DESC_INDEP
 SET(FTN_SUPPORT_DESC_DEP
   aligned.c
   allo.c
+  bitcmp.c
   comm.c
   copy.c
   cshift.c

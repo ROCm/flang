@@ -22,6 +22,11 @@
  *
  * Date of Modification: 21st February 2019
  *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
  */
 
 /**
@@ -1550,7 +1555,11 @@ const char *SyminiFE90::init_names0[] = {
     "any",
     "compl",
     "count",
-    // APCC Begin
+    // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2072,6 +2081,10 @@ const char *SyminiFE90::init_names1[] = {
     "compl",
     "count",
     // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2594,6 +2607,10 @@ const char *SyminiFE90::init_names2[] = {
     "compl",
     "count",
     // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
     "norm2",
     // AOCC End
     "dot_product",
@@ -3169,6 +3186,10 @@ const char *SyminiFE90::init_names3[] = {
     "compl",
     "count",
     // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
     "norm2",
     // AOCC End
     "dot_product",

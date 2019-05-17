@@ -22,6 +22,11 @@
  *
  * Date of Modification: 21st February 2019
  *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -73,6 +78,9 @@ FtnRteRtn ftnRtlRtns[] = {
     {"auto_dealloc", "", true, ""},
     {"auto_deallocm", "", true, ""},
     {"auto_deallocp", "", true, ""},
+    /* AOCC begin */
+    {"bitcmp", "", false, ""},
+    /* AOCC end */
     {"c_f_procptr", "", false, ""},
     {"c_f_ptr", "", true, ""},
     {"calloc03a", "", true, ""},
