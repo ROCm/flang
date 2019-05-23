@@ -8343,6 +8343,8 @@ ref_pd(SST *stktop, ITEM *list)
 
     /* Both arguments should be some kind of INTEGER where kind is at max = 8 */
     switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
       case TY_BINT:
       case TY_SINT:
       case TY_INT:
@@ -8354,6 +8356,8 @@ ref_pd(SST *stktop, ITEM *list)
     }
 
     switch (DTY(dtype2)) {
+      case TY_WORD:
+      case TY_DWORD:
       case TY_BINT:
       case TY_SINT:
       case TY_INT:
