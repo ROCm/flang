@@ -1560,6 +1560,8 @@ const char *SyminiFE90::init_names0[] = {
     "bgt",
     "ble",
     "blt",
+    "maskl",
+    "maskr",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2085,6 +2087,8 @@ const char *SyminiFE90::init_names1[] = {
     "bgt",
     "ble",
     "blt",
+    "maskl",
+    "maskr",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2611,6 +2615,8 @@ const char *SyminiFE90::init_names2[] = {
     "bgt",
     "ble",
     "blt",
+    "maskl",
+    "maskr",
     "norm2",
     // AOCC End
     "dot_product",
@@ -3190,6 +3196,8 @@ const char *SyminiFE90::init_names3[] = {
     "bgt",
     "ble",
     "blt",
+    "maskl",
+    "maskr",
     "norm2",
     // AOCC End
     "dot_product",

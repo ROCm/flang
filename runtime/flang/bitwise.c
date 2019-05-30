@@ -22,13 +22,17 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
  */
-
 
 /* clang-format off */
 
-/** \file 
- * \brief F90  BITCMP intrinsics for INT types
+/** \file
+ * \brief F90  BITWISE intrinsics for INT types
  */
 
 /* AOCC begin */
@@ -76,7 +80,7 @@ int ENTF90(BITCMP, bitcmp)(long *ptr_a, long *ptr_b, int *ptr_a_nbits, int *ptr_
 
   /* Slighly hacky way to get an unsigned long with MSB unset and every other
    * bit set without using literally hand-written numbers that could violate
-   * portability */ 
+   * portability */
   unsigned long msb_mask = ((unsigned long ) ULONG_MAX & LONG_MAX);
   /* Ignore the most-significant-bit since they are the same for a and b */
   unsigned_a = unsigned_a & msb_mask;
@@ -86,5 +90,25 @@ int ENTF90(BITCMP, bitcmp)(long *ptr_a, long *ptr_b, int *ptr_a_nbits, int *ptr_
     return 0;
 
   return unsigned_a > unsigned_b ? 1 : -1;
+}
+
+unsigned long ENTF90(BITMASK, bitmask)(int *ptr_n, int *ptr_kind, int *ptr_is_left) {
+  long n = *ptr_n;
+  int kind = *ptr_kind;
+  int is_left = *ptr_is_left;
+  unsigned long ret = 0;
+
+  if (is_left) {
+    for (unsigned long i = ((kind * 8) - 1), j = 0; j < n; i--, j++) {
+      ret |= ((unsigned long) 0x1 << i);
+    }
+
+  } else {
+    for (unsigned long i = 0; i < n; i++) {
+      ret |= ((unsigned long) 0x1 << i);
+    }
+  }
+
+  return ret;
 }
 /* AOCC end */

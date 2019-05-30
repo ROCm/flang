@@ -1107,6 +1107,11 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .PD BLT - -
 .AT elemental i j
 
+.PD MASKL - -
+.AT elemental i j
+.PD MASKR - -
+.AT elemental i j
+
 .PD REAL - -
 .AT elemental a *kind
 .PD CMPLX - -

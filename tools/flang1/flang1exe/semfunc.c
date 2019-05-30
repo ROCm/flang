@@ -8371,6 +8371,57 @@ ref_pd(SST *stktop, ITEM *list)
     dtyper = DT_LOG;
     argt_count = count;
     break;
+
+  case PD_maskl:
+  case PD_maskr:
+    if (flg.std != F2008) {
+      error(155, 3, gbl.lineno, SYMNAME(pdsym),
+          "bit masking is supported only in f2008, use -std=f2008 to enable\n");
+    }
+
+    if (count > 2 || count <= 0) {
+      E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+
+    /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    /* Both arguments should be some kind of INTEGER where kind is at max = 8 */
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg */
+    switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+    }
+
+    if (count == 2) {
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg */
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+      }
+    }
+
+    dtyper = DT_INT8;
+    argt_count = count;
+    break;
   /* AOCC end */
 
   case PD_digits:

@@ -35,6 +35,11 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
  */
 
 /**
@@ -1938,7 +1943,50 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
         case I_BLT:
           return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
       }
-                }
+    }
+
+    case I_MASKL:
+    case I_MASKR: {
+      FtnRtlEnum bitmask_rtlRtn = RTE_bitmask;
+
+      nargs = 2;
+      if (ARGT_ARG(func_args, 1) == 0) {
+        nargs = 1;
+      }
+
+      char *bitmask_name = mkRteRtnNm(bitmask_rtlRtn);
+      int bitmask_sptr = sym_mkfunc(bitmask_name, DT_INT8);
+
+      /* set n */
+      int bitmask_argt = mk_argt(3);
+      ARGT_ARG(bitmask_argt, 0) = ARGT_ARG(func_args, 0);
+
+      /* if KIND argument */
+      if (nargs == 2) {
+        ARGT_ARG(bitmask_argt, 1) = ARGT_ARG(func_args, 1);
+      } else {
+        ARGT_ARG(bitmask_argt, 1) = mk_cval1(0, DT_INT);
+      }
+
+      /* set is_left */
+      switch (optype) {
+        case I_MASKL: /* then set is_left as 1 */
+          ARGT_ARG(bitmask_argt, 2) = mk_cval1(1, DT_INT);
+          break;
+
+        case I_MASKR: /* else set is_left as 0 */
+          ARGT_ARG(bitmask_argt, 2) = mk_cval1(0, DT_INT);
+      }
+
+      int bitmask_func = mk_func_node(A_FUNC, mk_id(bitmask_sptr), 3, bitmask_argt);
+      A_OPTYPEP(bitmask_func, A_OPTYPEG(func_ast));
+
+      int bitmask_temp_result = mk_id(sym_get_scalar("bitmask_tmp", "i", DT_INT8));
+      int bitmask_assign = mk_assn_stmt(bitmask_temp_result, bitmask_func, DT_INT8);
+      add_stmt_before(bitmask_assign, arg_gbl.std);
+      return bitmask_temp_result;
+    }
+
     /* AOCC end */
     default:
       if (INKINDG(A_SPTRG(A_LOPG(func_ast))) == IK_ELEMENTAL)

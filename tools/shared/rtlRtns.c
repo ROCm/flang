@@ -27,6 +27,12 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+
+ *
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -80,6 +86,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"auto_deallocp", "", true, ""},
     /* AOCC begin */
     {"bitcmp", "", false, ""},
+    {"bitmask", "", false, ""},
     /* AOCC end */
     {"c_f_procptr", "", false, ""},
     {"c_f_ptr", "", true, ""},
