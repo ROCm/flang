@@ -1307,6 +1307,23 @@ remove_dead_instrs(void)
   }
 }
 
+// AOCC Begin
+/*
+ * \brief Static function to calculate alloca addrespace from DL string
+ *
+ */
+#ifdef OMP_OFFLOAD_AMD
+static int get_alloca_addrspace(LL_Module *module) {
+  const char *dl = module->datalayout_string;
+  while ((*dl) != 'A' && (*dl) != '\0')
+    dl++;  if (dl[0] == '\0')
+    return -1;
+  dl++;
+  return (*dl) - '0';
+}
+#endif
+// AOCC End
+
 /**
    \brief Perform code translation from ILI to LLVM for one routine
  */
@@ -1532,8 +1549,10 @@ restartConcur:
     }
 
     // AOCC Begin
+#ifndef OMP_OFFLOAD_LLVM
     // clear the global flag set from last iteration
     clear_rw_nodepchk();
+#endif
     // AOCC End
 
     if (XBIT(183, 0x10000000)) {
@@ -1547,6 +1566,7 @@ restartConcur:
     }
 
     // AOCC Begin
+#ifndef OMP_OFFLOAD_LLVM
     /** \brief Flang codegen support for !dir$ ivdep
      *
      * Following piece of code is added for handling ivdep directive. This
@@ -1583,6 +1603,7 @@ restartConcur:
         }
       }
     }
+#endif
     // AOCC End
 
     for (ilt = BIH_ILTFIRST(bih); ilt; ilt = ILT_NEXT(ilt)) {
@@ -1788,7 +1809,19 @@ restartConcur:
                            func_type);
 
   /* write out local variable defines */
+
+// AOCC Begin
+/*
+ * \brief Emitting allocas with addrespace
+ *
+ */
+#ifdef OMP_OFFLOAD_AMD
+  int alloca_addrspace = get_alloca_addrspace(current_module);
+  ll_write_local_objects(llvm_file(), llvm_info.curr_func, alloca_addrspace);
+#else
   ll_write_local_objects(llvm_file(), llvm_info.curr_func);
+#endif
+// AOCC End
   /* Emit alloca for local equivalence, c.f. get_local_overlap_var(). */
   write_local_overlap();
 
@@ -1873,6 +1906,7 @@ restartConcur:
       GBL_CURRFUNC = SPTR_NULL;
   }
   gcTempMap();
+
 } /* schedule */
 
 INLINE static bool
@@ -5187,7 +5221,17 @@ static OPERAND *
 gen_gep_op(int ilix, OPERAND *base_op, LL_Type *llt, OPERAND *index_op)
 {
   base_op->next = index_op;
-  return ad_csed_instr(I_GEP, ilix, llt, base_op, InstrListFlagsNull, true);
+  OPERAND * op = ad_csed_instr(I_GEP, ilix, llt, base_op, InstrListFlagsNull, true);
+
+  // AOCC Begin
+  /*
+   * Setting name for generated ptrs.
+   */
+#ifdef OMP_OFFLOAD_AMD
+  set_llvm_sptr_name(op);
+#endif
+  // AOCC End
+  return op;
 }
 
 INLINE static OPERAND *
@@ -11667,6 +11711,11 @@ gen_sptr(SPTR sptr)
 #ifdef OMP_OFFLOAD_LLVM
 #endif
   DBGTRACEOUT1(" returns operand %p", sptr_operand)
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  set_llvm_sptr_name(sptr_operand);
+#endif
+  // AOCC End
   return sptr_operand;
 } /* gen_sptr */
 
@@ -12465,6 +12514,17 @@ isNVVM(char *fn_name)
     return false;
   return (strncmp(fn_name, "__kmpc", 6) == 0) ||
          (strncmp(fn_name, "llvm.nvvm", 9) == 0) ||
+         // AOCC Begin
+         /*
+          * We need some math intrinsics to be emitted.
+          * TODO : Handle special cases if any, which are not supported by target.
+          *
+          */
+#ifdef OMP_OFFLOAD_AMD
+         (strncmp(fn_name, "nvvm.", 5) == 0) ||
+         (strncmp(fn_name, "llvm.", 5) == 0) ||
+#endif
+         // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
          (strncmp(fn_name, "llvm.fma", 8) == 0);
 }
@@ -12989,7 +13049,14 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     linkage = " internal";
 #ifdef OMP_OFFLOAD_LLVM
   if (OMPACCFUNCKERNELG(func_sptr)) {
-    linkage = " ptx_kernel";
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (flg.amdgcn_target)
+      linkage = " amdgpu_kernel";
+    else
+#endif
+    // AOCC End
+      linkage = " ptx_kernel";
   }
 #endif
   if (linkage)

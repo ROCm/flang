@@ -1609,7 +1609,17 @@ ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *inargs, int sched)
   }
 
   args[8] = gen_null_arg(); /* ident */
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  /*
+   * Passing the first argument as global thread number.
+   * This is required for bound calculation.
+   */
+  args[7] = ll_make_kmpc_global_thread_num();
+#else
   args[7] = ad_icon(0);
+#endif
+  // AOCC End
   args[6] = ad_icon(sched); /* sched     */
   if (last
       && STYPEG(last) != ST_CONST
@@ -1624,6 +1634,7 @@ ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *inargs, int sched)
   args[2] = mk_address(stride); /* pstridr   */
   args[1] = ld_sptr(stride);    /* incr      */
   args[0] = chunk;              /* chunk     */
+
 
   ADDRTKNP(upper, 1);
   ADDRTKNP(stride, 1);

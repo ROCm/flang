@@ -1069,13 +1069,34 @@ write_libomtparget(void)
   if (!isOmptargetInitialized) {
     if(!strcmp(SYMNAME(gbl.currsub), "ompaccel.register"))
     {
-      fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
-@.omp_offloading.img_end.nvptx64-nvidia-cuda = external constant i8 \n\
-@.omp_offloading.img_start.nvptx64-nvidia-cuda = external constant i8 \n\
-@.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
-@.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
-@.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.nvptx64-nvidia-cuda, i8* @.omp_offloading.img_end.nvptx64-nvidia-cuda, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
-@.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      if (flg.amdgcn_target) {
+        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  @.omp_offloading.img_end.amdgcn-amd-amdhsa = external constant i8 \n\
+  @.omp_offloading.img_start.amdgcn-amd-amdhsa = external constant i8 \n\
+  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.amdgcn-amd-amdhsa, i8* @.omp_offloading.img_end.amdgcn-amd-amdhsa, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+      }
+
+      else{
+#endif
+      // AOCC End
+        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  @.omp_offloading.img_end.nvptx64-nvidia-cuda = external constant i8 \n\
+  @.omp_offloading.img_start.nvptx64-nvidia-cuda = external constant i8 \n\
+  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.nvptx64-nvidia-cuda, i8* @.omp_offloading.img_end.nvptx64-nvidia-cuda, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      }
+#endif
+      // AOCC End
       isOmptargetInitialized = true;
     }
   }
@@ -1084,24 +1105,14 @@ write_libomtparget(void)
 #endif
 
 #ifdef OMP_OFFLOAD_LLVM
-/**
-   \brief Complete assem for the source file
-   Writes shared memory variables to global module.
- */
-void
-ompaccel_write_sharedvars(void)
-{
-  int gblsym;
-  char *name, *typed;
-  for (gblsym = ag_other; gblsym; gblsym = AG_SYMLK(gblsym)) {
-    name = AG_NAME(gblsym);
-    typed = AG_TYPENAME(gblsym);
-    fprintf(gbl.ompaccfile, "@%s = common addrspace(3) global %s ", name,
-            typed);
-    fprintf(gbl.ompaccfile, " zeroinitializer\n");
-  }
-}
 
+// AOCC Begin
+
+/* AMDGPU offload support
+ * Removed multiple definition ompaccel_write_sharedvars
+ */
+
+// AOCC end
 static void
 write_tgtrt_statics(SPTR sptr, char *gname, char *typed, int gblsym,
                     DSRT *dsrtp)
@@ -1129,22 +1140,13 @@ write_tgtrt_statics(SPTR sptr, char *gname, char *typed, int gblsym,
   fputc('\n', ASMFIL);
 }
 
-static bool isLibomptargetInit = false;
-void
-write_libomtparget(void)
-{
-  if (isLibomptargetInit)
-    return;
-  fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
-  @.omp_offloading.img_end.nvptx64-nvidia-cuda = external constant i8 \n\
-  @.omp_offloading.img_start.nvptx64-nvidia-cuda = external constant i8 \n\
-  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry \n\
-  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry \n\
-  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.nvptx64-nvidia-cuda, i8* @.omp_offloading.img_end.nvptx64-nvidia-cuda, %%struct.__tgt_offload_entry* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry* @.omp_offloading.entries_end }], align 8\n\
-  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry* @.omp_offloading.entries_end }, align 8\n\n");
-  isLibomptargetInit = true;
-}
+// AOCC Begin
 
+/* AMDGPU offload support
+ * Removed multiple definition of write_libomtparget
+ */
+
+// AOCC end
 #endif
 
 /**
@@ -1387,10 +1389,16 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
     if (skip_size > 0) {
       if (ptrcnt) {
         if (!first_data && skip_size)
-          fprintf(ASMFIL, ", ");
+// TODO Fix this more generically!
+          if (!flg.amdgcn_target)
+            fprintf(ASMFIL, ", ");
         if (!i8cnt) {
-          ptr = put_next_member(ptr);
-          fprintf(ASMFIL, "zeroinitializer ");
+// TODO Fix this more generically!
+          if (!flg.amdgcn_target) {
+            ptr = put_next_member(ptr);
+            fprintf(ASMFIL, "zeroinitializer ");
+          }
+
           free(cptrCopy);
           return dsrtp;
         }

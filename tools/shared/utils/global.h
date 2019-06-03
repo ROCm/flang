@@ -235,6 +235,7 @@ typedef struct {
   LOGICAL func_args_alias;      /* assume function arguments are aliasing */
   char *std_string; /* input string arg of -std= */
   FORTRAN_STD std;
+  bool amdgcn_target; /*chech if we are offloading to amd gcn */
   // AOCC End
 } FLG;
 

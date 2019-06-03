@@ -467,6 +467,14 @@ static const struct triple_info known_triples[] = {
     {"armv7-", "e-p:32:32-i64:64-v128:64:128-n32-S64"},
     {"aarch64-", "e-m:e-i64:64-i128:128-n32:64-S128"},
     {"powerpc64le", "e-p:64:64-i64:64-n32:64"},
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    {"amdgcn-amd-amdhsa", "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64"
+                          "-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32"
+                          "-v48:64-v96:128-v192:256-v256:256-v512:512"
+                          "-v1024:1024-v2048:2048-n32:64-S32-A5"},
+#endif
+    // AOCC End
     {"", ""}};
 
 /* Compute the data layout for the requested target triple. */

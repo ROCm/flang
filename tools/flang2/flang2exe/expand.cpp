@@ -368,6 +368,7 @@ expand(void)
     }
     dmpili();
   }
+
 #if DEBUG
   verify_function_ili(VERIFY_ILI_DEEP);
   if (DBGBIT(10, 16)) {
@@ -627,7 +628,15 @@ eval_ilm(int ilmx)
     /* Enables creation of libomptarget related structs in the main function,
      * but it is not recommended option. Default behaviour is to initialize and
      * create them in the global constructor. */
-    if (XBIT(232, 0x10)) {
+
+    // AOCC Begin
+    /*
+     * Restrict target lib initialization only to entry function
+     *TODO : Handle multi kernel applications.
+     *
+     */
+    if (XBIT(232, 0x10) && gbl.rutype == RU_PROG) {
+    // AOCC End
       if (!ompaccel_is_tgt_registered() && !OMPACCRTG(gbl.currsub) &&
           !gbl.outlined) {
         ilix = ll_make_tgt_register_lib2();

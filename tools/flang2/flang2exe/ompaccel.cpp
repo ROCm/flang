@@ -792,7 +792,14 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   return sym;
 }
 
-INLINE static SPTR
+// AOCC BEGIN
+/*
+ * This function doesn't return anything.
+ * Changed return type from SPTR  to void
+ *
+ */
+INLINE static void
+// AOCC END
 add_symbol_to_function(SPTR func, SPTR sym)
 {
   int dpdscp, paramct;

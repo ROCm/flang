@@ -269,8 +269,22 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
       fprintf(ASMFIL, ", ");
 #ifdef OMP_OFFLOAD_LLVM
     // TODO ompaccel. Hackery for TGT structs. It must be fixed later.
-    if (flg.omptarget)
+    if (flg.omptarget) {
       fprintf(ASMFIL, " i8* ");
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      if (flg.amdgcn_target) {
+        char *temp_ptr = *cptr;
+        if (*temp_ptr == ',')
+          temp_ptr++;
+        while (*temp_ptr != ',' && *temp_ptr != '\0') {
+          temp_ptr++;
+        }
+        *cptr = temp_ptr;
+      }
+#endif
+     // AOCC End
+    }
     else
 #endif
       *cptr = put_next_member(*cptr);

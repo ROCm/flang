@@ -741,6 +741,7 @@ init(int argc, char *argv[])
             version.lang);
   }
   flg.omptarget = false;
+  flg.amdgcn_target = false;
   gbl.ompaccfilename = NULL;
 #ifdef OMP_OFFLOAD_LLVM
   if (omptp != NULL) {
@@ -748,6 +749,13 @@ init(int argc, char *argv[])
     flg.omptarget = true;
     gbl.ompaccfilename = ompfile;
   }
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
+    flg.amdgcn_target = true;
+#endif
+  // AOCC End
+
 #endif
   /* Vectorizer settings */
   flg.vect |= vect_val;
