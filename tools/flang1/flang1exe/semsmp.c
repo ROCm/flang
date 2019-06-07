@@ -1633,10 +1633,17 @@ semsmp(int rednum, SST *top)
    */
   case MP_STMT47: {
 #ifdef OMP_OFFLOAD_LLVM
+    // AOCC begin
+#ifndef OMP_OFFLOAD_AMD
+    // AOCC end
     if(flg.omptarget) {
       error(1200, ERR_Severe, gbl.lineno, "target update",
             NULL);
     }
+    // AOCC Begin
+#endif
+    // AOCC End
+
 #endif
     check_targetdata(OMP_TARGETUPDATE, "OMP TARGET UPDATE");
     ast = mk_stmt(A_MP_TARGETUPDATE, 0);

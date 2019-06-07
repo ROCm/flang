@@ -1652,11 +1652,27 @@ make_operand(void)
   return op;
 }
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+void
+#else
+// AOCC End
 static void
+// AOCC Begin
+#endif
+// AOCC End
 set_llasm_output_file(FILE *fd)
 {
   LLVMFIL = fd;
 }
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+FILE *get_llasm_output_file() {
+  return LLVMFIL;
+}
+#endif
+// AOCC End
 
 void
 init_output_file(void)

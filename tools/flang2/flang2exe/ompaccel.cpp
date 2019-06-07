@@ -382,6 +382,20 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
   return ad2ili(opc, ili1, ili2);
 } /* mk_ompaccel_add */
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+/*
+ * Return op1 itself
+ * TODO : This will be implemented in next commit
+ */
+int
+mk_ompaccel_min(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
+  // return mk_ompaccel_add(ili1, dtype1, ili2, dtype2);
+  return ili1;
+}
+#endif
+// AOCC End
+
 static int
 mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
 {
@@ -531,8 +545,21 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
     return mk_ompaccel_add(lili, dtype1, rili, dtype2);
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
+    //AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  case 347:
+    return mk_ompaccel_min(lili, dtype1, rili, dtype2);
+#endif
+    // AOCC End
   default:
     static_assert(true, "Rest of reduction operators are not implemented yet.");
+    // AOCC Begin
+    /*
+     * Above static assert will never fail. So added explicit error message.
+     */
+    fprintf(stderr, "ERROR : This reduction type is not supported yet %d \n", redop);
+    exit(1);
+    // AOCC End
     break;
   }
   return 0;
@@ -805,7 +832,22 @@ add_symbol_to_function(SPTR func, SPTR sym)
   int dpdscp, paramct;
   paramct = PARAMCTG(func);
   paramct += 1;
+
+  // AOCC begin
+#ifdef OMP_OFFLOAD_AMD
+  /*
+   * NODIFICATION Changed the following line from
+   * aux.dpdsc_base[paramct] = sym
+   * This is how other arguments are also added. Arg count and offset are not same.
+   */
+  aux.dpdsc_base[aux.dpdsc_avl] = sym;
+#else
+  // AOCC End
   aux.dpdsc_base[paramct] = sym;
+  // AOCC Begin
+#endif
+  // AOCC End
+
   PARAMCTP(func, paramct);
   aux.dpdsc_avl += 1;
 }
@@ -824,8 +866,18 @@ get_devsptr(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
          * ILM. In case there is a symbol that has no device symbol created, we
          * should create device symbol for it also we should add it function
          * parameter. */
+
+        // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+        tinfo->symbols[i].device_sym =
+            ompaccel_create_device_symbol(tinfo->symbols[i].host_sym, i);
+#else
+        // AOCC End
         tinfo->symbols[i].device_sym =
             ompaccel_create_device_symbol(tinfo->symbols[i].host_sym, 1);
+        // AOCC Begin
+#endif
+        // AOCC End
         add_symbol_to_function(tinfo->func_sptr, tinfo->symbols[i].device_sym);
       }
       return tinfo->symbols[i].device_sym;
@@ -1299,14 +1351,31 @@ ompaccel_emit_tgt_register()
 }
 
 SPTR
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions,
+                          const char *suffix)
+#else
+// AOCC End
 ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
+// AOCC Begin
+#endif
+// AOCC End
 {
   int ili, bili, rili;
   SPTR sptrFn, sptrRhs, sptrReduceData, func_params[2];
   DTYPE dtypeReductionItem, dtypeReduceData;
   int nmeReduceData, nmeRhs;
   int params_dtypes[2] = {DT_ADDR, DT_ADDR};
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  char name[300];
+#else
+  // AOCC End
   char name[30];
+  // AOCC Begin
+#endif
+  // AOCC End
 
   /* Generate function parameters */
   dtypeReduceData = get_type(2, TY_PTR, DT_ANY);
@@ -1316,7 +1385,15 @@ ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
       mk_ompaccel_addsymbol(".rhs", dtypeReduceData, SC_DUMMY, ST_VAR);
 
   /* Generate function symbol */
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  sprintf(name, "%s_%s_%d", "ompaccel_reduction", suffix, reductionFunctionCounter++);
+#else
+  // AOCC End
   sprintf(name, "%s%d", "ompaccel_reduction", reductionFunctionCounter++);
+  // AOCC Begin
+#endif
+  // AOCC End
   sptrFn = mk_ompaccel_function(name, 2, func_params, true);
   cr_block();
 
@@ -1360,15 +1437,33 @@ ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
 }
 
 SPTR
+//AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
+                                  int NumReductions, SPTR sptrFnReduce,
+                                  const char *suffix)
+#else
+// AOCC End
 ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
                                   int NumReductions, SPTR sptrFnReduce)
+// AOCC Begin
+#endif
+// AOCC End
 {
   int ili, rili, bili;
   SPTR sptrFn, sptrRhs, sptrReduceData, sptrShuffleReturn, sptrLaneOffset,
       func_params[4];
   DTYPE dtypeReductionItem, dtypeReduceData, dtypeRHS;
   int nmeReduceData, nmeRhs, params[2];
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  char name[300];
+#else
+  // AOCC End
   char name[30];
+  // AOCC Begin
+#endif
+  // AOCC End
   DTYPE params_dtypes[2] = {DT_ADDR, DT_ADDR};
 
   /* Generate function parameters */
@@ -1385,7 +1480,16 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
   PASSBYVALP(func_params[3], 1);
 
   /* Generate function symbol */
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  sprintf(name, "%s_%s_%d", "ompaccel_shufflereduce", suffix, reductionFunctionCounter++);
+#else
+  // AOCC End
   sprintf(name, "%s%d", "ompaccel_shufflereduce", reductionFunctionCounter++);
+  // AOCC Begin
+#endif
+  // AOCC End
+
   sptrFn = mk_ompaccel_function(name, 4, func_params, true);
   cr_block();
 
@@ -1458,8 +1562,18 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
    of every active warp to lanes in the first warp.
  */
 SPTR
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
+                                   int NumReductions,
+                                   const char *suffix)
+#else
+// AOCC End
 ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
                                    int NumReductions)
+// AOCC Begin
+#endif
+// AOCC End
 {
   int ili, rili;
   SPTR sptrFn, sptrReduceData, sptrWarpNum, sptrShmem, sptrWarpId,
@@ -1467,9 +1581,18 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   SPTR lFirstLane, lBarrier, lFirstWarp, lFinalBarrier;
   int nmeShmem;
   DTYPE dtypeReductionItem;
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  char name[300];
+  sprintf(name, "%s_%s_%d", "ompaccel_InterWarpCopy", suffix, reductionFunctionCounter++);
+#else
+  // AOCC End
   char name[30];
-
   sprintf(name, "%s%d", "ompaccel_InterWarpCopy", reductionFunctionCounter++);
+  // AOCC Begin
+#endif
+  // AOCC End
+
   sptrReduceData = func_params[0] = mk_ompaccel_addsymbol(
       ".reduceData", mk_ompaccel_array_dtype(DT_INT8, NumReductions), SC_DUMMY,
       ST_ARRAY);
