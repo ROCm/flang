@@ -114,6 +114,7 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
   bestsptr = bestsptrloop = 0;
   bestuse = bestuse2 = bestusecount = bestuse2count = 0;
   bestsl = -1;
+
   for (sptrloop = first_hash(first); sptrloop; sptrloop = HASHLKG(sptrloop)) {
     int want_scope, usecount, sptrlink;
     SCOPESTACK *scope;
@@ -244,7 +245,10 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
           if (overloadclass == 0 || STYPEG(sptrlink) == ST_UNKNOWN ||
               stb.ovclass[STYPEG(sptrlink)] == overloadclass) {
             int sl = get_scope_level(scope);
-            if (sl > bestsl) {
+            if (sl > bestsl
+                // AOCC BEGIN
+                || (STYPEG(sptr) == ST_TYPEDEF && sl == bestsl && STYPEG(first) == ST_PROC)) {
+                // AOCC END
               if (scope->kind == SCOPE_USE &&
                   STYPEG(sptrlink) != ST_USERGENERIC &&
                   STYPEG(sptrlink) != ST_ENTRY && !VTOFFG(sptrlink) &&
@@ -836,6 +840,31 @@ declsym(int first, SYMTYPE stype, LOGICAL errflg)
       sptr = sptralias;
       goto return1;
     }
+    // AOCC BEGIN
+    if (stype == ST_PROC && st == ST_TYPEDEF) {
+      /* the existing symbol is  typedef and creating a type bound procedure.
+       * in the same name is acceptable. Hide the type bound procedure symbol.
+       */
+      oldsptr = sptr;
+      /* create new one for type bound procedure */
+      sptr = insert_sym(first);
+      IGNOREP(sptr, 1); /* hide the procedure symbol */
+      goto return1;
+    }
+    if (stype == ST_TYPEDEF && st == ST_PROC && VTOFFG(sptr)) {
+      /* the existing symbol is the type bound procedure and a new typedef
+       * in the same name is acceptable. Hide the type bound procedure symbol.
+       */
+      IGNOREP(sptr, 1); /* hide the procedure symbol */
+      oldsptr = sptr;
+      /* create new one for typedef */
+      sptr = insert_sym(first);
+      /* make sure this is the first symbol on the hash list */
+      pop_sym(sptr);
+      push_sym(sptr);
+      goto return1;
+    }
+    // AOCC END
     if (stype == ST_ENTRY && sptralias == sptr && sem.mod_sym &&
         st == ST_PROC && ENCLFUNCG(sptr) == sem.mod_sym) {
       /* the existing symbol is the interface (ST_PROC) for
