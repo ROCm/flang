@@ -8018,21 +8018,22 @@ ref_pd(SST *stktop, ITEM *list)
 #ifdef PD_ieee_selected_real_kind
   case PD_ieee_selected_real_kind:
 #endif
-    if (count > 2 || count == 0) {
-      E74_CNT(pdsym, count, 0, 2);
+    if (count > 3) {
+      E74_CNT(pdsym, count, 0, 3);
       goto call_e74_cnt;
     }
-    if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
+    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
       goto exit_;
 
     if (sem.dinit_data) {
-      gen_init_intrin_call(stktop, pdsym, 2, stb.user.dt_int, FALSE);
+      gen_init_intrin_call(stktop, pdsym, 3, stb.user.dt_int, FALSE);
       return 0;
     }
 
     stkp = ARG_STK(0);
     is_constant = TRUE;
     conval = 4;
+    int r = 0, p = 0;
     if (!stkp) {
       ARG_AST(0) = astb.ptr0;
     } else {
@@ -8055,8 +8056,10 @@ ref_pd(SST *stktop, ITEM *list)
           conval = 8;
         else if (con1 <= 31 && !XBIT(57, 4))
           conval = 16;
-        else
+        else {
           conval = -1;
+	  p = -1;
+	}
       }
     }
     stkp = ARG_STK(1);
@@ -8079,35 +8082,91 @@ ref_pd(SST *stktop, ITEM *list)
         if (XBIT(49, 0x40000)) {
           /* Cray C90 */
           if (con1 <= 37) {
-            if (conval > 0 && conval < 4)
+            if (conval > 0 && conval <= 4)
               conval = 4;
           } else if (con1 <= 2465) {
-            if (conval > 0 && conval < 8)
+            if (conval > 0 && conval <= 8)
               conval = 8;
           } else {
             if (conval > 0)
               conval = 0;
-            conval -= 2;
+            conval = -2;
+	    r = -2;
           }
         } else {
           /* ANSI */
           if (con1 <= 37) {
-            if (conval > 0 && conval < 4)
+            if (conval > 0 && conval <= 4)
               conval = 4;
           } else if (con1 <= 307) {
-            if (conval > 0 && conval < 8)
+            if (conval > 0 && conval <= 8)
               conval = 8;
-          } else if (con1 <= 4931 && !XBIT(57, 4)) {
-            if (conval > 0 && conval < 16)
+          } else if ((con1 <= 4931) && !XBIT(57, 4)) {
+            if (conval > 0 && conval <= 16)
               conval = 16;
           } else {
             if (conval > 0)
               conval = 0;
-            conval -= 2;
+            conval = -2;
+	    r = -2;
           }
         }
       }
     }
+    // AOCC begin
+    stkp = ARG_STK(2);
+    if (!stkp) {
+      ARG_AST(2) = astb.ptr0;
+    if (p < 0 && r < 0)
+      conval = -3;
+    } else {
+      dtype1 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype1)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      XFR_ARGAST(2);
+      ast = SST_ASTG(stkp);
+      if (!A_ALIASG(ast)) {
+        is_constant = FALSE;
+      } else {
+        ast = A_ALIASG(ast);
+        con1 = A_SPTRG(ast);
+        con1 = CONVAL2G(con1);
+        if (XBIT(49, 0x40000)) {
+          /* Cray C90 */
+          if (con1 == 2) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    else if (p == 0 || r == 0)
+	      conval = -4;
+	    else if (p < 0 && r < 0)
+	      conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        } else {
+          /* ANSI */
+          if (con1 == 2) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
+	    else if (p == 0 || r == 0)
+	      conval = -4;
+	    else if (p < 0 && r < 0)
+	      conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        }
+      }
+    }
+    // AOCC end
     if (is_constant) {
       goto const_default_int_val; /*return default integer*/
     }
@@ -8116,7 +8175,7 @@ ref_pd(SST *stktop, ITEM *list)
 
     hpf_sym = sym_mkfunc(mkRteRtnNm(RTE_sel_real_kind), stb.user.dt_int);
     dtyper = stb.user.dt_int;
-    argt_count = 2;
+    argt_count = 3;
     break;
 
   case PD_selected_char_kind:

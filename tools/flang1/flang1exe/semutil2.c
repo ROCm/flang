@@ -9390,10 +9390,13 @@ eval_selected_real_kind(ACL *arg)
 {
   ACL *rslt;
   ACL *wrkarg;
-  int r;
+  int r, pre, range;
   INT con;
 
   r = 4;
+  // AOCC
+  pre = 0;
+  range = 0;
 
   wrkarg = arg = eval_init_expr(arg);
   con = get_int_from_init_conval(wrkarg);
@@ -9401,24 +9404,53 @@ eval_selected_real_kind(ACL *arg)
     r = 4;
   else if (con <= 15)
     r = 8;
-  else
+  else if (con <= 33 && !XBIT(57, 4))
+    r = 16;
+  else {
     r = -1;
+    pre = -1;
+  }
 
   if (arg->next) {
     wrkarg = arg->next;
     con = get_int_from_init_conval(wrkarg);
     if (con <= 37) {
-      if (r > 0 && r < 4)
+      if (r > 0 && r <= 4)
         r = 4;
     } else if (con <= 307) {
-      if (r > 0 && r < 8)
+      if (r > 0 && r <= 8)
         r = 8;
+    } else if (con <= 4931 && !XBIT(57, 4)) {
+      if (r > 0 && r <= 16)
+        r = 16;
     } else {
       if (r > 0)
         r = 0;
-      r -= 2;
+      range = -2;
+      r = -2;
     }
   }
+
+  // AOCC begin
+  if (arg->next->next) {
+    wrkarg = arg->next->next;
+    con = get_int_from_init_conval(wrkarg);
+    if (con == 2 || con == 0) {
+      if (r > 0 && r <= 4)
+        r = 4;
+      else if (r > 0 && r <= 8)
+        r = 8;
+      else if (r > 0 && r <= 16)
+        r = 16;
+      else if (pre == 0 || range == 0)
+        r = -4;
+      else if (pre < 0 && range < 0)
+        r = -3;
+    }
+      else if (con != 2)
+        r = -5;
+  }
+  // AOCC end
 
   rslt = GET_ACL(15);
   rslt->id = AC_CONVAL;
