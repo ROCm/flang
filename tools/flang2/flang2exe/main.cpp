@@ -1096,25 +1096,62 @@ ompaccel_create_reduction_wrappers()
 {
   if (gbl.inomptarget && gbl.currsub != NULL) {
     int nreds = ompaccel_tinfo_current_get()->n_reduction_symbols;
+#ifdef OMP_OFFLOAD_AMD
+    // AOCC Begin
+    /*
+     * Adding suffix to reduction function  names. This is to avoid duplicate
+     * function names in the case of multi kernel applications
+     *
+     */
+    const char *suffix = SYMNAME(gbl.currsub);
+#endif
+    // AOCC End
     if (nreds != 0) {
       SPTR cur_func_sptr = gbl.currsub;
       OMPACCEL_RED_SYM *redlist =
           ompaccel_tinfo_current_get()->reduction_symbols;
       gbl.outlined = false;
       gbl.isnvvmcodegen = true;
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds, suffix);
+#else
+      // AOCC End
       SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       gbl.func_count++;
       gbl.multi_func_count++;
+
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
+          ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce, suffix);
+#else
+      // AOCC End
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       gbl.func_count++;
       gbl.multi_func_count++;
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
+          ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds, suffix);
+#else
+      // AOCC End
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       ompaccel_write_sharedvars();

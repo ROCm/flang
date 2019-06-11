@@ -93,6 +93,18 @@ typedef enum NVVM_SREG_ENUM {
   warpSize
 } nvvm_sregs;
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+static const char *NVVM_SREG[] = {
+    "nvvm.read.ptx.sreg.tid.x",    "nvvm.read.ptx.sreg.tid.y",
+    "nvvm.read.ptx.sreg.tid.z",    "nvvm.read.ptx.sreg.ctaid.x",
+    "nvvm.read.ptx.sreg.ctaid.y",  "nvvm.read.ptx.sreg.ctaid.z",
+    "nvvm.read.ptx.sreg.ntid.x",   "nvvm.read.ptx.sreg.ntid.y",
+    "nvvm.read.ptx.sreg.ntid.z",   "nvvm.read.ptx.sreg.nctaid.x",
+    "nvvm.read.ptx.sreg.nctaid.y", "nvvm.read.ptx.sreg.nctaid.z",
+    "nvvm.read.ptx.sreg.warpsize"};
+#else
+// AOCC End
 static const char *NVVM_SREG[] = {
     "llvm.nvvm.read.ptx.sreg.tid.x",    "llvm.nvvm.read.ptx.sreg.tid.y",
     "llvm.nvvm.read.ptx.sreg.tid.z",    "llvm.nvvm.read.ptx.sreg.ctaid.x",
@@ -101,11 +113,24 @@ static const char *NVVM_SREG[] = {
     "llvm.nvvm.read.ptx.sreg.ntid.z",   "llvm.nvvm.read.ptx.sreg.nctaid.x",
     "llvm.nvvm.read.ptx.sreg.nctaid.y", "llvm.nvvm.read.ptx.sreg.nctaid.z",
     "llvm.nvvm.read.ptx.sreg.warpsize"};
+// AOCC Begin
+#endif
+// AOCC End
 
 typedef enum NVVM_INTRINSICS_ENUM { barrier0, barrier } nvvm_intrinsics;
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+static const char *NVVM_INTRINSICS[] = {"nvvm.barrier0",
+                                        "nvvm.barrier"};
+#else
+// AOCC End
 static const char *NVVM_INTRINSICS[] = {"llvm.nvvm.barrier0",
                                         "llvm.nvvm.barrier"};
+// AOCC Begin
+#endif
+// AOCC End
+
 
 typedef enum NVVM_BARRIERS { CTA_BARRIER, PARTIAL_BARRIER } nvvm_barriers;
 
@@ -164,6 +189,24 @@ int ompaccel_nvvm_get_gbl_tid(void);
 /**
    \brief Emit shuffle reduce for reduction. (nvvm device only)
  */
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+SPTR ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *, int, SPTR,
+                                       const char *);
+
+/**
+   \brief Emit reduce for reduction. (nvvm device only)
+ */
+SPTR ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *, int, const char *);
+
+/**
+   \brief Emit inter warp copy for reduction. (nvvm device only)
+ */
+SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int,
+                                        const char *);
+#else
+// AOCC End
 SPTR ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *, int, SPTR);
 
 /**
@@ -175,6 +218,9 @@ SPTR ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *, int);
    \brief Emit inter warp copy for reduction. (nvvm device only)
  */
 SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int);
+// AOCC Begin
+#endif
+// AOCC End
 
 /* ################################################ */
 /* OpenMP ACCEL - Target Information data structure */

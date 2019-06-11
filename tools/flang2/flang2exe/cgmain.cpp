@@ -10982,8 +10982,15 @@ process_local_sptr(SPTR sptr)
 static void
 process_private_sptr(SPTR sptr)
 {
+
+  // AOCC Begin
+#ifndef OMP_OFFLOAD_AMD
+  // AOCC End
   if (!gbl.outlined && !TASKG(sptr) && !ISTASKDUPG(GBL_CURRFUNC))
     return;
+  // AOCC Begin
+#endif
+  // AOCC End
 
   assert(SCG(sptr) == SC_PRIVATE, "Expected local sptr", sptr, ERR_Fatal);
   assert(SNAME(sptr) == NULL, "Already processed sptr", sptr, ERR_Fatal);
@@ -11711,11 +11718,6 @@ gen_sptr(SPTR sptr)
 #ifdef OMP_OFFLOAD_LLVM
 #endif
   DBGTRACEOUT1(" returns operand %p", sptr_operand)
-  // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-  set_llvm_sptr_name(sptr_operand);
-#endif
-  // AOCC End
   return sptr_operand;
 } /* gen_sptr */
 

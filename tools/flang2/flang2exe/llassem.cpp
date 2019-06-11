@@ -1022,9 +1022,21 @@ ompaccel_write_sharedvars(void)
   for (gblsym = ag_other; gblsym; gblsym = AG_SYMLK(gblsym)) {
     name = AG_NAME(gblsym);
     typed = AG_TYPENAME(gblsym);
+    // AOCC begin
+#ifdef OMP_OFFLOAD_AMD
+    fprintf(gbl.ompaccfile,
+            "@%s = weak addrspace(3) externally_initialized global %s ", name,
+            typed);
+    fprintf(gbl.ompaccfile, " undef\n");
+#else
+    // AOCC End
     fprintf(gbl.ompaccfile, "@%s = common addrspace(3) global %s ", name,
             typed);
     fprintf(gbl.ompaccfile, " zeroinitializer\n");
+
+    // AOCC Begin
+#endif
+    // AOCC end
   }
 }
 
@@ -1261,6 +1273,21 @@ assemble_end(void)
 static void
 write_consts(void)
 {
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  FILE *llvmfile;
+  FILE *asmfile;
+
+  if (flg.amdgcn_target && gbl.isnvvmcodegen) {
+    //printf("Setting GPU file\n");
+    llvmfile = get_llasm_output_file();
+    asmfile = ASMFIL;
+    use_gpu_output_file();
+    ASMFIL = gbl.ompaccfile;
+  }
+#endif
+  // AOCC End
+
   if (gbl.consts > NOSYM) {
     SPTR sptr;
     for (sptr = gbl.consts; sptr > NOSYM; sptr = SYMLKG(sptr)) {
@@ -1272,7 +1299,7 @@ write_consts(void)
         put_kstr(sptr, XBIT(124, 0x8000));
         fputc('\n', ASMFIL);
       } else if (DTY(dtype) != TY_PTR) {
-        const char *tyName = char_type(dtype, sptr);        
+        const char *tyName = char_type(dtype, sptr);
         if (OMPACCRTG(sptr)) {
           fprintf(ASMFIL, "@%s = external constant %s ", getsname(sptr),
                   tyName);
@@ -1300,6 +1327,15 @@ write_consts(void)
         SYMLKP(tsptr, SPTR_NULL);
     }
   }
+
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target && gbl.isnvvmcodegen) {
+    ASMFIL = asmfile;
+    set_llasm_output_file(llvmfile);
+  }
+#endif
+  // AOCC End
   gbl.consts = NOSYM;
 }
 
