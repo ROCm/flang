@@ -9052,8 +9052,7 @@ semant1(int rednum, SST *top)
 
         /* AOCC begin */
         if (flg.std == F2008) {
-          /* null() pointer declarations are skipped here */
-          if (POINTERG(sptr) && SST_ASTG(RHS(3)) != A_FUNC) {
+          if (POINTERG(sptr) && !IN_MODULE_SPEC) {
             ast = assign_pointer(RHS(1), RHS(3));
             add_stmt(ast);
             SST_ASTP(RHS(1), ast);
