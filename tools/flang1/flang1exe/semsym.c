@@ -14,6 +14,15 @@
  * limitations under the License.
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Changes to support character arrays as subroutine internal variables.
+  *
+  * Date of Modification: December 2018
+  *
+  */
+
 
 /** \file
     \brief Fortran Semantic action routines to resolve symbol references as to

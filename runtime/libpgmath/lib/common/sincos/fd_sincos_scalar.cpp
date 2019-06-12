@@ -15,6 +15,14 @@
  * limitations under the License.
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: October 2018
+  *
+  */
 
 
 #include <assert.h>

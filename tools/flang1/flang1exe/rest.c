@@ -14,6 +14,15 @@
  * limitations under the License.
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: March 2019
+  *
+  */
+
 
 /** \file rest.c
     \brief various ast transformations
