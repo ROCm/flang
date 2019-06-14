@@ -1108,8 +1108,13 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .AT elemental i j
 
 .PD MASKL - -
-.AT elemental i j
+.AT elemental i *kind
 .PD MASKR - -
+.AT elemental i *kind
+
+.PD SHIFTL - -
+.AT elemental i j
+.PD SHIFTR - -
 .AT elemental i j
 
 .PD REAL - -
@@ -1732,10 +1737,6 @@ Internal subroutine to perform a copy out of an ordinary argument.
 .AT elemental x
 .H4 DCOT * -
 .AT elemental x
-.H4 SHIFTL - -
-.AT elemental i j
-.H4 SHIFTR - -
-.AT elemental i j
 .H4 DSHIFTL - -
 .AT elemental i j k
 .H4 DSHIFTR - -

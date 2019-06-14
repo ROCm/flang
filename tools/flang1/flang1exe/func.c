@@ -40,6 +40,11 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Shifting intrinsics.
+ *
+ * Month of Modification: June 2019
+ *
  */
 
 /**
@@ -1966,7 +1971,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       if (nargs == 2) {
         ARGT_ARG(bitmask_argt, 1) = ARGT_ARG(func_args, 1);
       } else {
-        ARGT_ARG(bitmask_argt, 1) = mk_cval1(0, DT_INT);
+        ARGT_ARG(bitmask_argt, 1) = mk_cval1(4, DT_INT);
       }
 
       /* set is_left */
@@ -1987,6 +1992,25 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       add_stmt_before(bitmask_assign, arg_gbl.std);
       return bitmask_temp_result;
     }
+
+    case I_SHIFTL:
+      if (flg.std == F2008) {
+        int val = ARGT_ARG(func_args, 0);
+        int shift = ARGT_ARG(func_args, 1);
+
+        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
+        return shift_func;
+      }
+
+    case I_SHIFTR:
+      if (flg.std == F2008) {
+        int val = ARGT_ARG(func_args, 0);
+        int shift = ARGT_ARG(func_args, 1);
+        int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+
+        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
+        return shift_func;
+      }
 
     /* AOCC end */
     default:

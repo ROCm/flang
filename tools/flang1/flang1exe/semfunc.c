@@ -35,6 +35,16 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Shifting intrinsics.
+ *
+ * Month of Modification: June 2019
+
  */
 
 /** \file
@@ -8401,7 +8411,7 @@ ref_pd(SST *stktop, ITEM *list)
     }
 
     if (count != 2) {
-      E74_CNT(pdsym, count, 1, 1);
+      E74_CNT(pdsym, count, 2, 2);
       goto call_e74_cnt;
     }
 
@@ -8435,7 +8445,7 @@ ref_pd(SST *stktop, ITEM *list)
       case TY_INT8:
         break;
       default:
-        E74_ARG(pdsym, 0, NULL);
+        E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
     }
 
@@ -8451,7 +8461,7 @@ ref_pd(SST *stktop, ITEM *list)
     }
 
     if (count > 2 || count <= 0) {
-      E74_CNT(pdsym, count, 1, 1);
+      E74_CNT(pdsym, count, 1, 2);
       goto call_e74_cnt;
     }
 
@@ -8485,7 +8495,7 @@ ref_pd(SST *stktop, ITEM *list)
         case TY_INT8:
           break;
         default:
-          E74_ARG(pdsym, 0, NULL);
+          E74_ARG(pdsym, 1, NULL);
           goto call_e74_arg;
       }
     }
@@ -10653,30 +10663,83 @@ ref_pd(SST *stktop, ITEM *list)
 
   case PD_shiftl:
   case PD_shiftr:
-    if (count != 2) {
-      E74_CNT(pdsym, count, 2, 2);
-      goto call_e74_cnt;
+  /* AOCC begin */
+    if (flg.std == F2008) {
+      if (count != 2) {
+        E74_CNT(pdsym, count, 2, 2);
+        goto call_e74_cnt;
+      }
+
+      /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+      if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+        goto exit_;
+
+      dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg */
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg */
+
+      switch (DTY(dtype1)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+      }
+
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 1, NULL);
+          goto call_e74_arg;
+      }
+
+      dtyper = DT_INT;
+      argt_count = count;
+      break;
+
+     /*
+      * The below semantic handling suggests that the shiftl/shiftr it's
+      * expecting is not the one from the F2008 standard. We default the handling
+      * to if the standard is not f2008 or above.
+      */
+
+    } else {
+    /* AOCC end */
+      if (count != 2) {
+        E74_CNT(pdsym, count, 2, 2);
+        goto call_e74_cnt;
+      }
+      if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
+        goto exit_;
+      stkp = ARG_STK(0); /* i */
+      shaper = SST_SHAPEG(stkp);
+      dtype1 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISINT(dtype1) && !DT_ISREAL(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+      stkp = ARG_STK(1); /* j */
+      dtype1 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISINT(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+      if (shaper)
+        dtyper = get_array_dtype(SHD_NDIM(shaper), DT_DWORD);
+      else
+        dtyper = DT_DWORD;
+      break;
     }
-    if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
-      goto exit_;
-    stkp = ARG_STK(0); /* i */
-    shaper = SST_SHAPEG(stkp);
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    if (!DT_ISINT(dtype1) && !DT_ISREAL(dtype1)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
-    }
-    stkp = ARG_STK(1); /* j */
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    if (!DT_ISINT(dtype1)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
-    }
-    if (shaper)
-      dtyper = get_array_dtype(SHD_NDIM(shaper), DT_DWORD);
-    else
-      dtyper = DT_DWORD;
-    break;
 
   case PD_dshiftl:
   case PD_dshiftr:

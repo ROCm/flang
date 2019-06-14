@@ -27,6 +27,16 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Shifting intrinsics.
+ *
+ * Month of Modification: June 2019
+
  */
 
 /**
