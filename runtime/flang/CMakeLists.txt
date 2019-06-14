@@ -49,6 +49,9 @@
 #
 # [AMD] Support for Bit Sequence Comparsion intrinsic
 # Month of Modification: May 2019
+
+# [AMD] Support for Bit Masking intrinsics.
+# Month of Modification: May 2019
 #===----------------------------------------------------------------------===#
 
 
@@ -357,7 +360,7 @@ SET(FTN_SUPPORT_DESC_INDEP
 SET(FTN_SUPPORT_DESC_DEP
   aligned.c
   allo.c
-  bitcmp.c
+  bitwise.c
   comm.c
   copy.c
   cshift.c

@@ -27,6 +27,11 @@
  *
  * Month of Modification: May 2019
  *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -83,6 +88,7 @@ typedef enum {
   RTE_auto_deallocp,
   /* AOCC begin */
   RTE_bitcmp,
+  RTE_bitmask,
   /* AOCC end */
   RTE_c_f_procptr,
   RTE_c_f_ptr,
