@@ -53,6 +53,7 @@
 #include "scutil.h"
 #include "symfun.h"
 
+
 /*
  * MTH, FMTH, ... names
  */
@@ -3864,6 +3865,7 @@ addarth(ILI *ilip)
       return ad1ili(IL_KNEG, ad2ili(IL_KMUL, op1, ILI_OPND(op2, 1)));
     }
     break;
+
   case IL_FMUL:
     if (!flg.ieee) {
       if (ncons == 2) {
@@ -3885,15 +3887,17 @@ addarth(ILI *ilip)
         goto add_rcon;
       }
     }
-    /* FMUL FNEG x, y --> FNEG FMUL x,y */
+    /* FMUL FNEG x, FNEG y --> FMUL x,y */
     if (ILI_OPC(op1) == IL_FNEG && ILI_OPC(op2) == IL_FNEG) {
       op1 = ILI_OPND(op1, 1);
       op2 = ILI_OPND(op2, 1);
       break;
     }
+    /* FMUL FNEG x, y --> FNEG FMUL x,y */
     if (ILI_OPC(op1) == IL_FNEG) {
       return ad1ili(IL_FNEG, ad2ili(IL_FMUL, ILI_OPND(op1, 1), op2));
     }
+    /* FMUL x, FNEG y --> FNEG FMUL x,y */
     if (ILI_OPC(op2) == IL_FNEG) {
       return ad1ili(IL_FNEG, ad2ili(IL_FMUL, op1, ILI_OPND(op2, 1)));
     }
@@ -4343,10 +4347,10 @@ addarth(ILI *ilip)
           }
         }
       }
-#endif /*} hardware divide */
+#endif /* defined(TARGET_X8664) || defined(TARGET_POWER) */
     }
     break;
-#endif
+#endif /*} hardware divide */
 #ifndef TM_FDIV /*{ no hardware divide */
 #ifdef TM_FRCP  /*{ mult - recip */
     /* perform divide by reciprocal approximation */
@@ -7798,7 +7802,8 @@ red_negate(int old, ILI_OP neg_opc, int mult_opc, int div_opc)
     return ad2ili(ILI_OPC(old), op1, op2); /* could be mult or divide */
   }
   if (IL_TYPE(ILI_OPC(op1)) == ILTY_CONS) {
-    if (!XBIT(15, 0x4) || (div_opc != IL_FDIV && div_opc != IL_DDIV)) {
+    if (!XBIT(15, 0x4) || 
+	(div_opc != IL_FDIV && div_opc != IL_DDIV)) {
       /* don't do if mult by recip enabled */
       op1 = ad1ili(neg_opc, op1);
       return ad2ili(ILI_OPC(old), op1, op2); /* should only be a divide */
@@ -8720,6 +8725,8 @@ fold_jmp:
   return 0;
 }
 
+bool is_floating_comparison_opcode(ILI_OP opc);
+
 /** \brief adds a branch ili by complementing the condition
  *
  * This routine adds a branch ili whose condition is the complement of the
@@ -8737,8 +8744,7 @@ compl_br(int ilix, int lbl)
   i = ilis[opc].oprs;
   New.opc = opc;
   New.opnd[--i] = lbl;
-  if (opc == IL_FCJMP || opc == IL_DCJMP || opc == IL_FCJMPZ ||
-      opc == IL_DCJMPZ) {
+  if (is_floating_comparison_opcode(opc)) {
     New.opnd[i - 1] = complement_ieee_cc(CC_ILI_OPND(ilix, i));
   } else {
     New.opnd[i - 1] = complement_int_cc(CC_ILI_OPND(ilix, i));
@@ -10093,7 +10099,7 @@ simplified_cmp_ili(int cmp_ili)
     shared_bin_cmp:
       new_cc = CC_ILI_OPND(new_ili, 3);
       if (invert_cc) {
-        if (new_opc == IL_FCMP || new_opc == IL_DCMP)
+        if (is_floating_comparison_opcode(new_opc))
           new_cc = complement_ieee_cc(new_cc);
         else
           new_cc = complement_int_cc(new_cc);
@@ -10128,7 +10134,7 @@ simplified_cmp_ili(int cmp_ili)
     shared_una_cmp:
       new_cc = CC_ILI_OPND(new_ili, 2);
       if (invert_cc) {
-        if (new_opc == IL_FCMPZ || new_opc == IL_DCMPZ)
+        if (is_floating_comparison_opcode(new_opc))
           new_cc = complement_ieee_cc(new_cc);
         else
           new_cc = complement_int_cc(new_cc);
@@ -10990,6 +10996,7 @@ prilitree(int i)
     fprintf(gbl.dbgfil, "%s0", opval);
     break;
 
+  case IL_HFMAX:
   case IL_FMAX:
   case IL_DMAX:
   case IL_KMAX:
@@ -10997,6 +11004,7 @@ prilitree(int i)
     n = 2;
     opval = "max";
     goto intrinsic;
+  case IL_HFMIN:
   case IL_FMIN:
   case IL_DMIN:
   case IL_KMIN:
@@ -14548,3 +14556,4 @@ imin_ili_ili(int leftx, int rightx)
   }
   return ilix;
 } /* imin_ili_ili */
+

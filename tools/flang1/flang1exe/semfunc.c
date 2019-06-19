@@ -4149,6 +4149,7 @@ ref_intrin(SST *stktop, ITEM *list)
   char tmpnm[64];
   FtnRtlEnum rtlRtn;
   int intrin; /* one of the I_* constants */
+  int is_real2_arg_error = 0;
 
   dtyper = 0;
   dtype1 = 0;
@@ -5608,6 +5609,7 @@ ref_pd(SST *stktop, ITEM *list)
   FtnRtlEnum rtlRtn;
   SPTR pdsym = SST_SYMG(stktop);
   int pdtype = PDNUMG(pdsym);
+  int is_real2_arg_error = 0;
 
 /* any integer type, or hollerith, or, if -x 51 0x20 not set, real/double */
 #define TYPELESS(dt)                     \
@@ -5959,8 +5961,6 @@ ref_pd(SST *stktop, ITEM *list)
     }
     break;
   case PD_findloc:
-    /* TODO: when the "back" argument is added to min/maxloc, merge
-     * find/min/maxloc code */
     if (count < 2 || count > 6) {
       E74_CNT(pdsym, count, 1, 6);
       goto call_e74_cnt;
@@ -6081,8 +6081,20 @@ ref_pd(SST *stktop, ITEM *list)
       dtyper2 = 0;
     }
 
+    /* back */
+    if ((stkp = ARG_STK(4))) {
+      dtype2 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISLOG(dtype2)) {
+        E74_ARG(pdsym, 3, NULL);
+        goto call_e74_arg;
+      }
+      ARG_AST(3) = SST_ASTG(ARG_STK(4));
+    } else {
+      ARG_AST(3) = mk_cval(SCFTN_FALSE, DT_LOG);
+    }
+
     stkp = ARG_STK(0);
-    argt_count = 3;
+    argt_count = 4;
     dtype1 = SST_DTYPEG(stkp);
     if (!DT_ISNUMERIC_ARR(dtype1) &&
         !(DTY(dtype1) == TY_ARRAY &&
@@ -8643,9 +8655,9 @@ ref_pd(SST *stktop, ITEM *list)
         goto call_e74_arg;
       }
 
-      argt = mk_argt(4);
-
       dtype2 = DDTG(SST_DTYPEG(ARG_STK(2)));
+
+      argt = mk_argt(4);
 
       sem.arrdim.ndim = 1;
       sem.arrdim.ndefer = 0;
@@ -11031,7 +11043,6 @@ const_isz_val:
   else
     SST_CVALP(stktop, A_SPTRG(ast));
   return iszval;
-
 const_real_val:
   EXPSTP(pdsym, 1); /* freeze predeclared */
   SST_IDP(stktop, S_CONST);
@@ -11240,6 +11251,7 @@ ref_pd_subr(SST *stktop, ITEM *list)
   int argt_count;
   SST *sp;
   SST *stkp;
+  int is_real2_arg_error = 0;
 
   /* Count the number of arguments to function */
   count = 0;

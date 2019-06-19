@@ -415,6 +415,8 @@ static int convert_to_llvm_cc(CC_RELATION cc, int cc_type);
 static OPERAND *get_intrinsic(const char *name, LL_Type *func_type);
 static OPERAND *get_intrinsic_call_ops(const char *name, LL_Type *return_type,
                                        OPERAND *args);
+static OPERAND *sign_extend_int(OPERAND *op, unsigned result_bits);
+static OPERAND *zero_extend_int(OPERAND *op, unsigned result_bits);
 static bool repeats_in_binary(union xx_u);
 static bool zerojump(ILI_OP);
 static bool exprjump(ILI_OP);
@@ -1341,7 +1343,7 @@ schedule(void)
   bool targetNVVM = false;
   bool processHostConcur = true;
   SPTR func_sptr = GBL_CURRFUNC;
-  LL_Module *current_module = cpu_llvm_module;
+  LL_Module *current_module = NULL;
   bool first = true;
   // AOCC Begin
   int i;
@@ -1350,8 +1352,6 @@ schedule(void)
 
   funcId++;
   assign_fortran_storage_classes();
-  if (!XBIT(53, 0x10000))
-    current_module->omnipotentPtr = ll_get_md_null();
   if (XBIT(183, 0x10000000)) {
     if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
       widenAddressArith();
@@ -1364,14 +1364,18 @@ restartConcur:
   func_sptr = GBL_CURRFUNC;
   entry_bih = gbl.entbih;
 
+  cg_llvm_init();
 #ifdef OMP_OFFLOAD_LLVM
   if (ISNVVMCODEGEN) {
     current_module = gpu_llvm_module;
     use_gpu_output_file();
-  }
+  } else 
 #endif
-
-  cg_llvm_init();
+  {
+    current_module = cpu_llvm_module;
+  }
+  if (!XBIT(53, 0x10000))
+    current_module->omnipotentPtr = ll_get_md_null();
 
   consTempMap(ilib.stg_avail);
 
@@ -2338,8 +2342,10 @@ write_I_CALL(INSTR_LIST *curr_instr, bool emit_func_signature_for_call)
    */
   print_token("\t");
 #if defined(TARGET_LLVM_X8664)
+  /* by default on X86-64, a function returning INTEGER*2 is promoted to return INTEGER*4
+     and the return value truncated.*/
   if (return_type->data_type == LL_I16) {
-    callRequiresTrunc = !XBIT(183, 0x400000);
+      callRequiresTrunc = !XBIT(183, 0x400000);
   }
 #endif
   assert(return_type, "write_I_CALL: missing return type for call instruction",
@@ -6304,7 +6310,9 @@ static OPERAND *
 convert_int_to_ptr(OPERAND *convert_op, LL_Type *rslt_type)
 {
   const LL_Type *llt = convert_op->ll_type;
-  assert(llt && (ll_type_int_bits(llt) == 8 * size_of(DT_CPTR)),
+  OPERAND* operand;
+  assert(llt,"convert_int_to_ptr(): missing incoming type",0,ERR_Fatal);
+  assert(ll_type_int_bits(llt) == 8 * size_of(DT_CPTR),
          "Unsafe type for inttoptr", ll_type_int_bits(llt), ERR_Fatal);
   return convert_operand(convert_op, rslt_type, I_INTTOPTR);
 }
@@ -6659,9 +6667,11 @@ get_call_sptr(int ilix)
 
   switch (opc) {
   case IL_JSR:
+  case IL_GJSR:
   case IL_QJSR:
     sptr = ILI_SymOPND(ilix, 1);
     break;
+  case IL_GJSRA:
   case IL_JSRA:
     addr = ILI_OPND(ilix, 1);
     if (ILI_OPC(addr) == IL_LDA) {
@@ -7732,6 +7742,8 @@ gen_llvm_vsincos_call(int ilix)
   const DTYPE dtype = ili_get_vect_dtype(ilix);
   LL_Type *floatTy = make_lltype_from_dtype(DT_FLOAT);
   LL_Type *vecTy = make_lltype_from_dtype(dtype);
+  DTYPE mask_dtype;
+  LL_Type *maskTy;
   DTYPE dtypeName = (vecTy->sub_types[0] == floatTy) ? DT_FLOAT : DT_DBLE;
   LL_Type *retTy = gen_vsincos_return_type(vecTy);
   OPERAND *opnd = gen_llvm_expr(ILI_OPND(ilix, 1), vecTy);
@@ -7743,7 +7755,12 @@ gen_llvm_vsincos_call(int ilix)
 
   /* Mask operand is always the one before the last operand */
   if (ILI_OPC(mask_arg_ili) != IL_NULL) {
-      opnd->next = gen_llvm_expr(mask_arg_ili, vecTy);
+    /* mask is always a vector of integers; same number and size as 
+     * the regular argument.
+     */
+    mask_dtype = get_vector_dtype(dtypeName==DT_FLOAT?DT_INT:DT_INT8,vecLen);
+    maskTy = make_lltype_from_dtype(mask_dtype);
+      opnd->next = gen_llvm_expr(mask_arg_ili, maskTy);
     hasMask = true;
   }
   llmk_math_name(sincosName, MTH_sincos, vecLen, hasMask, dtypeName);
@@ -7966,7 +7983,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
       DTYPE dtype = DTYPEG(sptr);
 
       /* If no type found assume generic pointer */
-      if (!dtype)
+      if (dtype == DT_NONE)
         dtype = DT_CPTR;
 
       if (operand->ll_type->sub_types[0]->data_type == LL_PTR ||
@@ -9897,8 +9914,11 @@ gen_optext_comp_operand(OPERAND *operand, ILI_OP opc, int lhs_ili, int rhs_ili,
   ad_instr(0, Curr_Instr);
   if (!optext)
     return operand;
-  /* Result type is bool which is signed, -1 for true, 0 for false. */
-  return sign_extend_int(operand, 32);
+  if (XBIT(125, 0x8))
+    return zero_extend_int(operand, 32);
+  else
+    /* Result type is bool which is signed, -1 for true, 0 for false. */
+    return sign_extend_int(operand, 32);
 }
 
 /*
@@ -13626,6 +13646,7 @@ add_debug_cmnblk_variables(LL_DebugInfo *db, SPTR sptr)
 void
 process_global_lifetime_debug(void)
 {
+  bool host_version = true;
   if (cpu_llvm_module->global_debug_map)
     hashmap_clear(cpu_llvm_module->global_debug_map);
   if (cpu_llvm_module->debug_info && gbl.cmblks) {
@@ -13633,18 +13654,25 @@ process_global_lifetime_debug(void)
     SPTR sptr = gbl.cmblks;
     update_llvm_sym_arrays();
     lldbg_reset_module(db);
-    for (; sptr > NOSYM; sptr = SYMLKG(sptr)) {
-      const SPTR scope = SCOPEG(sptr);
-      if (gbl.cuda_constructor)
-        continue;
-      if (scope > 0) {
-        if (CCSYMG(sptr)) {
-          lldbg_emit_module_mdnode(db, scope);
-          add_debug_cmnblk_variables(db, sptr);
-        } else {
-          if (FROMMODG(sptr) || (gbl.rutype == RU_BDATA && scope == gbl.currsub)) {
-            lldbg_emit_common_block_mdnode(db, sptr);
+    if (gbl.currsub>NOSYM) {
+       if (CUDAG(gbl.currsub) && 
+	   !(CUDAG(gbl.currsub) & CUDA_HOST)) {
+         host_version = false;
+       }
+    }
+    if (!gbl.cuda_constructor &&
+        host_version) {
+      for (; sptr > NOSYM; sptr = SYMLKG(sptr)) {
+        const SPTR scope = SCOPEG(sptr);
+        if (scope > 0) {
+          if (CCSYMG(sptr)) {
+            lldbg_emit_module_mdnode(db, scope);
             add_debug_cmnblk_variables(db, sptr);
+          } else {
+            if (FROMMODG(sptr) || (gbl.rutype == RU_BDATA && scope == gbl.currsub)) {
+              lldbg_emit_common_block_mdnode(db, sptr);
+              add_debug_cmnblk_variables(db, sptr);
+            }
           }
         }
       }
