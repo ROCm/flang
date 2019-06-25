@@ -2012,6 +2012,11 @@ exp_ompaccel_etarget(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     ili = ll_make_tgt_target(gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID,
                              uplevel_sptr);
   } else if (ompaccel_tinfo_current_target_mode() == mode_target_parallel_for ||
+// AOCC Begin
+             // Need to create a single team for target parallel mode as well.
+             // Loops can be present inside omp target parallel block
+             ompaccel_tinfo_current_target_mode() == mode_target_parallel ||
+// AOCC end
              ompaccel_tinfo_current_target_mode() ==
                  mode_target_parallel_for_simd) {
     // Create kernel with single team.
