@@ -3221,6 +3221,22 @@ addarth(ILI *ilip)
 #endif
     break;
 
+  // AOCC begin
+  case IL_FCMPZNZ:
+    if (!IEEE_CMP && ILI_OPC(op1) == IL_FSUB)
+      return ad3ili(IL_FCMP, (int)ILI_OPND(op1, 1), (int)ILI_OPND(op1, 2), op2);
+    {
+      int fcon_one = ad1ili(IL_FCON, stb.flt1);
+
+      (void)mk_prototype("llvm.copysign.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.copysign.f32", 2, fcon_one, op1);
+
+      int fcon_zero = ad1ili(IL_FCON, stb.flt0);
+      return ad3ili(IL_FCMP, ad2altili(opc, fcon_one, op1, ilix), fcon_zero, op2);
+    }
+    break;
+  // AOCC end
+
   case IL_DCMPZ:
     if (ncons == 1) {
       GETVAL64(num1, cons1);
@@ -3237,6 +3253,24 @@ addarth(ILI *ilip)
     return ad3ili(IL_DCMP, op1, tmp, op2);
 #endif
     break;
+
+  // AOCC begin
+  case IL_DCMPZNZ:
+    if (!IEEE_CMP && ILI_OPC(op1) == IL_DSUB)
+      return ad3ili(IL_DCMP, (int)ILI_OPND(op1, 1), (int)ILI_OPND(op1, 2), op2);
+    if (ILI_OPC(op1) == IL_DBLE && !XBIT(15, 0x80))
+      return ad2ili(IL_FCMPZ, ILI_OPND(op1, 1), op2);
+    {
+      int dcon_one = ad1ili(IL_DCON, stb.dbl1);
+
+      (void)mk_prototype("llvm.copysign.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.copysign.f64", 2, dcon_one, op1);
+
+      int dcon_zero = ad1ili(IL_DCON, stb.dbl0);
+      return ad3ili(IL_DCMP, ad2altili(opc, dcon_one, op1, ilix), dcon_zero, op2);
+    }
+    break;
+  // AOCC end
 
   case IL_ACMPZ:
     if (ncons == 1) {

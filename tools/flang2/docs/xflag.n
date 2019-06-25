@@ -2088,6 +2088,8 @@ Inhibit MAX/MIN optimization whereby the results of the MAX/MIN
 are stored directly within ili template.
 .XB 0x08:
 Generate position-independent code
+.XB 0x10
+(D)SIGN distinguishes negative zero.
 
 .XF "63"
 Used to pass opt level to CUDA back end code generator.

@@ -3732,9 +3732,16 @@ lower_intrinsic(int ast)
   case I_JISIGN:
   case I_KISIGN:
   case I_ISIGN:
+  /* AOCC begin */
+    ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+    break;
   case I_DSIGN:
   case I_SIGN:
-    ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+    if (XBIT(64, 0x10))
+      ilm = intrin_name("SIGNNZ", ast, in_I_K_r_D);
+    else
+      ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+  /* AOCC end */
     break;
 
   /* xor family */

@@ -990,8 +990,19 @@ Real valued SIGN intrinsic.
 .OP FABS t2 p1
 .OP FNEG t3 t2
 .OP FSELECT r t1 t2 t3
+.IL SIGNNZ arth lnk lnk
+Real valued SIGN intrinsic that distinguishes negative zero.
+.OP FCMPZNZ t1 p2 lt
+.OP FABS t2 p1
+.OP FNEG t3 t2
+.OP FSELECT r t1 t2 t3
 .IL DSIGN arth lnk lnk
 .OP DCMPZ t1 p2 lt
+.OP DABS t2 p1
+.OP DNEG t3 t2
+.OP DSELECT r t1 t2 t3
+.IL DSIGNNZ arth lnk lnk
+.OP DCMPZNZ t1 p2 lt
 .OP DABS t2 p1
 .OP DNEG t3 t2
 .OP DSELECT r t1 t2 t3

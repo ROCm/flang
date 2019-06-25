@@ -251,6 +251,7 @@ DPSCON	num
 DPVAL	ilm
 DREAL	ilm
 DSIGN	ilm	ilm
+DSIGNNZ	ilm	ilm
 DSIN	ilm
 DSIND	ilm
 DSINH	ilm
@@ -557,6 +558,7 @@ SHD	ilm	ilm	ilm
 SHIFT	ilm	ilm
 SHIFT64	ilm	ilm
 SIGN	ilm	ilm
+SIGNNZ	ilm	ilm
 SILD	ilm
 SIN	ilm
 SIND	ilm
