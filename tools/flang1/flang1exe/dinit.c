@@ -648,10 +648,11 @@ setConval(int sptr, int conval, int op)
 static void
 process_real_kind(int sptr, ACL *ict, int op)
 {
-  int ast, con1, conval;
+  int ast, con1, conval, p, r;
 
   ast = ict->u1.ast;
-  conval = 0;
+  conval = 4;
+  p = 0, r = 0;  // AOCC
   if (A_TYPEG(ast) == A_CNST) {
 
     con1 = A_SPTRG(ast);
@@ -662,8 +663,10 @@ process_real_kind(int sptr, ACL *ict, int op)
       conval = 8;
     else if (con1 <= 31 && !XBIT(57, 4))
       conval = 16;
-    else
+    else {
       conval = -1;
+      p = -1;
+    }
   }
 
   ict = ict->next;
@@ -676,35 +679,79 @@ process_real_kind(int sptr, ACL *ict, int op)
       if (XBIT(49, 0x40000)) {
         /* Cray C90 */
         if (con1 <= 37) {
-          if (conval > 0 && conval < 4)
+          if (conval > 0 && conval <= 4)
             conval = 4;
         } else if (con1 <= 2465) {
-          if (conval > 0 && conval < 8)
+          if (conval > 0 && conval <= 8)
             conval = 8;
         } else {
           if (conval > 0)
             conval = 0;
-          conval -= 2;
+          conval = -2;
+	  r = -2;
         }
       } else {
         /* ANSI */
         if (con1 <= 37) {
-          if (conval > 0 && conval < 4)
+          if (conval > 0 && conval <= 4)
             conval = 4;
         } else if (con1 <= 307) {
-          if (conval > 0 && conval < 8)
+          if (conval > 0 && conval <= 8)
             conval = 8;
-        } else if (con1 <= 4931 && !XBIT(57, 4)) {
-          if (conval > 0 && conval < 16)
+        } else if ((con1 <= 4931) && !XBIT(57, 4)) {
+          if (conval > 0 && conval <= 16)
             conval = 16;
         } else {
           if (conval > 0)
             conval = 0;
-          conval -= 2;
+          conval = -2;
+	  r = -2;
         }
       }
     }
   }
+  // AOCC begin
+  ict = ict->next;
+  if (ict) {
+    ast = ict->u1.ast;
+
+    if (A_TYPEG(ast) == A_CNST) {
+      con1 = A_SPTRG(ast);
+      con1 = CONVAL2G(con1);
+      if (XBIT(49, 0x40000)) {
+        /* Cray C90 */
+        if (con1 == 2) {
+          if (conval > 0 && conval <= 4)
+            conval = 4;
+	  else if (conval > 0 && conval <= 8)
+            conval = 8;
+	  else if (p == 0 || r == 0)
+	    conval = -4;
+          else if (p < 0 && r < 0)
+	    conval = -3;
+        }
+	else if (con1 != 2)
+            conval = -5;
+      } else {
+        /* ANSI */
+          if (con1 == 2 || con1 == 0) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
+	    else if (p == 0 || r == 0)
+	      conval = -4;
+            else if (p < 0 && r < 0)
+	    conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        }
+    }
+  }
+  // AOCC end
   if (conval) {
     setConval(sptr, conval, op);
   }
