@@ -15,6 +15,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes made to create single team for omp target parallel block as well
+ * Date of Modification: 26th June 2019
+ *
+ *
+ */
+
 /**
  *  \file
  *  \brief ompaccel.c - OpenMP GPU Offload for NVVM Targets. It uses
