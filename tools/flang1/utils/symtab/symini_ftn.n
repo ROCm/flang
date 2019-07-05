@@ -1153,6 +1153,10 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT elemental --
 .PD ANY - -
 .AT transformational mask *dim
+.PD PARITY - -
+.AT transformational mask *dim
+.PD IPARITY - -
+.AT transformational mask *dim
 .PD COMPL - -
 .AT elemental --
 .PD COUNT - -
@@ -1170,11 +1174,11 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .PD MAXLOC - -
 .AT transformational array *dim *mask *kind *back
 .PD MAXVAL - -
-.AT transformational array *dim *mask 
+.AT transformational array *dim *mask
 .PD MINLOC - -
 .AT transformational array *dim *mask *kind *back
 .PD MINVAL - -
-.AT transformational array *dim *mask 
+.AT transformational array *dim *mask
 .PD MERGE - -
 .AT elemental tsource fsource mask
 .PD NEQV - -

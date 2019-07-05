@@ -727,6 +727,7 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
   case OP_LNEQV:
   case OP_LOR:
   case OP_LAND:
+  case OP_LXOR:         // AOCC
     commutable = TRUE;
   /***** fall through *****/
   default:
@@ -949,6 +950,20 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
           return rop; /* something .or. .true. is .true */
         return lop;   /* something .or. .false. is something */
         break;
+      // AOCC begin
+      case OP_LXOR:
+        v1 = CONVAL2G(A_SPTRG(lop));
+        v2 = CONVAL2G(A_SPTRG(rop));
+        if (v1 != v2) {
+          if (v1 == 0)
+            return rop;
+          return lop;
+        }
+        if (v1 == 0)
+          return lop;
+        return rop;
+        break;
+      // AOCC end
       default:
         break;
       }

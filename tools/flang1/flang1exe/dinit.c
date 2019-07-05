@@ -611,6 +611,9 @@ setConval(int sptr, int conval, int op)
     case AC_LOR:
       val |= conval;
       break;
+    case AC_LXOR:           // AOCC
+      val ^= conval;
+      break;
     case AC_LAND:
       val &= conval;
       break;
@@ -775,6 +778,7 @@ dinit_acl_val2(int sptr, int dtype, ACL *ict, int op)
     case AC_DIV:
     case AC_EXP:
     case AC_LOR:
+    case AC_LXOR:     // AOCC
     case AC_LAND:
     case AC_LEQV:
     case AC_LNEQV:
@@ -1356,6 +1360,9 @@ ac_opname(int id)
     break;
   case AC_LOR:
     strcpy(bf, "LOR");
+    break;
+  case AC_LXOR:           // AOCC
+    strcpy(bf, "XOR");
     break;
   case AC_LAND:
     strcpy(bf, "LAND");

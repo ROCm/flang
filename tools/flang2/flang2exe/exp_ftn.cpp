@@ -864,6 +864,13 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     op2 = ILI_OF(ILM_OPND(ilmp, 2));
     ILM_RESULT(curilm) = ad2ili(IL_KXOR, op1, op2);
     return;
+  // AOCC begin
+  case IM_XOR:
+    op1 = ILI_OF(ILM_OPND(ilmp, 1));
+    op2 = ILI_OF(ILM_OPND(ilmp, 2));
+    ILM_RESULT(curilm) = ad2ili(IL_XOR, op1, op2);
+    return;
+  // AOCC end
   case IM_KNOT:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     ILM_RESULT(curilm) = ad1ili(IL_KNOT, op1);
