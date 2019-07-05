@@ -2248,6 +2248,50 @@ INTINTRIN2("iand", eval_iand, &)
 INTINTRIN2("ior", eval_ior, |)
 INTINTRIN2("ieor", eval_ieor, ^)
 
+/* AOCC begin */
+static CONST *
+eval_merge_bits(CONST *arg, DTYPE dtype)
+{
+  CONST *arg_i = eval_init_expr_item(arg);
+  CONST *arg_j = eval_init_expr_item(arg->next);
+  CONST *arg_mask = eval_init_expr_item(arg->next->next);
+
+  CONST *arg_notmask = clone_init_const(arg_mask, true);
+
+  /* 32-bit values get stored in the conval field, while larger values need to
+   * be looked up in the symbol table.
+   */
+  if (size_of(arg_mask->dtype) > 4) {
+    INT ival[2];
+    ISZ_T mask_val, notmask_val;
+
+    ival[0] = CONVAL1G(arg_mask->u1.conval);
+    ival[1] = CONVAL2G(arg_mask->u1.conval);
+
+    INT64_2_ISZ(ival, mask_val);
+    notmask_val = ~mask_val;
+    ISZ_2_INT64(notmask_val, ival); /* Now ival will represent notmask_val */
+
+    arg_notmask->u1.conval = getcon(ival, arg_mask->dtype);
+  } else {
+    arg_notmask->u1.conval = ~(arg_mask->u1.conval);
+  }
+
+  CONST *arg_i_and_mask = clone_init_const(arg_i, true);
+  arg_i_and_mask->next = arg_mask;
+
+  CONST *arg_j_and_notmask = clone_init_const(arg_j, true);
+  arg_j_and_notmask->next = arg_notmask;
+
+  CONST *iand_i = eval_iand(arg_i_and_mask, dtype);
+  CONST *iand_j = eval_iand(arg_j_and_notmask, dtype);
+
+  iand_i->next = iand_j;
+
+  return eval_ior(iand_i, dtype);
+}
+/* AOCC end */
+
 static CONST *
 eval_ichar(CONST *arg, DTYPE dtype)
 {
@@ -4814,6 +4858,9 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
     // AOCC begin
     case AC_I_transpose:
       root = eval_reshape(rop, dtype, /*transpose*/ TRUE);
+      break;
+    case AC_I_merge_bits:
+      root = eval_merge_bits(rop, dtype);
       break;
     // AOCC end
     case AC_I_reshape:

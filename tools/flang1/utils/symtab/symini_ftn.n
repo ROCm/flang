@@ -1117,6 +1117,8 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .PD SHIFTR - -
 .AT elemental i j
 
+.PD MERGE_BITS - -
+.AT elemental i j mask
 .PD REAL - -
 .AT elemental a *kind
 .PD CMPLX - -
@@ -1873,8 +1875,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i j shift
 .H7 .DSHIFTR - -
 .AT elemental i j shift
-.H7 .MERGE_BITS - -
-.AT elemental i j mask
 .H7 .IALL - -
 .AT transformational array *dim *mask
 .H7 .IANY - -

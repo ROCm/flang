@@ -36,7 +36,12 @@
  * Support for Bit Shifting intrinsics.
  *
  * Month of Modification: June 2019
-
+ *
+ *
+ * Support for MERGE_BITS intrinsic.
+ *
+ * Month of Modification: July 2019
+ *
  */
 
 /**
@@ -1572,6 +1577,7 @@ const char *SyminiFE90::init_names0[] = {
     "blt",
     "maskl",
     "maskr",
+    "merge_bits",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2099,6 +2105,7 @@ const char *SyminiFE90::init_names1[] = {
     "blt",
     "maskl",
     "maskr",
+    "merge_bits",
     "norm2",
     // AOCC End
     "dot_product",
@@ -2627,6 +2634,7 @@ const char *SyminiFE90::init_names2[] = {
     "blt",
     "maskl",
     "maskr",
+    "merge_bits",
     "norm2",
     // AOCC End
     "dot_product",
@@ -3208,6 +3216,7 @@ const char *SyminiFE90::init_names3[] = {
     "blt",
     "maskl",
     "maskr",
+    "merge_bits",
     "norm2",
     // AOCC End
     "dot_product",

@@ -3880,6 +3880,12 @@ map_PD_to_AC(int pdnum)
   // AOCC begin
   case PD_transpose:
     return AC_I_transpose;
+  case PD_merge_bits:
+    return AC_I_merge_bits;
+  case PD_shiftl:
+    return AC_I_lshift;
+  case PD_shiftr:
+    return AC_I_rshift;
   // AOCC end
   case PD_scale:
     return AC_I_scale;
@@ -3936,6 +3942,7 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_ieor:
   case AC_I_merge:
   case AC_I_scale:
+  case AC_I_merge_bits: /* AOCC */
     return mk_elem_init_intrinsic(intrin, ast, dtype, parent_acltype);
   case AC_I_maxloc:
   case AC_I_maxval:
@@ -8283,6 +8290,49 @@ INTINTRIN2("iand", eval_iand, &)
 INTINTRIN2("ior", eval_ior, |)
 INTINTRIN2("ieor", eval_ieor, ^)
 
+/* AOCC begin */
+static ACL *
+eval_merge_bits(ACL *arg, DTYPE dtype) {
+  ACL *arg_i = eval_init_expr_item(arg);
+  ACL *arg_j = eval_init_expr_item(arg->next);
+  ACL *arg_mask = eval_init_expr_item(arg->next->next);
+
+  ACL *arg_notmask = clone_init_const(arg_mask, true);
+
+  /* 32-bit values get stored in the conval field, while larger values need to
+   * be looked up in the symbol table.
+   */
+  if (size_of(arg_mask->dtype) > 4) {
+    INT ival[2];
+    ISZ_T mask_val, notmask_val;
+
+    ival[0] = CONVAL1G(arg_mask->conval);
+    ival[1] = CONVAL2G(arg_mask->conval);
+
+    INT64_2_ISZ(ival, mask_val);
+    notmask_val = ~mask_val;
+    ISZ_2_INT64(notmask_val, ival); /* Now ival will represent notmask_val */
+
+    arg_notmask->conval = getcon(ival, arg_mask->dtype);
+  } else {
+    arg_notmask->conval = ~(arg_mask->conval);
+  }
+
+  ACL *arg_i_and_mask = clone_init_const(arg_i, true);
+  arg_i_and_mask->next = arg_mask;
+
+  ACL *arg_j_and_notmask = clone_init_const(arg_j, true);
+  arg_j_and_notmask->next = arg_notmask;
+
+  ACL *iand_i = eval_iand(arg_i_and_mask, dtype);
+  ACL *iand_j = eval_iand(arg_j_and_notmask, dtype);
+
+  iand_i->next = iand_j;
+
+  return eval_ior(iand_i, dtype);
+}
+/* AOCC end */
+
 static ACL *
 eval_ichar(ACL *arg, DTYPE dtype)
 {
@@ -10826,6 +10876,9 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     // AOCC begin
     case AC_I_transpose:
       root = eval_reshape(rop, dtype, /*transpose*/ TRUE);
+      break;
+    case AC_I_merge_bits:
+      root = eval_merge_bits(rop, dtype);
       break;
     // AOCC end
     case AC_I_reshape:

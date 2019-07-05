@@ -44,7 +44,11 @@
  * Support for Bit Shifting intrinsics.
  *
  * Month of Modification: June 2019
-
+ *
+ *
+ * Support for MERGE_BITS intrinsic.
+ *
+ * Month of Modification: July 2019
  */
 
 /** \file
@@ -8503,6 +8507,85 @@ ref_pd(SST *stktop, ITEM *list)
     dtyper = DT_INT8;
     argt_count = count;
     break;
+
+  case PD_merge_bits: {
+    if (flg.std != F2008) {
+      error(155, 3, gbl.lineno, SYMNAME(pdsym),
+          "merge_bits is supported only in f2008, use -std=f2008 to enable\n");
+    }
+
+    int dtype3;
+
+    if (count != 3) {
+      E74_CNT(pdsym, count, 3, 3);
+      goto call_e74_cnt;
+    }
+
+    /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    /* All arguments should be some INTGER kind or boz-literal constant. i and j
+     * can't be both boz-literal constant */
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (i) */
+    switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+    }
+
+    dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (j) */
+    switch (DTY(dtype2)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+    }
+
+    dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (shift) */
+    switch (DTY(dtype3)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+    }
+
+    /* If i and j are boz-literal constants, then throw error */
+    if ((DTY(dtype1) == TY_WORD || DTY(dtype1) == TY_DWORD) &&
+        (DTY(dtype2) == TY_WORD || DTY(dtype2) == TY_DWORD)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    /* If kinds mismatch, then throw error */
+    if (!(DTY(dtype1) == DTY(dtype2) && DTY(dtype2) == DTY(dtype3))) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    dtyper = (dtype1 > dtype2) ? dtype1 : dtype2;
+    argt_count = count;
+    break;
+  }
   /* AOCC end */
 
   case PD_digits:

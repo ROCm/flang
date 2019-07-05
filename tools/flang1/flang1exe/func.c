@@ -45,6 +45,10 @@
  *
  * Month of Modification: June 2019
  *
+ *
+ * Support for MERGE_BITS intrinsic.
+ *
+ * Month of Modification: July 2019
  */
 
 /**
@@ -2012,6 +2016,17 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
         return shift_func;
       }
 
+    case I_MERGE_BITS: {
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      int mask = ARGT_ARG(func_args, 2);
+
+      int not_mask = ast_intr(I_NOT, A_DTYPEG(mask), 1, mask);
+      int iand_i = ast_intr(I_IAND, A_DTYPEG(i), 2, i, mask);
+      int iand_j = ast_intr(I_IAND, A_DTYPEG(j), 2, j, not_mask);
+
+      return ast_intr(I_IOR, A_DTYPEG(i), 2, iand_i, iand_j);
+    }
     /* AOCC end */
     default:
       if (INKINDG(A_SPTRG(A_LOPG(func_ast))) == IK_ELEMENTAL)

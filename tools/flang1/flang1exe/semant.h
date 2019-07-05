@@ -675,7 +675,12 @@ typedef enum {
   AC_I_minloc,
   AC_I_minval,
   AC_I_scale,
-  AC_I_transpose, // AOCC
+  /* AOCC begin */
+  AC_I_transpose,
+  AC_I_merge_bits,
+  AC_I_shiftl,
+  AC_I_shiftr
+  /* AOCC end */
 } AC_INTRINSIC;
 
 #define BINOP(p) ((p)->op != AC_NEG && (p)->op != AC_CONV)
