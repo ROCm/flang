@@ -1,12 +1,4 @@
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Avoiding generation of _mth_aint and _mth_dint lib calls for the aint input;
- * instead handling it in flang
- * Date of Modification: May 2018
- *
- */
-/*
  * Copyright (c) 1994-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,29 +18,28 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Support for DNORM intrinsic
+ * Avoiding generation of _mth_aint and _mth_dint lib calls for the aint input;
+ * instead handling it in flang
+ * Date of Modification: May 2018
  *
+ * Support for DNORM intrinsic
  * Date of Modification: 21st February 2019
  *
- *
  * Support for Bit Sequence Comparsion intrinsic
- *
  * Month of Modification: May 2019
- *
  *
  * Support for Bit Masking intrinsics.
- *
  * Month of Modification: May 2019
  *
- *
  * Support for Bit Shifting intrinsics.
- *
  * Month of Modification: June 2019
  *
- *
  * Support for MERGE_BITS intrinsic.
- *
  * Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ * Month of Modification: July 2019
+ *
  */
 
 /** \file
@@ -11852,6 +11843,75 @@ ref_pd_subr(SST *stktop, ITEM *list)
     }
     REFP(pdsym, 1);
     break;
+
+  // AOCC Begin
+  // Pre-Defined subroutine execute_command_line
+  case PD_execute_command_line:
+    if (count < 1 || count > 5) {  // && evl_kwd_args(list, 1, KWDARGSTR(pdsym))))
+      E74_CNT(pdsym, count, 1, 5);
+      goto call_e74_cnt;
+    }
+    if (get_kwd_args(list, 5, KWDARGSTR(pdsym)))
+      goto exit_;
+    sp = ARG_STK(0);  /* command */
+    (void)mkexpr(sp);
+    XFR_ARGAST(0);
+    dtype2 = SST_DTYPEG(sp);
+    if (DTY(dtype2) != TY_CHAR) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+    if ((sp = ARG_STK(1))) { /* wait */
+      (void)mkexpr(sp);
+      XFR_ARGAST(1);
+      dtype2 = SST_DTYPEG(sp);
+      if (dtype2 != stb.user.dt_log) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+    }
+    if ((sp = ARG_STK(2))) { /* exitstat */
+      if (!is_varref(sp)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      (void)mkarg(sp, &dum);
+      XFR_ARGAST(2);
+      dtype2 = SST_DTYPEG(sp);
+      if (dtype2 != stb.user.dt_int) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+    }
+    if ((sp = ARG_STK(3))) { /* cmdstat */
+      if (!is_varref(sp)) {
+        E74_ARG(pdsym, 3, NULL);
+        goto call_e74_arg;
+      }
+      (void)mkarg(sp, &dum);
+      XFR_ARGAST(3);
+      dtype2 = SST_DTYPEG(sp);
+      if (dtype2 != stb.user.dt_int) {
+        E74_ARG(pdsym, 3, NULL);
+        goto call_e74_arg;
+      }
+    }
+    if ((sp = ARG_STK(4))) { /* cmdmsg */
+      if (!is_varref(sp)) {
+        E74_ARG(pdsym, 4, NULL);
+        goto call_e74_arg;
+      }
+      (void)mkarg(sp, &dum);
+      XFR_ARGAST(4);
+      dtype2 = SST_DTYPEG(sp);
+      if (DTY(dtype2) != TY_CHAR) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+    }
+    argt_count = 5;
+    break;
+  // AOCC End
 
   case PD_get_command_argument:
     if (count < 1 || count > 4) {

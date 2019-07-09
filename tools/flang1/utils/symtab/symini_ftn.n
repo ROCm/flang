@@ -21,6 +21,10 @@
 .\" *
 .\" * Date of Modification: 21st February 2019
 .\" *
+.\" * Support for EXECUTE_COMMAND_LINE intrinsic
+.\" *
+.\" * Date of Modification: July 2019
+.\" *
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -1165,6 +1169,8 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT transformational array *dim
 .PD ISNAN - -
 .AT elemental x
+.PD EXECUTE_COMMAND_LINE - -
+.AT subroutine command *wait *exitstat *cmdstat *cmdmsg
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -

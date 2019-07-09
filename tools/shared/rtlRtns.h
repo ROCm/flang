@@ -31,7 +31,10 @@
  * Support for Bit Masking intrinsics.
  *
  * Month of Modification: May 2019
-
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *
+ * Month of Modification: July 2019
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -144,6 +147,9 @@ typedef enum {
   RTE_dmodulov,
   RTE_errorstop08a_char,
   RTE_errorstop08a_int,
+  /* AOCC begin */
+  RTE_execute_command_line,
+  /* AOCC end */
   RTE_exit,
   RTE_expon,
   RTE_expond,

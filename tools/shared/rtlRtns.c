@@ -31,7 +31,10 @@
  * Support for Bit Masking intrinsics.
  *
  * Month of Modification: May 2019
-
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *
+ * Month of Modification: July 2019
  *
  */
 
@@ -140,6 +143,9 @@ FtnRteRtn ftnRtlRtns[] = {
     {"dmodulov", "", false, ""},
     {"errorstop08a_char", "", false, ""},
     {"errorstop08a_int", "", false, ""},
+    /* AOCC begin */
+    {"execute_command_line", "", false, ""},
+    /* AOCC end */
     {"exit", "", false, ""},
     {"expon", "", false, "k"},
     {"expond", "", false, "k"},

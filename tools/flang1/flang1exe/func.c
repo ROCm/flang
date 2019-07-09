@@ -1,12 +1,4 @@
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Implemented the minloc/maxloc inlining support
- *
- * Date of Modification: August 2018
- *
- */
-/*
  * Copyright (c) 1994-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,29 +18,27 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Support for DNORM intrinsic
+ * Implemented the minloc/maxloc inlining support
+ * Date of Modification: August 2018
  *
+ * Support for DNORM intrinsic
  * Date of Modification: 21st February 2019
  *
- *
  * Support for Bit Sequence Comparsion intrinsic
- *
  * Month of Modification: May 2019
- *
  *
  * Support for Bit Masking intrinsics.
- *
  * Month of Modification: May 2019
  *
- *
  * Support for Bit Shifting intrinsics.
- *
  * Month of Modification: June 2019
  *
- *
  * Support for MERGE_BITS intrinsic.
- *
  * Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ * Month of Modification: July 2019
+ *
  */
 
 /**
@@ -2975,6 +2965,20 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     ARGT_ARG(newargt, 5) = mk_cval(size_of(stb.user.dt_int), DT_INT4);
     is_icall = FALSE;
     goto ret_call;
+
+  // AOCC Begin
+  case I_EXECUTE_COMMAND_LINE:
+    newsym = sym_mkfunc_nodesc(mkRteRtnNm(RTE_execute_command_line), DT_INT);
+    nargs = 6;
+    newargt = mk_argt(nargs);
+    for (i = 0; i < nargs - 1; i++) {
+      int arg = ARGT_ARG(func_args, i);
+      ARGT_ARG(newargt, i) = arg != 0 ? arg : (i == 4) ? astb.ptr0c : astb.ptr0;
+    }
+    ARGT_ARG(newargt, 5) = mk_cval(size_of(stb.user.dt_int), DT_INT4);
+    is_icall = FALSE;
+    goto ret_call;
+  // AOCC end
   default:
     goto ret_norm;
   }

@@ -97,6 +97,9 @@ SET(FTN_INTRINSICS_DESC_INDEP
   erf3f.c
   erfc3f.c
   etime3f.c
+# AOCC begin
+  exec_cmd_line.c
+# AOCC end
   exit3f.c
   fdate3f.c
   fgetc3f.c
