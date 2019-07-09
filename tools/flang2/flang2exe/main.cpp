@@ -20,6 +20,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 9th July 2019
+ *
+ */
+
+
 /**
    \file
    \brief Fortran backend main program and initialization routines.
@@ -1103,7 +1112,8 @@ ompaccel_create_reduction_wrappers()
      * function names in the case of multi kernel applications
      *
      */
-    const char *suffix = SYMNAME(gbl.currsub);
+    char suffix[300];
+    sprintf(suffix, "%s", SYMNAME(gbl.currsub));
 #endif
     // AOCC End
     if (nreds != 0) {

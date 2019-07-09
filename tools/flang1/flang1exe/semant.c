@@ -46,6 +46,10 @@
 // THE SOFTWARE.
 //===----------------------------------------------------------------------===//
 //
+// Date of Modification : 9th July 2019
+// Support for AMDGPU OpenMP offloading
+//
+//===----------------------------------------------------------------------===//
 
 /**
     \file
@@ -12147,10 +12151,14 @@ procedure_stmt:
    */
   case MP_DECL2:
 #ifdef OMP_OFFLOAD_LLVM
+    // AOCC Begin
+#ifndef OMP_OFFLOAD_AMD
     if(flg.omptarget) {
       error(1200, ERR_Severe, gbl.lineno, "declare target",
             NULL);
     }
+    // AOCC End
+#endif
 #endif
     break;
   /*

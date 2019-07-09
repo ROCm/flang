@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 9th July 2019
+ *
+ */
 
 /** \file
  * \brief tgtutil.c - Various definitions for the libomptarget runtime
@@ -644,16 +651,45 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     } else {
       param_ili = ld_sptr(param_sptr);
 
+      // AOCC Begin
+      // Passing int32 args as int64
+#ifdef OMP_OFFLOAD_AMD
+      DTYPE dty = DTYPEG(param_sptr);
+      if (DTYPEG(param_sptr) == DT_INT) {
+        param_ili = ad1ili(IL_IKMV, param_ili);
+        dty = DT_INT8;
+      }
+      // AOCC End
+#endif
+
       /* assign arg */
       nme = add_arrnme(NT_ARR, args_sptr, nme_args, 0, ad_icon(i), FALSE);
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ili = mk_ompaccel_store(param_ili, dty, nme,
+                              ad_acon(args_sptr, i * TARGET_PTRSIZE));
+#else
+      // AOCC End
       ili = mk_ompaccel_store(param_ili, DTYPEG(param_sptr), nme,
                               ad_acon(args_sptr, i * TARGET_PTRSIZE));
+      // AOCC Begin
+#endif
+      // AOCC End
       chk_block(ili);
 
       /* assign base */
       nme = add_arrnme(NT_ARR, arg_base_sptr, nme_base, 0, ad_icon(i), FALSE);
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ili = mk_ompaccel_store(param_ili, dty, nme,
+                              ad_acon(arg_base_sptr, i * TARGET_PTRSIZE));
+#else
+      // AOCC End
       ili = mk_ompaccel_store(param_ili, DTYPEG(param_sptr), nme,
                               ad_acon(arg_base_sptr, i * TARGET_PTRSIZE));
+      // AOCC Begin
+#endif
+      // AOCC End
       chk_block(ili);
     }
 

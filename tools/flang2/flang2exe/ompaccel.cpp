@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 9th July 2019
+ *
+ */
 
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
@@ -394,13 +401,44 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 /*
- * Return op1 itself
- * TODO : This will be implemented in next commit
+ * Returning min
  */
 int
 mk_ompaccel_min(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
-  // return mk_ompaccel_add(ili1, dtype1, ili2, dtype2);
-  return ili1;
+
+  ILI_OP opc = IL_NONE;
+  int dt = 0;
+  bool uu = FALSE;
+  if (!ili1)
+    return ili2;
+  if (!ili2)
+    return ili1;
+  if (_pointer_type(dtype1) || _pointer_type(dtype2)) {
+    assert(0, "Min reduction of this type not handled.", 0, ERR_Fatal);
+  } else {
+    _long_unsigned(ili1, &dt, &uu, dtype1);
+    _long_unsigned(ili2, &dt, &uu, dtype2);
+    /* signed */
+    if (!uu) {
+      if (dt == 1)
+        opc = IL_IMIN;
+      else if (dt == 2)
+        opc = IL_KMIN;
+      else if (dt == 3)
+        opc = IL_FMIN;
+      else if (dt == 4)
+        opc = IL_DADD;
+      else if (dt == 5 || dt == 6)
+        assert(0, "Min reduction of this type not handled.", 0, ERR_Fatal);
+    } else {
+      if (dt == 1)
+        opc = IL_UIMIN;
+      else if (dt == 2)
+        opc = IL_UKMIN;
+    }
+  }
+  assert(opc != IL_NONE, "Min reduction of this type not handled.", 0, ERR_Fatal);
+  return ad2ili(opc, ili1, ili2);
 }
 #endif
 // AOCC End
@@ -809,6 +847,14 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   if (dtype == DT_CPTR) {
     dtype = DT_INT8;
   }
+
+  // AOCC Begin
+  // Interpreting all int32 args as int64 values
+#ifdef OMP_OFFLOAD_AMD
+  if (dtype == DT_INT) {
+    dtype = DT_INT8;
+  }
+#endif
   // assume it's base of allocatable descriptor
   if (strncmp(SYMNAME(sptr), ".Z", 2) == 0) {
     for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j)
@@ -2123,6 +2169,25 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                               addnme(NT_VAR, sptrReductionItem, 0, 0),
                               mk_address(sptrReductionItem));
       break;
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    case 3:
+      ili = mk_ompaccel_mul(ili, dtypeReductionItem, bili, dtypeReductionItem);
+      ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                              addnme(NT_VAR, sptrReductionItem, 0, 0),
+                              mk_address(sptrReductionItem));
+      break;
+    case 347:
+      ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
+      ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                              addnme(NT_VAR, sptrReductionItem, 0, 0),
+                              mk_address(sptrReductionItem));
+      break;
+    default:
+      fprintf(stderr, "ERROR : This reduction type is not supported yet\n");
+      exit(1);
+    // AOCC End
+#endif
     }
 
     chk_block(ili);
