@@ -1131,39 +1131,7 @@ write_libomtparget(void)
 
 /* AMDGPU offload support
  * Removed multiple definition ompaccel_write_sharedvars
- */
-
-// AOCC end
-static void
-write_tgtrt_statics(SPTR sptr, char *gname, char *typed, int gblsym,
-                    DSRT *dsrtp)
-{
-  char *linkage_type;
-  linkage_type = "internal";
-  sprintf(gname, "struct%s", getsname(sptr));
-  get_typedef_ag(gname, typed);
-  free(typed);
-  gblsym = find_ag(gname);
-  typed = AG_TYPENAME(gblsym);
-#ifdef WEAKG
-  if (WEAKG(sptr))
-    linkage_type = "weak";
-#endif
-  fprintf(ASMFIL, "@%s = %s global %s ", getsname(sptr), linkage_type, typed);
-
-  fprintf(ASMFIL, " { ");
-  process_dsrt(dsrtp, gbl.saddr, typed, TRUE, 0);
-  fprintf(ASMFIL, " ,i64 0, i32 0, i32 0 }");
-
-  fprintf(ASMFIL, ", section \"%s\"", sections[dsrtp->sectionindex].name);
-  if (sections[dsrtp->sectionindex].align)
-    fprintf(ASMFIL, ", align %d", sections[dsrtp->sectionindex].align);
-  fputc('\n', ASMFIL);
-}
-
-// AOCC Begin
-
-/* AMDGPU offload support
+ *
  * Removed multiple definition of write_libomtparget
  */
 
