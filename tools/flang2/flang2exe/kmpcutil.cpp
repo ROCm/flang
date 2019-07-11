@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 11th July 2019
+ *
+ */
 
 /** \file
  * \brief outliner.c - extract regions into subroutines; add uplevel references
@@ -180,6 +187,13 @@ public:
     case KMPC_API_SPMD_KERNEL_INIT:
       return {"__kmpc_spmd_kernel_init", IL_NONE, DT_VOID_NONE, 0};
       break;
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    case KMPC_API_SPMD_KERNEL_DEINIT_V2:
+      return {"__kmpc_spmd_kernel_deinit_v2", IL_NONE, DT_VOID_NONE, 0};
+      break;
+#endif
+    // AOCC End
     case KMPC_API_PUSH_TARGET_TRIPCOUNT:
       return {"__kmpc_push_target_tripcount", IL_NONE, DT_VOID_NONE, 0};
       break;
@@ -284,6 +298,12 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
          KMPC_FLAG_STR_FMT},
     [KMPC_API_SPMD_KERNEL_INIT] = {"__kmpc_spmd_kernel_init", 0, DT_VOID_NONE,
                                    0},
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    [KMPC_API_SPMD_KERNEL_DEINIT_V2] = {"__kmpc_spmd_kernel_deinit_v2", 0, DT_VOID_NONE,
+                                   0},
+#endif
+    // AOCC End
     [KMPC_API_PUSH_TARGET_TRIPCOUNT] = {"__kmpc_push_target_tripcount", 0,
                                         DT_VOID_NONE, 0},
     [KMPC_API_KERNEL_INIT_PARAMS] = {"__kmpc_kernel_init_params", 0,
@@ -1555,6 +1575,19 @@ ll_make_kmpc_spmd_kernel_init(int sptr)
   args[0] = gen_null_arg();
   return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 3, arg_types, args);
 }
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+int
+ll_make_kmpc_spmd_kernel_deinit_v2()
+{
+  int args[1];
+  DTYPE arg_types[3] = {DT_SINT};
+  args[0] = gen_null_arg();
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_DEINIT_V2, 1, arg_types, args);
+}
+#endif
+// AOCC End
 
 int
 ll_make_kmpc_nvptx_parallel_reduce_nowait_simple_spmd(int ili_num_vars,
