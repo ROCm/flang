@@ -2115,6 +2115,17 @@ semsmp(int rednum, SST *top)
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD),
                   "OMP TEAMS DISTRIBUTE PARALLEL DO SIMD");
     begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    // mode_target_teams_distribute_parallel_for
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    }
+#endif
+    // AOCC End
     DI_ISSIMD(sem.doif_depth) = TRUE;
     break;
   /*
