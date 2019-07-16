@@ -1319,6 +1319,11 @@ get_ast_op(int op)
   case AC_LOR:
     ast_op = OP_LOR;
     break;
+  // AOCC
+  case AC_LXOR:
+    ast_op = OP_XOR;
+    break;
+  // AOCC end
   case AC_LAND:
     ast_op = OP_LAND;
     break;
@@ -4710,12 +4715,17 @@ mk_cmp(CONST *c, int op, INT l_conval, INT r_conval, DTYPE rdtype, DTYPE dt)
   case OP_LOR:
     c->u1.conval = l_conval | r_conval;
     break;
+  // AOCC begin
+  case OP_XOR:
+    c->u1.conval = l_conval ^ r_conval;
+    break;
+  // AOCC end
   case OP_LAND:
     c->u1.conval = l_conval & r_conval;
     break;
   case OP_XTOI:
   case OP_XTOK:
-    c->u1.conval = init_fold_const(get_ast_op(op), l_conval, r_conval, rdtype);   
+    c->u1.conval = init_fold_const(get_ast_op(op), l_conval, r_conval, rdtype);
   default:
     c->u1.conval = init_fold_const(get_ast_op(op), l_conval, r_conval, dt);
   }
@@ -5224,6 +5234,11 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
     case OP_LOR:
       root->u1.conval = lop->u1.conval | rop->u1.conval;
       break;
+    // AOCC begin
+    case OP_XOR:
+      root->u1.conval = lop->u1.conval ^ rop->u1.conval;
+      break;
+    // AOCC end
     case OP_LAND:
       root->u1.conval = lop->u1.conval & rop->u1.conval;
       break;

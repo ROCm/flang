@@ -82,7 +82,7 @@
 #define OP_ARRAY 31
 #define OP_DERIVED 32
 #define OP_BYVAL 33
-
+#define OP_LXOR 34     // AOCC
 /* AST attributes: for fast AST checking -- astb.attr is a table indexed
  * by A_<type>
  */

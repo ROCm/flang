@@ -2040,6 +2040,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     A_DTYPEP(retval, DT_INT);
     A_SHAPEP(retval, 0);
     return retval;
+  case I_PARITY:/* parity(mask, [dim]) AOCC */
   case I_ALL:   /* all(mask, [dim]) */
   case I_ANY:   /* any(mask, [dim]) */
   case I_COUNT: /* count(mask, [dim]) */
@@ -3360,6 +3361,7 @@ leave_arg(int ast, int i, int *parg, int lc)
     case I_ALL:
     case I_ANY:
     case I_COUNT:
+    case I_PARITY:      // AOCC
       if (i != 0)
         return 0;
       args = A_ARGSG(ast);
@@ -4489,6 +4491,7 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
   case I_MINLOC:
   case I_MAXLOC:
   case I_FINDLOC:
+  case I_PARITY:             // AOCC
   case I_ALL:
   case I_ANY:
   case I_COUNT:
@@ -4691,6 +4694,7 @@ search_conform_array(int ast, int flag)
       case I_DOT_PRODUCT:
       // AOCC Begin
       case I_NORM2:
+      case I_PARITY:
       // AOCC End
       case I_ALL:
       case I_ANY:
@@ -5908,6 +5912,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   switch (A_OPTYPEG(ast)) {
   case I_ALL:
   case I_ANY:
+  case I_PARITY:       // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
   case I_MAXVAL:
@@ -5919,7 +5924,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     break;
   case I_MAXLOC:
       return ast;
-  case I_MINLOC: 
+  case I_MINLOC:
     /* simple cases only */
     // AOCC Begin
     if (!can_inline_minloc(dest, A_ARGSG(ast)))
@@ -6004,6 +6009,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     }
     srcarray = mk_binop(operator, src1, src2, dtype);
     break;
+  case I_PARITY:     // AOCC
   case I_ALL:
   case I_ANY:
   case I_COUNT:
@@ -6344,6 +6350,12 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     ReducType = I_REDUCE_ANY;
     astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
     break;
+    // AOCC begin
+  case I_PARITY:
+    ReducType = I_REDUCE_PARITY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
+    // AOCC end
   default:
     assert(0, "inline_reduction_f90: unknown type", ast, 4);
   }
@@ -6656,6 +6668,42 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
     break;
+  // AOCC begin
+  case I_PARITY:
+    if (A_OPTYPEG(ast) == I_PARITY) {
+      newast = ast2;
+      operand = mk_binop(OP_LXOR, astsubscrtmp, ast2, DT_LOG);
+    }
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
+
+    ifast = mk_stmt(A_IFTHEN, 0);
+    A_IFEXPRP(ifast, ast2);
+    std = add_stmt_before(ifast, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    endif = mk_stmt(A_ENDIF, 0);
+    std = add_stmt_before(endif, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+    break;
+  // AOCC end
   default:
     assert(0, "inline_reduction_f90: unknown type", ast, 4);
   }

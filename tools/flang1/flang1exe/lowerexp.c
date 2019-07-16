@@ -1600,6 +1600,7 @@ add_lnop(int ilm, int ast, int dtype)
     case OP_LNEQV:
     case OP_LEQV:
     case OP_LOR:
+    case OP_LXOR:
     case OP_LAND:
     case OP_SCAND:
       return ilm;
@@ -2941,6 +2942,7 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
 
   case I_ALL:
   case I_ANY:
+  case I_PARITY:     // AOCC
   case I_COUNT:
   // AOCC Begin
   case I_NORM2:
@@ -4391,6 +4393,7 @@ lower_intrinsic(int ast)
 
   case I_ALL:
   case I_ANY:
+  case I_PARITY:        // AOCC
   case I_COUNT:
   // AOCC Begin
   case I_NORM2:
@@ -4573,6 +4576,11 @@ lower_ast(int ast, int *unused)
     case OP_LOR:
       ilm = lower_bin_logical(ast, "LOR");
       break;
+    // AOCC begin
+    case OP_LXOR:
+      ilm = lower_bin_logical(ast, "XOR");
+      break;
+    // AOCC end
     case OP_MUL:
       ilm = lower_bin_arith(ast, "MUL", dtype, dtype);
       break;
@@ -5648,6 +5656,29 @@ lower_logical(int ast, iflabeltype *iflabp)
         lower_logical(A_ROPG(ast), iflabp);
       }
       break;
+    // AOCC begin
+    case OP_LXOR:
+      if (iflabp->thenlabel == 0) {
+        /* The incoming fall-through case is 'then'.
+         *  brtrue(left) newlabel
+         *  brfalse(right) elselabel
+         *  newlabel: */
+        nlab.thenlabel = lower_lab();
+        nlab.elselabel = 0;
+        lower_logical(A_LOPG(ast), &nlab);
+        /* second operand can fall through if true, branch around if false */
+        lower_logical(A_ROPG(ast), iflabp);
+        plower("oL", "LABEL", nlab.thenlabel);
+        lower_reinit();
+      } else {
+        /* The incoming fall-through case is 'else'.
+         *  brtrue(left) thenlabel
+         *  brtrue(right) thenlabel */
+        lower_logical(A_LOPG(ast), iflabp);
+        lower_logical(A_ROPG(ast), iflabp);
+      }
+      break;
+    // AOCC end
     case OP_LEQV:
       lower_expression(A_LOPG(ast));
       lower_expression(A_ROPG(ast));

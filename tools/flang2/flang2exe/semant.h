@@ -75,6 +75,7 @@
 #define OP_LT 24
 #define OP_NE 25
 #define OP_LNOT 26
+#define OP_XOR 27   // AOCC
 
 /* Different types of atomic actions. */
 #define ATOMIC_UNDEF -1
@@ -385,6 +386,7 @@ struct CONST {
 #define AC_LNOT 23
 #define AC_EXPX 24
 #define AC_TRIPLE 25
+#define AC_LXOR 26          // AOCC
 
 #define AC_I_adjustl 1
 #define AC_I_adjustr 2

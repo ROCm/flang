@@ -5825,6 +5825,39 @@ ref_pd(SST *stktop, ITEM *list)
     break;
 
   // AOCC Begin
+  case PD_parity:
+    if (flg.std != F2008) {
+      char buf[64];
+      sprintf(buf, "parity is supported only in f2008, use -std=f2008 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    if (count == 0 || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+    // Evaluate all the arguments, and create them
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    argt_count = 2;
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    if (!DT_ISLOG_ARR(dtype1)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+    dtyper = DTY(dtype1 + 1);
+    if ((stkp = ARG_STK(1))) { /* dim */
+      dtype2 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype2)) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+      shaper = reduc_shape((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp),
+                           (int)STD_PREV(0));
+      if (shaper)
+        dtyper = dtype1;
+    }
+    break;
   // Pre-Defined function norm2()
   case PD_norm2:
 

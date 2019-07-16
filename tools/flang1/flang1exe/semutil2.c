@@ -4026,6 +4026,11 @@ get_ast_op(int op)
   case AC_LOR:
     ast_op = OP_LOR;
     break;
+  // AOCC begin
+  case AC_LXOR:
+    ast_op = OP_LXOR;
+    break;
+  // AOCC end
   case AC_LAND:
     ast_op = OP_LAND;
     break;
@@ -4094,6 +4099,11 @@ get_ac_op(int ast)
   case OP_LOR:
     ac_op = AC_LOR;
     break;
+  // AOCC begin
+  case OP_LXOR:
+    ac_op = AC_LXOR;
+    break;
+  // AOCC end
   case OP_LAND:
     ac_op = AC_LAND;
     break;
@@ -10697,6 +10707,11 @@ mk_cmp(ACL *c, int op, INT l_conval, INT r_conval, int rdtype, int dt)
   case OP_LOR:
     c->conval = l_conval | r_conval;
     break;
+  // AOCC begin
+  case OP_LXOR:
+    c->conval = l_conval ^ r_conval;
+    break;
+  // AOCC end
   case OP_LAND:
     c->conval = l_conval & r_conval;
     break;
@@ -11147,6 +11162,11 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case OP_LOR:
       root->conval = lop->conval | rop->conval;
       break;
+    // AOCC begin
+    case OP_LXOR:
+      root->conval = lop->conval ^ rop->conval;
+      break;
+    // AOCC end
     case OP_LAND:
       root->conval = lop->conval & rop->conval;
       break;

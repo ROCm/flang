@@ -109,8 +109,9 @@ static struct optabstruct {
     {0, ""},       /* OP_LOC	26 */
     {0, ""},       /* OP_REF	27 */
     {0, ""},       /* OP_VAL	28 */
+    {0, ".xor."},  /* OP_LXOR	29 */   // AOCC
 };
-#define OPTABSIZE 29
+#define OPTABSIZE 30
 
 /** \brief Determines if we should (re)generate generic type bound procedure
  *  (tbp) bindings based on scope. This should only be done once per scope.

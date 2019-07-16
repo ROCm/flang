@@ -2237,6 +2237,9 @@ getop(int op, char *string)
   case OP_LOR:
     s = ".or.";
     break;
+  case OP_LXOR:        // AOCC
+    s = ".xor.";
+    break;
   case OP_LAND:
     s = ".and.";
     break;
