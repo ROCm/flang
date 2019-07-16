@@ -13559,13 +13559,14 @@ llvm_write_ctor_dtor_list(init_list_t *list, const char *global_name)
   print_token(" = appending global [");
   sprintf(int_str_buffer, "%d", list->size);
   print_token(int_str_buffer);
-  print_token(" x { i32, void ()* }][");
+  print_token(" x { i32, void ()*, i8* }][");
   for (node = list->head; node != NULL; node = node->next) {
-    print_token("{ i32, void ()* } { i32 ");
+    print_token("{ i32, void ()*, i8* } { i32 ");
     sprintf(int_str_buffer, "%d", node->priority);
     print_token(int_str_buffer);
     print_token(", void ()* @");
     print_token(node->name);
+    print_token(", i8* null");
     print_token(" }");
     if (node->next != NULL) {
       print_token(", ");
