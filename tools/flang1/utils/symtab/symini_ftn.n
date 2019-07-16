@@ -1595,6 +1595,8 @@ Internal subroutine to perform a copy out of an ordinary argument.
 .AT transformational array *dim *mask *segment *exclusive
 .H1 LEADZ - -
 .AT elemental i
+.H1 TRAILZ - -
+.AT elemental i
 .H1 MAXVAL_PREFIX - -
 .AT transformational array *dim *mask *segment *exclusive
 .H1 MAXVAL_SCATTER - -
@@ -1871,7 +1873,7 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i
 .H7 POPPAR - -
 .AT elemental i
-.H7 .TRAILZ - -
+.H7 TRAILZ - -
 .AT elemental i
 .H7 .MASKL - -
 .AT elemental i *kind

@@ -8,6 +8,8 @@
  * Last modified: March 2020
  * Added support for QFLOAT
  *
+ * Support for TRAILZ intrinsic.
+ * Month of Modification: July 2019
  */
 
 #ifndef MTH_H_
@@ -243,6 +245,11 @@ typedef enum MTH_FN {
 #define MTH_I_ILEADZI "__mth_i_ileadzi"
 #define MTH_I_ILEADZ "__mth_i_ileadz"
 #define MTH_I_KLEADZ "__mth_i_kleadz"
+// AOCC begin
+#define MTH_I_ITRAILZI "__mth_i_itrailzi"
+#define MTH_I_ITRAILZ "__mth_i_itrailz"
+#define MTH_I_KTRAILZ "__mth_i_ktrailz"
+// AOCC end
 #define MTH_I_IPOPCNTI "__mth_i_ipopcnti"
 #define MTH_I_IPOPCNT "__mth_i_ipopcnt"
 #define MTH_I_KPOPCNT "__mth_i_kpopcnt"

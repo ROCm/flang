@@ -26,6 +26,10 @@
  *
  * Month of Modification: July 2019
  *
+ * Support for TRAILZ intrinsic.
+ *
+ * Month of Modification: July 2019
+ *
  * Support for Bit transformational intrinsic iany, iall, iparity.
  *
  * Month of Modification: July 2019
@@ -636,6 +640,9 @@ FtnRteRtn ftnRtlRtns[] = {
     {"sums", "", true, ""},
     {"sysclk", "", true, ""},
     {"template", "", true, ""},
+    /* AOCC begin */
+    {"trailz", "", false, ""},
+    /* AOCC end */
     {"transfer", "", true, ""},
     {"type", "", false, ""},
     {"typep", "", false, ""},

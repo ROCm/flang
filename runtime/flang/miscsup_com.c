@@ -5,6 +5,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for TRAILZ intrinsic.
+ *
+ * Month of Modification: July 2019
+ */
+
+
 /* clang-format off */
 
 /** \file
@@ -3329,6 +3338,16 @@ ENTFTN(LEADZ, leadz)(void *i, __INT_T *size)
     --nz;
   return nz;
 }
+
+/* AOCC begin */
+__INT_T
+ENTFTN(TRAILZ, trailz)(void *i, __INT_T *size)
+{
+  unsigned ui = (unsigned) I8(__fort_varying_int)(i, size);
+
+  return (ui) ? __builtin_ctz(ui) : (*size * 8);
+}
+/* AOCC end */
 
 __INT_T
 ENTFTN(POPCNT, popcnt)(void *i, __INT_T *size)

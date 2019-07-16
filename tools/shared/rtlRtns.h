@@ -32,6 +32,10 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ *
+ * Support for TRAILZ intrinsic.
+ *
+ * Month of Modification: July 2019
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -640,6 +644,9 @@ typedef enum {
   RTE_sums,
   RTE_sysclk,
   RTE_templateDsc,
+  /* AOCC begin */
+  RTE_trailz,
+  /* AOCC end */
   RTE_transfer,
   RTE_type,
   RTE_typep,

@@ -131,6 +131,8 @@ SET(FTN_INTRINSICS_DESC_INDEP
   isnand3f.c
   isnanf3f.c
   itime3f.c
+  itrailz.c
+  itrailzi.c
   kabs.c
   kidim.c
   kill3f.c
@@ -140,6 +142,7 @@ SET(FTN_INTRINSICS_DESC_INDEP
   kmin.c
   kpopcnt.c
   kpoppar.c
+  ktrailz.c
   link3f.c
   lnblnk3f.c
   loc3f.c

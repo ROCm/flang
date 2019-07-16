@@ -27,6 +27,9 @@
  * Support for MERGE_BITS intrinsic.
  * Month of Modification: July 2019
  *
+ * Support for TRAILZ intrinsic.
+ * Month of Modification: July 2019
+ *
  * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
  * Month of Modification: July 2019
  *
@@ -11503,6 +11506,9 @@ ref_pd(SST *stktop, ITEM *list)
     }
     break;
   case PD_leadz:
+  /* AOCC begin */
+  case PD_trailz:
+  /* AOCC end */
   case PD_popcnt:
   case PD_poppar:
     if (count != 1) {

@@ -2866,6 +2866,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_COMPL:
 
   case I_LEADZ:
+  /* AOCC begin */
+  case I_TRAILZ:
+  /* AOCC end */
   case I_POPCNT:
   case I_POPPAR:
     return A_NDTYPEG(ast);
@@ -4512,6 +4515,11 @@ lower_intrinsic(int ast)
   case I_LEADZ:
     ilm = intrin_name_bsik("LEADZ", ast);
     break;
+  /* AOCC begin */
+  case I_TRAILZ:
+    ilm = intrin_name_bsik("TRAILZ", ast);
+    break;
+  /* AOCC end */
   case I_POPCNT:
     ilm = intrin_name_bsik("POPCNT", ast);
     break;

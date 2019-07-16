@@ -13,6 +13,9 @@
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 12th February  2020
+ *
+ * Support for TRAILZ intrinsic.
+ * Month of Modification: July 2019
  */
 
 /**
@@ -1050,6 +1053,18 @@ print_ast(int ast)
       rtlRtn = RTE_leadz;
       goto make_func_name;
 #endif
+/* AOCC begin */
+#ifdef I_TRAILZ
+    case I_TRAILZ:
+      if (XBIT(49, 0x1040000)) {
+        /* T3D/T3E or C90 Cray targets */
+        put_call(ast, 0, NULL, 0);
+        break;
+      }
+      rtlRtn = RTE_trailz;
+      goto make_func_name;
+#endif
+/* AOCC end */
 #ifdef I_POPCNT
     case I_POPCNT:
       if (XBIT(49, 0x1040000)) {
