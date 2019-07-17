@@ -1579,6 +1579,7 @@ const char *SyminiFE90::init_names0[] = {
     "maskr",
     "merge_bits",
     "norm2",
+    "isnan",
     "parity"
     // AOCC End
     "dot_product",
@@ -2108,6 +2109,7 @@ const char *SyminiFE90::init_names1[] = {
     "maskr",
     "merge_bits",
     "norm2",
+    "isnan",
     "parity",
     // AOCC End
     "dot_product",
@@ -2638,6 +2640,7 @@ const char *SyminiFE90::init_names2[] = {
     "maskr",
     "merge_bits",
     "norm2",
+    "isnan",
     "parity",
     // AOCC End
     "dot_product",
@@ -3221,6 +3224,7 @@ const char *SyminiFE90::init_names3[] = {
     "maskr",
     "merge_bits",
     "norm2",
+    "isnan",
     "parity",
     // AOCC End
     "dot_product",

@@ -4615,6 +4615,10 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
     temp_sptr = mk_shape_sptr(shape, subscr, elem_dty);
     *retval = mk_id(temp_sptr);
     break;
+  // AOCC BEGIN
+  case I_ISNAN:
+     break;
+  // AOCC END
   default:
     interr("mk_result_sptr: can't handle intrinsic", func_ast, 4);
     break;
