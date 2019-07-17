@@ -1163,6 +1163,8 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT transformational mask *dim
 .PD NORM2 - -
 .AT transformational array *dim
+.PD ISNAN - -
+.AT elemental x
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -
@@ -1917,8 +1919,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental x y
 .H7 LOG_GAMMA - -
 .AT elemental x
-.H7 .NORM2 - -
-.AT transformational x *dim
 .H7 .PARITY - -
 .AT transformational mask *dim
 .H7 .EXECUTE_COMMAND_LINE - -

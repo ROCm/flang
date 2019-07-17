@@ -2906,6 +2906,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_SET_EXPONENT:
   case I_VERIFY:
   case I_RAN:
+  // AOCC BEGIN
+  case I_ISNAN:
+  // AOCC END
     return -1;
 
   case I_ZEXT:
@@ -3994,6 +3997,16 @@ lower_intrinsic(int ast)
     ilm = lower_function(ast);
     A_ILMP(ast, ilm);
     return ilm;
+
+  // AOCC BEGIN
+  case I_ISNAN:
+    arg = ARGT_ARG(args,0);
+    lower_expression(arg);
+    ilm = plower("oi", styped("ISNAN", A_DTYPEG(arg)),
+                 lower_ilm(arg));
+    A_ILMP(ast, ilm);
+    return ilm;
+  // AOCC END
 
   case I_NLEN:
     ilm = intrin_name("NLEN", ast, in_i);
