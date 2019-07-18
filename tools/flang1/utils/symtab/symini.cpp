@@ -1581,6 +1581,8 @@ const char *SyminiFE90::init_names0[] = {
     "norm2",
     "isnan",
     "parity"
+    "iall",
+    "iany",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2111,6 +2113,8 @@ const char *SyminiFE90::init_names1[] = {
     "norm2",
     "isnan",
     "parity",
+    "iall",
+    "iany",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2642,6 +2646,8 @@ const char *SyminiFE90::init_names2[] = {
     "norm2",
     "isnan",
     "parity",
+    "iall",
+    "iany",
     // AOCC End
     "dot_product",
     "eqv",
@@ -3226,6 +3232,8 @@ const char *SyminiFE90::init_names3[] = {
     "norm2",
     "isnan",
     "parity",
+    "iall",
+    "iany",
     // AOCC End
     "dot_product",
     "eqv",

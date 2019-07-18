@@ -1164,8 +1164,12 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT transformational mask *dim
 .PD PARITY - -
 .AT transformational mask *dim
+.PD IALL - -
+.AT transformational array *dim *mask
+.PD IANY - -
+.AT transformational array *dim *mask
 .PD IPARITY - -
-.AT transformational mask *dim
+.AT transformational array *dim *mask
 .PD COMPL - -
 .AT elemental --
 .PD COUNT - -

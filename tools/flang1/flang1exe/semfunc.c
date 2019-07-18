@@ -5818,6 +5818,81 @@ ref_pd(SST *stktop, ITEM *list)
     break;
 
   // AOCC Begin
+  case PD_iall:
+  case PD_iany:
+    if (flg.std != F2008) {
+      char buf[64];
+      sprintf(buf, "iall and iany is supported only in f2008, use -std=f2008 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    if (count == 0 || count > 3) {
+      E74_CNT(pdsym, count, 1, 3);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
+      goto exit_;
+    argt_count = 3;
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    if (!DT_ISNUMERIC_ARR(dtype1)) {
+      if (pdtype == PD_iany || pdtype == PD_iall) {
+        if (!(DTY(dtype1) == TY_ARRAY &&
+              (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) {
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+        }
+
+      } else {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+    }
+    if (pdtype == PD_iany || pdtype == PD_iall) {
+      if ((!DT_ISINT_ARR(dtype1) && !DT_ISREAL_ARR(dtype1) &&
+           !(DTY(dtype1) == TY_ARRAY &&
+             (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) ||
+          DT_ISLOG_ARR(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+    }
+    dtyper = DTY(dtype1 + 1);
+    if ((stkp = ARG_STK(2))) { /* mask */
+      dtype2 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISLOG(dtype2)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      if (!chkshape(stkp, ARG_STK(0), FALSE)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      XFR_ARGAST(2);
+    }
+    if ((stkp = ARG_STK(1))) { /* dim */
+      dtype2 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype2)) {
+        if (count == 2) {
+          if (DT_ISLOG(DDTG(dtype2)) && chkshape(stkp, ARG_STK(0), FALSE)) {
+            XFR_ARGAST(1);
+            /* shift args over */
+            ARG_AST(2) = ARG_AST(1); /* mask */
+            ARG_AST(1) = 0;          /* dim is 'null' */
+            break;
+          }
+        }
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+
+      if (rank_of_ast(ARG_AST(0)) != 1) {
+        shaper = reduc_shape((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp),
+                             (int)STD_PREV(0));
+        if (shaper)
+          dtyper = dtype1;
+      } else
+        check_dim_error((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp));
+    }
+    break;
   case PD_parity:
     if (flg.std != F2008) {
       char buf[64];

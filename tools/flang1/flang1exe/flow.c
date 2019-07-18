@@ -699,6 +699,8 @@ bld_ud(int ast, int *dummy)
     switch (A_OPTYPEG(ast)) {
     case I_ALL:
     case I_ANY:
+    case I_IALL:                 // AOCC
+    case I_IANY:                 // AOCC
     case I_PARITY:               // AOCC
     case I_COUNT:
     case I_PRODUCT:

@@ -2284,6 +2284,8 @@ inline_spread_shifts(int asgn_ast, int forall_ast, int inlist)
   case I_MAXVAL:
   case I_MINVAL:
   case I_PARITY:      // AOCC
+  case I_IALL:
+  case I_IANY:
   case I_ALL:
   case I_ANY:
   case I_COUNT:

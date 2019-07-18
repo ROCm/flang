@@ -2110,6 +2110,36 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       ARGT_ARG(newargt, 2) = dim;
     }
     goto ret_new;
+  // AOCC begin
+  case I_IALL: /* iany(array, [dim, mask]) */
+  case I_IANY: /* iany(array, [dim, mask]) */
+    mask = ARGT_ARG(func_args, 2);
+    srcarray = ARGT_ARG(func_args, 0);
+    dim = ARGT_ARG(func_args, 1);
+
+    if (mask == 0) {
+      mask = mk_cval(1, DT_LOG);
+    }
+    mask = misalignment(srcarray, mask, arg_gbl.std);
+    rtlRtn = RTE_iany;
+
+    if (dim == 0) {
+      rtlRtn =
+          optype == I_IALL ? RTE_ialls : RTE_ianys;
+      nargs = 3;
+    } else {
+      rtlRtn =
+          optype == I_IALL ? RTE_iall : RTE_iany;
+      nargs = 4;
+    }
+    newargt = mk_argt(nargs);
+    ARGT_ARG(newargt, 1) = srcarray;
+    ARGT_ARG(newargt, 2) = mask;
+    if (nargs == 4) {
+      ARGT_ARG(newargt, 3) = dim;
+    }
+    goto ret_new;
+  // AOCC end
   case I_PRODUCT: /* product(array, [dim, mask]) */
   case I_SUM:     /* sum(array, [dim, mask]) */
     mask = ARGT_ARG(func_args, 2);
@@ -4577,6 +4607,8 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
   case I_PARITY:             // AOCC
   case I_ALL:
   case I_ANY:
+  case I_IALL:               // AOCC
+  case I_IANY:               // AOCC
   case I_COUNT:
   case I_MAXVAL:
   case I_MINVAL:
@@ -4782,6 +4814,8 @@ search_conform_array(int ast, int flag)
       case I_DOT_PRODUCT:
       // AOCC Begin
       case I_NORM2:
+      case I_IALL:
+      case I_IANY:
       case I_PARITY:
       // AOCC End
       case I_ALL:
@@ -6000,6 +6034,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   switch (A_OPTYPEG(ast)) {
   case I_ALL:
   case I_ANY:
+  case I_IALL:         // AOCC
+  case I_IANY:         // AOCC
   case I_PARITY:       // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
@@ -6107,7 +6143,20 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       if (contiguous_section_array(srcarray))
         return ast;
     break;
+  // AOCC begin
+  case I_IALL:
+  case I_IANY:
+    astdim = ARGT_ARG(args, 1);
+    mask = ARGT_ARG(args, 2);
+    srcarray = ARGT_ARG(args, 0);
+    if (DTYG(dtype) == TY_CHAR || DTYG(dtype) == TY_NCHAR)
+      return ast;
+    if (arg_gbl.inforall)
+      if (contiguous_section_array(srcarray))
+        return ast;
+    break;
   }
+  // AOCC end
 
   if (astdim) {
     if (A_TYPEG(astdim) != A_CNST) {
@@ -6441,6 +6490,14 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     // AOCC begin
   case I_PARITY:
     ReducType = I_REDUCE_PARITY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
+  case I_IALL:
+    ReducType = I_REDUCE_IALL;
+    astInit = mk_cval(SCFTN_TRUE, DDTG(dtypetmp));
+    break;
+  case I_IANY:
+    ReducType = I_REDUCE_IANY;
     astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
     break;
     // AOCC end
@@ -6790,6 +6847,25 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_TASK(std) = STD_TASK(stdnext);
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
+    break;
+  case I_IALL:
+  case I_IANY:
+    if (A_OPTYPEG(ast) == I_IALL)
+      operand = mk_binop(OP_LAND, ast2, astsubscrtmp, DT_LOG);
+    else
+      operand = mk_binop(OP_LOR, ast2, astsubscrtmp, DT_LOG);
+
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
+
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
     break;
   // AOCC end
   default:

@@ -2945,10 +2945,12 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
 
   case I_ALL:
   case I_ANY:
-  case I_PARITY:     // AOCC
   case I_COUNT:
 #if 0    
   // AOCC Begin
+  case I_IALL:
+  case I_IANY:
+  case I_PARITY:
   case I_NORM2:
   // AOCC End
 #endif    
@@ -4409,9 +4411,11 @@ lower_intrinsic(int ast)
 
   case I_ALL:
   case I_ANY:
-  case I_PARITY:        // AOCC
   case I_COUNT:
   // AOCC Begin
+  case I_IALL:
+  case I_IANY:
+  case I_PARITY:
   case I_NORM2:
   // AOCC End
   case I_DOT_PRODUCT:
