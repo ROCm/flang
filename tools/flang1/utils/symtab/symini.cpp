@@ -42,6 +42,11 @@
  *
  * Month of Modification: July 2019
  *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
  */
 
 /**
@@ -1581,6 +1586,7 @@ const char *SyminiFE90::init_names0[] = {
     "norm2",
     "isnan",
     "parity"
+    "iparity"
     "iall",
     "iany",
     // AOCC End
@@ -2113,6 +2119,7 @@ const char *SyminiFE90::init_names1[] = {
     "norm2",
     "isnan",
     "parity",
+    "iparity"
     "iall",
     "iany",
     // AOCC End
@@ -2646,6 +2653,7 @@ const char *SyminiFE90::init_names2[] = {
     "norm2",
     "isnan",
     "parity",
+    "iparity"
     "iall",
     "iany",
     // AOCC End
@@ -3232,6 +3240,7 @@ const char *SyminiFE90::init_names3[] = {
     "norm2",
     "isnan",
     "parity",
+    "iparity"
     "iall",
     "iany",
     // AOCC End

@@ -25,6 +25,11 @@
 .\" *
 .\" * Date of Modification: July 2019
 .\" *
+.\" * Support for parity intrinsic.
+.\" * Month of Modification: July 2019
+.\" *
+.\" * Support for Bit transformational intrinsic iany, iall, iparity.
+.\" * Month of Modification: July 2019
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN

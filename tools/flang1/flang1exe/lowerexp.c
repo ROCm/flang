@@ -22,6 +22,11 @@
  *
  * Date of Modification: 21st February 2019
  *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
  */
 
 /**
@@ -2950,6 +2955,7 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   // AOCC Begin
   case I_IALL:
   case I_IANY:
+  case I_IPARITY:
   case I_PARITY:
   case I_NORM2:
   // AOCC End
@@ -4415,6 +4421,7 @@ lower_intrinsic(int ast)
   // AOCC Begin
   case I_IALL:
   case I_IANY:
+  case I_IPARITY:
   case I_PARITY:
   case I_NORM2:
   // AOCC End

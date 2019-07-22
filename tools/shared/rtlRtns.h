@@ -22,7 +22,6 @@
  *
  * Date of Modification: 21st February 2019
  *
- *
  * Support for Bit Sequence Comparsion intrinsic
  *
  * Month of Modification: May 2019
@@ -33,6 +32,10 @@
  * Month of Modification: May 2019
  *
  * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
  *
  * Month of Modification: July 2019
  */
@@ -512,6 +515,9 @@ typedef enum {
   RTE_global_product,
   RTE_global_sum,
   RTE_globalize,
+  RTE_iparity,
+  RTE_iparity_scatterx,
+  RTE_iparitys,
   RTE_iall,
   RTE_iall_scatterx,
   RTE_ialls,
@@ -526,7 +532,6 @@ typedef enum {
   RTE_indexx_cr_nma,
   RTE_init,
   RTE_instance,
-  RTE_iparity_scatterx,
   RTE_islocal_idx,
   RTE_jdate,
   RTE_lastval,

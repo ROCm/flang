@@ -36,6 +36,9 @@
  *
  * Month of Modification: July 2019
  *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *
+ * Month of Modification: July 2019
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -508,6 +511,9 @@ FtnRteRtn ftnRtlRtns[] = {
     {"global_product", "", false, ""},
     {"global_sum", "", false, ""},
     {"globalize", "", false, ""},
+    {"iparity", "", false, ""},
+    {"iparity_scatterx", "", false, ""},
+    {"iparitys", "", true, ""},
     {"iall", "", false, ""},
     {"iall_scatterx", "", false, ""},
     {"ialls", "", true, ""},
@@ -522,7 +528,6 @@ FtnRteRtn ftnRtlRtns[] = {
     {"indexx_cr_nma", "", true, "k"},
     {"init", "", false, ""},
     {"instance", "", true, ""},
-    {"iparity_scatterx", "", false, ""},
     {"islocal_idx", "", false, ""},
     {"jdate", "", false, ""},
     {"lastval", "", false, ""},

@@ -41,6 +41,12 @@
  *
  * Support for Combined Bit Shifting intrinsic.
  * Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
  */
 
 /**
@@ -2111,6 +2117,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     }
     goto ret_new;
   // AOCC begin
+  case I_IPARITY: /* iparity(array, [dim, mask]) */
   case I_IALL: /* iany(array, [dim, mask]) */
   case I_IANY: /* iany(array, [dim, mask]) */
     mask = ARGT_ARG(func_args, 2);
@@ -2125,11 +2132,11 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
 
     if (dim == 0) {
       rtlRtn =
-          optype == I_IALL ? RTE_ialls : RTE_ianys;
+          optype == I_IALL ? RTE_ialls : optype == I_ANY ? RTE_ianys : RTE_iparitys;
       nargs = 3;
     } else {
       rtlRtn =
-          optype == I_IALL ? RTE_iall : RTE_iany;
+          optype == I_IALL ? RTE_iall : optype == I_IANY ? RTE_iany : RTE_iparity;
       nargs = 4;
     }
     newargt = mk_argt(nargs);
@@ -4609,6 +4616,7 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
   case I_ANY:
   case I_IALL:               // AOCC
   case I_IANY:               // AOCC
+  case I_IPARITY:            // AOCC
   case I_COUNT:
   case I_MAXVAL:
   case I_MINVAL:
@@ -4816,6 +4824,7 @@ search_conform_array(int ast, int flag)
       case I_NORM2:
       case I_IALL:
       case I_IANY:
+      case I_IPARITY:
       case I_PARITY:
       // AOCC End
       case I_ALL:
@@ -6036,6 +6045,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_ANY:
   case I_IALL:         // AOCC
   case I_IANY:         // AOCC
+  case I_IPARITY:      // AOCC
   case I_PARITY:       // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
@@ -6144,6 +6154,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         return ast;
     break;
   // AOCC begin
+  case I_IPARITY:
   case I_IALL:
   case I_IANY:
     astdim = ARGT_ARG(args, 1);
@@ -6500,6 +6511,10 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     ReducType = I_REDUCE_IANY;
     astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
     break;
+  case I_IPARITY:
+    ReducType = I_REDUCE_IPARITY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
     // AOCC end
   default:
     assert(0, "inline_reduction_f90: unknown type", ast, 4);
@@ -6815,10 +6830,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     break;
   // AOCC begin
   case I_PARITY:
-    if (A_OPTYPEG(ast) == I_PARITY) {
-      newast = ast2;
-      operand = mk_binop(OP_LXOR, astsubscrtmp, ast2, DT_LOG);
-    }
+    newast = ast2;
+    operand = mk_binop(OP_LXOR, astsubscrtmp, ast2, DT_LOG);
     asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
 
     ifast = mk_stmt(A_IFTHEN, 0);
@@ -6857,6 +6870,18 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
 
     asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
 
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    break;
+  case I_IPARITY:
+    operand = mk_binop(OP_LXOR, ast2, astsubscrtmp, DT_LOG);
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
 
     std = add_stmt_before(asn, stdnext);
     STD_LINENO(std) = lineno;

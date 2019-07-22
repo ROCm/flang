@@ -22,6 +22,9 @@
  *
  * Date of Modification: 21st February 2019
  *
+ * Support for parity and bit transformational intrinsic iparity, iany, iall
+ * Date of Modification: July 2019
+ *
  */
 
 /**
@@ -701,6 +704,7 @@ bld_ud(int ast, int *dummy)
     case I_ANY:
     case I_IALL:                 // AOCC
     case I_IANY:                 // AOCC
+    case I_IPARITY:              // AOCC
     case I_PARITY:               // AOCC
     case I_COUNT:
     case I_PRODUCT:

@@ -14,6 +14,15 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ */
 
 /** \brief Fortran transformation module */
 
@@ -2284,8 +2293,9 @@ inline_spread_shifts(int asgn_ast, int forall_ast, int inlist)
   case I_MAXVAL:
   case I_MINVAL:
   case I_PARITY:      // AOCC
-  case I_IALL:
-  case I_IANY:
+  case I_IPARITY:     // AOCC
+  case I_IALL:        // AOCC
+  case I_IANY:        // AOCC
   case I_ALL:
   case I_ANY:
   case I_COUNT:

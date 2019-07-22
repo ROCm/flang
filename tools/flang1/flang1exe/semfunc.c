@@ -42,6 +42,12 @@
  *
  * Support for Combined Bit Shifting intrinsic.
  * Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
  */
 
 /** \file
@@ -5818,6 +5824,7 @@ ref_pd(SST *stktop, ITEM *list)
     break;
 
   // AOCC Begin
+  case PD_iparity:
   case PD_iall:
   case PD_iany:
     if (flg.std != F2008) {
@@ -5834,7 +5841,7 @@ ref_pd(SST *stktop, ITEM *list)
     argt_count = 3;
     dtype1 = SST_DTYPEG(ARG_STK(0));
     if (!DT_ISNUMERIC_ARR(dtype1)) {
-      if (pdtype == PD_iany || pdtype == PD_iall) {
+      if (pdtype == PD_iany || pdtype == PD_iall || pdtype == PD_iparity) {
         if (!(DTY(dtype1) == TY_ARRAY &&
               (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) {
           E74_ARG(pdsym, 0, NULL);
@@ -5846,7 +5853,7 @@ ref_pd(SST *stktop, ITEM *list)
         goto call_e74_arg;
       }
     }
-    if (pdtype == PD_iany || pdtype == PD_iall) {
+    if (pdtype == PD_iany || pdtype == PD_iall || pdtype == PD_iparity) {
       if ((!DT_ISINT_ARR(dtype1) && !DT_ISREAL_ARR(dtype1) &&
            !(DTY(dtype1) == TY_ARRAY &&
              (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) ||
