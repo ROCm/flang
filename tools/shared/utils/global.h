@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
@@ -215,6 +222,11 @@ typedef struct {
   bool trans_inv; /* global equiv to -Mx,7,0x10000 */
   int tpcount;
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  bool amdgcn_target; // AOCC
+#endif
+  // AOCC End
 } FLG;
 
 extern FLG flg;
