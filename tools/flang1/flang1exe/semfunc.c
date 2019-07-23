@@ -40,6 +40,8 @@
  * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
  * Month of Modification: July 2019
  *
+ * Support for Combined Bit Shifting intrinsic.
+ * Month of Modification: July 2019
  */
 
 /** \file
@@ -8589,7 +8591,7 @@ ref_pd(SST *stktop, ITEM *list)
         goto call_e74_arg;
     }
 
-    dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (shift) */
+    dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (mask) */
     switch (DTY(dtype3)) {
       case TY_WORD:
       case TY_DWORD:
@@ -10860,34 +10862,115 @@ ref_pd(SST *stktop, ITEM *list)
 
   case PD_dshiftl:
   case PD_dshiftr:
-    if (count != 3) {
-      E74_CNT(pdsym, count, 3, 3);
-      goto call_e74_cnt;
-    }
-    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
-      goto exit_;
-    shaper = 0;
-    for (i = 0; i < 3; i++) {
-      stkp = ARG_STK(i); /* i, j, k */
-      dtype1 = DDTG(SST_DTYPEG(stkp));
-      if (!DT_ISINT(dtype1)) {
-        E74_ARG(pdsym, i, NULL);
+    /* AOCC begin */
+    if (flg.std == F2008) {
+      int dtype3;
+
+      if (count != 3) {
+        E74_CNT(pdsym, count, 3, 3);
+        goto call_e74_cnt;
+      }
+
+      /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+      if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+        goto exit_;
+
+      /* All arguments should be some INTGER kind or boz-literal constant. i and j
+       * can't be both boz-literal constant */
+      dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (i) */
+      switch (DTY(dtype1)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+      }
+
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (j) */
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 1, NULL);
+          goto call_e74_arg;
+      }
+
+      dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (shift) */
+      switch (DTY(dtype3)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 2, NULL);
+          goto call_e74_arg;
+      }
+
+      /* If i and j are boz-literal constants, then throw error */
+      if ((DTY(dtype1) == TY_WORD || DTY(dtype1) == TY_DWORD) &&
+          (DTY(dtype2) == TY_WORD || DTY(dtype2) == TY_DWORD)) {
+        E74_ARG(pdsym, 0, NULL);
         goto call_e74_arg;
       }
-      if (shaper) {
-        if ((shape1 = SST_SHAPEG(stkp)) &&
-            SHD_NDIM(shaper) != SHD_NDIM(shape1)) {
+
+      /* If kinds mismatch, then throw error */
+      if (DTY(dtype1) != DTY(dtype2)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+
+      dtyper = (dtype1 > dtype2) ? dtype1 : dtype2;
+      argt_count = count;
+      break;
+      /*
+       * The below semantic handling suggests that the dshiftl/dshiftr it's
+       * expecting is not the one from the F2008 standard. We default the handling
+       * to if the standard is not f2008 or above.
+       */
+    } else {
+      /* AOCC end */
+      if (count != 3) {
+        E74_CNT(pdsym, count, 3, 3);
+        goto call_e74_cnt;
+      }
+      if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
+        goto exit_;
+      shaper = 0;
+      for (i = 0; i < 3; i++) {
+        stkp = ARG_STK(i); /* i, j, k */
+        dtype1 = DDTG(SST_DTYPEG(stkp));
+        if (!DT_ISINT(dtype1)) {
           E74_ARG(pdsym, i, NULL);
           goto call_e74_arg;
         }
-      } else
-        shaper = SST_SHAPEG(stkp);
+        if (shaper) {
+          if ((shape1 = SST_SHAPEG(stkp)) &&
+              SHD_NDIM(shaper) != SHD_NDIM(shape1)) {
+            E74_ARG(pdsym, i, NULL);
+            goto call_e74_arg;
+          }
+        } else
+          shaper = SST_SHAPEG(stkp);
+      }
+      if (shaper)
+        dtyper = get_array_dtype(SHD_NDIM(shaper), DT_INT);
+      else
+        dtyper = DT_INT;
+      break;
     }
-    if (shaper)
-      dtyper = get_array_dtype(SHD_NDIM(shaper), DT_INT);
-    else
-      dtyper = DT_INT;
-    break;
 
   case PD_mask:
   /* Mask is a cray intrinsic */

@@ -680,7 +680,9 @@ typedef enum {
   AC_I_transpose,
   AC_I_merge_bits,
   AC_I_shiftl,
-  AC_I_shiftr
+  AC_I_shiftr,
+  AC_I_dshiftl,
+  AC_I_dshiftr
   /* AOCC end */
 } AC_INTRINSIC;
 
