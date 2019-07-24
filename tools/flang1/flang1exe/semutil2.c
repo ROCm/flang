@@ -3886,6 +3886,10 @@ map_PD_to_AC(int pdnum)
     return AC_I_lshift;
   case PD_shiftr:
     return AC_I_rshift;
+  case PD_dshiftl:
+    return AC_I_dshiftl;
+  case PD_dshiftr:
+    return AC_I_dshiftr;
   // AOCC end
   case PD_scale:
     return AC_I_scale;
@@ -3942,7 +3946,11 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_ieor:
   case AC_I_merge:
   case AC_I_scale:
-  case AC_I_merge_bits: /* AOCC */
+  /* AOCC begin */
+  case AC_I_merge_bits:
+  case AC_I_dshiftl:
+  case AC_I_dshiftr:
+  /* AOCC end */
     return mk_elem_init_intrinsic(intrin, ast, dtype, parent_acltype);
   case AC_I_maxloc:
   case AC_I_maxval:
@@ -8341,6 +8349,56 @@ eval_merge_bits(ACL *arg, DTYPE dtype) {
 
   return eval_ior(iand_i, dtype);
 }
+
+static ACL *
+eval_dshift(ACL *arg, DTYPE dtype, bool is_left)
+{
+  ACL *arg_i = eval_init_expr_item(arg);
+  ACL *arg_j = eval_init_expr_item(arg->next);
+  ACL *arg_shift = eval_init_expr_item(arg->next->next);
+
+  short bit_size_i = bits_in(arg_i->dtype);
+  short bit_size_j = bits_in(arg_j->dtype);
+
+  if (is_left) {
+    /* Evaluating IOR(SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT)). */
+
+    /* evaluating lhs of IOR */
+    ACL *arg_i_and_shift = clone_init_const(arg_i, true);
+    arg_i_and_shift->next = arg_shift;
+    ACL * arg_shiftl_i = eval_ishft(arg_i_and_shift, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    ACL *arg_j_and_bs_j = clone_init_const(arg_j, true);
+    arg_j_and_bs_j->next = clone_init_const(arg_shift, true);
+    /* The negation below is to force ishft to do a right shift */
+    arg_j_and_bs_j->next->conval = -(bit_size_j - arg_shift->conval);
+    ACL *arg_shiftr_bs_j = eval_ishft(arg_j_and_bs_j, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_i->next = arg_shiftr_bs_j;
+    return eval_ior(arg_shiftl_i, arg_i->dtype);
+
+  } else {
+    /* Evaluating IOR(SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT)) */
+
+    /* evaluating lhs of IOR */
+    ACL *arg_i_and_bs_i = clone_init_const(arg_i, true);
+    arg_i_and_bs_i->next = clone_init_const(arg_shift, true);
+    arg_i_and_bs_i->next->conval = bit_size_i - arg_shift->conval;
+    ACL *arg_shiftl_bs_i = eval_ishft(arg_i_and_bs_i, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    ACL *arg_j_and_shift = clone_init_const(arg_j, true);
+    arg_j_and_shift->next = clone_init_const(arg_shift, true);
+    arg_j_and_shift->next->conval = -(arg_j_and_shift->next->conval);
+    ACL * arg_shiftr_j = eval_ishft(arg_j_and_shift, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_bs_i->next = arg_shiftr_j;
+    return eval_ior(arg_shiftl_bs_i, arg_i->dtype);
+  }
+}
 /* AOCC end */
 
 static ACL *
@@ -10894,6 +10952,12 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
       break;
     case AC_I_merge_bits:
       root = eval_merge_bits(rop, dtype);
+      break;
+    case AC_I_dshiftl:
+      root = eval_dshift(rop, dtype, /*is_left*/ TRUE);
+      break;
+    case AC_I_dshiftr:
+      root = eval_dshift(rop, dtype, /*is_left*/ FALSE);
       break;
     // AOCC end
     case AC_I_reshape:

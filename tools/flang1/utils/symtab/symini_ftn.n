@@ -1121,6 +1121,11 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .PD SHIFTR - -
 .AT elemental i j
 
+.PD DSHIFTL - -
+.AT elemental i j shift
+.PD DSHIFTR - -
+.AT elemental i j shift
+
 .PD MERGE_BITS - -
 .AT elemental i j mask
 .PD REAL - -
@@ -1751,10 +1756,6 @@ Internal subroutine to perform a copy out of an ordinary argument.
 .AT elemental x
 .H4 DCOT * -
 .AT elemental x
-.H4 DSHIFTL - -
-.AT elemental i j k
-.H4 DSHIFTR - -
-.AT elemental i j k
 .H4 MASK - -
 .AT elemental i
 .bp
@@ -1883,10 +1884,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i shift
 .H7 .SHIFTR - -
 .AT elemental i shift
-.H7 .DSHIFTL - -
-.AT elemental i j shift
-.H7 .DSHIFTR - -
-.AT elemental i j shift
 .H7 .IALL - -
 .AT transformational array *dim *mask
 .H7 .IANY - -

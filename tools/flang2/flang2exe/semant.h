@@ -448,6 +448,8 @@ struct CONST {
 #define AC_I_merge_bits 57
 #define AC_I_shiftl 58
 #define AC_I_shiftr 59
+#define AC_I_dshiftl 60
+#define AC_I_dshiftr 61
 /* AOCC end */
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 

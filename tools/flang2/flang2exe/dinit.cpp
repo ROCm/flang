@@ -2295,6 +2295,56 @@ eval_merge_bits(CONST *arg, DTYPE dtype)
 
   return eval_ior(iand_i, dtype);
 }
+
+static CONST *
+eval_dshift(CONST *arg, DTYPE dtype, bool is_left)
+{
+  CONST *arg_i = eval_init_expr_item(arg);
+  CONST *arg_j = eval_init_expr_item(arg->next);
+  CONST *arg_shift = eval_init_expr_item(arg->next->next);
+
+  short bit_size_i = dtypeinfo[arg_i->dtype].bits;
+  short bit_size_j = dtypeinfo[arg_j->dtype].bits;
+
+  if (is_left) {
+    /* Evaluating IOR(SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT)). */
+
+    /* evaluating lhs of IOR */
+    CONST *arg_i_and_shift = clone_init_const(arg_i, true);
+    arg_i_and_shift->next = arg_shift;
+    CONST * arg_shiftl_i = eval_ishft(arg_i_and_shift, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    CONST *arg_j_and_bs_j = clone_init_const(arg_j, true);
+    arg_j_and_bs_j->next = clone_init_const(arg_shift, true);
+    /* The negation below is to force ishft to do a right shift */
+    arg_j_and_bs_j->next->u1.conval = -(bit_size_j - arg_shift->u1.conval);
+    CONST *arg_shiftr_bs_j = eval_ishft(arg_j_and_bs_j, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_i->next = arg_shiftr_bs_j;
+    return eval_ior(arg_shiftl_i, arg_i->dtype);
+
+  } else {
+    /* Evaluating IOR(SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT)) */
+
+    /* evaluating lhs of IOR */
+    CONST *arg_i_and_bs_i = clone_init_const(arg_i, true);
+    arg_i_and_bs_i->next = clone_init_const(arg_shift, true);
+    arg_i_and_bs_i->next->u1.conval = bit_size_i - arg_shift->u1.conval;
+    CONST *arg_shiftl_bs_i = eval_ishft(arg_i_and_bs_i, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    CONST *arg_j_and_shift = clone_init_const(arg_j, true);
+    arg_j_and_shift->next = clone_init_const(arg_shift, true);
+    arg_j_and_shift->next->u1.conval = -(arg_j_and_shift->next->u1.conval);
+    CONST * arg_shiftr_j = eval_ishft(arg_j_and_shift, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_bs_i->next = arg_shiftr_j;
+    return eval_ior(arg_shiftl_bs_i, arg_i->dtype);
+  }
+}
 /* AOCC end */
 
 static CONST *
@@ -4871,6 +4921,12 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
       break;
     case AC_I_merge_bits:
       root = eval_merge_bits(rop, dtype);
+      break;
+    case AC_I_dshiftl:
+      root = eval_dshift(rop, dtype, /*is_left*/ TRUE);
+      break;
+    case AC_I_dshiftr:
+      root = eval_dshift(rop, dtype, /*is_left*/ FALSE);
       break;
     // AOCC end
     case AC_I_reshape:

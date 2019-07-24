@@ -39,6 +39,8 @@
  * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
  * Month of Modification: July 2019
  *
+ * Support for Combined Bit Shifting intrinsic.
+ * Month of Modification: July 2019
  */
 
 /**
@@ -2016,6 +2018,47 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       int iand_j = ast_intr(I_IAND, A_DTYPEG(j), 2, j, not_mask);
 
       return ast_intr(I_IOR, A_DTYPEG(i), 2, iand_i, iand_j);
+    }
+
+    case I_DSHIFTL:
+    case I_DSHIFTR: {
+      if (flg.std != F2008) {
+        break; // Default to flang's "dshift(l/r)" lowering (not the F2008 one)
+      }
+
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      int shift = ARGT_ARG(func_args, 2);
+
+      int bit_size_i = mk_cval(bits_in(A_DTYPEG(i)), A_DTYPEG(i));
+      int bit_size_j = mk_cval(bits_in(A_DTYPEG(j)), A_DTYPEG(j));
+
+      if (optype == I_DSHIFTL) {
+        /* Rewriting the ast as IOR(SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT)). */
+
+        /* computing ast for IOR's lhs */
+        int shiftl_i = ast_intr(I_ISHFT, A_DTYPEG(i), 2, i, shift);
+
+        /* computing ast for IOR's rhs */
+        int negated_shiftval = mk_binop(OP_SUB, mk_cnst(stb.i0),
+            mk_binop(OP_SUB, bit_size_j, shift, A_DTYPEG(shift)) , A_DTYPEG(shift));
+        int shiftr_bs_j = ast_intr(I_ISHFT, A_DTYPEG(j), 2, j, negated_shiftval);
+
+        return ast_intr(I_IOR, A_DTYPEG(i), 2, shiftl_i, shiftr_bs_j);
+
+      } else {
+        /* Rewriting the ast as IOR(SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT)) */
+
+        /* computing ast for IOR's lhs */
+        int shiftl_bs_i = ast_intr(I_ISHFT, A_DTYPEG(i), 2, i,
+            mk_binop(OP_SUB, bit_size_i, shift, A_DTYPEG(shift)));
+
+        /* computing ast for IOR's rhs */
+        int negated_shiftval = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+        int shiftr_j = ast_intr(I_ISHFT, A_DTYPEG(j), 2, j, negated_shiftval);
+
+        return ast_intr(I_IOR, A_DTYPEG(i), 2, shiftl_bs_i, shiftr_j);
+      }
     }
     /* AOCC end */
     default:
