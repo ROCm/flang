@@ -49,6 +49,9 @@
 // Date of Modification : 9th July 2019
 // Support for AMDGPU OpenMP offloading
 //
+// Date of Modification: 16th July 2019
+// Suppressed a duplicate diagnostic message: "Redundant specification of array"
+//
 //===----------------------------------------------------------------------===//
 
 /**
@@ -9442,7 +9445,7 @@ semant1(int rednum, SST *top)
           ndim = AD_NUMDIM(ad1);
           if (ndim != AD_NUMDIM(ad2)) {
             error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
-            break;
+	     break;
           }
           for (i = 0; i < ndim; i++)
             if (AD_LWBD(ad1, i) != AD_LWBD(ad2, i) ||
@@ -9452,7 +9455,10 @@ semant1(int rednum, SST *top)
             error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
             break;
           }
-          error(119, 2, gbl.lineno, SYMNAME(sptr), CNULL);
+          //AOCC begin
+          // Removing the following line as it produces duplicate warnings
+          // error(119, 2, gbl.lineno, SYMNAME(sptr), CNULL);
+          //AOCC end
         } else if (stype1 != ST_UNKNOWN && stype1 != ST_IDENT &&
                    stype1 != ST_VAR) {
           error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
