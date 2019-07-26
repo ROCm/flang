@@ -19,6 +19,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
+ * Date of modification 26th July 2019
  *
  */
 
@@ -1163,6 +1164,18 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
     current_tinfo->symbols[current_tinfo->n_symbols].map_type = map_type;
     current_tinfo->n_symbols++;
   }
+
+  // AOCC Begin
+  // For pointer arrays copy array descripor to device
+#ifdef OMP_OFFLOAD_AMD
+  if (SDSCG(host_symbol) && (MIDNUMG(host_symbol)) && POINTERG(host_symbol)) {
+    ompaccel_tinfo_current_add_sym(SDSCG(host_symbol), NOSYM,
+                                   OMP_TGT_MAPTYPE_TARGET_PARAM |
+                                   OMP_TGT_MAPTYPE_TO |
+                                   OMP_TGT_MAPTYPE_FROM);
+  }
+#endif
+  // AOCC End
 }
 
 INLINE static void

@@ -15,6 +15,14 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 26th July 2019
+ *
+ */
+
 /**
    \file
    \brief extract regions into subroutines; add uplevel references as
@@ -49,6 +57,13 @@
 #include "ompaccel.h"
 static bool isReplacerEnabled = false;
 #endif
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+#include <vector>
+std::vector<SPTR> constArraySymbolList;
+#endif
+// AOCC End
 
 #define MAX_PARFILE_LEN 15
 
@@ -1143,6 +1158,26 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
     len = llGetILMLen(ilmx);
   }
   ilmpx = (ILM *)(ilmb.ilm_base + ilmx);
+
+  // AOCC Begin
+  // For array elements whose index are constants, store them
+#ifdef OMP_OFFLOAD_AMD
+  if (ILM_OPC(ilmpx) == IM_ELEMENT && flg.omptarget) {
+    SPTR sym;
+    ILM *ilma;
+    ILM *ilmi;
+    int arrilm = ILM_OPND(ilmpx, 2);
+    int indexilm = ILM_OPND(ilmpx, 4);
+    ilma = (ILM *)(ilmb.ilm_base + arrilm);
+    ilmi = (ILM *)(ilmb.ilm_base + indexilm);
+    if (ILM_OPC(ilma) == IM_BASE && ILM_OPC(ilmi) == IM_KCON) {
+      sym = ILM_SymOPND(ilma, 1);
+      constArraySymbolList.push_back(sym);
+    }
+  }
+#endif
+  // AOCC End
+
   if (!gbl.outlined)
     llCollectSymbolInfo(ilmpx);
   {

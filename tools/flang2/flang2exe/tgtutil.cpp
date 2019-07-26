@@ -19,6 +19,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
+ * Date of modification 26th July 2019
  *
  */
 
@@ -57,6 +58,15 @@
 #include "dtypeutl.h"
 #include "llassem.h"
 #include "symfun.h"
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+#include <vector>
+#include <algorithm>
+// Vector to keep track all array accesses with constant offset within device.
+extern std::vector<SPTR> constArraySymbolList;
+#endif
+// AOCC End
 
 #define MXIDLEN 100
 static int dataregion = 0;
@@ -706,10 +716,23 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       targetinfo->symbols[i].map_type = map_type;
     } else {
       if (targetinfo->symbols[i].map_type == 0) {
+
+        // AOCC End
         targetinfo->symbols[i].map_type =
             OMP_TGT_MAPTYPE_IMPLICIT | OMP_TGT_MAPTYPE_TARGET_PARAM;
         if (DTY(dtype) != TY_ARRAY)
           targetinfo->symbols[i].map_type |= OMP_TGT_MAPTYPE_LITERAL;
+        // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+        if (std::find(constArraySymbolList.begin(), constArraySymbolList.end(),
+                      targetinfo->symbols[i].device_sym) !=
+                                            constArraySymbolList.end()) {
+          // TODO: For such arrays map type should be decided at runtime.
+          targetinfo->symbols[i].map_type = OMP_TGT_MAPTYPE_TO |
+                                            OMP_TGT_MAPTYPE_TARGET_PARAM;
+        }
+#endif
+        // AOCC End
       }
       map_type = targetinfo->symbols[i].map_type;
     }
