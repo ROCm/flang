@@ -18,8 +18,10 @@
 .\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
 .\" *
 .\" * Support for DNORM intrinsic
-.\" *
 .\" * Date of Modification: 21st February 2019
+.\" *
+.\" * Support for vector and novector directives
+.\" * Date of Modification: 19th July 2019
 .\" *
 .\" */
 .NS 18 "Other Compiler Switches"
@@ -2289,6 +2291,8 @@ Execute tasks immediately
 In the outliner used for KPMC openmp regions, when filling the argument
 .XB 0x100000:
 Enable nodepchk for simd construct/clause.
+.XB 0x200000:
+Enable nodepchk for ivdep pragma.
 
 .XF "70-79:"
 RESERVED FOR ALTERNATE CODE GENERATION
@@ -4815,7 +4819,7 @@ size from integer power elements
 .XB 0x2000000:
 Switch definition of "long double" on Power from "double double" to __float128
 .XB 0x4000000:
-Disable generation of !llvm.loop metadata
+Disable generation of !llvm.loop metadata. !DIR$ novector / !pgi$l novector
 .XB 0x8000000:
 (C/C++ only) Disable the LLVM inliner by marking all routines with the LLVM attribute 'noinline'.
 .XB 0x10000000:
@@ -4824,6 +4828,8 @@ Enable arithmetic widening on address arithmetic.
 Put constants in non read-only memories.
 .XB 0x40000000:
 Emit DWARF name for Fortran COMMON blocks.
+.XB 0x80000000:
+Enable generation of !llvm.loop metadata. !DIR$ vector / !pgi$l vector
 
 .XF "184:"
 ARM modifications

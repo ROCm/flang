@@ -23,8 +23,10 @@
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Support for ivdep directive
- *
  * Date of Modification: 11th march 2019
+ *
+ * Support for vector and novector directives
+ * Date of Modification: 19th July 2019
  *
  */
 
@@ -255,6 +257,10 @@ static int *idxstack = NULL;
 static hashmap_t sincos_map;
 static hashmap_t sincos_imap;
 static LL_MDRef cached_loop_metadata;
+// AOCC Begin
+static LL_MDRef cached_loop_vec_metadata;
+static LL_MDRef access_group_metadata;
+// AOCC End
 
 static struct ret_tag {
   /** If ILI uses a hidden pointer argument to return a struct, this is it. */
@@ -977,8 +983,14 @@ cons_novectorize_metadata(void)
   if (cpu_llvm_module->loop_md)
     return cpu_llvm_module->loop_md;
   rv = ll_create_flexible_md_node(cpu_llvm_module);
-  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.enable");
-  lvcomp[1] = ll_get_md_i1(0);
+  // AOCC Begin
+  // replaced
+  //	llvm.loop.vectorize.enable
+  // with
+  // 	llvm.loop.vectorize.width
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.width");
+  lvcomp[1] = ll_get_md_i1(1);
+  // AOCC End
   loopVect = ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
   ll_extend_md_node(cpu_llvm_module, rv, rv);
   ll_extend_md_node(cpu_llvm_module, rv, loopVect);
@@ -1271,14 +1283,54 @@ finish_routine(void)
   }
 }
 
+// AOCC Begin
+/*
+ * when ivdep pragma is specified, "llvm.loop.parallel_accesses" metadata has
+ * to be generated along with "llvm.access.group" for each load/store instructions.
+ */
+INLINE static LL_MDRef
+cons_loop_parallel_accesse_metadata(void)
+{
+  LL_MDRef lvcomp[2];
+
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.parallel_accesses");
+  lvcomp[1] = access_group_metadata;
+  return ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
+} // cons_loop_parallel_accesse_metadata
+
+/*
+ * When vector pragma is specified, only "llvm.loop.vectorize.enable" metadata
+ * has to be generated.
+ */
+static LL_MDRef
+cons_loops_vectorize_metadata(void)
+{
+  if (LL_MDREF_IS_NULL(cached_loop_vec_metadata)) {
+    LL_MDRef vectorize = cons_vectorize_metadata();
+    LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    ll_extend_md_node(cpu_llvm_module, md, md);
+    ll_extend_md_node(cpu_llvm_module, md, vectorize);
+    cached_loop_vec_metadata = md;
+  } // if
+  return cached_loop_vec_metadata;
+} // cons_loops_vectorize_metadata
+// AOCC End
+
 static LL_MDRef
 cons_no_depchk_metadata(void)
 {
   if (LL_MDREF_IS_NULL(cached_loop_metadata)) {
     LL_MDRef vectorize = cons_vectorize_metadata();
     LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    // AOCC Begin
+    // for ivdep pragma, "llvm.loop.parallel_accesses" metadata is generated
+    LL_MDRef lpam = cons_loop_parallel_accesse_metadata();
+    // AOCC End
     ll_extend_md_node(cpu_llvm_module, md, md);
     ll_extend_md_node(cpu_llvm_module, md, vectorize);
+    // AOCC Begin
+    ll_extend_md_node(cpu_llvm_module, md, lpam);
+    // AOCC End
     cached_loop_metadata = md;
   }
   return cached_loop_metadata;
@@ -1322,8 +1374,110 @@ static int get_alloca_addrspace(LL_Module *module) {
     return -1;
   dl++;
   return (*dl) - '0';
-}
+} // get_alloca_addrspace
 #endif
+
+/*
+ * Check if the break instruction is having vector/novector pragma effect.
+ *  "!llvm.loop" metadata will be generated for the break instruction if
+ *  VECTOR/NOVECTOR pragma is specified for a loop.
+ */
+static bool check_for_vector_novector_directive(int break_line_number, int xflag) {
+  int iter;
+  LPPRG *lpprg;
+
+  // Check if any loop pragmas are specified
+  if (direct.lpg.avail > 1) {
+    // Loop thru all the loop pragmas
+    for (iter = 1; iter < direct.lpg.avail; iter++) {
+      lpprg = direct.lpg.stgb + iter;
+      // check if vector/novector pragma is specified
+      // x[183] = 0x4000000   => !dir$ NOVECTOR
+      // x[183] = 0x80000000  => !dir$ VECTOR
+      if ((lpprg->dirset.x[183] & xflag)
+          &&
+          (break_line_number == lpprg->end_line)) {
+        return  true;
+      } // if
+
+      if (break_line_number < lpprg->beg_line) {
+        // break instruction is not having any pragma specified.
+        break;
+      } // if
+    } // for
+  } // if
+
+  return false;
+} // check_for_vector_novector_directive
+
+/*
+ * Fix ivdep loop directive for nested loops
+ *   If a loop with an IVDEP directive is enclosed within another loop with an IVDEP directive,
+ *   the IVDEP directive on the outer loop is ignored.
+ *
+ * Loop thru the loop directives and disable ivdep directive for the outer loop.
+ */
+static void fix_ivdep_directives () {
+  static bool processed = false;
+  int iter;
+  LPPRG *lpprg, *prev_lpprg = NULL;
+
+  if (!processed && (direct.lpg.avail > 1)) {
+    for (iter = 1; iter < direct.lpg.avail; iter++) {
+      lpprg = direct.lpg.stgb + iter;
+      if (!lpprg->dirset.depchk && (lpprg->dirset.x[69] & 0x200000)) {
+        if (prev_lpprg && (lpprg->beg_line <= prev_lpprg->end_line)) {
+          // Both outer loop and inner loop has ivdep directive.
+          // Disable ivdep directive for the outer loop.
+          prev_lpprg->dirset.depchk = 1;
+        } // if
+        prev_lpprg  = lpprg;
+      } // if
+    } // for
+    processed = true;
+  } // if
+} // fix_ivdep_directives
+
+/*
+ *  ivdep directive applies only to the first loop that follows the directive
+ *
+ *  Check if the code block belongs to the outer loop or the nested inner loops
+ *
+ *  Eg:
+ *      !dir$ ivdep
+ *      do ...
+ *        <outer loop code block>  <=  B1
+ *        do ...
+ *          <inner loop code block> <= B2
+ *        end do
+ *        <outer loop code block> <= B3
+ *      end do
+ *
+ * In the above example, ivdep applies only to B1 and B3.
+ * The below function checks for B3.
+ */
+static bool block_belong_to_outer_loop (int iter, int curr_line,
+                                        int outer_loop_end_line) {
+  bool is_outer_loop_block = true;
+  LPPRG *lpprg;
+
+  while (iter < direct.lpg.avail) {
+    lpprg = direct.lpg.stgb + iter;
+    if (curr_line >= lpprg->beg_line &&
+        curr_line < lpprg->end_line) {
+      is_outer_loop_block = false;
+    } // if
+
+    if (outer_loop_end_line < lpprg->beg_line) {
+      // No more pragmas for current code block
+      break;
+    }
+
+    iter++;
+  } // while
+
+  return is_outer_loop_block;
+} // block_belong_to_outer_loop
 // AOCC End
 
 /**
@@ -1346,8 +1500,7 @@ schedule(void)
   LL_Module *current_module = NULL;
   bool first = true;
   // AOCC Begin
-  int i;
-  LPPRG *lpprg;
+  bool is_ivdep_directive = false;
   // AOCC End
 
   funcId++;
@@ -1501,6 +1654,17 @@ restartConcur:
   bih = BIH_NEXT(0);
   if ((XBIT(34, 0x200) || gbl.usekmpc) && !processHostConcur)
     bih = gbl.entbih;
+
+  // AOCC Begin
+  // If a loop with an IVDEP directive is enclosed within another loop with an
+  // IVDEP directive, the IVDEP directive on the outer loop is ignored.
+  fix_ivdep_directives();
+
+  // Create a distinct md_node
+  if (!access_group_metadata)
+    access_group_metadata = ll_create_distinct_md_node(cpu_llvm_module, LL_PlainMDNode, NULL, 0);
+  // AOCC End
+
   for (; bih; bih = BIH_NEXT(bih)) {
 
 #if DEBUG
@@ -1553,10 +1717,8 @@ restartConcur:
     }
 
     // AOCC Begin
-#ifndef OMP_OFFLOAD_LLVM
     // clear the global flag set from last iteration
     clear_rw_nodepchk();
-#endif
     // AOCC End
 
     if (XBIT(183, 0x10000000)) {
@@ -1570,7 +1732,6 @@ restartConcur:
     }
 
     // AOCC Begin
-#ifndef OMP_OFFLOAD_LLVM
     /** \brief Flang codegen support for !dir$ ivdep
      *
      * Following piece of code is added for handling ivdep directive. This
@@ -1586,28 +1747,56 @@ restartConcur:
      * will be captured by llvm::Loop::isAnnotatedParallel().
      *
      * The approach
-     * STEP 1 : Check if there are any loop pragmas
-     * STEP 2 : Iterate through avaibale pragmas
-     * STEP 2a: Check if depchk flag for current pragma is reset.
-     *          By default this flag is set for all pragmas
-     * STEP 2b: If the current pragma scope is within current range
-     *          Enable global flag to add  nodepcheck metadata
-     * STEP 2c: Stop if we find any nodepcheck pragma for current scope.
+     * STEP 1 : Check if there are any loop pragmas.
+     * STEP 2 : Iterate through avaibale pragmas.
+     * STEP 3 : Check if depchk flag for current pragma is reset.
+     *          By default this flag is set for all pragmas.
+     * STEP 4 : If the current pragma scope is within current range, the line number
+     *          will match (ivdep directive line number and code block beg line number).
+     * STEP 5 : If line number matches, enable global flag to add nodepcheck metadata
+     *          and break the loop.
+     * STEP 6 : If line number didn't match and the code block is in the current range,
+     *          then the code block belongs to inner loop or after the inner loop.
+     * STEP 7 : Check if the code belongs to outer loop with ivdep directive.
+     * STEP 8 : enable global flag to add nodepcheck metadata and break the loop.
+     *
+     * 0x200000   => xflag[69]  value for IVDEP
      */
-    if (direct.lpg.avail > 1) {
-      for (i = 1; i < direct.lpg.avail; i++) {
-        lpprg = direct.lpg.stgb + i;
-        if (!direct.lpg.stgb->dirset.depchk) {
-          if ( BIH_LINENO(bih) >= lpprg->beg_line &&
-               BIH_LINENO(bih) <= lpprg->end_line) {
+     if (direct.lpg.avail > 1) {
+      int iter;
+      int curr_line = BIH_LINENO(bih);
+      LPPRG *lpprg;
+      is_ivdep_directive = false;
+
+      for (iter = 1; iter < direct.lpg.avail; iter++) {
+        lpprg = direct.lpg.stgb + iter;
+
+        // Check for ivdep directive and mark nodepchk
+        if (!lpprg->dirset.depchk && (lpprg->dirset.x[69] & 0x200000)) {
+          if (curr_line == lpprg->beg_line) {
+            is_ivdep_directive = true;
             mark_rw_nodepchk(bih);
             // Once we found right pragma, stop
             break;
-          }
-        }
-      }
-    }
-#endif
+          } else if ((curr_line > lpprg->beg_line) &&
+                     (curr_line <= lpprg->end_line)) {
+            // Nested loop. check for next loop pragma
+            // check if the code block belongs to nested loops.
+            // if no, then the code block belongs to outer loop, mark nodepchk
+            if (block_belong_to_outer_loop(++iter, curr_line, lpprg->end_line)) {
+              is_ivdep_directive = true;
+              mark_rw_nodepchk(bih);
+            } // if
+
+            // Pragma for code block is processed. stop
+            break;
+          } else if (curr_line < lpprg->beg_line) {
+            // no pragmas for current code block. stop
+            break;
+          } // if
+        } // if
+      } // for
+    } // if
     // AOCC End
 
     for (ilt = BIH_ILTFIRST(bih); ilt; ilt = ILT_NEXT(ilt)) {
@@ -1653,21 +1842,43 @@ restartConcur:
             next_bih_label = t_next_bih_label;
         }
         make_stmt(STMT_BR, ilix, false, next_bih_label, ilt);
-        if (XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
-            BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)) &&
-            (!ignore_simd_block(bih))) {
-          LL_MDRef loop_md = cons_no_depchk_metadata();
+
+        // AOCC Begin
+        // Added support for vector, novector and ivdep pragma to generate the
+        // required metadata
+        //   0x4000000  => xflag[183] value for NOVECTOR
+        //   0x80000000 => xflag[183] value for VECTOR
+        if (ignore_simd_block(bih)
+            ||
+            (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x4000000))) {
+          LL_MDRef loop_md = cons_novectorize_metadata();
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= SIMD_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+
+        } else if ((XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
+                    BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
+                   ||
+                   (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
+                   ||
+                   (is_ivdep_directive)) {
+          LL_MDRef loop_md;
+          // for ivdep pragma, rw_nodepcheck will be enabled.
+          // Need to generate "llvm.loop.parallel_accesses" metadata as well.
+          if (rw_nodepcheck) {
+            loop_md = cons_no_depchk_metadata();
+          } else {
+            loop_md = cons_loops_vectorize_metadata();
+          }
           INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
           if (i) {
             i->flags |= SIMD_BACKEDGE_FLAG;
             i->misc_metadata = loop_md;
           }
         }
-        if (ignore_simd_block(bih)) {
-          LL_MDRef loop_md = cons_novectorize_metadata();
-          llvm_info.last_instr->flags |= SIMD_BACKEDGE_FLAG;
-          llvm_info.last_instr->misc_metadata = loop_md;
-        }
+        // AOCC End
       } else if ((ILT_ST(ilt) || ILT_DELETE(ilt)) &&
                  (IL_TYPE(opc) == ILTY_STORE)) {
         /* store */
@@ -2746,8 +2957,12 @@ write_no_depcheck_metadata(LL_Module *module, INSTR_LIST *insn)
     char buf[64];
     int n;
     DEBUG_ASSERT(insn->misc_metadata, "missing metadata");
-    n = snprintf(buf, 64, ", !llvm.mem.parallel_loop_access !%u",
-                 LL_MDREF_value(insn->misc_metadata));
+    // AOCC Begin
+    // Replaced "llvm.mem.parallel_loop_access" with "llvm.access.group"
+    // Refer https://reviews.llvm.org/D52116 for more details.
+    n = snprintf(buf, 64, ", !llvm.access.group !%u",
+                 LL_MDREF_value(access_group_metadata));
+    // AOCC End
     DEBUG_ASSERT(n < 64, "buffer overrun");
     print_token(buf);
   }
