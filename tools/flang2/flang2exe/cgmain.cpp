@@ -13478,22 +13478,38 @@ llvm_write_ctor_dtor_list(init_list_t *list, const char *global_name)
 {
   struct init_node *node;
   char int_str_buffer[20];
+  char * i8type;
+  char * i8typewithnull;
 
   if (list->size == 0)
     return;
+
+/* starting with llvm 9, need 3 arg for some type stuff, i8* null is sufficient */
+  if (get_llvm_version() >= LL_Version_9_0) {
+    i8type = ", i8*";
+    i8typewithnull = ", i8* null";
+  } else {
+    i8type = "";
+    i8typewithnull = "";
+  }
 
   print_token("@");
   print_token(global_name);
   print_token(" = appending global [");
   sprintf(int_str_buffer, "%d", list->size);
   print_token(int_str_buffer);
-  print_token(" x { i32, void ()* }][");
+  print_token(" x { i32, void ()*");
+  print_token(i8type);
+  print_token(" }][");
   for (node = list->head; node != NULL; node = node->next) {
-    print_token("{ i32, void ()* } { i32 ");
+    print_token("{ i32, void ()*");
+    print_token(i8type);
+    print_token(" } { i32 ");
     sprintf(int_str_buffer, "%d", node->priority);
     print_token(int_str_buffer);
     print_token(", void ()* @");
     print_token(node->name);
+    print_token(i8typewithnull);
     print_token(" }");
     if (node->next != NULL) {
       print_token(", ");
