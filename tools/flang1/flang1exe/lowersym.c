@@ -845,7 +845,7 @@ lower_prepare_symbols()
     }
     switch (stype) {
     case ST_ARRAY:
-      if (gbl.internal <= 1 || INTERNALG(sptr)) {
+      if ((gbl.internal <= 1 && !gbl.empty_contains) || INTERNALG(sptr)) {
         int saveg;
         saveg = 0;
         if (SAVEG(sptr) && !THREADG(sptr))
@@ -1655,7 +1655,10 @@ lower_sym_header(void)
   /* put out header lines */
   fprintf(lowersym.lowerfile, "TOILM version %d/%d\n", VersionMajor,
           VersionMinor);
-  putvline("Internal", gbl.internal);
+  if (gbl.internal == 1 && gbl.empty_contains)
+    putvline("Internal", 0);
+  else 
+    putvline("Internal", gbl.internal);
   if (gbl.internal > 1) {
     putvline("Outer", lowersym.outersub);
     putvline("First", stb.firstusym);
@@ -5357,7 +5360,10 @@ stb_lower_sym_header()
   /* put out header lines */
   fprintf(lowersym.lowerfile, "TOILM version %d/%d\n", VersionMajor,
           VersionMinor);
-  putvline("Internal", gbl.internal);
+  if (gbl.internal == 1 && gbl.empty_contains)
+    putvline("Internal", 0);
+  else 
+    putvline("Internal", gbl.internal);
   if (gbl.internal > 1) {
     putvline("Outer", lowersym.outersub);
     putvline("First", stb.firstusym);

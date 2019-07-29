@@ -1832,6 +1832,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
   int temp_arr;
   int newargt;
   int srcarray;
+  int rank;
   int retval = 0;
   int ast;
   int nargs;
@@ -2156,7 +2157,35 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       ARGT_ARG(newargt, 3) = dim;
     }
     goto ret_new;
+  case I_NORM2:     /* norm2(array, [dim]) */
+    srcarray = ARGT_ARG(func_args, 0);
+    dim = ARGT_ARG(func_args, 1);
+    rank = get_ast_rank(srcarray);
+    shape = dim ? A_SHAPEG(srcarray) : 0;
 
+    // If dim is supplied for a one dimensional array, result is still a scalar.
+    shape  = (shape && (rank == 1)) ? 0 : shape;
+
+    if (dim == 0) {
+      rtlRtn = RTE_norm2_nodim;
+      nargs = 3;
+    } else {
+      rtlRtn = RTE_norm2;
+      nargs = 4;
+    }
+    newargt = mk_argt(nargs);
+    ARGT_ARG(newargt, 1) = srcarray;
+
+    if (!flg.ieee) { // fast. Currently also mapped to relaxed
+      ARGT_ARG(newargt, 2) = mk_cval(1, DT_INT4);
+    } else  { // Precise
+      ARGT_ARG(newargt, 2) = mk_cval(2, DT_INT4);
+    }
+
+    if (nargs == 4) {
+      ARGT_ARG(newargt, 3) = dim;      
+    }
+    goto ret_new;
   case I_MAXVAL: /* maxval(array, [dim, mask]) */
   case I_MINVAL: /* minval(array, [dim, mask]) */
     mask = ARGT_ARG(func_args, 2);
@@ -2242,11 +2271,12 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     ARGT_ARG(newargt, 1) = srcarray;
     ARGT_ARG(newargt, 2) = ARGT_ARG(func_args, 1);
     goto ret_new;
-
+#if 0
   // AOCC Begin
   case I_NORM2:  /* norm2(array[, dim]) */
     return emit_norm2(func_ast, func_args, lhs);
   // AOCC End
+#endif    
 
   case I_EOSHIFT: /* eoshift(array, shift, [boundary, dim]); */
     if (A_SHAPEG(ARGT_ARG(func_args, 1)))
@@ -3415,6 +3445,12 @@ leave_arg(int ast, int i, int *parg, int lc)
       astdim = ARGT_ARG(args, 1);
       mask = ARGT_ARG(args, 2);
       break;
+    case I_NORM2:
+      if (i != 0)
+        return 0;
+      args = A_ARGSG(ast);
+      astdim = ARGT_ARG(args, 1);
+      break;
     case I_DOT_PRODUCT:
       if (i > 1)
         return 0;
@@ -4546,6 +4582,7 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
   case I_MINVAL:
   case I_PRODUCT:
   case I_SUM:
+  case I_NORM2:
     arg = ARGT_ARG(func_args, 0);
     /* first arg with dimension removed */
     dim = A_OPTYPEG(func_ast) == I_FINDLOC ? ARGT_ARG(func_args, 2)
