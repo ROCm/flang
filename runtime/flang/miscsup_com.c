@@ -4405,8 +4405,11 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
       k = 4;
     else if (p <= 15)
       k = 8;
+// Real kind 16 is not supported currently
+#if 0
     else if (p <= 31)
       k = 16;
+#endif
     else {
       e -= 1;
       prec = -1;
@@ -4422,10 +4425,12 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
       if (k <= 8)
         k = 8;
     }
+#if 0
     else if (r <= 4931) {
       if (k <= 16)
         k = 16;
     }
+#endif
     else {
       e -= 2;
       range = -2;
@@ -4439,8 +4444,10 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
         k = 4;
       else if (k <= 8)
         k = 8;
+#if 0
       else if (k <= 16)
         k = 16;
+#endif
       else if (prec == 0 || range == 0)
 	k = -4;
       else if (prec < 0 && range < 0)
