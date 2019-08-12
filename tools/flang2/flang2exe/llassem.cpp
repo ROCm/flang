@@ -1255,7 +1255,7 @@ write_consts(void)
   FILE *llvmfile;
   FILE *asmfile;
 
-  if (flg.amdgcn_target && gbl.isnvvmcodegen) {
+  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
     //printf("Setting GPU file\n");
     llvmfile = get_llasm_output_file();
     asmfile = ASMFIL;
@@ -1307,7 +1307,7 @@ write_consts(void)
 
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && gbl.isnvvmcodegen) {
+  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
     ASMFIL = asmfile;
     set_llasm_output_file(llvmfile);
   }
@@ -5042,13 +5042,6 @@ get_llvm_name(SPTR sptr)
       sprintf(name, "%s", SYMNAME(sptr));
       p = name;
     }
-#ifdef OMP_OFFLOAD_LLVM
-    if (gbl.isnvvmcodegen && STYPEG(sptr) == ST_PROC &&
-        strncmp(SYMNAME(sptr), "omp_get_", 8) == 0) {
-      sprintf(name, "%s", SYMNAME(sptr));
-      return name;
-    }
-#endif
     else if (gbl.internal && CONTAINEDG(sptr)) {
       p = name;
       if (gbl.outersub) {

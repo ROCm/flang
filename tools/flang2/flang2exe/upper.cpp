@@ -3261,7 +3261,9 @@ read_symbol(void)
       up = llmp_create_uplevel_bykey(parsyms);
       up->parent = parent;
       for (i = 0; i < parsymsct; ++i) {
-        llmp_add_shared_var(up, getnum());
+	/* todo this should be removed as it's wrong.
+	 * Keep it until tested. */
+	llmp_add_shared_var(up, getnum());
       }
     }
 
@@ -3696,11 +3698,15 @@ fix_symbol(void)
         if (midnum) {
           const int newMid = symbolxref[midnum];
           MIDNUMP(sptr, newMid);
+#ifdef REVMIDLNKP
           if (POINTERG(sptr) && newMid) {
             assert(!REVMIDLNKG(newMid), "REVMIDLNK already set", newMid,
                    ERR_Fatal);
             REVMIDLNKP(newMid, sptr);
           }
+#endif
+          if (ALLOCATTRG(sptr))
+            ALLOCATTRP(newMid, 1);
         }
       }
       if (SCG(sptr) == SC_DUMMY) {
@@ -3789,6 +3795,9 @@ fix_symbol(void)
         link = symbolxref[link];
         SYMLKP(sptr, link);
         VARIANTP(link, sptr);
+        if (ALLOCATTRG(sptr) && ADDRESSG(link) == ADDRESSG(sptr) &&
+            DTY(DTYPEG(link)) == TY_PTR)
+          ALLOCATTRP(link, 1);
       }
       dtype = DTYPEG(sptr);
       if (DTY(dtype) == TY_ARRAY) {

@@ -47,7 +47,7 @@
 #include "dbg_out.h"
 #include "xref.h"
 #include "exp_rte.h"
-#ifdef OMP_OFFLOAD_LLVM
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 #include "ompaccel.h"
 #endif
 #include "rmsmove.h"
@@ -197,8 +197,9 @@ process_input(char *argv0, bool *need_cuda_constructor)
   static int accsev = 0;
   bool have_data_constructor = false;
   bool is_constructor = false;
-
-llvm_restart:
+  bool is_omp_recompile = false;
+  omp_recompile:
+  llvm_restart:
   if (gbl.maxsev > accsev)
     accsev = gbl.maxsev;
 
@@ -220,7 +221,8 @@ llvm_restart:
    * uses STATICS/BSS from host routine.
    */
   if (flg.smp && IS_PARFILE) {
-    ll_set_outlined_currsub();
+    ll_set_outlined_currsub(is_omp_recompile);
+    is_omp_recompile = false;
   }
   gbl.func_count++;
 
@@ -257,11 +259,19 @@ llvm_restart:
     gbl.nofperror = true;
     if (gbl.rutype == RU_BDATA) {
     } else {
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+      if (flg.omptarget) {
+        if(IS_OMP_DEVICE_CG)
+          gbl.ompaccel_intarget = ompaccel_tinfo_get_by_device(gbl.currsub) != NULL;
+        else
+          gbl.ompaccel_intarget = ompaccel_tinfo_has(gbl.currsub);
+        ompaccel_initsyms();
+      }
+#endif
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget) {
         init_test();
         ompaccel_initsyms();
-        gbl.inomptarget = ompaccel_tinfo_has(gbl.currsub);
         ompaccel_create_reduction_wrappers();
       }
 #endif
@@ -329,11 +339,13 @@ llvm_restart:
         rm_smove();
         DUMP("rmsmove");
 
-#ifdef OMP_OFFLOAD_LLVM
-        if (DBGBIT(61, 1) && flg.omptarget)
-          dumpomptarget(ompaccel_tinfo_current_get());
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+        if(flg.omptarget && DBGBIT(61, 1))
+          dumpomptargets(); /* print all openmp target regions */
+#endif
+#if defined(OMP_OFFLOAD_LLVM)
         if (flg.omptarget && ompaccel_tinfo_has(gbl.currsub))
-          gbl.isnvvmcodegen = true;
+          gbl.ompaccel_isdevice = true;
 #endif
 
         TR("F90 SCHEDULER begins\n");
@@ -382,6 +394,8 @@ llvm_restart:
     if (ll_reset_parfile())
       return true;
   }
+#ifndef NO_OMP_OFFLOAD
+#endif
   return true;
 }
 
@@ -412,11 +426,13 @@ main(int argc, char *argv[])
   if (XBIT(14, 0x20000) || !XBIT(14, 0x10000)) {
     init_global_ilm_mode();
   }
-
-#ifdef OMP_OFFLOAD_LLVM
+//TODO Need to add NO_OMP_OFFLOAD, otherwise compilation of main_ex fails.
+#ifndef NO_OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   if (flg.omptarget) {
     ompaccel_init();
   }
+#endif
 #endif
 
   if (STB_UPPER()) {
@@ -749,9 +765,11 @@ init(int argc, char *argv[])
     fprintf(stderr, "%s-W-Opt levels greater than 4 are not supported\n",
             version.lang);
   }
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   flg.omptarget = false;
   flg.amdgcn_target = false;
   gbl.ompaccfilename = NULL;
+#endif
 #ifdef OMP_OFFLOAD_LLVM
   if (omptp != NULL) {
     ompaccel_set_targetriple(omptp);
@@ -924,9 +942,9 @@ reinit(void)
   gbl.basevars = NOSYM;
   gbl.outlined = 0;
   gbl.usekmpc = 0;
-#ifdef OMP_OFFLOAD_LLVM
-  gbl.isnvvmcodegen = false;
-  gbl.inomptarget = false;
+#if defined(OMP_OFFLOAD_PGI) || defined(OMP_OFFLOAD_LLVM)
+  gbl.ompaccel_intarget = 0;
+  gbl.ompaccel_isdevice = 0;
 #endif
   gbl.typedescs = NOSYM;
   gbl.vfrets = 0;
@@ -1103,10 +1121,10 @@ ompaccel_create_globalctor()
 static void
 ompaccel_create_reduction_wrappers()
 {
-  if (gbl.inomptarget && gbl.currsub != NULL) {
+  if (gbl.ompaccel_intarget && gbl.currsub != NULL) {
     int nreds = ompaccel_tinfo_current_get()->n_reduction_symbols;
-#ifdef OMP_OFFLOAD_AMD
     // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
     /*
      * Adding suffix to reduction function  names. This is to avoid duplicate
      * function names in the case of multi kernel applications
@@ -1121,7 +1139,7 @@ ompaccel_create_reduction_wrappers()
       OMPACCEL_RED_SYM *redlist =
           ompaccel_tinfo_current_get()->reduction_symbols;
       gbl.outlined = false;
-      gbl.isnvvmcodegen = true;
+      gbl.ompaccel_isdevice = true;
       // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
       SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds, suffix);
@@ -1168,7 +1186,7 @@ ompaccel_create_reduction_wrappers()
       gbl.func_count++;
       gbl.multi_func_count++;
       gbl.outlined = false;
-      gbl.isnvvmcodegen = false;
+      gbl.ompaccel_isdevice = false;
       gbl.currsub = cur_func_sptr;
     }
   }

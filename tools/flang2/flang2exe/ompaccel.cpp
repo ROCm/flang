@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,19 @@
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
+ * Changes made to create single team for omp target parallel block as well
+ * Date of Modification: 26th June 2019
+ *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
  *
  */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes made to create single team for omp target parallel block as well
- * Date of Modification: 26th June 2019
- *
- *
- */
-
 /**
  *  \file
- *  \brief ompaccel.c - OpenMP GPU Offload for NVVM Targets. It uses
- * libomptarget
+ *  \brief ompaccel.c - OpenMP Target Accelerator
  */
-#ifdef OMP_OFFLOAD_LLVM
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 
 #include "kmpcutil.h"
 #include "error.h"
@@ -67,15 +59,16 @@
 #include "llassem.h"
 #include "ll_ftn.h"
 #include "symfun.h"
-#include "../../flang1/flang1exe/global.h"
 
-#define NOT_IMPLEMENTED(_pragma) \
-  error((error_code_t)1200, ERR_Fatal, 0, _pragma, NULL)
-#define NOT_IMPLEMENTED_CANTCOMBINED(_pragma, _pragma2) \
-  error((error_code_t)1201, ERR_Fatal, 0, _pragma, _pragma2)
-#define NOT_IMPLEMENTED_NEEDCOMBINED(_pragma, _pragma2) \
-  error((error_code_t)1202, ERR_Fatal, 0, _pragma, _pragma2)
-
+void
+_ompaccelInternalFail(const char *message, const char *location)
+{
+  error((error_code_t)1204, ERR_Fatal, 0, message, location);
+}
+void
+_ompaccelInternalFailures(const char *location, int numargs, char *format, ...)
+{
+}
 /* Initial Max target region */
 #define INC_EXP 2
 int tinfo_size = 50;
@@ -83,8 +76,10 @@ int tinfo_size_reductions = 10;
 
 int num_tinfos = 0;
 OMPACCEL_TINFO **tinfos;
-OMPACCEL_TINFO *current_tinfo = nullptr;
+OMPACCEL_TINFO *current_tinfo = NULL;
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
+
+static OMPACCEL_TINFO *tinfo_create(SPTR func_sptr, SPTR device_sptr, int max_nargs, ILM_OP opc);
 
 const char *nvvm_target_triple;
 void
@@ -118,7 +113,7 @@ _long_unsigned(int lilix, int *dt, bool *punsigned, DTYPE dtype)
     *dt = 4;
   }
 
-  // todo ompaccel I don't know how to handle others
+  // todo ompaccel: don't know how to handle others
 
   switch (DTY(dtype)) {
   case TY_UINT:
@@ -195,18 +190,14 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
         return ad3ili(IL_LDKR, ili, nme, MSZ_F8);
       else
         return ad3ili(IL_LDSP, ili, nme, MSZ_F8);
-      break;
     case DT_DBLE:
       return ad3ili(IL_LDDP, ili, nme, MSZ_DBLE);
-      break;
     case DT_CMPLX:
       return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
-      break;
     case DT_NONE:
       return ad3ili(IL_LD, ili, nme, MSZ_WORD);
-      break;
     default:
-      return 0;
+      ompaccelInternalFail("unknown type");
       break;
     }
   }
@@ -227,24 +218,18 @@ mk_ompaccel_store(int ili_value, DTYPE dtype, int nme, int ili_address)
     switch (dtype) {
     case DT_LOG:
       return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_WORD);
-      break;
     case DT_INT:
       return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_WORD);
-      break;
     case DT_REAL:
       return ad4ili(IL_STSP, ili_value, ili_address, nme, MSZ_F4);
-      break;
     case DT_DBLE:
       return ad4ili(IL_STDP, ili_value, ili_address, nme, MSZ_DBLE);
-      break;
     case DT_INT8:
       return ad4ili(IL_STKR, ili_value, ili_address, nme, MSZ_I8);
-      break;
     case DT_NONE:
       return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_WORD);
-      break;
     default:
-      return 0;
+      ompaccelInternalFail("unknown type");
       break;
     }
   }
@@ -326,7 +311,8 @@ mk_ompaccel_shift(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
     else if (dt == 2)
       opc = IL_KURSHIFT;
   }
-  assert(opc != IL_NONE, "Correct IL is not found.", 0, ERR_Fatal);
+  if (opc == IL_NONE)
+    ompaccelInternalFail("Correct ILI is not found.");
   return ad2ili(opc, ili1, ili2);
 }
 
@@ -355,7 +341,8 @@ mk_ompaccel_compare(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2, int CC)
     else if (dt == 2)
       opc = IL_UKCMP;
   }
-  assert(opc != IL_NONE, "Correct IL is not found.", 0, ERR_Fatal);
+  if (opc == IL_NONE)
+    ompaccelInternalFail("Correct ILI is not found.");
   return ad3ili(opc, ili1, ili2, CC);
 }
 
@@ -395,7 +382,8 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_UKADD;
     }
   }
-  assert(opc != IL_NONE, "Correct IL is not found.", 0, ERR_Fatal);
+  if (opc == IL_NONE)
+    ompaccelInternalFail("Correct ILI is not found.");
   return ad2ili(opc, ili1, ili2);
 } /* mk_ompaccel_add */
 
@@ -481,7 +469,8 @@ mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_UKMUL;
     }
   }
-  assert(opc != IL_NONE, "Correct IL is not found.", 0, ERR_Fatal);
+  if (opc == IL_NONE)
+    ompaccelInternalFail("Correct ILI is not found.");
   return ad2ili(opc, ili1, ili2);
 } /* mk_ompaccel_mul */
 
@@ -524,7 +513,7 @@ mk_ompaccel_function_end(SPTR func_sptr)
   RFCNTP(endlab, 1);
   CCSYMP(endlab, 1);
   ILIBLKP(endlab, bihx);
-  BIH_LABEL(bihx) = SPTR(endlab);
+  BIH_LABEL(bihx) = (SPTR)endlab;
 }
 
 static SPTR
@@ -533,6 +522,7 @@ mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
 {
   /* Create a function symbol along with parameters */
   int dpdscp, bihx;
+  int i;
   SPTR func_sptr, sym;
   func_sptr = getsymbol(name);
   TASKFNP(func_sptr, FALSE);
@@ -555,7 +545,7 @@ mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
   NEED(aux.dpdsc_avl, aux.dpdsc_base, int, aux.dpdsc_size,
        aux.dpdsc_size + n_params + 100);
 
-  for (int i = 0; i < n_params; ++i) {
+  for (i = 0; i < n_params; ++i) {
     sym = param_sptrs[i];
     aux.dpdsc_base[dpdscp++] = sym;
   }
@@ -600,7 +590,9 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
 #endif
     // AOCC End
   default:
-    static_assert(true, "Rest of reduction operators are not implemented yet.");
+    ompaccelInternalFail(
+        "Rest of reduction operators are not implemented yet.");
+#if 0
     // AOCC Begin
     /*
      * Above static assert will never fail. So added explicit error message.
@@ -608,6 +600,7 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
     fprintf(stderr, "ERROR : This reduction type is not supported yet %d \n", redop);
     exit(1);
     // AOCC End
+#endif
     break;
   }
   return 0;
@@ -636,7 +629,7 @@ open_OMP_OFFLOAD_LLVM_file()
 {
   FILE *F;
   F = fopen(gbl.ompaccfilename, "w");
-  if (F == nullptr) {
+  if (F == NULL) {
 #if DEBUG
     fprintf(stderr, "Trying to open temp file %s\n", gbl.ompaccfilename);
 #endif
@@ -667,8 +660,10 @@ create_sregs(const char *name)
 void
 ompaccel_init()
 {
+#ifdef OMP_OFFLOAD_LLVM
   /* Create file to write device code */
   open_OMP_OFFLOAD_LLVM_file();
+#endif
   /* Create target pool */
   tinfos = (OMPACCEL_TINFO **)sccrelal(
       (char *)tinfos, ((BIGUINT64)((tinfo_size) * sizeof(OMPACCEL_TINFO *))));
@@ -677,6 +672,7 @@ ompaccel_init()
 void
 ompaccel_initsyms()
 {
+#if   OMP_OFFLOAD_LLVM
   /* Create thread id sreg symbols */
   init_nvvm_syms = create_sregs(NVVM_SREG[threadIdX]);
   create_sregs(NVVM_SREG[threadIdY]);
@@ -699,15 +695,16 @@ ompaccel_initsyms()
   /* Create llvm intrinsics symbols */
   init_nvvm_intrinsics = create_nvvm_sym(NVVM_INTRINSICS[barrier0], DT_NONE);
   create_nvvm_sym(NVVM_INTRINSICS[barrier], DT_NONE);
+#endif
 }
 
 int
 ompaccel_nvvm_get(nvvm_sregs sreg)
 {
-  SPTR sptr = SPTR(init_nvvm_syms + sreg);
-  ll_make_ftn_outlined_params(sptr, 0, nullptr);
+  SPTR sptr = (SPTR)(init_nvvm_syms + sreg);
+  ll_make_ftn_outlined_params(sptr, 0, NULL);
   ll_process_routine_parameters(sptr);
-  return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, nullptr);
+  return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, NULL);
 }
 
 int
@@ -718,9 +715,9 @@ ompaccel_nvvm_mk_barrier(nvvm_barriers btype)
     sptr = (SPTR)(init_nvvm_intrinsics + barrier0);
     ll_make_ftn_outlined_params(sptr, 0, 0);
     ll_process_routine_parameters(sptr);
-    return ll_ad_outlined_func2(IL_NONE, IL_JSR, sptr, 0, nullptr);
+    return ll_ad_outlined_func2(IL_NONE, IL_JSR, sptr, 0, NULL);
   }
-  static_assert(true, "Other nvvm intrinsics are not implemented yet.");
+  ompaccelInternalFail("Other nvvm intrinsics are not implemented yet.");
 }
 
 int
@@ -744,7 +741,91 @@ ompaccel_nvvm_get_gbl_tid()
 void
 ompaccel_tinfo_current_set_mode(OMP_TARGET_MODE type)
 {
+  if (current_tinfo == NULL)
+    ompaccelInternalFail("Current target info is empty");
   current_tinfo->mode = type;
+}
+
+static OMPACCEL_TINFO *
+_ompaccel_tinfo_get_byside(int func_sptr)
+{
+  int i;
+  for (i = 0; i < num_tinfos; ++i) {
+    if (tinfos[i]->device_sptr == func_sptr) {
+      return tinfos[i];
+    }
+  }
+  return NULL;
+}
+
+OMPACCEL_TINFO *
+ompaccel_tinfo_get_by_device(int device_func_sptr)
+{
+  return _ompaccel_tinfo_get_byside(device_func_sptr);
+}
+
+SPTR
+ompaccel_tinfo_get_nested_side(int func_sptr)
+{
+  OMPACCEL_TINFO *ctinfo = _ompaccel_tinfo_get_byside(func_sptr);
+  if (ctinfo == NULL)
+    ompaccelInternalFail("The tinfo is empty");
+  if (ctinfo->child_tinfos == NULL)
+    //    ompaccelInternalFail("The nested tinfo is empty");
+    return SPTR_NULL;
+  return ctinfo->child_tinfos[0]->device_sptr;
+}
+
+void
+ompaccel_tinfo_register_func(SPTR sptr, SPTR device_sptr, SPTR stblk_sptr,
+                             int iskernel, ILM_OP opc)
+{
+  int i, max_nargs, n_args;
+  OMPACCEL_TINFO *current_tinfo = NULL;
+  const LLUplevel *uplevel;
+  SPTR arg_sptr;
+
+  uplevel = llmp_has_uplevel(stblk_sptr);
+  max_nargs = uplevel != NULL ? uplevel->vals_count : 0;
+
+  // check whether is it registered before
+  if(gbl.ompaccel_isdevice) {
+    /* if it's parallel region or outlining elimination is active for teams
+      * we return child tinfo of the current tinfo.
+      * we assume that child tinfo is already added at outlining function for host */
+    if(!(outlined_is_eliminated(IM_BTEAMS) &&
+      (opc == IM_BPAR || opc == IM_BPARD || opc == IM_BPARN || opc == IM_BPARA))) {
+      current_tinfo = ompaccel_tinfo_get_by_device(GBL_CURRFUNC);
+      if (current_tinfo != NULL) {
+        current_tinfo = current_tinfo->child_tinfos[0];
+        current_tinfo->device_sptr = device_sptr;
+      }
+    }
+  } else if(ompaccel_tinfo_has(GBL_CURRFUNC) && ompaccel_tinfo_get(GBL_CURRFUNC)->n_child){
+    current_tinfo = ompaccel_tinfo_get(GBL_CURRFUNC)->child_tinfos[0];
+    if(current_tinfo != NULL)
+      current_tinfo->func_sptr = sptr;
+  }
+  // if it's not registered, create a new one.
+  if(current_tinfo == NULL)
+    current_tinfo = tinfo_create(sptr, device_sptr, max_nargs, opc);
+
+  for (i = 0; i < max_nargs; ++i) {
+    arg_sptr = (SPTR)uplevel->vals[i];
+    if (!arg_sptr && !ompaccel_tinfo_current_is_registered(arg_sptr))
+      continue;
+    if (SCG(arg_sptr) == SC_PRIVATE)
+      continue;
+#ifdef OMP_OFFLOAD_LLVM
+    if (DESCARRAYG(arg_sptr))
+      continue;
+#endif
+    if (!iskernel && !OMPACCDEVSYMG(arg_sptr))
+      arg_sptr = ompaccel_tinfo_parent_get_devsptr(arg_sptr);
+    ompaccel_tinfo_current_add_sym(arg_sptr, SPTR_NULL, 0);
+
+    n_args++;
+  }
 }
 
 void
@@ -756,29 +837,62 @@ ompaccel_tinfo_set_mode_next_target(OMP_TARGET_MODE type)
 OMP_TARGET_MODE
 ompaccel_tinfo_current_target_mode()
 {
+  if (current_tinfo == NULL)
+    ompaccelInternalFail("Current target info is empty");
   return current_tinfo->mode;
 }
 
-OMPACCEL_TINFO *
-ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
+static void
+tinfo_add_parent(OMPACCEL_TINFO *info) {
+  OMPACCEL_TINFO *pinfo;
+  /* if host func sptr, we should search parent by device */
+  if (info->func_sptr == SPTR_NULL) {
+    //code falls int ohere if teams outlining elimination.
+    pinfo = ompaccel_tinfo_get_by_device(gbl.currsub);
+    pinfo = pinfo->child_tinfos[0];
+  } else
+    pinfo = ompaccel_tinfo_get(gbl.currsub);
+  if(pinfo == NULL)
+    ompaccelInternalFail("Parent tinfo is not found. ");
+  int sz = pinfo->sz_child == 0 ? 10 : pinfo->sz_child * INC_EXP;
+  NEED(pinfo->n_child + 1, pinfo->child_tinfos, OMPACCEL_TINFO*, pinfo->sz_child, sz);
+  info->parent_tinfo = pinfo;
+  pinfo->child_tinfos[pinfo->n_child] = info;
+  pinfo->n_child++;
+}
+
+static OMPACCEL_TINFO *
+tinfo_create(SPTR func_sptr, SPTR device_sptr, int max_nargs, ILM_OP opc)
 {
   OMPACCEL_TINFO *info;
-  if (DBGBIT(61, 0x10) && gbl.dbgfil != nullptr)
+  if (DBGBIT(61, 0x10) && gbl.dbgfil != NULL)
     fprintf(gbl.dbgfil, "#target add request for sptr:%d [%s]\n", func_sptr,
             SYMNAME(func_sptr));
 
   NEW(info, OMPACCEL_TINFO, 1);
   info->func_sptr = func_sptr;
+  info->device_sptr = device_sptr;
   info->n_symbols = 0;
   if (max_nargs != 0) {
     NEW(info->symbols, OMPACCEL_SYM, max_nargs);
     NEW(info->quiet_symbols, OMPACCEL_SYM, max_nargs);
   } else {
-    info->symbols = nullptr;
-    info->quiet_symbols = nullptr;
+    info->symbols = NULL;
+    info->quiet_symbols = NULL;
   }
   info->sz_symbols = info->sz_quiet_symbols = max_nargs;
+#ifdef OMP_OFFLOAD_LLVM
   info->mode = NextTargetMode;
+#endif
+  if (opc != N_ILM) {
+    if (opc == IM_BTARGET)
+      info->mode = NextTargetMode;
+    else if (opc == IM_BTEAMS || opc == IM_BTEAMSN)
+      info->mode = mode_outlinedfunc_teams;
+    else if (opc == IM_BPAR || opc == IM_BPARA || opc == IM_BPARD ||
+             opc == IM_BPARN)
+      info->mode = mode_outlinedfunc_parallel;
+  }
   NextTargetMode = mode_none_target;
   info->nowait = false;
   info->n_quiet_symbols = 0;
@@ -791,18 +905,53 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   tinfos[num_tinfos++] = info;
 
   /* linking */
-  if (current_tinfo != nullptr)
-    info->parent_tinfo = current_tinfo;
-  else
-    info->parent_tinfo = nullptr;
+  info->parent_tinfo = NULL;
+  info->child_tinfos = NULL;
+  info->sz_child = 0;
+  switch(opc) {
+    case N_ILM:
+    case IM_BTARGET:
+    case IM_BTARGETDATA:
+    case IM_TARGETENTERDATA:
+    case IM_TARGETEXITDATA:
+    case IM_TARGETUPDATE:
+      //todo implement their parent info, for now we don't need.
+      break;
+  case IM_BTEAMS:
+  case IM_BTEAMSN:
+    /* teams must be tightly nested to target */
+    tinfo_add_parent(info);
+    break;
+  case IM_BPAR:
+  case IM_BPARA:
+  case IM_BPARN:
+  case IM_BPARD:
+    /* If it's in target region, add parent */
+    if(gbl.ompaccel_intarget)
+      tinfo_add_parent(info);
+    break;
+  default:
+    ompaccelInternalFail("Can't create tinfo for this directive.");
+    break;
+  }
+
+  info->isProcessed = false;
+  info->n_child = 0;
   current_tinfo = info;
   return info;
+}
+
+OMPACCEL_TINFO *
+ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
+{
+  return tinfo_create(func_sptr, SPTR_NULL, max_nargs, N_ILM);
 }
 
 bool
 ompaccel_tinfo_has(int func_sptr)
 {
-  for (int i = 0; i < num_tinfos; ++i) {
+  int i;
+  for (i = 0; i < num_tinfos; ++i) {
     if (tinfos[i]->func_sptr == func_sptr) {
       return true;
     }
@@ -819,7 +968,7 @@ ompaccel_tinfo_get(int func_sptr)
       return tinfos[i];
     }
   }
-  return nullptr;
+  return NULL;
 }
 
 SPTR
@@ -858,11 +1007,12 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
 #endif
   // assume it's base of allocatable descriptor
   if (strncmp(SYMNAME(sptr), ".Z", 2) == 0) {
-    for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j)
+    int j;
+    for (j = 0; j < current_tinfo->n_quiet_symbols; ++j)
       if (MIDNUMG(current_tinfo->quiet_symbols[j].host_sym) == sptr)
         sptr_alloc = current_tinfo->quiet_symbols[j].host_sym;
     byval = false;
-    DTYPEP(sym, DTYPE(DTYPEG(sptr_alloc) + 1));
+    DTYPEP(sym, (DTYPE)(DTYPEG(sptr_alloc) + 1));
     sptr_alloc = ((SPTR)0);
 
   } else {
@@ -912,7 +1062,7 @@ INLINE static SPTR
 get_devsptr(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
 {
   int i;
-  if (tinfo == nullptr)
+  if (tinfo == NULL)
     return host_symbol;
 
   for (i = 0; i < tinfo->n_symbols; ++i) {
@@ -957,16 +1107,29 @@ get_devsptr2(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
 OMPACCEL_TINFO *
 ompaccel_tinfo_current_get_targetdata()
 {
-  OMPACCEL_TINFO *tinfo = current_tinfo;
-  while (tinfo != nullptr) {
-    if (tinfo->mode == mode_target_data_region)
-      return tinfo;
-    if (tinfo->parent_tinfo == nullptr)
+  int i, current_tinfo_idx = -1;
+  OMPACCEL_TINFO *tinfo = NULL;
+  for (i = 0; i < num_tinfos; ++i)
+    if (tinfos[i]->func_sptr == current_tinfo->func_sptr) {
+      current_tinfo_idx = i;
       break;
-    tinfo = tinfo->parent_tinfo;
+    }
+  if (current_tinfo_idx == -1)
+    ompaccelInternalFail("Current tinfo is not found. ");
+
+  for (i = 0; i <= current_tinfo_idx; ++i) {
+    if (tinfos[i]->mode == mode_target_data_region)
+      /* If the target info is processed, we should look more deeper.
+       * There may be nested target data. */
+      if (!tinfos[i]->isProcessed) {
+        tinfos[i]->isProcessed = true;
+        tinfo = tinfos[i];
+        break;
+      }
   }
-  ompaccel_msg_interr("XXX", "Beginning of 'target data' is not found. ");
-  return nullptr;
+  if (tinfo == NULL)
+    ompaccelInternalFail("Beginning of 'target data' is not found. ");
+  return tinfo;
 }
 
 OMPACCEL_TINFO *
@@ -980,7 +1143,7 @@ ompaccel_tinfo_current_get_dev_dtype(DTYPE org_dtype)
 {
   int i;
   DTYPE dev_dtype = org_dtype;
-  if (current_tinfo != nullptr) {
+  if (current_tinfo != NULL) {
     for (i = 0; i < current_tinfo->n_quiet_symbols; ++i) {
       if (DTYPEG(current_tinfo->quiet_symbols[i].host_sym) == org_dtype) {
         dev_dtype = DTYPEG(current_tinfo->quiet_symbols[i].device_sym);
@@ -995,7 +1158,7 @@ ompaccel_tinfo_current_get_dev_dtype(DTYPE org_dtype)
       }
     }
   }
-  if (DBGBIT(61, 2) && gbl.dbgfil != nullptr) {
+  if (DBGBIT(61, 2) && gbl.dbgfil != NULL) {
     if (org_dtype != dev_dtype) {
       fprintf(gbl.dbgfil, "[ompaccel] REPLACED org_dtype:%d --> dev_dtype:%d",
               org_dtype, dev_dtype);
@@ -1008,7 +1171,7 @@ SPTR
 ompaccel_tinfo_parent_get_devsptr(SPTR host_symbol)
 {
   int i;
-  if (current_tinfo->parent_tinfo == nullptr)
+  if (current_tinfo->parent_tinfo == NULL)
     return host_symbol;
   for (i = 0; i < current_tinfo->parent_tinfo->n_quiet_symbols; ++i) {
     if (current_tinfo->parent_tinfo->quiet_symbols[i].host_sym == host_symbol) {
@@ -1022,7 +1185,7 @@ bool
 ompaccel_tinfo_current_is_registered(SPTR host_symbol)
 {
   int i;
-  if (current_tinfo == nullptr || !host_symbol)
+  if (current_tinfo == NULL || !host_symbol)
     return false;
 
   for (i = 0; i < current_tinfo->n_symbols; ++i) {
@@ -1037,16 +1200,15 @@ SPTR
 ompaccel_tinfo_current_get_devsptr(SPTR host_symbol)
 {
   SPTR device_symbol;
-  if (current_tinfo == nullptr || !host_symbol)
+  if (current_tinfo == NULL || !host_symbol)
     return host_symbol;
 
   device_symbol = get_devsptr(current_tinfo, host_symbol);
 
-  if (device_symbol == host_symbol && current_tinfo->parent_tinfo != nullptr)
+  if (device_symbol == host_symbol && current_tinfo->parent_tinfo != NULL)
     device_symbol = get_devsptr2(current_tinfo->parent_tinfo, host_symbol);
 
-  if ((DBGBIT(61, 2)) && gbl.dbgfil != nullptr &&
-      device_symbol != host_symbol) {
+  if ((DBGBIT(61, 2)) && gbl.dbgfil != NULL && device_symbol != host_symbol) {
     fprintf(gbl.dbgfil,
             "[ompaccel] REPLACED host_symbol:%d[%s] --> device_symbol:%d[%s]",
             host_symbol, SYMNAME(host_symbol), device_symbol,
@@ -1081,8 +1243,8 @@ void
 ompaccel_tinfo_current_add_reductionitem(SPTR private_sym, SPTR shared_sym,
                                          int redop)
 {
-  if (current_tinfo == nullptr)
-    ompaccel_msg_interr("XXX", "Current target info is not found.\n");
+  if (current_tinfo == NULL)
+    ompaccelInternalFail("Current target info is not found.\n");
 
   current_tinfo->reduction_symbols[current_tinfo->n_reduction_symbols]
       .private_sym = private_sym;
@@ -1115,8 +1277,8 @@ void
 ompaccel_tinfo_current_addupdate_mapitem(SPTR host_symbol, int map_type)
 {
   SPTR midsptr;
-  if (current_tinfo == nullptr)
-    ompaccel_msg_interr("XXX", "Current target info is not found\n");
+  if (current_tinfo == NULL)
+    ompaccelInternalFail("The tinfo is not found");
 
   // check whether it is allocatable or not
   if (SCG(host_symbol) == SC_BASED) {
@@ -1182,7 +1344,7 @@ INLINE static void
 dumptargetsym(OMPACCEL_SYM targetsym)
 {
   const char *dev_sptr_name, *org_sptr_name;
-  if (gbl.dbgfil == nullptr)
+  if (gbl.dbgfil == NULL)
     return;
 
   dev_sptr_name =
@@ -1224,7 +1386,7 @@ dumptargetsym(OMPACCEL_SYM targetsym)
 INLINE static void
 dumptargetreduction(OMPACCEL_RED_SYM targetred)
 {
-  if (gbl.dbgfil == nullptr)
+  if (gbl.dbgfil == NULL)
     return;
   switch (targetred.redop) {
   case 1:
@@ -1263,17 +1425,15 @@ dumptargetreduction(OMPACCEL_RED_SYM targetred)
           targetred.private_sym, SYMNAME(targetred.private_sym));
 }
 
-void
-dumpomptarget(OMPACCEL_TINFO *tinfo)
+static void
+dumptargetmode(OMPACCEL_TINFO *tinfo)
 {
-  if (tinfo == nullptr)
+  if (tinfo == NULL)
     return;
-  if (gbl.dbgfil == nullptr)
+  if (gbl.dbgfil == NULL)
     return;
-
   switch (tinfo->mode) {
   case mode_none_target:
-
     fprintf(gbl.dbgfil, " <mode none>");
     break;
   case mode_target:
@@ -1306,33 +1466,68 @@ dumpomptarget(OMPACCEL_TINFO *tinfo)
   case mode_target_data_exit_region:
     fprintf(gbl.dbgfil, " <target data exit>");
     break;
+  case mode_outlinedfunc_teams:
+    fprintf(gbl.dbgfil, " <outlined teams>");
+    break;
+  case mode_outlinedfunc_parallel:
+    fprintf(gbl.dbgfil, " <outlined parallel>");
+    break;
   }
+}
+
+void
+dumpomptarget(OMPACCEL_TINFO *tinfo)
+{
+  int j;
+  if (tinfo == NULL)
+    return;
+  if (gbl.dbgfil == NULL)
+    return;
+
+  dumptargetmode(tinfo);
   fprintf(gbl.dbgfil, " \n");
-  //}
 
   if ((tinfo->mode != mode_target_data_region) &&
       (tinfo->mode != mode_target_data_enter_region) &&
       (tinfo->mode != mode_target_data_exit_region)) {
+    int functype = -1;
+#if   defined(OMP_OFFLOAD_LLVM)
     if (OMPACCFUNCKERNELG(tinfo->func_sptr))
-      fprintf(gbl.dbgfil, " (__global__) ");
+      functype = 1;
     else if (OMPACCFUNCDEVG(tinfo->func_sptr))
+      functype = 0;
+#endif
+    if (functype == 1)
+      fprintf(gbl.dbgfil, " (__global__) ");
+    else if (functype == 0)
       fprintf(gbl.dbgfil, " (__device__) ");
     else
-      fprintf(gbl.dbgfil, " ??? ");
-    fprintf(gbl.dbgfil, "%s\t sptr: %d \n", SYMNAME(tinfo->func_sptr),
+      fprintf(gbl.dbgfil, " (attribute not found) ");
+    fprintf(gbl.dbgfil, "[Host func] %s sptr: %d ", SYMNAME(tinfo->func_sptr),
             tinfo->func_sptr);
+    if (tinfo->device_sptr != NOSYM)
+      fprintf(gbl.dbgfil, "\t[Device func] %s sptr: %d",
+              SYMNAME(tinfo->device_sptr), tinfo->device_sptr);
+    fprintf(gbl.dbgfil, "\n");
+    if (tinfo->parent_tinfo != NULL)
+      fprintf(gbl.dbgfil, "\t  [Parent] %s sptr: %d ",
+              SYMNAME(tinfo->parent_tinfo->func_sptr),
+              tinfo->parent_tinfo->func_sptr);
+    fprintf(gbl.dbgfil, "\n");
+  } else {
+    fprintf(gbl.dbgfil, "Processed: %s\n", tinfo->isProcessed ? "YES" : "NO");
   }
 
   fprintf(gbl.dbgfil, " ** Active Symbols ** \n");
-  for (int j = 0; j < tinfo->n_symbols; ++j) {
+  for (j = 0; j < tinfo->n_symbols; ++j) {
     dumptargetsym(tinfo->symbols[j]);
   }
   fprintf(gbl.dbgfil, " ** Passive Symbols ** \n");
-  for (int j = 0; j < tinfo->n_quiet_symbols; ++j) {
+  for (j = 0; j < tinfo->n_quiet_symbols; ++j) {
     dumptargetsym(tinfo->quiet_symbols[j]);
   }
   fprintf(gbl.dbgfil, " ** Reductions ** \n");
-  for (int j = 0; j < tinfo->n_reduction_symbols; ++j) {
+  for (j = 0; j < tinfo->n_reduction_symbols; ++j) {
     dumptargetreduction(tinfo->reduction_symbols[j]);
   }
   fprintf(gbl.dbgfil, "\n");
@@ -1349,7 +1544,50 @@ dumpomptargets()
     dumpomptarget(tinfos[i]);
   }
 }
+static void
+dumpfuncinfo(OMPACCEL_TINFO *tinfo)
+{
+  if (gbl.dbgfil == NULL)
+    return;
+  fprintf(gbl.dbgfil, "[Outlined] %s sptr: %d \t[Target] %s sptr: %d \n",
+          SYMNAME(tinfo->func_sptr), tinfo->func_sptr,
+          SYMNAME(tinfo->device_sptr), tinfo->device_sptr);
+}
 
+static void
+dumptinfochild(OMPACCEL_TINFO *tp, int cn)
+{
+  int i;
+  if (cn != 0) {
+    int k;
+    fprintf(gbl.dbgfil, "|");
+    for (k = 0; k < cn; ++k)
+      fprintf(gbl.dbgfil, "   ");
+  }
+  fprintf(gbl.dbgfil, "+-- ");
+  dumptargetmode(tp);
+  dumpfuncinfo(tp);
+  ++cn;
+  for (i = 0; i < tp->n_child; ++i) {
+    dumptinfochild(tp->child_tinfos[i], cn);
+  }
+}
+
+void
+dumpomptargetstree()
+{
+  int i, j;
+  if (gbl.dbgfil == NULL)
+    return;
+  fprintf(gbl.dbgfil,
+          "------------OpenMP Target Region Tree ---------------\n");
+  for (i = 0; i < num_tinfos; ++i) {
+    if (tinfos[i]->parent_tinfo != NULL)
+      continue;
+    dumptinfochild(tinfos[i], 0);
+    fprintf(gbl.dbgfil, "\n");
+  }
+}
 void
 dumpomptargetsymbols()
 {
@@ -1371,21 +1609,10 @@ dumpomptargetsymbols()
 void
 dumptargetsymbols(OMPACCEL_SYM *targetsyms, int n)
 {
-  for (int i = 0; i < n; ++i) {
+  int i;
+  for (i = 0; i < n; ++i) {
     dumptargetsym(targetsyms[i]);
   }
-}
-
-void
-ompaccel_msg_interr(char *id, const char *message)
-{
-  interr(message, MSGOMPACCEL, ERR_Fatal);
-}
-
-void
-ompaccel_msg_info(char *id, const char *message)
-{
-  ccff_info(MSGOMPACCEL, id, gbl.findex, gbl.lineno, message, NULL);
 }
 
 bool
@@ -1431,6 +1658,7 @@ ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
 // AOCC End
 {
   int ili, bili, rili;
+  int i;
   SPTR sptrFn, sptrRhs, sptrReduceData, func_params[2];
   DTYPE dtypeReductionItem, dtypeReduceData;
   int nmeReduceData, nmeRhs;
@@ -1465,7 +1693,7 @@ ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
   sptrFn = mk_ompaccel_function(name, 2, func_params, true);
   cr_block();
 
-  for (int i = 0; i < NumReductions; ++i) {
+  for (i = 0; i < NumReductions; ++i) {
     dtypeReductionItem = DTYPEG(ReductionItems[i].shared_sym);
 
     bili = mk_ompaccel_ldsptr(sptrReduceData);
@@ -1519,6 +1747,7 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
 // AOCC End
 {
   int ili, rili, bili;
+  int i;
   SPTR sptrFn, sptrRhs, sptrReduceData, sptrShuffleReturn, sptrLaneOffset,
       func_params[4];
   DTYPE dtypeReductionItem, dtypeReduceData, dtypeRHS;
@@ -1564,7 +1793,7 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
   dtypeRHS = mk_ompaccel_array_dtype(dtypeReduceData, NumReductions);
   sptrRhs = mk_ompaccel_addsymbol(".rhs", dtypeRHS, SC_LOCAL, ST_ARRAY);
 
-  for (int i = 0; i < NumReductions; ++i) {
+  for (i = 0; i < NumReductions; ++i) {
 
     dtypeReductionItem = DTYPEG(ReductionItems[i].shared_sym);
     sptrShuffleReturn =
@@ -1644,6 +1873,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
 // AOCC End
 {
   int ili, rili;
+  int i;
   SPTR sptrFn, sptrReduceData, sptrWarpNum, sptrShmem, sptrWarpId,
       sptrMasterWarp, sptrRedItem, sptrRedItemAddress, func_params[2];
   SPTR lFirstLane, lBarrier, lFirstWarp, lFinalBarrier;
@@ -1702,7 +1932,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   sptrRedItemAddress =
       mk_ompaccel_addsymbol(".reductionitemaddr", DT_ADDR, SC_LOCAL, ST_VAR);
 
-  for (int i = 0; i < NumReductions; ++i) {
+  for (i = 0; i < NumReductions; ++i) {
     cr_block();
     dtypeReductionItem = DTYPEG(ReductionItems[i].shared_sym);
     rili = mk_ompaccel_ldsptr(sptrReduceData);
@@ -1941,8 +2171,8 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   loop_args_t loop_args;
 #if LLVM_YKT
   /* frontend generates two MPLOOP ILM, one for distribute, other for parallel
-   * If it is combined construct like ttdpf, I don't need to do something
-   * special for distribute I need to pass different scheduling type to device
+   * If it is combined construct like ttdpf, we don't need to do something
+   * special for distribute; we need to pass different scheduling type to device
    * runtime.
    */
   if (mp_sched_to_kmpc_sched(ILM_OPND(ilmp, 7)) == KMP_DISTRIBUTE_STATIC) {
@@ -2012,7 +2242,8 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
 
 void
 exp_ompaccel_btarget(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
-                     int(incrOutlinedCnt()))
+                     int(incrOutlinedCnt()), SPTR *targetfunc_sptr,
+                     int *isTargetDevice)
 {
   int ili, outlinedCnt;
   SPTR sptr;
@@ -2034,7 +2265,7 @@ exp_ompaccel_btarget(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
   if (outlinedCnt == 1) {
     /* inomptarget used to figure out whether other directives, statements are
      * in target region or not */
-    gbl.inomptarget = true;
+    gbl.ompaccel_intarget = true;
     /* Outline function, create sptr as ptx kernel, duplicate all the sptrs*/
     sptr = ll_make_outlined_ompaccel_func(uplevel_sptr, scopeSptr, TRUE);
     /* set global outlined function with the latest */
@@ -2046,6 +2277,9 @@ exp_ompaccel_btarget(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
   }
   ccff_info(MSGOPENMP, "OMP020", gbl.findex, gbl.lineno,
             "Target region activated for offload", NULL);
+  *targetfunc_sptr = sptr;
+  *isTargetDevice = ILI_OF(ILM_OPND(ilmp, 1));
+  return;
 }
 
 static void
@@ -2061,23 +2295,28 @@ exp_ompaccel_ereduction(ILM *ilmp, int curilm)
 }
 
 void
-exp_ompaccel_etarget(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
-                     int(decrOutlinedCnt()))
+exp_ompaccel_etarget_combined(ILM *ilmp, int curilm, SPTR targetfunc_sptr,
+                              int outlinedCnt, SPTR uplevel_sptr,
+                              int(decrOutlinedCnt()), int num_teams,
+                              int thread_limit, int num_threads, int device_id)
 {
   int ili;
-  if (outlinedCnt == 1) {
-    ilm_outlined_pad_ilm(curilm);
-  }
-  outlinedCnt = decrOutlinedCnt();
-  if (outlinedCnt >= 1) {
-    ll_rewrite_ilms(-1, curilm, 0);
-    return;
-  }
-  if (gbl.outlined)
-    expb.sc = SC_AUTO;
+  const OMP_TARGET_MODE mode = ompaccel_tinfo_current_target_mode();
+  ili = ll_make_tgt_target_teams_parallel(targetfunc_sptr, device_id,
+                                          uplevel_sptr, num_teams, thread_limit,
+                                          num_threads, mode);
+  iltb.callfg = 1;
+  chk_block(ili);
+  gbl.ompaccel_intarget = false;
+}
 
+void
+exp_ompaccel_etarget(ILM *ilmp, int curilm, SPTR targetfunc_sptr,
+                     int outlinedCnt, SPTR uplevel_sptr, int(decrOutlinedCnt()))
+{
+  int ili;
   if (ompaccel_tinfo_current_target_mode() == mode_target) {
-    ili = ll_make_tgt_target(gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID,
+    ili = ll_make_tgt_target(targetfunc_sptr, OMPACCEL_DEFAULT_DEVICEID,
                              uplevel_sptr);
   } else if (ompaccel_tinfo_current_target_mode() == mode_target_parallel_for ||
 // AOCC Begin
@@ -2088,26 +2327,24 @@ exp_ompaccel_etarget(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
              ompaccel_tinfo_current_target_mode() ==
                  mode_target_parallel_for_simd) {
     // Create kernel with single team.
-    ili = ll_make_tgt_target_teams(
-        gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID, uplevel_sptr, 1, 0);
+    ili = ll_make_tgt_target_teams(targetfunc_sptr, OMPACCEL_DEFAULT_DEVICEID,
+                                   uplevel_sptr, 1, 0);
   } else {
-    ili = ll_make_tgt_target_teams(
-        gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID, uplevel_sptr, 0, 0);
+    ili = ll_make_tgt_target_teams(targetfunc_sptr, OMPACCEL_DEFAULT_DEVICEID,
+                                   uplevel_sptr, 0, 0);
   }
 
   iltb.callfg = 1;
   chk_block(ili);
 
-  gbl.inomptarget = false;
-
-  ccff_info(MSGOPENMP, "OMP021", gbl.findex, gbl.lineno,
-            "Target region terminated", NULL);
+  gbl.ompaccel_intarget = false;
 }
 
 void
 exp_ompaccel_reduction(ILM *ilmp, int curilm)
 {
   int ili, bili, nmeReduceData, sizeRed = 0;
+  int i;
   SPTR lAssignReduction, sptrReduceData, sptrReductionItem;
   DTYPE dtypeReduceData, dtypeReductionItem;
   dtypeReduceData = mk_ompaccel_array_dtype(
@@ -2117,7 +2354,7 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
       mk_ompaccel_addsymbol(".reduceData", dtypeReduceData, SC_LOCAL, ST_ARRAY);
 
   cr_block();
-  for (int i = 0; i < ompaccel_tinfo_current_get()->n_reduction_symbols; ++i) {
+  for (i = 0; i < ompaccel_tinfo_current_get()->n_reduction_symbols; ++i) {
     sptrReductionItem =
         ompaccel_tinfo_current_get()->reduction_symbols[i].shared_sym;
     dtypeReductionItem = DTYPEG(sptrReductionItem);
@@ -2158,7 +2395,7 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
   chk_block(ili);
 
   // Load reduced items to the origina laddress
-  for (int i = 0; i < ompaccel_tinfo_current_get()->n_reduction_symbols; ++i) {
+  for (i = 0; i < ompaccel_tinfo_current_get()->n_reduction_symbols; ++i) {
     bili = mk_address(sptrReduceData);
     sptrReductionItem =
         ompaccel_tinfo_current_get()->reduction_symbols[i].private_sym;
@@ -2337,7 +2574,7 @@ exp_ompaccel_targetdata(ILM *ilmp, int curilm, ILM_OP opc)
   int dotarget;
   SPTR beg_label, end_label;
   ompaccel_symreplacer(false);
-  ompaccel_tinfo_create(OMPACCEL_DATA_FUNCTION, OMPACCEL_DATA_MAX_SYM);
+  tinfo_create(OMPACCEL_DATA_FUNCTION, SPTR_NULL, OMPACCEL_DATA_MAX_SYM, opc);
   if (opc == IM_TARGETEXITDATA)
     ompaccel_tinfo_current_set_mode(mode_target_data_exit_region);
   else if (opc == IM_TARGETENTERDATA)

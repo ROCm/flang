@@ -1,9 +1,4 @@
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- * Date of Modification: May 2018
- *
- */
-/*
  * Copyright (c) 2010-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +17,8 @@
 /*
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
+ * Date of Modification: May 2018
+ *
  * Support for ivdep directive
  * Date of Modification: 11th march 2019
  *
@@ -29,7 +26,6 @@
  * Date of Modification: 19th July 2019
  *
  */
-
 
 /**
    \file
@@ -71,7 +67,7 @@
 
 #ifdef OMP_OFFLOAD_LLVM
 #include "ompaccel.h"
-#define ISNVVMCODEGEN gbl.isnvvmcodegen
+#define ISNVVMCODEGEN gbl.ompaccel_isdevice
 #else
 #define ISNVVMCODEGEN false
 #endif
@@ -2860,7 +2856,7 @@ tbaa_disabled(void)
 {
 #ifdef OMP_OFFLOAD_LLVM
   /* Always disable tbaa for device code. */
-  if (gbl.isnvvmcodegen)
+  if (ISNVVMCODEGEN)
     return true;
 #endif
   return (flg.opt < 2) || XBIT(183, 0x20000);
@@ -7970,11 +7966,11 @@ gen_llvm_vsincos_call(int ilix)
 
   /* Mask operand is always the one before the last operand */
   if (ILI_OPC(mask_arg_ili) != IL_NULL) {
-    /* mask is always a vector of integers; same number and size as 
-     * the regular argument.
-     */
-    mask_dtype = get_vector_dtype(dtypeName==DT_FLOAT?DT_INT:DT_INT8,vecLen);
-    maskTy = make_lltype_from_dtype(mask_dtype);
+     /* mask is always a vector of integers; same number and size as 
+      * the regular argument.
+      */
+     mask_dtype = get_vector_dtype(dtypeName==DT_FLOAT?DT_INT:DT_INT8,vecLen);
+     maskTy = make_lltype_from_dtype(mask_dtype);
       opnd->next = gen_llvm_expr(mask_arg_ili, maskTy);
     hasMask = true;
   }
@@ -10815,7 +10811,7 @@ INLINE static bool
 need_debug_info(SPTR sptr)
 {
 #ifdef OMP_OFFLOAD_LLVM
-  if (is_ompaccel(sptr) && gbl.isnvvmcodegen)
+  if (is_ompaccel(sptr) && ISNVVMCODEGEN)
     return false;
 #endif
   return generating_debug_info() && needDebugInfoFilt(sptr);
@@ -11213,28 +11209,9 @@ process_local_sptr(SPTR sptr)
   addDebugForLocalVar(sptr, type);
 }
 
-/* May need to be revisited */
 static void
-process_private_sptr(SPTR sptr)
+gen_name_private_sptr(SPTR sptr)
 {
-
-  // AOCC Begin
-#ifndef OMP_OFFLOAD_AMD
-  // AOCC End
-  if (!gbl.outlined && !TASKG(sptr) && !ISTASKDUPG(GBL_CURRFUNC))
-    return;
-  // AOCC Begin
-#endif
-  // AOCC End
-
-  assert(SCG(sptr) == SC_PRIVATE, "Expected local sptr", sptr, ERR_Fatal);
-  assert(SNAME(sptr) == NULL, "Already processed sptr", sptr, ERR_Fatal);
-
-  /* TODO: Check enclfuncg's scope and if its is not the same as the
-   * scope level for -g, then return early, this is not a private sptr
-   */
-  sym_is_refd(sptr);
-
   /* This is an actual local variable. Create an alloca. */
   LL_Type *type = LLTYPE(sptr);
   LL_Object *local;
@@ -11253,6 +11230,23 @@ process_private_sptr(SPTR sptr)
                                  "%s", get_llvm_name(sptr));
   SNAME(sptr) = (char *)local->address.data;
   addDebugForLocalVar(sptr, type);
+}
+/* May need to be revisited */
+static void
+process_private_sptr(SPTR sptr)
+{
+  if (!gbl.outlined && !TASKG(sptr) && !ISTASKDUPG(GBL_CURRFUNC))
+    return;
+
+  assert(SCG(sptr) == SC_PRIVATE, "Expected local sptr", sptr, ERR_Fatal);
+  assert(SNAME(sptr) == NULL, "Already processed sptr", sptr, ERR_Fatal);
+
+  /* TODO: Check enclfuncg's scope and if its is not the same as the
+   * scope level for -g, then return early, this is not a private sptr
+   */
+  sym_is_refd(sptr);
+
+  gen_name_private_sptr(sptr);
 }
 
 /**
@@ -11443,6 +11437,9 @@ process_sptr_offset(SPTR sptr, ISZ_T off)
 #ifdef SC_PRIVATE
   case SC_PRIVATE: /* OpenMP */
     process_private_sptr(sptr);
+    if(!SNAME(sptr)) {
+      gen_name_private_sptr(sptr);
+    }
     break;
 #endif
   default:
