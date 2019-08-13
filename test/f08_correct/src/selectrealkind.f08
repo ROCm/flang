@@ -13,7 +13,7 @@
         end subroutine
       end interface
 
-       parameter(NTEST=8)
+       parameter(NTEST=10)
        integer :: result(NTEST)
        integer :: expect(NTEST) = (/  &
          !select_rkind1
@@ -21,7 +21,7 @@
          !select_rkind2
              8,         &
          !select_rkind3
-             -4,        &
+             -2,        &
          !select_rkind4
              8,         &
          !select_rkind5
@@ -29,9 +29,13 @@
          !select_rkind6
              -3,        &
          !select_rkind7
-             -4,        &
+             -2,        &
          !select_rkind8
-             -5         &
+             -5,        &
+         !select_rkind7
+             -3,        &
+         !select_rkind7
+             -1         &
          /)
        integer,parameter :: select_rkind1 = selected_real_kind(6)
        integer,parameter :: select_rkind2 = selected_real_kind(10,100)
@@ -41,6 +45,8 @@
        integer :: select_rkind6 = SELECTED_REAL_KIND(45, 5000, 2)
        integer :: select_rkind7 = SELECTED_REAL_KIND(8, 6000, 2)
        integer :: select_rkind8 = SELECTED_REAL_KIND(60,600, 10)
+       integer :: select_rkind9 = selected_real_kind(16,400)
+       integer :: select_rkind10 = selected_real_kind(34)
         print *,"! select_rkind1"
         print *,select_rkind1;
         result(1) = select_rkind1
@@ -65,7 +71,12 @@
         print *,"! select_rkind8"
         print *,select_rkind8;
         result(8) = select_rkind8
-
+        print *,"! select_rkind9"
+        print *,select_rkind9;
+        result(9) = select_rkind9
+        print *,"! select_rkind10"
+        print *,select_rkind10;
+        result(10) = select_rkind10
       call check(result,expect,NTEST)
       end program real_kinds
 

@@ -3611,8 +3611,8 @@ eval_selected_real_kind(CONST *arg, DTYPE dtype)
     r = 4;
   else if (con <= 15)
     r = 8;
-  else if (con <= 31 && !XBIT(57, 4))
-    r = 16;
+  /*else if (con <= 31 && !XBIT(57, 4))
+    r = 16; Currently real 16 is not supported */
   else {
     r = -1;
     prec =-1;
@@ -3627,10 +3627,11 @@ eval_selected_real_kind(CONST *arg, DTYPE dtype)
     } else if (con <= 307) {
       if (r > 0 && r <= 8)
         r = 8;
-    } else if (con <= 4931 && !XBIT(57, 4)) {
-      if (r > 0 && r <= 16)
+    } /*else if (con <= 4931 && !XBIT(57, 4)) {
+        if (r > 0 && r <= 16)
         r = 16;
-    } else {
+        }*/
+    else {
       if (r > 0)
         r = 0;
       r = -2;
@@ -3647,10 +3648,8 @@ eval_selected_real_kind(CONST *arg, DTYPE dtype)
         r = 4;
       else if (r > 0 && r <= 8)
         r = 8;
-      else if (r > 0 && r <=16)
-        r = 16;
-      else if (prec == 0 || range == 0)
-        r = -4;
+      /*else if (r > 0 && r <=16)
+        r = 16;*/
       else if (prec < 0 && range < 0)
         r = -3;
     }

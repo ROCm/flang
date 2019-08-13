@@ -8210,8 +8210,8 @@ ref_pd(SST *stktop, ITEM *list)
           conval = 4;
         else if (con1 <= 15)
           conval = 8;
-        else if (con1 <= 31 && !XBIT(57, 4))
-          conval = 16;
+        /*else if (con1 <= 31 && !XBIT(57, 4))
+          conval = 16; currently real 16 is not supported */
         else {
           conval = -1;
 	  p = -1;
@@ -8257,10 +8257,10 @@ ref_pd(SST *stktop, ITEM *list)
           } else if (con1 <= 307) {
             if (conval > 0 && conval <= 8)
               conval = 8;
-          } else if ((con1 <= 4931) && !XBIT(57, 4)) {
+          } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
             if (conval > 0 && conval <= 16)
               conval = 16;
-          } else {
+          }*/ else {
             if (conval > 0)
               conval = 0;
             conval = -2;
@@ -8273,8 +8273,8 @@ ref_pd(SST *stktop, ITEM *list)
     stkp = ARG_STK(2);
     if (!stkp) {
       ARG_AST(2) = astb.ptr0;
-    if (p < 0 && r < 0)
-      conval = -3;
+      if (p < 0 && r < 0)
+        conval = -3;
     } else {
       dtype1 = SST_DTYPEG(stkp);
       if (!DT_ISINT(dtype1)) {
@@ -8296,8 +8296,6 @@ ref_pd(SST *stktop, ITEM *list)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    else if (p == 0 || r == 0)
-	      conval = -4;
 	    else if (p < 0 && r < 0)
 	      conval = -3;
           }
@@ -8310,10 +8308,8 @@ ref_pd(SST *stktop, ITEM *list)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    else if (conval > 0 && conval <= 16)
-              conval = 16;
-	    else if (p == 0 || r == 0)
-	      conval = -4;
+	    /*else if (conval > 0 && conval <= 16)
+              conval = 16;*/
 	    else if (p < 0 && r < 0)
 	      conval = -3;
           }

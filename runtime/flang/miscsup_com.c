@@ -4448,8 +4448,6 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
       else if (k <= 16)
         k = 16;
 #endif
-      else if (prec == 0 || range == 0)
-	k = -4;
       else if (prec < 0 && range < 0)
 	k = -3;
     }

@@ -9541,8 +9541,8 @@ eval_selected_real_kind(ACL *arg)
     r = 4;
   else if (con <= 15)
     r = 8;
-  else if (con <= 33 && !XBIT(57, 4))
-    r = 16;
+  /*else if (con <= 33 && !XBIT(57, 4))
+    r = 16; Currently real 16 is not supported*/
   else {
     r = -1;
     pre = -1;
@@ -9557,10 +9557,10 @@ eval_selected_real_kind(ACL *arg)
     } else if (con <= 307) {
       if (r > 0 && r <= 8)
         r = 8;
-    } else if (con <= 4931 && !XBIT(57, 4)) {
+    } /*else if (con <= 4931 && !XBIT(57, 4)) {
       if (r > 0 && r <= 16)
         r = 16;
-    } else {
+    }*/ else {
       if (r > 0)
         r = 0;
       range = -2;
@@ -9577,10 +9577,8 @@ eval_selected_real_kind(ACL *arg)
         r = 4;
       else if (r > 0 && r <= 8)
         r = 8;
-      else if (r > 0 && r <= 16)
-        r = 16;
-      else if (pre == 0 || range == 0)
-        r = -4;
+      /*else if (r > 0 && r <= 16)
+        r = 16;*/
       else if (pre < 0 && range < 0)
         r = -3;
     }

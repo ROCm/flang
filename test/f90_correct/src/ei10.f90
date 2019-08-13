@@ -229,7 +229,7 @@ program e10
    !select_rkind4
        8,		&
    !select_rkind5
-       16,		&
+       -1,		&
    !select_rkind6
        4,		&
    !select_rkind7
@@ -241,9 +241,9 @@ program e10
    !select_rkind10
        8,		&
    !select_rkind11
-       16,		&
+       -2,		&
    !select_rkind12
-       -4,		&
+       -2,		&
    !select_rkind13
        4,		&
    !select_rkind14
@@ -257,13 +257,13 @@ program e10
    !select_rkind18
        8,		&
    !select_rkind19
-       16,		&
+       -2,		&
    !select_rkind20
-       16,		&
+       -3,		&
    !select_rkind21
-       -4,		&
+       -2,		&
    !select_rkind22
-       -4,		&
+       -3,		&
    !i2dimarryparam1
        50, 40, 30, 20, 10, 1,		&
        2, 3, 4, 5,		&

@@ -664,8 +664,8 @@ process_real_kind(int sptr, ACL *ict, int op)
       conval = 4;
     else if (con1 <= 15)
       conval = 8;
-    else if (con1 <= 31 && !XBIT(57, 4))
-      conval = 16;
+    /*else if (con1 <= 31 && !XBIT(57, 4))
+      conval = 16; Currently real 16 is not supported */
     else {
       conval = -1;
       p = -1;
@@ -701,10 +701,10 @@ process_real_kind(int sptr, ACL *ict, int op)
         } else if (con1 <= 307) {
           if (conval > 0 && conval <= 8)
             conval = 8;
-        } else if ((con1 <= 4931) && !XBIT(57, 4)) {
+        } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
           if (conval > 0 && conval <= 16)
             conval = 16;
-        } else {
+        }*/ else {
           if (conval > 0)
             conval = 0;
           conval = -2;
@@ -728,8 +728,6 @@ process_real_kind(int sptr, ACL *ict, int op)
             conval = 4;
 	  else if (conval > 0 && conval <= 8)
             conval = 8;
-	  else if (p == 0 || r == 0)
-	    conval = -4;
           else if (p < 0 && r < 0)
 	    conval = -3;
         }
@@ -742,10 +740,8 @@ process_real_kind(int sptr, ACL *ict, int op)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    else if (conval > 0 && conval <= 16)
-              conval = 16;
-	    else if (p == 0 || r == 0)
-	      conval = -4;
+	    /*else if (conval > 0 && conval <= 16)
+              conval = 16;*/
             else if (p < 0 && r < 0)
 	    conval = -3;
           }
