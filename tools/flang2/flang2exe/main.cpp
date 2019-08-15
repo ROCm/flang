@@ -425,7 +425,7 @@ main(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget) {
     init_test();
-/*    ompaccel_create_globalctor(); causes multiple defs for main, not needed*/
+    ompaccel_create_globalctor();
     gbl.func_count--;
     gbl.multi_func_count--;
   }

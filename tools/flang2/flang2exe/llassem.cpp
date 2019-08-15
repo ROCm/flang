@@ -5051,7 +5051,15 @@ get_llvm_name(SPTR sptr)
       strcpy(name, "_MAIN_");
       return name;
 #else
-      q = "MAIN";
+      /* if this is the ctor for ompaccel.register, name must be unique, since
+         we generate this once per source file */
+      if (!strcmp(SYMNAME(sptr), "ompaccel.register")) {
+	strcpy(name, "MAIN.");
+	strcat (name, gbl.module);
+	return name;
+      } else {
+        q = "MAIN";
+      }
 #endif
     }
     while ((ch = *q++)) {
