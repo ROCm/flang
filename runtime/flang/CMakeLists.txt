@@ -577,7 +577,8 @@ add_dependencies(flang_static
   )
 
 # Make sure the compiler is built before we bootstrap
-add_dependencies(flang_shared 
+add_dependencies(flang_shared
+  flang_static 
   flang1
   flang2
   )
