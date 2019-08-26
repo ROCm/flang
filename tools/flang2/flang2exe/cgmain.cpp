@@ -25,6 +25,8 @@
  * Support for vector and novector directives
  * Date of Modification: 19th July 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Aug 2019
  */
 
 /**
@@ -13251,6 +13253,62 @@ INLINE void static add_property_struct(char *func_name, int nreductions,
 }
 #endif
 
+// AOCC begin
+#ifdef OMP_OFFLOAD_LLVM
+/**
+ * \brief emits the tgt-offload-entry structure globals in the device IR for x86
+ * offloading for the function \p func_sptr.
+ *
+ * These global structs will go to the .omp_offloading.entries data section
+ * which will be fetched by x86's RTL in libomptarget. These are not meant to be
+ * referenced in anywhere else in the IR, hence we're hard-coding them here.
+ *
+ */
+static void
+emit_x86_device_offload_entry(SPTR func_sptr)
+{
+  assert(get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget,
+      "This function should only be called for x86 offloading and only "
+      "during it's device IR emission", func_sptr, ERR_Fatal);
+
+  char *omp_entry_var_name, *omp_entry_sym_name;
+  size_t name_sz = 100 + strlen(SYMNAME(func_sptr));
+  FILE *ll_file = get_llasm_output_file();
+  static bool offload_structty_defined = false;
+
+  NEW(omp_entry_var_name, char, name_sz);
+  NEW(omp_entry_sym_name, char, name_sz);
+
+  strcpy(omp_entry_sym_name, SYMNAME(func_sptr));
+
+  strcpy(omp_entry_var_name, ".openmp.offload.entry.");
+  strcat(omp_entry_var_name, omp_entry_sym_name);
+
+  LL_Type *kernel_ty = make_lltype_from_sptr(func_sptr);
+
+  if (!offload_structty_defined) {
+    fprintf(ll_file, "%%struct.__tgt_offload_entry = type { i8*, i8*, i64, i32, i32 }\n");
+    offload_structty_defined = true;
+  }
+
+  fprintf(ll_file, "@.omp_offloading.entry_name_%s =  internal unnamed_addr constant [%d x i8] c\"%s\\00\"\n",
+      omp_entry_sym_name,
+      strlen(omp_entry_sym_name) + 1,
+      omp_entry_sym_name);
+
+  fprintf(ll_file, "@%s = ", omp_entry_var_name);
+  fprintf(ll_file, "weak constant %%struct.__tgt_offload_entry { ");
+  fprintf(ll_file, "i8* bitcast (%s @%s_ to i8*), ", kernel_ty->str, omp_entry_sym_name);
+  fprintf(ll_file, "i8* getelementptr inbounds ([%d x i8], [%d x i8]* @.omp_offloading.entry_name_%s, i32 0, i32 0), ",
+      strlen(omp_entry_sym_name) + 1,
+      strlen(omp_entry_sym_name) + 1,
+      omp_entry_sym_name);
+  fprintf(ll_file, "i64 0, i32 0, i32 0 }, ");
+  fprintf(ll_file, "section \".omp_offloading\.entries\", align 1\n");
+}
+#endif
+// AOCC end
+
 /**
    \brief write out the header of the function definition
 
@@ -13275,6 +13333,12 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
       add_property_struct(SYMNAME(func_sptr), tinfo->n_reduction_symbols,
                           reductionsize);
     }
+
+    // AOCC begin
+    if (get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget) {
+      emit_x86_device_offload_entry(func_sptr);
+    }
+    // AOCC end
   }
 #endif
   /* Start printing the defining line to the output file. */
@@ -13289,6 +13353,8 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
 #ifdef OMP_OFFLOAD_AMD
     if (flg.amdgcn_target)
       linkage = " amdgpu_kernel";
+    else if (flg.x86_64_omptarget)
+      linkage = " ";
     else
 #endif
     // AOCC End

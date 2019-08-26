@@ -21,6 +21,8 @@
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Aug 2019
  */
 
 /** \file
@@ -422,11 +424,15 @@ init_tgt_register_syms()
   gbl.consts = tptr2;
   OMPACCRTP(tptr2, 1);
 
+  // AOCC begin
 #ifdef OMP_OFFLOAD_AMD
   if (flg.amdgcn_target)
     tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.amdgcn-amd-amdhsa");
+  else if (flg.x86_64_omptarget)
+    tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.x86_64-pc-linux-gnu");
   else
 #endif
+    // AOCC end
     tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.nvptx64-nvidia-cuda");
 
   DTYPEP(tptr3, DT_BINT);
@@ -436,11 +442,15 @@ init_tgt_register_syms()
   gbl.consts = tptr3;
   OMPACCRTP(tptr3, 1);
 
+  // AOCC begin
 #ifdef OMP_OFFLOAD_AMD
   if (flg.amdgcn_target)
     tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.amdgcn-amd-amdhsa");
+  else if (flg.x86_64_omptarget)
+    tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.x86_64-pc-linux-gnu");
   else
 #endif
+    // AOCC end
     tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.nvptx64-nvidia-cuda");
 
   DTYPEP(tptr4, DT_BINT);

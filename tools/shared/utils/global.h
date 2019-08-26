@@ -237,6 +237,7 @@ typedef struct {
   char *std_string; /* input string arg of -std= */
   FORTRAN_STD std;
   bool amdgcn_target; /*chech if we are offloading to amd gcn */
+  bool x86_64_omptarget; /*chech if we are offloading to x86-64 */
   // AOCC End
 } FLG;
 
