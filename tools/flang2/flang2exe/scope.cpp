@@ -14,6 +14,14 @@
  * limitations under the License.
  *
  */
+/*
+  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * While removing the scope labels, blocks were traversed with a wrong loop
+  * terminating condition. This has been fixed.
+  * Date of Modification: 27th Aug 2019
+  *
+  */
 
 /**
    \file
@@ -869,7 +877,11 @@ void
 remove_scope_labels(void)
 {
   int bihx, iltx, nextiltx;
-  for (bihx = gbl.entbih; 1; bihx = BIH_NEXT(bihx)) {
+  // AOCC Begin
+  //   Replaced below loop condition from 1 to bihx.
+  //   Block number will never be zero. Exit the loop if the block number is zero.
+  // AOCC End
+  for (bihx = gbl.entbih; bihx; bihx = BIH_NEXT(bihx)) {
     rdilts(bihx);
     for (iltx = BIH_ILTFIRST(bihx); iltx; iltx = nextiltx) {
       nextiltx = ILT_NEXT(iltx);
