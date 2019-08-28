@@ -767,7 +767,10 @@ init(int argc, char *argv[])
   }
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   flg.omptarget = false;
+  // AOCC begin
   flg.amdgcn_target = false;
+  flg.x86_64_omptarget = false;
+  // AOCC end
   gbl.ompaccfilename = NULL;
 #endif
 #ifdef OMP_OFFLOAD_LLVM
@@ -780,6 +783,8 @@ init(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_AMD
   if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
     flg.amdgcn_target = true;
+  else if (omptp && strcmp(omptp, "x86_64-pc-linux-gnu") == 0)
+    flg.x86_64_omptarget = true;
 #endif
   // AOCC End
 

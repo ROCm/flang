@@ -21,6 +21,8 @@
   *
   * Date of Modification: November 2018
   *
+  * Support for x86-64 OpenMP offloading
+  * Last modified: Aug 2019
   */
 
 
@@ -1103,7 +1105,15 @@ write_libomtparget(void)
   @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
       }
 
-      else{
+      else if (flg.x86_64_omptarget) {
+        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  @.omp_offloading.img_end.x86_64-pc-linux-gnu = external constant i8 \n\
+  @.omp_offloading.img_start.x86_64-pc-linux-gnu = external constant i8 \n\
+  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.x86_64-pc-linux-gnu, i8* @.omp_offloading.img_end.x86_64-pc-linux-gnu, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+      } else {
 #endif
       // AOCC End
         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
