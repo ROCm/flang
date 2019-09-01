@@ -813,6 +813,7 @@ add_etmp(int sptr)
   x->next = sem.etmp_list;
   sem.etmp_list = x;
   x->t.sptr = sptr;
+  if (sptr) x->ast = mk_id(sptr);
 }
 
 void

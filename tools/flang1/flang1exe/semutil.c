@@ -3355,6 +3355,19 @@ assign(SST *newtop, SST *stktop)
         ITEM *p, *t;
 
         p = NULL;
+	// AOCC Begin
+	for (t = sem.etmp_list; t != NULL; t = t->next) {
+          if (t->ast == rhs) {
+            ast_to_comment(STD_AST(sem.arrfn.alloc_std));
+            if (p == NULL)
+              sem.etmp_list = t->next;
+            else
+              p->next = t->next;
+            break;
+          }
+          p = t;
+        }
+	// AOCC End
         for (t = sem.p_dealloc; t != NULL; t = t->next) {
           if (t->ast == rhs) {
             ast_to_comment(STD_AST(sem.arrfn.alloc_std));
