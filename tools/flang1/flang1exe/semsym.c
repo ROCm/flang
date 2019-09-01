@@ -277,6 +277,7 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
             } else if (bestuse && scope->kind == SCOPE_USE &&
                        /* for submodule, use-association overwrites host-association*/
                        STYPEG(scope->sptr) == ST_MODULE && 
+		       bestuse2 &&   // AOCC
                        ANCESTORG(gbl.currmod) != scope->sptr &&
                        scope->sptr != bestuse &&
                        STYPEG(sptrlink) != ST_USERGENERIC &&
