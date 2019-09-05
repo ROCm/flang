@@ -19,6 +19,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 11th July 2019
+ * Date of modification 05th September 2019
  *
  */
 
@@ -206,6 +207,14 @@ public:
     case KMPC_API_SHUFFLE_I64:
       return {"__kmpc_shuffle_int64", IL_NONE, DT_INT8, 0};
       break;
+    // AOCC Begin
+    // Currently emitting intrinsic call as there is no OpenMP API exposed for
+    // float shuffle. Once OpenMP has float shuffle APIs  we can change the
+    // name to API name.
+    case KMPC_API_SHUFFLE_F32:
+      return {"nvvm.shfl.down.f32", IL_NONE, DT_FLOAT, 0};
+      break;
+    // AOCC Begin
     case KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD:
       return {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", IL_NONE,
               DT_INT, 0};
@@ -310,6 +319,9 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
                                      DT_VOID_NONE, 0},
     [KMPC_API_SHUFFLE_I32] = {"__kmpc_shuffle_int32", 0, DT_INT, 0},
     [KMPC_API_SHUFFLE_I64] = {"__kmpc_shuffle_int64", 0, DT_INT8, 0},
+    // AOCC Begin
+    [KMPC_API_SHUFFLE_F32] = {"llvm.nvvm.shfl.down.f32", 0, DT_FLOAT, 0},
+    // AOCC End
     [KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD] =
         {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", 0, DT_INT, 0},
     [KMPC_API_NVPTX_END_REDUCE_NOWAIT] = {"__kmpc_nvptx_end_reduce_nowait", 0,
@@ -1554,6 +1566,19 @@ ll_make_kmpc_shuffle(int ili_val, int ili_delta, int ili_size, bool isint64)
     return mk_kmpc_api_call(KMPC_API_SHUFFLE_I64, 3, arg_types, args);
   return mk_kmpc_api_call(KMPC_API_SHUFFLE_I32, 3, arg_types, args);
 }
+
+// AOCC Begin
+int
+ll_make_kmpc_shuffle_f32(int ili_val, int ili_delta, int ili_size)
+{
+  int args[3];
+  DTYPE arg_types[3] = {DT_FLOAT, DT_INT, DT_INT};
+  args[2] = ili_val;   /* value               */
+  args[1] = ili_delta; /* delta               */
+  args[0] = ili_size;  /* size                */
+  return mk_kmpc_api_call(KMPC_API_SHUFFLE_F32, 3, arg_types, args);
+}
+// AOCC End
 
 int
 ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)

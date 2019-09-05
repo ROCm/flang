@@ -20,6 +20,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 9th July 2019
+ * Date of modification 5th September 2019
  *
  */
 
@@ -1776,14 +1777,6 @@ semsmp(int rednum, SST *top)
     ast = 0;
     clause_errchk((BT_DISTRIBUTE | BT_PARDO), "OMP DISTRIBUTE PARALLE DO");
     begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO));
-    //AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-    if (target_ast) {
-      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
-                                  BT_TARGET | BT_DISTRIBUTE | BT_PARDO));
-    }
-#endif
-    // AOCC End
     SST_ASTP(LHS, ast);
     break;
   /*
@@ -2962,6 +2955,14 @@ semsmp(int rednum, SST *top)
     }
     /* skip past the fake REDUC_SYM item */
     reducp->list = reducp->list->next;
+    //AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_DISTRIBUTE | BT_PARDO));
+    }
+#endif
+    // AOCC End
     break;
 
   /* ------------------------------------------------------------------ */

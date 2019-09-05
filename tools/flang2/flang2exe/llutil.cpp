@@ -18,6 +18,7 @@
  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Changes for AMD GPU OpenMP offloading and bug fixes.
+ * Date of Modification: 05th Septemeber 2019
  *
  * Date of Modification: November 2018
  *
@@ -281,7 +282,10 @@ LL_InstrListFlags
 ldst_instr_flags_from_dtype_nme(DTYPE dtype, int nme)
 {
   unsigned flags = ldst_instr_flags_from_dtype(dtype);
-  if (nme == NME_VOL)
+  // AOCC Begin
+  // Adding NME_VOLATILE condition
+  if (nme == NME_VOL || NME_VOLATILE(nme))
+  // AOCC End
     flags |= VOLATILE_FLAG;
   return (LL_InstrListFlags)flags;
 }

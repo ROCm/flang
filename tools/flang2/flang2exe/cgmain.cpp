@@ -27,6 +27,9 @@
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Aug 2019
+ *
+ * Support for volatile in NME
+ * Date of modification 05th September 2019
  */
 
 /**
@@ -4313,7 +4316,10 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
         op1 = convert_int_size(ilix, op1, store_op->ll_type->sub_types[0]);
       }
 
-      if (nme == NME_VOL)
+      // AOCC Begin
+      // Added NME_VOLATILE condition
+      if (nme == NME_VOL || NME_VOLATILE(nme))
+      // AOCC End
         store_flags |= VOLATILE_FLAG;
       if (IL_HAS_FENCE(ILI_OPC(ilix)))
         store_flags |= ll_instr_flags_for_memory_order_and_scope(ilix);

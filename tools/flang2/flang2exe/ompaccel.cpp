@@ -23,6 +23,7 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
+ * Date of modification 05th Sepetember 2019
  *
  */
 /**
@@ -59,6 +60,13 @@
 #include "llassem.h"
 #include "ll_ftn.h"
 #include "symfun.h"
+
+// AOCC Begin
+// Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
+#define GV_Warp_Size 64
+#define GV_Warp_Size_Log2 6
+#define GV_Warp_Size_Log2_Mask 63
+// AOCC End
 
 void
 _ompaccelInternalFail(const char *message, const char *location)
@@ -416,7 +424,7 @@ mk_ompaccel_min(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
       else if (dt == 3)
         opc = IL_FMIN;
       else if (dt == 4)
-        opc = IL_DADD;
+        opc = IL_DMIN;
       else if (dt == 5 || dt == 6)
         assert(0, "Min reduction of this type not handled.", 0, ERR_Fatal);
     } else {
@@ -707,6 +715,26 @@ ompaccel_nvvm_get(nvvm_sregs sreg)
   return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, NULL);
 }
 
+// AOCC Begin
+int
+ompaccel_nvvm_mk_barrier(nvvm_barriers btype, int ili)
+{
+  SPTR sptr;
+  DTYPE arg_types[2] = {DT_INT, DT_INT};
+  int args[2];
+  args[1] = ad_icon(1);
+  args[0] = ili;
+  if (btype != PARTIAL_BARRIER) {
+    ompaccelInternalFail("Barrier type not supported ");
+  }
+
+  sptr = (SPTR)(init_nvvm_intrinsics + barrier);
+  ll_make_ftn_outlined_params(sptr, 2, arg_types);
+  ll_process_routine_parameters(sptr);
+  return ll_ad_outlined_func2(IL_NONE, IL_JSR, sptr, 2, args);
+}
+// AOCC End
+
 int
 ompaccel_nvvm_mk_barrier(nvvm_barriers btype)
 {
@@ -724,6 +752,12 @@ int
 ompaccel_nvvm_get_gbl_tid()
 {
   int ilix, iliy, iliz;
+
+  // AOCC Begin
+  if (flg.amdgcn_target)
+    return ll_make_kmpc_global_thread_num();
+  // AOCC End
+
   ilix = ad2ili(IL_ISUB, ompaccel_nvvm_get(blockDimX), ad_icon(32));
   ilix = ad2ili(IL_IMUL, ompaccel_nvvm_get(blockIdX), ilix);
 
@@ -1732,6 +1766,75 @@ ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *ReductionItems, int NumReductions)
   return sptrFn;
 }
 
+// AOCC Begin
+/// Copied from CLANG
+/// Emit a helper that reduces data across two OpenMP threads (lanes)
+/// in the same warp.  It uses shuffle instructions to copy over data from
+/// a remote lane's stack.  The reduction algorithm performed is specified
+/// by the fourth parameter.
+///
+/// Algorithm Versions.
+/// Full Warp Reduce (argument value 0):
+///   This algorithm assumes that all 32 lanes are active and gathers
+///   data from these 32 lanes, producing a single resultant value.
+/// Contiguous Partial Warp Reduce (argument value 1):
+///   This algorithm assumes that only a *contiguous* subset of lanes
+///   are active.  This happens for the last warp in a parallel region
+///   when the user specified num_threads is not an integer multiple of
+///   32.  This contiguous subset always starts with the zeroth lane.
+/// Partial Warp Reduce (argument value 2):
+///   This algorithm gathers data from any number of lanes at any position.
+/// All reduced values are stored in the lowest possible lane.  The set
+/// of problems every algorithm addresses is a super set of those
+/// addressable by algorithms with a lower version number.  Overhead
+/// increases as algorithm version increases.
+///
+/// Terminology
+/// Reduce element:
+///   Reduce element refers to the individual data field with primitive
+///   data types to be combined and reduced across threads.
+/// Reduce list:
+///   Reduce list refers to a collection of local, thread-private
+///   reduce elements.
+/// Remote Reduce list:
+///   Remote Reduce list refers to a collection of remote (relative to
+///   the current thread) reduce elements.
+///
+/// We distinguish between three states of threads that are important to
+/// the implementation of this function.
+/// Alive threads:
+///   Threads in a warp executing the SIMT instruction, as distinguished from
+///   threads that are inactive due to divergent control flow.
+/// Active threads:
+///   The minimal set of threads that has to be alive upon entry to this
+///   function.  The computation is correct iff active threads are alive.
+///   Some threads are alive but they are not active because they do not
+///   contribute to the computation in any useful manner.  Turning them off
+///   may introduce control flow overheads without any tangible benefits.
+/// Effective threads:
+///   In order to comply with the argument requirements of the shuffle
+///   function, we must keep all lanes holding data alive.  But at most
+///   half of them perform value aggregation; we refer to this half of
+///   threads as effective. The other half is simply handing off their
+///   data.
+///
+/// Procedure
+/// Value shuffle:
+///   In this step active threads transfer data from higher lane positions
+///   in the warp to lower lane positions, creating Remote Reduce list.
+/// Value aggregation:
+///   In this step, effective threads combine their thread local Reduce list
+///   with Remote Reduce list and store the result in the thread local
+///   Reduce list.
+/// Value copy:
+///   In this step, we deal with the assumption made by algorithm 2
+///   (i.e. contiguity assumption).  When we have an odd number of lanes
+///   active, say 2k+1, only k threads will be effective and therefore k
+///   new values will be produced.  However, the Reduce list owned by the
+///   (2k+1)th thread is ignored in the value aggregation.  Therefore
+///   we copy the Reduce list from the (2k+1)th lane to (k+1)th lane so
+///   that the contiguity assumption still holds.
+// AOCC End
 SPTR
 //AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
@@ -1755,6 +1858,9 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
   char name[300];
+  int arg1, arg2, arg3;
+  int lili;
+  SPTR lThen1, lIf1, lElseIf1, lElseIf2, lElse1, lThen2, lElseIf3, lElse2;
 #else
   // AOCC End
   char name[30];
@@ -1816,7 +1922,13 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
     ili = mk_ompaccel_load(bili, DT_ADDR, nmeReduceData);
     ili = mk_ompaccel_load(ili, dtypeReductionItem, nmeReduceData);
 
-    if (dtypeReductionItem == DT_DBLE)
+    // AOCC Begin
+    if (flg.amdgcn_target && (dtypeReductionItem == DT_DBLE || dtypeReductionItem == DT_FLOAT))
+      ili =
+          ll_make_kmpc_shuffle_f32(ili, mk_ompaccel_ldsptr(func_params[2]),
+                               ad_icon(size_of(dtypeReductionItem) * 8));
+    // AOCC End
+    else if (dtypeReductionItem == DT_DBLE)
       ili =
           ll_make_kmpc_shuffle(ili, mk_ompaccel_ldsptr(func_params[2]),
                                ad_icon(size_of(dtypeReductionItem) * 8), true);
@@ -1838,6 +1950,95 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
     chk_block(ili);
   }
 
+  // AOCC Begin
+  // Arg0 ---> ReductionList
+  // Arg1 ---> LaneID/ThreadID
+  // Arg2 ---> LaneOffset
+  // Arg3 ---> AlgoVersion
+  //
+  // The actions to be performed on the Remote Reduce list is dependent
+  // on the algorithm version.
+  //
+  //  if (AlgoVer==0) || (AlgoVer==1 && (LaneId < Offset)) || (AlgoVer==2 &&
+  //  LaneId % 2 == 0 && Offset > 0):
+  //    do the reduction value aggregation
+  //
+  //  The thread local variable Reduce list is mutated in place to host the
+  //  reduced data, which is the aggregated value produced from local and
+  //  remote lanes.
+  //
+  //  Note that AlgoVer is expected to be a constant integer known at compile
+  //  time.
+  //  When AlgoVer==0, the first conjunction evaluates to true, making
+  //    the entire predicate true during compile time.
+  //  When AlgoVer==1, the second conjunction has only the second part to be
+  //    evaluated during runtime.  Other conjunctions evaluates to false
+  //    during compile time.
+  //  When AlgoVer==2, the third conjunction has only the second part to be
+  //    evaluated during runtime.  Other conjunctions evaluates to false
+  //    during compile time.
+#ifdef OMP_OFFLOAD_AMD
+  lThen1 = getlab();
+  lIf1 = getlab();
+  lElseIf1 = getlab();
+  lElseIf2 = getlab();
+  lElse1 = getlab();
+
+  arg3 = mk_ompaccel_ldsptr(func_params[3]);
+  ili = ad4ili(IL_ICJMP, arg3, ad_icon(0), CC_EQ, lThen1);
+
+  RFCNTI(lIf1);
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+  exp_label(lIf1);
+
+  arg3 = mk_ompaccel_ldsptr(func_params[3]);
+  arg1 = mk_ompaccel_ldsptr(func_params[1]);
+  arg2 = mk_ompaccel_ldsptr(func_params[2]);
+  ili = ad3ili(IL_ICMP, arg3, ad_icon(1), CC_EQ);
+  lili = ad3ili(IL_ICMP, arg1, arg2, CC_LT);
+  ili = ad2ili(IL_AND, ili, lili);
+  ili = ad4ili(IL_ICJMP, ili, ad_icon(0), CC_NE, lThen1);
+
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+
+  RFCNTI(lElseIf1);
+  exp_label(lElseIf1);
+  arg3 = mk_ompaccel_ldsptr(func_params[3]);
+  arg1 = mk_ompaccel_ldsptr(func_params[1]);
+  arg2 = mk_ompaccel_ldsptr(func_params[2]);
+  ili = ad3ili(IL_ICMP, arg3, ad_icon(2), CC_EQ);
+  lili = ad3ili(IL_ICMP, arg2, ad_icon(0), CC_GT);
+  rili = ad2ili(IL_AND, arg1, ad_icon(1));
+  rili = ad3ili(IL_ICMP, rili, ad_icon(0), CC_EQ);
+  ili = ad2ili(IL_AND, ili, lili);
+  ili = ad2ili(IL_AND, ili, rili);
+  ili = ad4ili(IL_ICJMP, ili, ad_icon(0), CC_NE, lThen1);
+
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+
+  RFCNTI(lElseIf2);
+  exp_label(lElseIf2);
+  ili = ad1ili(IL_JMP, lElse1);
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+
+
+  RFCNTI(lThen1);
+  exp_label(lThen1);
+#endif
+  // AOCC End
+
   params[0] = mk_address(sptrRhs);
   params[1] = mk_address(sptrReduceData);
 
@@ -1848,7 +2049,84 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
   iltb.callfg = 1;
   chk_block(ili);
 
+  // AOCC Begin
+  // if (AlgoVer==1 && (LaneId >= Offset)) copy Remote Reduce list to local
+  // Reduce list.
+#ifdef OMP_OFFLOAD_AMD
   wr_block();
+  cr_block();
+
+
+  RFCNTI(lElse1);
+  exp_label(lElse1);
+  ili = mk_ompaccel_ldsptr(func_params[3]);
+  lili = mk_ompaccel_compare(ili, DT_INT, ad_icon(1), DT_INT, CC_EQ);
+  ili = mk_ompaccel_ldsptr(func_params[1]);
+  rili = mk_ompaccel_ldsptr(func_params[2]);
+  rili = mk_ompaccel_compare(ili, DT_INT, rili, DT_INT, CC_GE);
+  ili = ad2ili(IL_AND, lili, rili);
+  lThen2 = getlab();
+  lElseIf3 = getlab();
+  lElse2 = getlab();
+  ili = ad4ili(IL_ICJMP, ili, ad_icon(0), CC_NE, lThen2);
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+
+  RFCNTI(lElseIf3);
+  exp_label(lElseIf3);
+  ili = ad1ili(IL_JMP, lElse2);
+  chk_block(ili);
+  iltb.callfg = 1;
+  wr_block();
+  cr_block();
+
+  RFCNTI(lThen2);
+  exp_label(lThen2);
+
+  for (int i = 0; i < NumReductions; ++i) {
+
+    cr_block();
+    dtypeReductionItem = DTYPEG(ReductionItems[i].shared_sym);
+    sptrShuffleReturn =
+        mk_ompaccel_getnewccsym('r', i, dtypeReductionItem, SC_LOCAL, ST_VAR);
+
+    bili = mk_ompaccel_ldsptr(sptrReduceData);
+    rili = mk_address(sptrRhs);
+
+    nmeReduceData =
+        add_arrnme(NT_IND, SPTR_NULL, addnme(NT_VAR, sptrReduceData, 0, 0), i,
+                   ad_icon(i), FALSE);
+
+    if (i != 0) {
+      rili = mk_ompaccel_add(rili, DT_ADDR, ad_aconi(i * size_of(DT_ADDR)),
+                             DT_ADDR);
+      bili = mk_ompaccel_add(bili, DT_ADDR, ad_aconi(i * size_of(DT_ADDR)),
+                             DT_ADDR);
+    }
+
+    ili = mk_ompaccel_load(bili, DT_ADDR, nmeReduceData);
+
+    nmeRhs = add_arrnme(NT_ARR, NME_NULL, addnme(NT_VAR, sptrRhs, 0, 0), i,
+                        ad_icon(i), FALSE);
+    bili = mk_ompaccel_load(rili, DT_ADDR, nmeRhs);
+    bili = mk_ompaccel_load(bili, dtypeReductionItem, nmeRhs);
+
+    ili = mk_ompaccel_store(bili, dtypeReductionItem,
+                            nmeReduceData,
+                            ili);
+    chk_block(ili);
+
+    wr_block();
+  }
+
+  cr_block();
+  RFCNTI(lElse2);
+  exp_label(lElse2);
+#endif
+  // AOCC End
+
   mk_ompaccel_function_end(sptrFn);
 
   return sptrFn;
@@ -1912,7 +2190,12 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   sptrMasterWarp =
       mk_ompaccel_addsymbol(".masterwarp", DT_INT, SC_LOCAL, ST_VAR);
   ili = ompaccel_nvvm_get(threadIdX);
-  ili = mk_ompaccel_iand(ili, ad_icon(31));
+  // AOCC Begin
+  if (flg.amdgcn_target)
+    ili = mk_ompaccel_iand(ili, ad_icon(GV_Warp_Size_Log2_Mask));
+  else
+  // AOCC End
+    ili = mk_ompaccel_iand(ili, ad_icon(31));
   ili = mk_ompaccel_stsptr(ili, sptrMasterWarp);
 
   chk_block(ili);
@@ -1920,7 +2203,12 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   /* MasterWarp */
   sptrWarpId = mk_ompaccel_addsymbol(".warpid", DT_INT, SC_LOCAL, ST_VAR);
   ili = ompaccel_nvvm_get(threadIdX);
-  ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(5), DT_UINT);
+  // AOCC Begin
+  if (flg.amdgcn_target)
+    ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(GV_Warp_Size_Log2), DT_UINT);
+  else
+  //  AOCC End
+    ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(5), DT_UINT);
   ili = mk_ompaccel_stsptr(ili, sptrWarpId);
 
   chk_block(ili);
@@ -1970,7 +2258,9 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
     ili = mk_ompaccel_add(mk_address(sptrShmem), DT_ADDR, ili, DT_ADDR);
     nmeShmem = add_arrnme(NT_ARR, NME_NULL, addnme(NT_VAR, sptrShmem, 0, 0), 0,
                           rili, FALSE);
-
+    // AOCC Begin
+    NME_VOLATILE(nmeShmem) = 1;
+    // AOCC End
     rili = mk_ompaccel_ldsptr(sptrRedItem);
     // todo ompaccel more
     if (dtypeReductionItem == DT_DBLE) {
@@ -2019,6 +2309,9 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
     nmeShmem = add_arrnme(NT_ARR, NME_NULL, addnme(NT_VAR, sptrShmem, 0, 0), 0,
                           rili, FALSE);
 
+    // AOCC Begin
+    NME_VOLATILE(nmeShmem) = 1;
+    // AOCC End
     ili = mk_ompaccel_load(ili, DT_DBLE, nmeShmem);
     rili = mk_ompaccel_ldsptr(sptrRedItemAddress);
 
@@ -2389,8 +2682,14 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
   lAssignReduction = getlab();
   RFCNTI(lAssignReduction);
 
-  ili = ompaccel_nvvm_get(threadIdX);
-  ili = mk_ompaccel_compare(ili, DT_INT, ad_icon(0), DT_INT, CC_NE);
+  // AOCC Begin
+  if (flg.amdgcn_target)
+    ili = mk_ompaccel_compare(ili, DT_INT, ad_icon(1), DT_INT, CC_NE);
+  // AOCC End
+  else {
+    ili = ompaccel_nvvm_get(threadIdX);
+    ili = mk_ompaccel_compare(ili, DT_INT, ad_icon(0), DT_INT, CC_NE);
+  }
   ili = ad3ili(IL_ICJMPZ, ili, CC_NE, lAssignReduction);
   chk_block(ili);
 

@@ -20,6 +20,7 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
+ * Date of modification 05th September 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Aug 2019
@@ -821,6 +822,11 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
                        SPTR args_maptypes_sptr, OMPACCEL_TINFO *targetinfo)
 {
   int i, j, ilix, iliy;
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  int temp_map_type = 0;
+#endif
+  // AOCC End
   OMPACCEL_SYM midnum_sym;
   DTYPE param_dtype, load_dtype;
   SPTR param_sptr;
@@ -856,7 +862,30 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       }
     }
     /* assign map type */
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    temp_map_type = 0;
+    if (targetinfo->symbols[i].map_type == 0) {
+      if (std::find(constArraySymbolList.begin(), constArraySymbolList.end(),
+                    targetinfo->symbols[i].device_sym) !=
+                                          constArraySymbolList.end()) {
+        // TODO: For such arrays map type should be decided at runtime.
+        temp_map_type = OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_TARGET_PARAM;
+      }
+    }
+#endif
+    // AOCC End
+
     targetinfo->symbols[i].map_type = _tgt_target_fill_maptype(param_sptr, targetinfo->symbols[i].map_type, isMidnum, midnum_sym.map_type);
+
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (temp_map_type != 0) {
+      targetinfo->symbols[i].map_type = temp_map_type;
+    }
+#endif
+    // AOCC End
+
     ilix = ad4ili(IL_ST, ad_icon(targetinfo->symbols[i].map_type),
                   ad_acon(args_maptypes_sptr, i * TARGET_PTRSIZE), nme_types, MSZ_I8);
     chk_block(ilix);
