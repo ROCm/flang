@@ -24,6 +24,7 @@
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
  * Date of modification 05th Sepetember 2019
+ * Date of modification 06th Sepetember 2019
  *
  */
 /**
@@ -2674,10 +2675,8 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn,
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy);
   iltb.callfg = 1;
-  chk_block(ili);
   wr_block();
 
-  exp_ompaccel_ereduction(ilmp, curilm);
 
   lAssignReduction = getlab();
   RFCNTI(lAssignReduction);
@@ -2740,6 +2739,11 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
     }
 
     chk_block(ili);
+    // AOCC Begin
+    wr_block();
+    cr_block();
+    exp_ompaccel_ereduction(ilmp, curilm);
+    // AOCC End
   }
   wr_block();
   cr_block();

@@ -214,7 +214,7 @@ public:
     case KMPC_API_SHUFFLE_F32:
       return {"nvvm.shfl.down.f32", IL_NONE, DT_FLOAT, 0};
       break;
-    // AOCC Begin
+    // AOCC End
     case KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD:
       return {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", IL_NONE,
               DT_INT, 0};
@@ -320,7 +320,7 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
     [KMPC_API_SHUFFLE_I32] = {"__kmpc_shuffle_int32", 0, DT_INT, 0},
     [KMPC_API_SHUFFLE_I64] = {"__kmpc_shuffle_int64", 0, DT_INT8, 0},
     // AOCC Begin
-    [KMPC_API_SHUFFLE_F32] = {"llvm.nvvm.shfl.down.f32", 0, DT_FLOAT, 0},
+    [KMPC_API_SHUFFLE_F32] = {"nvvm.shfl.down.f32", 0, DT_FLOAT, 0},
     // AOCC End
     [KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD] =
         {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", 0, DT_INT, 0},
