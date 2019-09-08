@@ -6335,6 +6335,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         STD_TASK(std) = STD_TASK(stdnext);
         STD_ACCEL(std) = STD_ACCEL(stdnext);
         STD_KERNEL(std) = STD_KERNEL(stdnext);
+        if (STD_ACCEL(std))
+          STD_RESCOPE(std) = 1;
         dealloc_tmpval = TRUE;
       }
     }
@@ -6396,6 +6398,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         STD_TASK(std) = STD_TASK(stdnext);
         STD_ACCEL(std) = STD_ACCEL(stdnext);
         STD_KERNEL(std) = STD_KERNEL(stdnext);
+        if (STD_ACCEL(std))
+          STD_RESCOPE(std) = 1;
       }
     }
   }
@@ -6447,6 +6451,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
           STD_TASK(std) = STD_TASK(stdnext);
           STD_ACCEL(std) = STD_ACCEL(stdnext);
           STD_KERNEL(std) = STD_KERNEL(stdnext);
+          if (STD_ACCEL(std))
+            STD_RESCOPE(std) = 1;
           dealloc_dest = TRUE;
         }
       }
@@ -6628,6 +6634,19 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       astsubscrtmp = dest;
     } else
       astsubscrtmp = asttmp;
+    if (A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC ||
+        A_OPTYPEG(ast) == I_MAXVAL || A_OPTYPEG(ast) == I_MINVAL) {
+      /* if the expression being reduced is nontrivial, assign to a temp */
+      if (A_TYPEG(ast2) == A_SUBSCR || A_TYPEG(ast2) == A_ID) {
+      } else {
+        /* create a temporary scalar */
+        int temprhs = sym_get_scalar(SYMNAME(sptr), "l", dtyperes);
+        /* assign the RHS to temprhs */
+        int std = mk_assn_stmt(mk_id(temprhs), ast2, dtyperes);
+        add_stmt_before(std, stdnext);
+        ast2 = mk_id(temprhs);
+      }
+    }
   }
   dtsclr = DDTG(dtypetmp);
   switch (A_OPTYPEG(ast)) {
@@ -7021,6 +7040,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_TASK(std) = STD_TASK(stdnext);
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
+    if (STD_ACCEL(std))
+      STD_RESCOPE(std) = 1;
   }
 
   if (dealloc_tmpval) {
@@ -7035,6 +7056,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_TASK(std) = STD_TASK(stdnext);
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
+    if (STD_ACCEL(std))
+      STD_RESCOPE(std) = 1;
   }
 
   if (dealloc_dest) {
@@ -7049,6 +7072,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_TASK(std) = STD_TASK(stdnext);
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
+    if (STD_ACCEL(std))
+      STD_RESCOPE(std) = 1;
   }
 
   ccff_info(MSGOPT, "OPT022", 1, STD_LINENO(arg_gbl.std),

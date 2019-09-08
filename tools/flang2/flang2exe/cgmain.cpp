@@ -51,6 +51,7 @@
 #include "llutil.h"
 #include "lldebug.h"
 #include "go.h"
+#include "sharedefs.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include "llassem.h"
@@ -213,7 +214,7 @@ static unsigned addressElementSize;
 
 /* Exported variables */
 
-char **sptr_array = NULL;
+SPTRINFO_T sptrinfo;
 
 /* This should live in llvm_info, but we need to access this module from other
  * translation units temporarily */
@@ -221,7 +222,7 @@ LL_Module *cpu_llvm_module = NULL;
 #ifdef OMP_OFFLOAD_LLVM
 LL_Module *gpu_llvm_module = NULL;
 #endif
-LL_Type **sptr_type_array = NULL;
+
 
 /* File static variables */
 
@@ -6708,7 +6709,10 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
         return NULL;
       if (IL_TYPE(ILI_OPC(instr->ilix)) != ILTY_STORE)
         return NULL;
-      if (ILI_OPND(ilix, 1) == ILI_OPND(instr->ilix, 2)) {
+      /* must use ili_opnd() call to skip by CSExx, otherwise
+       * may not get latest store to the load location.
+       */
+      if (ILI_OPND(ilix, 1) == ili_opnd(instr->ilix, 2)) {
         /* Maybe revisited to add conversion op */
         if (match_types(instr->operands->ll_type, llt) != MATCH_OK)
           return NULL;
@@ -12890,10 +12894,13 @@ INLINE static OPERAND *
 cons_expression_metadata_operand(LL_Type *llTy)
 {
   // FIXME: we don't need to always do this, do we? do a type check here
-  LL_DebugInfo *di = cpu_llvm_module->debug_info;
-  unsigned v = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
-  LL_MDRef exprMD = lldbg_emit_expression_mdnode(di, 1, v);
-  return make_mdref_op(exprMD);
+  if (llTy->data_type == LL_PTR) {
+    LL_DebugInfo *di = cpu_llvm_module->debug_info;
+    unsigned v = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
+    LL_MDRef exprMD = lldbg_emit_expression_mdnode(di, 1, v);
+    return make_mdref_op(exprMD);
+  }
+  return NULL;
 }
 
 INLINE static bool
@@ -13473,10 +13480,6 @@ static void
 update_llvm_sym_arrays(void)
 {
   const int new_size = stb.stg_avail + MEM_EXTRA;
-  int old_last_sym_avail = llvm_info.last_sym_avail; // NEEDB assigns
-  NEEDB(stb.stg_avail, sptr_array, char *, llvm_info.last_sym_avail, new_size);
-  NEEDB(stb.stg_avail, sptr_type_array, LL_Type *, old_last_sym_avail,
-        new_size);
   if ((flg.debug || XBIT(120, 0x1000)) && cpu_llvm_module) {
     lldbg_update_arrays(cpu_llvm_module->debug_info, llvm_info.last_dtype_avail,
                         stb.dt.stg_avail + MEM_EXTRA);
@@ -13524,11 +13527,14 @@ cg_llvm_init(void)
   /* last_sym_avail is used for all the arrays below */
   llvm_info.last_sym_avail = stb.stg_avail + MEM_EXTRA;
 
-  NEW(sptr_array, char *, stb.stg_avail + MEM_EXTRA);
-  BZERO(sptr_array, char *, stb.stg_avail + MEM_EXTRA);
-  /* set up the type array shadowing the symbol table */
-  NEW(sptr_type_array, LL_Type *, stb.stg_avail + MEM_EXTRA);
-  BZERO(sptr_type_array, LL_Type *, stb.stg_avail + MEM_EXTRA);
+  if (sptrinfo.array.stg_base) {
+    STG_CLEAR_ALL(sptrinfo.array);
+    STG_CLEAR_ALL(sptrinfo.type_array);
+  } else {
+    STG_ALLOC_SIDECAR(stb, sptrinfo.array);
+    /* set up the type array shadowing the symbol table */
+    STG_ALLOC_SIDECAR(stb, sptrinfo.type_array);
+  }
 
   Globals = NULL;
   recorded_Globals = NULL;
