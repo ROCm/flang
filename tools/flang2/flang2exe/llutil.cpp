@@ -1707,11 +1707,11 @@ set_llasm_output_file(FILE *fd)
 }
 
 // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
+#ifdef OMP_OFFLOAD_LLVM
 FILE *get_llasm_output_file() {
   return LLVMFIL;
 }
-#endif
+#endif // OMP_OFFLOAD_LLVM
 // AOCC End
 
 void
