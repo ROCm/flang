@@ -7484,7 +7484,7 @@ ref_pd(SST *stktop, ITEM *list)
         rtlRtn = RTE_shape4;
         break;
       case DT_INT8:
-        rtlRtn = RTE_shape;
+        rtlRtn = RTE_shape8;
         break;
       default:
         error(155, 3, gbl.lineno, SYMNAME(gbl.currsub),
