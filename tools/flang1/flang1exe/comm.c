@@ -495,8 +495,7 @@ reference_for_temp(int sptr, int a, int forall)
             lw = check_member(a, A_LBDG(ast));
             up = check_member(a, A_UPBDG(ast));
             c = constant_stride(A_STRIDEG(ast), &stride);
-	    // AOCC: the normalization happening incorrectly at O2
-            if (flg.opt >= 2 && !XBIT(2, 0x400000) && false) {
+            if (flg.opt >= 2 && !XBIT(2, 0x400000)) {
               stride = A_STRIDEG(ast);
               if (stride == 0)
                 stride = astb.i1;
@@ -535,8 +534,7 @@ reference_for_temp(int sptr, int a, int forall)
               lw = A_LBDG(ASTLI_TRIPLE(k));
               up = A_UPBDG(ASTLI_TRIPLE(k));
               c = constant_stride(A_STRIDEG(ASTLI_TRIPLE(k)), &stride);
-	      // AOCC: the normalization happening incorrectly at O2
-              if (flg.opt >= 2 && !XBIT(2, 0x400000) && false) {
+              if (flg.opt >= 2 && !XBIT(2, 0x400000)) {
                 stride = A_STRIDEG(ASTLI_TRIPLE(k));
                 if (stride == 0)
                   stride = astb.i1;
