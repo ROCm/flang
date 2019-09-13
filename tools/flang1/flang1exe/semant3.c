@@ -15,6 +15,14 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support,
+ * [CPUPC-2279]:F2008: Raise error for non integer 
+ * and non character stop codes
+ * Last modified: Tue Sep 10 2019
+ */
 /**
     \file semant3.c
     \brief This file contains part 3 of the compiler's semantic actions
@@ -1568,6 +1576,26 @@ semant3(int rednum, SST *top)
       error(1050, ERR_Severe, gbl.lineno, "STOP in", CNULL); // 2018-C1137
     ast1 = SST_TMPG(RHS(2));
     ast2 = SST_ASTG(RHS(2));
+
+    // AOCC Begin
+    /* 
+     * [CPUPC-2279]:F2008:Error not thrown for other 
+     * than integer/character type STOP CODE 
+    */
+    if (DTY(A_DTYPEG(ast1)) == TY_INT ||
+            DTY(A_DTYPEG(ast1)) == TY_SINT ||
+            DTY(A_DTYPEG(ast1)) == TY_INT8 ||
+            DTY(A_DTYPEG(ast1)) == TY_CHAR ||
+            DTY(A_DTYPEG(ast1)) == TY_NCHAR) {
+      goto stop_common;
+    }
+    else {
+      error(95, ERR_Warning, gbl.lineno, SYMNAME(gbl.currsub),
+        "-STOP code must be either INTEGER or CHARACTER type-\n");
+    }
+    // AOCC End
+
+stop_common:
     if (XBIT(54, 0x10)) {
       rtlRtn = RTE_stopa;
       goto pause_shared;
