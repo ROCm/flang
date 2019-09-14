@@ -3614,6 +3614,15 @@ can_inline_minloc(int dest, int args) {
     dim = get_int_cval(A_SPTRG(astdim));
   }
 
+  int astback = ARGT_ARG(args, 3);
+  if (astback) {
+    if (A_TYPEG(astback) != A_CNST) {
+      return false;
+    }
+    int back = get_int_cval(A_SPTRG(astback));
+    if (back != 0) return false;
+  }
+
   if (dim >= 1) {
      if (A_TYPEG(dest) == A_SUBSCR) {
        if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
