@@ -2951,7 +2951,7 @@ print_ast(int ast)
       break;
     case PR_ACCTPLOOP:
       acc_pragma(ast);
-      put_string("(parallel-right) loop");
+      put_string("(parallel-tight) loop");
       break;
     case PR_ACCSLOOP:
       acc_pragma(ast);
@@ -2959,7 +2959,7 @@ print_ast(int ast)
       break;
     case PR_ACCTSLOOP:
       acc_pragma(ast);
-      put_string("(serial-right) loop");
+      put_string("(serial-tight) loop");
       break;
     case PR_ACCWAITDIR:
       acc_pragma(ast);
