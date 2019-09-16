@@ -23,6 +23,9 @@
   *
   * Support for x86-64 OpenMP offloading
   * Last modified: Aug 2019
+  *
+  * Changes to support AMDGPU OpenMP offloading.
+  * Date of modification 16th September 2019
   */
 
 
@@ -1049,6 +1052,11 @@ ompaccel_write_sharedvars(void)
 #endif
     // AOCC end
   }
+
+  // AOCC Begin
+  // Reset after global are dumped to file
+  ag_other = 0;
+  // AOCC End
 }
 
 static void

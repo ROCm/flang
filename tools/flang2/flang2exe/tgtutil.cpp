@@ -21,6 +21,7 @@
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
  * Date of modification 05th September 2019
+ * Date of modification 16th September 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Aug 2019
@@ -882,6 +883,9 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
 #ifdef OMP_OFFLOAD_AMD
     if (temp_map_type != 0) {
       targetinfo->symbols[i].map_type = temp_map_type;
+    }
+    if (isMidnum) {
+      targetinfo->symbols[i].map_type |= OMP_TGT_MAPTYPE_TO;
     }
 #endif
     // AOCC End

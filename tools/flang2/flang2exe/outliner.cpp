@@ -20,6 +20,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 26th July 2019
+ * Date of modification 16th September 2019
  *
  */
 
@@ -321,6 +322,9 @@ ll_get_outlined_funcname(int fileno, int lineno, bool isompaccel) {
     funcNo = funcCnt++;
 
   nmSize += strlen(sptrnm);
+  // AOCC Begin
+  nmSize += 10;
+  // AOCC End
   if (nmLen < nmSize) {
     if (nm)
       free(nm);
@@ -328,7 +332,10 @@ ll_get_outlined_funcname(int fileno, int lineno, bool isompaccel) {
     nmLen = nmSize;
   }
   /* side-effect: global funcCnt incremented */
-  r = snprintf(nm, nmSize, "%s_%dF%dL%d", sptrnm, funcNo, fileno, lineno);
+  // AOCC Begin
+  // TODO: This is a temporary fix for naming issue with kernels.
+  r = snprintf(nm, nmSize, "%s__kernel_%dF%dL%d", sptrnm, funcNo, fileno, lineno);
+  // AOCC End
   assert(r < nmSize, "buffer overrun", r, ERR_Fatal);
   return nm;
 }
@@ -1363,6 +1370,10 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             ompaccel_symreplacer(true);
           } else if (opc == IM_BCS) {
             ompaccel_symreplacer(false);
+          // AOCC Begin
+          } else if (opc == IM_ECS) {
+            ompaccel_symreplacer(true);
+          // AOCC End
           } else if (ILM_OPC(ilmpx) == IM_ELEMENT && gbl.ompaccel_intarget ) {
             /* replace dtype for allocatable arrays */
             ILM_OPND(ilmpx, 3) =

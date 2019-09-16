@@ -25,6 +25,7 @@
  * Date of modification 26th July 2019
  * Date of modification 05th Sepetember 2019
  * Date of modification 06th Sepetember 2019
+ * Date of modification 16th Sepetember 2019
  *
  */
 /**
@@ -2176,8 +2177,11 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   sptrFn = mk_ompaccel_function(name, 2, func_params, true);
   cr_block();
 
+  // AOCC Begin
+  sprintf(name, "%s_%s_%d", "ompaccelshmem", suffix, reductionFunctionCounter++);
+  // AOCC End
   sptrShmem = mk_ompaccel_addsymbol(
-      "ompaccelshmem", mk_ompaccel_array_dtype(DT_INT8, NVVM_WARPSIZE),
+      name, mk_ompaccel_array_dtype(DT_INT8, NVVM_WARPSIZE),
       SC_EXTERN, ST_ARRAY);
   OMPACCSHMEMP(sptrShmem, true);
   SYMLKP(sptrShmem, gbl.externs);

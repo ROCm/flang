@@ -21,6 +21,7 @@
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 9th July 2019
  * Date of modification 5th September 2019
+ * Date of modification 16th September 2019
  *
  */
 
@@ -8185,6 +8186,9 @@ end_reduction(REDUC *red, int doif)
   int ast_crit, ast_endcrit, ast_red;
   int save_par, save_target, save_teams;
   LOGICAL done = FALSE;
+  // AOCC Begin
+  LOGICAL bredcution_created = FALSE;
+  // AOCC End
   LOGICAL in_parallel = FALSE;
 
   if (red == NULL)
@@ -8228,6 +8232,9 @@ end_reduction(REDUC *red, int doif)
       if (!use_atomic_for_reduction(sem.doif_depth) && !done) {
 #ifdef OMP_OFFLOAD_LLVM
         ast_red = mk_stmt(A_MP_BREDUCTION, 0);
+        // AOCC Begin
+        bredcution_created = TRUE;
+        // AOCC End
         (void) add_stmt(ast_red);
 #endif
         ast_crit = emit_bcs_ecs(A_MP_CRITICAL);
@@ -8254,10 +8261,15 @@ end_reduction(REDUC *red, int doif)
 #ifdef OMP_OFFLOAD_LLVM
     A_ISOMPREDUCTIONP(ast_endcrit, 1);
 #endif
+    // AOCC Begin
+    // Emitting ereduction ilm only bredution is emitted
 #ifdef OMP_OFFLOAD_LLVM
-    ast_red = mk_stmt(A_MP_EREDUCTION, 0);
-    (void)add_stmt(ast_red);
+    if (bredcution_created) {
+      ast_red = mk_stmt(A_MP_EREDUCTION, 0);
+      (void)add_stmt(ast_red);
+    }
 #endif
+    // AOCC End
   }
 }
 

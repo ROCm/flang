@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 16th September 2019
+ *
+ */
 
 /** \file
  * \brief SMP expander routines
@@ -1387,7 +1394,10 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_QJSR(expb.curbih) = true;
     BIH_NOMERGE(expb.curbih) = true;
     bihb.csfg = BIH_CS(expb.curbih) = true;
-    ili = addMpBcsNest();
+    // AOCC Begin
+    if (!flg.amdgcn_target)
+    // AOCC End
+      ili = addMpBcsNest();
     iltb.callfg = 1;
     chk_block(ili);
     ccff_info(MSGOPENMP, "OMP003", gbl.findex, gbl.lineno,
@@ -1401,7 +1411,10 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_QJSR(expb.curbih) = true;
     BIH_NOMERGE(expb.curbih) = true;
     BIH_CS(expb.curbih) = true;
-    ili = addMpEcsNest();
+    // AOCC Begin
+    if (!flg.amdgcn_target)
+    // AOCC End
+      ili = addMpEcsNest();
     iltb.callfg = 1;
     chk_block(ili);
     wr_block();
