@@ -250,6 +250,48 @@ SPTR ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *, int);
 SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int);
 // AOCC Begin
 #endif
+
+/**
+ * \brief remembers \p func_sptr to be a parallel outlined function in target
+ * region for x86 offloading
+ */
+void ompaccel_x86_add_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if \p func_sptr is a parallel func (as described above)
+ */
+bool ompaccel_x86_is_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if we need to fork-call \p func_sptr
+ */
+bool ompaccel_x86_is_toplevel_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief remembers \p func_sptr as fork-wrapper function
+ */
+void ompaccel_x86_add_fork_wrapper_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if \p func_sptr is a fork-wrapper function
+ */
+bool ompaccel_x86_is_fork_wrapper_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if the function \p func_sptr needs to go into the
+ * .omp_offloading.entries data section.
+ */
+bool ompaccel_x86_is_entry_func(SPTR func_sptr);
+
+/**
+ * \briefs prepends global_tid and bound_tid params to \p func_sptr
+ */
+void ompaccel_x86_add_tid_params(SPTR func_sptr);
+
+/**
+ * \brief generates the "wrapper" that emits __kmpc_fork_call to \p target_func
+ */
+void gen_fork_wrapper(SPTR target_func);
 // AOCC End
 
 /* ################################################ */

@@ -26,7 +26,7 @@
  * Date of Modification: 19th July 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Aug 2019
+ * Last modified: Sept 2019
  *
  * Support for volatile in NME
  * Date of modification 05th September 2019
@@ -13306,9 +13306,14 @@ INLINE void static add_property_struct(char *func_name, int nreductions,
 static void
 emit_x86_device_offload_entry(SPTR func_sptr)
 {
+  bool debug_me = false;
+
   assert(get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget,
       "This function should only be called for x86 offloading and only "
       "during it's device IR emission", func_sptr, ERR_Fatal);
+
+  if (!ompaccel_x86_is_entry_func(func_sptr))
+    return;
 
   char *omp_entry_var_name, *omp_entry_sym_name;
   size_t name_sz = 100 + strlen(SYMNAME(func_sptr));
@@ -13320,6 +13325,9 @@ emit_x86_device_offload_entry(SPTR func_sptr)
 
   strcpy(omp_entry_sym_name, SYMNAME(func_sptr));
 
+  if (debug_me) {
+    printf("[ompaccel-x86]: generating entry for %s\n", omp_entry_sym_name);
+  }
   strcpy(omp_entry_var_name, ".openmp.offload.entry.");
   strcat(omp_entry_var_name, omp_entry_sym_name);
 
@@ -13337,7 +13345,10 @@ emit_x86_device_offload_entry(SPTR func_sptr)
 
   fprintf(ll_file, "@%s = ", omp_entry_var_name);
   fprintf(ll_file, "weak constant %%struct.__tgt_offload_entry { ");
-  fprintf(ll_file, "i8* bitcast (%s @%s_ to i8*), ", kernel_ty->str, omp_entry_sym_name);
+  if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
+    fprintf(ll_file, "i8* bitcast (%s @%s to i8*), ", kernel_ty->str, omp_entry_sym_name);
+  else
+    fprintf(ll_file, "i8* bitcast (%s @%s_ to i8*), ", kernel_ty->str, omp_entry_sym_name);
   fprintf(ll_file, "i8* getelementptr inbounds ([%d x i8], [%d x i8]* @.omp_offloading.entry_name_%s, i32 0, i32 0), ",
       strlen(omp_entry_sym_name) + 1,
       strlen(omp_entry_sym_name) + 1,
@@ -13360,6 +13371,11 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   const char *linkage = NULL;
   int reductionsize = 0;
 #ifdef OMP_OFFLOAD_LLVM
+  // AOCC begin
+  if (get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget) {
+    emit_x86_device_offload_entry(func_sptr);
+  }
+  // AOCC end
   if (OMPACCFUNCKERNELG(func_sptr)) {
     OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(func_sptr);
     if (tinfo->n_reduction_symbols == 0) {
@@ -13372,12 +13388,6 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
       add_property_struct(SYMNAME(func_sptr), tinfo->n_reduction_symbols,
                           reductionsize);
     }
-
-    // AOCC begin
-    if (get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget) {
-      emit_x86_device_offload_entry(func_sptr);
-    }
-    // AOCC end
   }
 #endif
   /* Start printing the defining line to the output file. */

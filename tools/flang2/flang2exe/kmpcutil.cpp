@@ -21,6 +21,8 @@
  * Date of modification 11th July 2019
  * Date of modification 05th September 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
  */
 
 /** \file
@@ -663,7 +665,9 @@ ll_make_kmpc_generic_ptr_int(int kmpc_api)
   DTYPE arg_types[2] = {DT_CPTR, DT_INT};
   args[1] = gen_null_arg();
 #ifdef OMP_OFFLOAD_LLVM
-  if (gbl.ompaccel_intarget)
+  // AOCC begin
+  if (gbl.ompaccel_intarget && !flg.x86_64_omptarget)
+  // AOCC end
     args[0] = ompaccel_nvvm_get_gbl_tid();
   else
 #endif
@@ -703,7 +707,9 @@ ll_make_kmpc_generic_ptr_2int(int kmpc_api, int argili)
   DTYPE arg_types[3] = {DT_CPTR, DT_INT, DT_INT};
   args[2] = gen_null_arg();
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget)
+  // AOCC begin
+  if (flg.omptarget && !flg.x86_64_omptarget)
+  // AOCC end
     args[1] = ompaccel_nvvm_get_gbl_tid();
   else
 #endif
@@ -756,6 +762,34 @@ ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt,
   args[0] = *arglist;
     return mk_kmpc_api_call(KMPC_API_FORK_CALL, 4, arg_types, args);
 }
+
+// AOCC begin
+int
+ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist, bool refargs)
+{
+  int argili, args[argc + 3] = {0};
+  DTYPE arg_types[argc + 3] = {DT_NONE};
+
+  args[argc + 2] = gen_null_arg(); /* ident */
+  arg_types[0] = DT_CPTR;
+
+  args[argc + 1] = ad_icon(argc);
+  arg_types[1] = DT_INT;
+
+  args[argc + 0] = ad_acon(sptr, 0);
+  arg_types[2] = DT_CPTR;
+
+  for (int i = 0; i < argc; i++) {
+    args[argc - i - 1] = ad_acon(sptrlist[i], 0);
+    if (refargs)
+      arg_types[2 + i + 1] = DT_CPTR;
+    else
+      arg_types[2 + i + 1] = DTYPEG(sptrlist[i]);
+  }
+
+  return mk_kmpc_api_call(KMPC_API_FORK_CALL, argc + 3, arg_types, args);
+}
+// AOCC end
 
 /* arglist is 1 containing the uplevel pointer */
 int

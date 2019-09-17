@@ -26,6 +26,8 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
  */
 
 
@@ -360,6 +362,15 @@ process_input(char *argv0, bool *need_cuda_constructor)
     xtimes[6] += getcpu();
     upper_save_syminfo();
   }
+
+  // AOCC begin
+  if (flg.x86_64_omptarget) {
+    gbl.ompaccel_isdevice = true;
+    gen_fork_wrapper(gbl.currsub);
+    gbl.ompaccel_isdevice = false;
+  }
+  // AOCC end
+
   if (DBGBIT(5, 4))
     symdmp(gbl.dbgfil, DBGBIT(5, 8));
   if (DBGBIT(5, 16))

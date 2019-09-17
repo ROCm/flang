@@ -297,6 +297,14 @@ int ll_make_kmpc_flush(void);
  */
 int ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt, int ngangs_ili);
 
+// AOCC begin
+/**
+ * \brief the variadic version of ll_make_kmpc_fork_call which uses \p argc args
+ * from \p sptrlist.  Set refargs to true if they are passed by ref.
+ */
+int ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist, bool refargs = true);
+// AOCC end
+
 /**
    \brief ...
  */

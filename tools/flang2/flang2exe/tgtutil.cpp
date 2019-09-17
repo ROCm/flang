@@ -24,7 +24,7 @@
  * Date of modification 16th September 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Aug 2019
+ * Last modified: Sept 2019
  */
 
 /** \file
@@ -353,13 +353,28 @@ ll_make_tgt_bin_descriptor(char *name, DTYPE entrytype, DTYPE deviceimagetype)
   return ll_make_struct(4, name, meminfo, 0);
 }
 
+// AOCC begin
+SPTR init_tgt_target_syms(const char *_kernelname, SPTR sptr = SPTR_NULL);
+
 SPTR
-init_tgt_target_syms(const char *kernelname)
+init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
 {
+  char *kernelname;
+  size_t size = 100 + strlen(_kernelname);
+  NEW(kernelname, char, size);
+  strcpy(kernelname, _kernelname);
+
   SPTR eptr1, eptr2, eptr3;
-  size_t size;
   char *kernelname_, *sname_region, *sname_entry;
-  size = 100 + strlen(kernelname);
+
+  if (flg.x86_64_omptarget) {
+    // Assuming that this function is called for outlined functions that are
+    // entry points.
+    if (ompaccel_x86_is_parallel_func(func_sptr)) {
+      sprintf(kernelname, "%s_x86_entry", _kernelname);
+    }
+  }
+  // AOCC end
 
   /* regionId */
   NEW(sname_region, char, size);
@@ -959,7 +974,12 @@ ll_make_tgt_target(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr)
 
   targetinfo = ompaccel_tinfo_get(outlined_func_sptr);
 #if OMP_OFFLOAD_LLVM
-  sptr = init_tgt_target_syms(rname);
+  // AOCC begin
+  if (flg.x86_64_omptarget)
+    sptr = init_tgt_target_syms(rname, outlined_func_sptr);
+  else
+    sptr = init_tgt_target_syms(rname);
+  // AOCC end
   ili_hostptr = ad_acon(sptr, 0);
 #endif
   if (targetinfo->n_symbols == 0) {
@@ -1022,7 +1042,12 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   rname = SYMNAME(outlined_func_sptr);
   NEW(name, char, 100);
 #if OMP_OFFLOAD_LLVM
-  sptr = init_tgt_target_syms(rname);
+  // AOCC begin
+  if (flg.x86_64_omptarget)
+    sptr = init_tgt_target_syms(rname, outlined_func_sptr);
+  else
+    sptr = init_tgt_target_syms(rname);
+  // AOCC end
   ili_hostptr = ad_acon(sptr, 0);
 #endif
 

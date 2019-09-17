@@ -937,6 +937,16 @@ genIntLoad(SPTR sym)
 void
 exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 {
+  // AOCC begin
+  if (flg.x86_64_omptarget &&
+      (opc == IM_BPARA || opc == IM_MPLOOP || opc == IM_PDO) &&
+      gbl.ompaccel_intarget) {
+    if (!gbl.outlined && gbl.ompoutlinedfunc)
+      ompaccel_x86_add_parallel_func(gbl.ompoutlinedfunc);
+    if (gbl.outlined)
+      ompaccel_x86_add_parallel_func(gbl.currsub);
+  }
+  // AOCC end
 #ifdef IM_BPAR
   int argili = 0;
   int ili, tili, ili_arg;
@@ -1538,10 +1548,17 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     if (outlinedCnt >= 1)
       break;
 #ifdef OMP_OFFLOAD_LLVM
-      if (flg.omptarget && gbl.ompaccel_intarget) {
+      // AOCC begin
+      if (flg.omptarget && !flg.x86_64_omptarget && gbl.ompaccel_intarget) {
+      // AOCC end
         exp_ompaccel_mploop(ilmp, curilm);
         break;
       }
+      // AOCC begin
+      if (flg.x86_64_omptarget && ompaccel_x86_is_parallel_func(gbl.currsub)) {
+        ompaccel_x86_add_tid_params(gbl.currsub);
+      }
+      // AOCC end
 #endif
     nlower = ILM_SymOPND(ilmp, 1);
     nupper = ILM_SymOPND(ilmp, 2);
