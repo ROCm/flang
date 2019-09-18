@@ -937,7 +937,9 @@ genIntLoad(SPTR sym)
 void
 exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 {
+#ifdef IM_BPAR
   // AOCC begin
+#if defined(OMP_OFFLOAD_LLVM)
   if (flg.x86_64_omptarget &&
       (opc == IM_BPARA || opc == IM_MPLOOP || opc == IM_PDO) &&
       gbl.ompaccel_intarget) {
@@ -946,8 +948,9 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     if (gbl.outlined)
       ompaccel_x86_add_parallel_func(gbl.currsub);
   }
+#endif
   // AOCC end
-#ifdef IM_BPAR
+
   int argili = 0;
   int ili, tili, ili_arg;
   int lastilt;

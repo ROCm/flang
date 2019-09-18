@@ -767,8 +767,8 @@ ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt,
 int
 ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist, bool refargs)
 {
-  int argili, args[argc + 3] = {0};
-  DTYPE arg_types[argc + 3] = {DT_NONE};
+  int argili, args[argc + 3];
+  DTYPE arg_types[argc + 3];
 
   args[argc + 2] = gen_null_arg(); /* ident */
   arg_types[0] = DT_CPTR;

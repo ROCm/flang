@@ -364,11 +364,13 @@ process_input(char *argv0, bool *need_cuda_constructor)
   }
 
   // AOCC begin
+#if defined(OMP_OFFLOAD_LLVM)
   if (flg.x86_64_omptarget) {
     gbl.ompaccel_isdevice = true;
     gen_fork_wrapper(gbl.currsub);
     gbl.ompaccel_isdevice = false;
   }
+#endif
   // AOCC end
 
   if (DBGBIT(5, 4))
