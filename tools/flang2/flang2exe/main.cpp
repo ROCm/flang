@@ -707,6 +707,8 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "use_llvm_math_intrin",
       (bool *)&(flg.use_llvm_math_intrin), true);
   register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
+  register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
+                       (bool *)&(flg.disable_loop_vectorize_pragmas), false);
   // AOCC End
 
   /* Run argument parser */

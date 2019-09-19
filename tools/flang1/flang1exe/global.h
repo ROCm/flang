@@ -270,6 +270,7 @@ typedef struct {
   LOGICAL allow_gnu_extensions; /* allow GNU fortran extensions */
   char *std_string; /* input string arg of -std= */
   FORTRAN_STD std;
+  LOGICAL disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
   // AOCC end
 } FLG;
 

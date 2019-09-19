@@ -606,7 +606,13 @@ do_sw(void)
   case SW_IVDEP:
     no_specified = true;
     // AOCC Begin
-    bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+    // Do not pass DEPCHK flag to flang2 if user has disabled processing
+    // loop vectorizing pragmas
+    if (flg.disable_loop_vectorize_pragmas) {
+      break;
+    } else {
+      bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+    }
     // AOCC End
   /*  fall thru  */
   case SW_DEPCHK:
@@ -675,6 +681,11 @@ do_sw(void)
 // AOCC BEGIN
   // x:183 0x4000000 is used to pass this pragma to flang2
   case SW_NOVECTOR:
+    // Do not pass novector pragma to ilm file
+    // loop vectorizing pragmas are disabled
+    if (flg.disable_loop_vectorize_pragmas)
+      break;
+
     if (no_specified)
       bclr(DIR_OFFSET(currdir, x[183]), 0x4000000);
     else
@@ -682,6 +693,11 @@ do_sw(void)
     break;
   // x:183 0x80000000 is used to pass this pragma to flang2
   case SW_VECTOR:
+    // Do not pass vector pragma to ilm file
+    // loop vectorizing pragmas are disabled
+    if (flg.disable_loop_vectorize_pragmas)
+      break;
+
     if (no_specified)
       bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
     else
