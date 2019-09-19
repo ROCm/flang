@@ -30,6 +30,9 @@
  *
  * Support for volatile in NME
  * Date of modification 05th September 2019
+ *
+ * Added some SPTR allocation code changes
+ * Date of modification 19th September 2019
  */
 
 /**
@@ -13516,6 +13519,16 @@ static void
 update_llvm_sym_arrays(void)
 {
   const int new_size = stb.stg_avail + MEM_EXTRA;
+  // AOCC Begin
+  // Adding back the removed code.
+  // This was removed in
+  //    commit fdcf2bc30393c4b9ff55fa78516088fc836bb3bd
+  //    Merge of PR #790 from PGI
+  int old_last_sym_avail = llvm_info.last_sym_avail; // NEEDB assigns
+  NEEDB(stb.stg_avail, sptrinfo.array.stg_base, char *, llvm_info.last_sym_avail, new_size);
+  NEEDB(stb.stg_avail, sptrinfo.type_array.stg_base, LL_Type *, old_last_sym_avail,
+        new_size);
+  // AOCC End
   if ((flg.debug || XBIT(120, 0x1000)) && cpu_llvm_module) {
     lldbg_update_arrays(cpu_llvm_module->debug_info, llvm_info.last_dtype_avail,
                         stb.dt.stg_avail + MEM_EXTRA);
@@ -13563,6 +13576,19 @@ cg_llvm_init(void)
   /* last_sym_avail is used for all the arrays below */
   llvm_info.last_sym_avail = stb.stg_avail + MEM_EXTRA;
 
+  // AOCC Begin
+  NEW(sptrinfo.array.stg_base, char *, stb.stg_avail + MEM_EXTRA);
+  BZERO(sptrinfo.array.stg_base, char *, stb.stg_avail + MEM_EXTRA);
+  /* set up the type array shadowing the symbol table */
+  NEW(sptrinfo.type_array.stg_base, LL_Type *, stb.stg_avail + MEM_EXTRA);
+  BZERO(sptrinfo.type_array.stg_base, LL_Type *, stb.stg_avail + MEM_EXTRA);
+
+  // Using above allocation method instead of below allocation method.
+  // As below allocation seems to fail with GPU codegen.
+  // This was added after
+  //    commit fdcf2bc30393c4b9ff55fa78516088fc836bb3bd
+  //    Merge of PR #790 from PGI
+#if 0
   if (sptrinfo.array.stg_base) {
     STG_CLEAR_ALL(sptrinfo.array);
     STG_CLEAR_ALL(sptrinfo.type_array);
@@ -13571,6 +13597,8 @@ cg_llvm_init(void)
     /* set up the type array shadowing the symbol table */
     STG_ALLOC_SIDECAR(stb, sptrinfo.type_array);
   }
+#endif
+  // AOCC End
 
   Globals = NULL;
   recorded_Globals = NULL;
