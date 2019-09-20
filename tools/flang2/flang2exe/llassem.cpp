@@ -26,6 +26,7 @@
   *
   * Changes to support AMDGPU OpenMP offloading.
   * Date of modification 16th September 2019
+  * Date of modification 20th September 2019
   */
 
 
@@ -1225,6 +1226,58 @@ assemble_end(void)
       AG_DSIZE(gblsym) = 1;
     }
   }
+
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  FILE *llvmfile;
+  FILE *asmfile;
+
+  if (flg.amdgcn_target) {
+    llvmfile = get_llasm_output_file();
+    asmfile = ASMFIL;
+    use_gpu_output_file();
+    ASMFIL = gbl.ompaccfile;
+
+    for (gblsym = ag_cmblks; gblsym; gblsym = AG_SYMLK(gblsym)) {
+      if (AG_DSIZE(gblsym) == 2)
+        continue;
+      if (AG_SC(gblsym) == SC_EXTERN) {
+        fprintf(ASMFIL, "@%s = linkonce global %s undef\n", AG_NAME(gblsym),
+                AG_TYPENAME(gblsym));
+      } else {
+        ISZ_T sz;
+        char tname[20];
+        LL_ObjToDbgList *listp = AG_OBJTODBGLIST(gblsym);
+        LL_ObjToDbgListIter i;
+        if (AG_ALLOC(gblsym))
+          sz = 8;
+        else
+          sz = AG_SIZE(gblsym);
+        name = AG_NAME(gblsym);
+        sprintf(gname, "struct%s", name);
+        sprintf(tname, "[%ld x i8]", sz);
+        get_typedef_ag(gname, tname);
+        tdefsym = find_ag(gname);
+        typed = AG_TYPENAME(tdefsym);
+        fprintf(ASMFIL, "%%struct%s = type < { %s } > \n", name, typed);
+        fprintf(ASMFIL, "@%s = weak addrspace(3) externally_initialized"
+                        " global %%struct%s ", name, name);
+        fprintf(ASMFIL, "undef, align %d", align_value);
+        for (llObjtodbgFirst(listp, &i); !llObjtodbgAtEnd(&i);
+             llObjtodbgNext(&i)) {
+          print_dbg_line(llObjtodbgGet(&i));
+        }
+        llObjtodbgFree(listp);
+        fprintf(ASMFIL, "\n");
+        AG_DSIZE(gblsym) = 2;
+      }
+    }
+
+    ASMFIL = asmfile;
+    set_llasm_output_file(llvmfile);
+  }
+#endif
+  // AOCC End
 
   for (gblsym = ag_intrin; gblsym; gblsym = AG_SYMLK(gblsym)) {
     print_line(AG_NAME(gblsym));

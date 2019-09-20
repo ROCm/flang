@@ -22,6 +22,7 @@
  * Date of modification 9th July 2019
  * Date of modification 5th September 2019
  * Date of modification 16th September 2019
+ * Date of modification 20th September 2019
  *
  */
 
@@ -8682,8 +8683,13 @@ begin_combine_constructs(BIGINT64 construct)
         error(1202, ERR_Severe, gbl.lineno, "target teams distribute",
               "parallel do");
       } else if (combinedMode == mode_target_teams) {
+        // AOCC Begin
+        // Commenting this as generated code is correct
+#ifndef OMP_OFFLOAD_AMD
         error(1202, ERR_Severe, gbl.lineno, "target teams",
              "distribute parallel do");
+#endif
+        // AOCC End
       }
       A_COMBINEDTYPEP(ast, combinedMode);
     }
