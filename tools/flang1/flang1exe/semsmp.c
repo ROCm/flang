@@ -23,6 +23,7 @@
  * Date of modification 5th September 2019
  * Date of modification 16th September 2019
  * Date of modification 20th September 2019
+ * Date of modification 23rd September 2019
  *
  */
 
@@ -125,6 +126,9 @@ static LOGICAL is_valid_atomic_update(int, int);
 static int mk_atomic_update_binop(int, int);
 static int mk_atomic_update_intr(int, int);
 static void do_map();
+// AOCC Begin
+static void do_tofrom();
+// AOCC End
 static LOGICAL use_atomic_for_reduction(int);
 
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
@@ -132,6 +136,9 @@ static char *map_type;
 bool isalways = false;
 static int get_omp_combined_mode(BIGINT64 type);
 static void mp_handle_map_clause(SST *, int, char *, int, int, bool);
+// AOCC Begin
+static void mp_handle_motion_clause(SST *, int, int);
+// AOCC End
 static void mp_check_maptype(const char *maptype);
 static LOGICAL is_in_omptarget(int d);
 #endif
@@ -1670,6 +1677,11 @@ semsmp(int rednum, SST *top)
     (void)leave_dir(DI_TARGETUPDATE, TRUE, 0);
   }
     SST_ASTP(LHS, 0);
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    do_tofrom();
+#endif
+    // AOCC End
     break;
   /*
    *	<mp stmt> ::= <target begin> <opt par list> |
@@ -3228,12 +3240,32 @@ semsmp(int rednum, SST *top)
   /*
    *	<motion clause> ::= TO ( <var ref list> ) |
    */
-  case MOTION_CLAUSE1:
+  // AOCC Begin
+  /*
+   * CHANGED MOTION_CLAUSE1 and MOTION_CLAUSE2
+   * In the grammer we have changed list type from  <var ref list> to
+   * <accel data list>. This is because <var ref list> doesn't populate
+   * ast properly. Changing that behaviour may break something else as
+   * it is used in many  places.
+   *
+   */
+   // AOCC End
+   case MOTION_CLAUSE1:
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    mp_handle_motion_clause(top, CL_TO, 3);
+#endif
+    // AOCC End
     break;
   /*
    *	<motion clause> ::= FROM ( <var ref list> )
    */
   case MOTION_CLAUSE2:
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    mp_handle_motion_clause(top, CL_FROM, 3);
+#endif
+    // AOCC End
     break;
 
   /* ------------------------------------------------------------------ */
@@ -4863,7 +4895,11 @@ semsmp(int rednum, SST *top)
    */
   case ACCEL_DATA1:
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+#ifndef OMP_OFFLOAD_AMD // AOCC
+    // Disabling this condition as <accel sub list> is also part of
+    // target update
     if(is_in_omptarget(sem.doif_depth)) {
+#endif // AOCC
       //todo support array section in the map clause for openmp
       if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
         sptr = SST_SYMG(RHS(1));
@@ -4873,7 +4909,9 @@ semsmp(int rednum, SST *top)
       error(1206, ERR_Warning, gbl.lineno, sptr ? SYMNAME(sptr) : CNULL, CNULL);
       goto accel_data2;
       break;
+#ifndef OMP_OFFLOAD_AMD // AOCC
     }
+#endif // AOCC
 #endif
   accel_data1:
     if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
@@ -7643,6 +7681,37 @@ do_copyprivate()
   }
 }
 
+// AOCC Begin
+static void
+do_tofrom()
+{
+  if (!flg.omptarget)
+    return;
+
+  ITEM *item;
+  int ast;
+  if (CL_PRESENT(CL_TO)) {
+    for (item = (ITEM *)CL_FIRST(CL_TO); item != ITEM_END; item = item->next) {
+      ast = mk_stmt(A_MP_MAP, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+  if (CL_PRESENT(CL_FROM)) {
+    for (item = (ITEM *)CL_FIRST(CL_FROM); item != ITEM_END;
+                        item = item->next) {
+      ast = mk_stmt(A_MP_MAP, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+  ast = mk_stmt(A_MP_EMAP, 0);
+  (void)add_stmt(ast);
+}
+// AOCC End
+
 static void
 do_map()
 {
@@ -10190,6 +10259,42 @@ gen_reduction_ompaccel(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
 #endif /* OMP_OFFLOAD_LLVM */
 
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+// AOCC Bgin
+static void
+mp_handle_motion_clause(SST *top, int clause, int op)
+{
+  ITEM *itemp, *itembeg, *itemend;
+  int type = 0;
+  type |= OMP_TGT_MAPTYPE_TARGET_PARAM;
+
+  if (clause == CL_TO) {
+    type |= OMP_TGT_MAPTYPE_TO;
+  } else if (clause == CL_FROM) {
+    type |= OMP_TGT_MAPTYPE_FROM;
+  } else {
+    assert(0, "Illegal motion cluase", clause, 3);
+  }
+
+  itembeg = SST_BEGG(RHS(op));
+  itemend = SST_ENDG(RHS(op));
+  if (itembeg == ITEM_END)
+    return;
+
+  int it = 0;;
+  for (itemp = itembeg; itemp != ITEM_END; itemp = itemp->next) {
+    it++;
+    itemp->t.cltype = type;
+  }
+
+  add_clause(clause, FALSE);
+  if (CL_FIRST(clause) == NULL)
+    CL_FIRST(clause) = itembeg;
+  else
+    ((ITEM *)CL_LAST(clause))->next = itembeg;
+  CL_LAST(clause) = itemend;
+}
+// AOCC End
+
 static void
 mp_check_maptype(const char *maptype)
 {

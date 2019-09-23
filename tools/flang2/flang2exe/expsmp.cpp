@@ -19,6 +19,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 16th September 2019
+ * Date of modification 23rd September 2019
  *
  */
 
@@ -2706,7 +2707,23 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     break;
 
   case IM_TARGETUPDATE:
-    /* don't update if false - currently has no effect because host is device */
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    dotarget = ILI_OF(ILM_OPND(ilmp, 1));
+    beg_label = getlab();
+    end_label = getlab();
+
+    dotarget = ad3ili(IL_ICJMPZ, dotarget, CC_EQ, end_label);
+    RFCNTI(end_label);
+    chk_block(dotarget);
+
+    wr_block();
+    cr_block();
+    exp_label(beg_label);
+    if (flg.amdgcn_target)
+      exp_ompaccel_target_update(ilmp, curilm, opc);
+#endif
+    // AOCC End
     break;
 
   case IM_BTARGETDATA:

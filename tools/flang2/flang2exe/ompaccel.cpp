@@ -23,9 +23,10 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
  * Date of modification 26th July 2019
- * Date of modification 05th Sepetember 2019
- * Date of modification 06th Sepetember 2019
- * Date of modification 16th Sepetember 2019
+ * Date of modification 05th September 2019
+ * Date of modification 06th September 2019
+ * Date of modification 16th September 2019
+ * Date of modification 23rd September 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -191,6 +192,13 @@ int tinfo_size_reductions = 10;
 int num_tinfos = 0;
 OMPACCEL_TINFO **tinfos;
 OMPACCEL_TINFO *current_tinfo = NULL;
+
+// AOCC Begin
+// This is used for target update. Since target update can appear anywhere in
+// source and there is too much dependency on current_tinfo I don't see any
+// other way to avoid overlapping of tinfo of target update with others.
+OMPACCEL_TINFO *old_tinfo = NULL;
+// AOCC End
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
 
 static OMPACCEL_TINFO *tinfo_create(SPTR func_sptr, SPTR device_sptr, int max_nargs, ILM_OP opc);
@@ -1245,11 +1253,17 @@ ompaccel_tinfo_current_get_targetdata()
 {
   int i, current_tinfo_idx = -1;
   OMPACCEL_TINFO *tinfo = NULL;
-  for (i = 0; i < num_tinfos; ++i)
+  for (i = 0; i < num_tinfos; ++i) {
+    // AOCC Begin
+    // Skipping target_update tinfo
+    if (tinfos[i]->mode == mode_target_update)
+      continue;
+    // AOCC End
     if (tinfos[i]->func_sptr == current_tinfo->func_sptr) {
       current_tinfo_idx = i;
       break;
     }
+  }
   if (current_tinfo_idx == -1)
     ompaccelInternalFail("Current tinfo is not found. ");
 
@@ -1421,7 +1435,10 @@ ompaccel_tinfo_current_addupdate_mapitem(SPTR host_symbol, int map_type)
     /* if it is in data mode, we should keep midnum at active symbols*/
     if (current_tinfo->mode == mode_target_data_enter_region ||
         current_tinfo->mode == mode_target_data_exit_region ||
-        current_tinfo->mode == mode_target_data_region) {
+        current_tinfo->mode == mode_target_data_region ||
+        // AOCC Begin
+        current_tinfo->mode == mode_target_update) {
+        // AOCC End
       midsptr = (SPTR)MIDNUMG(host_symbol);
       if (!tinfo_update_maptype(current_tinfo->symbols,
                                 current_tinfo->n_symbols, midsptr, map_type))
@@ -1593,6 +1610,11 @@ dumptargetmode(OMPACCEL_TINFO *tinfo)
   case mode_target_teams_distribute:
     fprintf(gbl.dbgfil, " <target teams distribute >");
     break;
+  // AOCC Begin
+  case mode_target_update:
+    fprintf(gbl.dbgfil, " <target update>");
+    break;
+  // AOCC End
   case mode_target_data_region:
     fprintf(gbl.dbgfil, " <target data>");
     break;
@@ -2362,7 +2384,11 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   cr_block();
 
   // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
   sprintf(name, "%s_%s_%d", "ompaccelshmem", suffix, reductionFunctionCounter++);
+#else
+  sprintf(name, "%s_%d", "ompaccelshmem", reductionFunctionCounter++);
+#endif
   // AOCC End
   sptrShmem = mk_ompaccel_addsymbol(
       name, mk_ompaccel_array_dtype(DT_INT8, NVVM_WARPSIZE),
@@ -3041,6 +3067,15 @@ exp_ompaccel_emap(ILM *ilmp, int curilm)
       ili = ll_make_tgt_target_data_end(OMPACCEL_DEFAULT_DEVICEID, targetinfo);
       iltb.callfg = 1;
       chk_block(ili);
+    // AOCC Begin
+    } else if (ompaccel_tinfo_current_target_mode() == mode_target_update) {
+      wr_block();
+      cr_block();
+      ili = ll_make_tgt_target_update(OMPACCEL_DEFAULT_DEVICEID, targetinfo);
+      iltb.callfg = 1;
+      chk_block(ili);
+      current_tinfo = old_tinfo;
+    // AOCC End
     }
   }
 }
@@ -3067,6 +3102,36 @@ exp_ompaccel_reductionitem(ILM *ilmp, int curilm)
   ompaccel_tinfo_current_add_reductionitem(
           ILM_SymOPND(ilmp, 1), ILM_SymOPND(ilmp, 2), ILM_SymOPND(ilmp, 3));
 }
+
+// AOCC Begin
+void
+exp_ompaccel_target_update(ILM *ilmp, int curilm, ILM_OP opc)
+{
+
+  int dotarget;
+
+  // Store current_tinfo to avoid overlapping with other tinfo.
+  // Overlapping happends moslty for reduction kernels.
+  old_tinfo = current_tinfo;
+
+  SPTR beg_label, end_label;
+  ompaccel_symreplacer(false);
+  tinfo_create(OMPACCEL_DATA_FUNCTION, SPTR_NULL, OMPACCEL_DATA_MAX_SYM, opc);
+  ompaccel_tinfo_current_set_mode(mode_target_update);
+  dotarget = ILI_OF(ILM_OPND(ilmp, 1));
+  beg_label = getlab();
+  end_label = getlab();
+
+  dotarget = ad3ili(IL_ICJMPZ, dotarget, CC_EQ, end_label);
+  RFCNTI(end_label);
+  chk_block(dotarget);
+  wr_block();
+  cr_block();
+  exp_label(beg_label);
+
+  exp_label(end_label);
+}
+// AOCC End
 
 void
 exp_ompaccel_targetdata(ILM *ilmp, int curilm, ILM_OP opc)

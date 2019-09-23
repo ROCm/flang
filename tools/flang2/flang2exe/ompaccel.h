@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 23rd September 2019
+ *
+ */
 
 /**
  *  \file
@@ -481,6 +488,12 @@ void exp_ompaccel_looptripcount(ILM *, int);
    \brief Expand ILM and emit code for reductionitem
  */
 void exp_ompaccel_reductionitem(ILM *, int);
+// AOCC Begin
+/**
+   \brief Expand ILM and emit code for target update
+ */
+void exp_ompaccel_target_update(ILM *, int, ILM_OP);
+// AOCC End
 /**
    \brief Expand ILM and emit code for targetdata
  */

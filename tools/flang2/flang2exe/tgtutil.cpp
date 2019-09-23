@@ -22,6 +22,7 @@
  * Date of modification 26th July 2019
  * Date of modification 05th September 2019
  * Date of modification 16th September 2019
+ * Date of modification 23rd September 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -75,6 +76,9 @@ extern std::vector<SPTR> constArraySymbolList;
 #define MXIDLEN 100
 #define MXIDLEN 100
 static int dataregion = 0;
+// AOCC Begin
+static int updateregion = 0;
+// AOCC End
 
 static DTYPE tgt_offload_entry_type = DT_NONE;
 
@@ -97,6 +101,10 @@ public:
       return {"__tgt_target_data_begin", 0, DT_NONE};
     case TGT_API_TARGET_DATA_END:
       return {"__tgt_target_data_end", 0, DT_NONE};
+    // AOCC Begin
+    case TGT_API_TARGET_UPDATE:
+      return {"__tgt_target_data_update", 0, DT_NONE};
+    // AOCC End
     default:
       return {nullptr, 0, DT_NONE};
     }
@@ -110,7 +118,11 @@ static const struct tgt_api_entry_t tgt_api_calls[] = {
     [TGT_API_TARGET_TEAMS] = {"__tgt_target_teams", 0, DT_INT},
     [TGT_API_TARGET_TEAMS_PARALLEL] = {"__tgt_target_teams_parallel", 0, DT_INT},
     [TGT_API_TARGET_DATA_BEGIN] = {"__tgt_target_data_begin", 0, DT_NONE},
-    [TGT_API_TARGET_DATA_END] = {"__tgt_target_data_end", 0, DT_NONE}};
+    [TGT_API_TARGET_DATA_END] = {"__tgt_target_data_end", 0, DT_NONE},
+    // AOCC Begin
+    [TGT_API_TARGET_UPDATE] = {"__tgt_target_data_update", 0, DT_NONE}};
+    // AOCC End
+
 #endif
 static int
 gen_null_arg()
@@ -1135,6 +1147,50 @@ ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
 
   return call_ili;
 }
+
+// AOCC Begin
+int
+ll_make_tgt_target_update(int device_id, OMPACCEL_TINFO *targetinfo)
+{
+  int call_ili, nargs;
+  SPTR arg_base_sptr, arg_sptr, arg_size_sptr, arg_map_sptr;
+  char name[12];
+  int local_args[12];
+
+  DTYPE locarg_types[] = {DT_INT8, DT_INT, DT_ADDR, DT_ADDR, DT_ADDR, DT_ADDR};
+
+  if (targetinfo == NULL) {
+    interr("Map item list is not found", 0, ERR_Fatal);
+  }
+  nargs = targetinfo->n_symbols;
+
+  sprintf(name, "update%d_base", updateregion);
+  arg_base_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "update%d_size", updateregion);
+  arg_size_sptr = make_array_sptr(name, DT_INT8, nargs);
+  sprintf(name, "update%d_args", updateregion);
+  arg_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "update%d_type", updateregion);
+  arg_map_sptr = make_array_sptr(name, DT_INT8, nargs);
+  updateregion++;
+
+  tgt_target_fill_params(arg_base_sptr, arg_size_sptr, arg_sptr,
+                         arg_map_sptr, targetinfo);
+
+  local_args[5] = ad_icon(device_id);
+  local_args[4] = ad_icon(nargs);
+  local_args[3] = ad_acon(arg_base_sptr, 0);
+  local_args[2] = ad_acon(arg_sptr, 0);
+  local_args[1] = ad_acon(arg_size_sptr, 0);
+  local_args[0] = ad_acon(arg_map_sptr, 0);
+
+  call_ili =
+      mk_tgt_api_call(TGT_API_TARGET_UPDATE, 6, locarg_types, local_args);
+
+  return call_ili;
+}
+// AOCC End
+
 
 int
 ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)

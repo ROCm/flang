@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 23rd September 2019
+ *
+ */
 
 #ifndef LLMPUTIL_H_
 #define LLMPUTIL_H_
@@ -105,6 +112,9 @@ typedef enum {
   mode_target_data_region,
   mode_outlinedfunc_teams,
   mode_outlinedfunc_parallel,
+  // AOCC Begin
+  mode_target_update,
+  // AOCC End
 } OMP_TARGET_MODE;
 /* The name of the modes of target related regions. */
 static const char *omp_target_mode_names[] = {
@@ -122,7 +132,10 @@ static const char *omp_target_mode_names[] = {
                                     "target data exit",
                                     "target data",
                                     "outlined teams region",
-                                    "outlined parallel region" };
+                                    "outlined parallel region",
+                                    // AOCC Begin
+                                    "target update" };
+                                    // AOCC End
 
 
 /* Obtain a previously created task object, where scope_sptr is the BMPSCOPE
