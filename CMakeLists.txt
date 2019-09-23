@@ -401,6 +401,10 @@ option(FLANG_OPENMP_GPU_AMD "Enable OpenMP AMD Accelerator Offload." OFF)
 if (FLANG_OPENMP_GPU_AMD)
   add_definitions("-DOMP_OFFLOAD_AMD")
 endif()
+
+if (FLANG_OPENMP_GPU_NVIDIA OR FLANG_OPENMP_GPU_AMD)
+  set(OMP_OFFLOADING_BUILD 1)
+endif()
 # AOCC End
 
 if( FLANG_INCLUDE_TESTS )
