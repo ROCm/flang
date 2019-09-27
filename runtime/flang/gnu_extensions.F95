@@ -46,11 +46,17 @@
 ! THE SOFTWARE.
 !===----------------------------------------------------------------------===!
 module GNU_EXTENSIONS
-
-contains
-  elemental logical function isnan(val)
-    use ieee_arithmetic, only: ieee_is_nan
-    isnan = ieee_is_nan(val)
-  end function
-
+ use ieee_arithmetic, only: ieee_is_nanr4,ieee_is_nanr8
+ interface isnan
+     module procedure isnanr4, isnanr8
+ end interface
+ contains
+   elemental logical function isnanr4(val)
+      real*4,intent(IN) :: val
+      isnanr4 = ieee_is_nanr4(val)
+   end function
+   elemental logical function isnanr8(val)
+      real*8,intent(IN) :: val
+      isnanr8 = ieee_is_nanr8(val)
+   end function
 end module GNU_EXTENSIONS

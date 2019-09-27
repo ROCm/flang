@@ -3226,7 +3226,7 @@ contiguous_array_section(int subscr_ast)
         state = TRIPLE_SNGL_ELEM_SEEN;
       break;
     case TRIPLE_SNGL_ELEM_SEEN:
-      if (tkn != DIM_ELMNT)
+      if (tkn != DIM_ELMNT && tkn != DONT_CARE)
         return FALSE;
       break;
     }
