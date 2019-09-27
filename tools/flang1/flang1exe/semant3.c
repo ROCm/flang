@@ -21,7 +21,7 @@
  * Changes to support,
  * [CPUPC-2279]:F2008: Raise error for non integer 
  * and non character stop codes
- * Last modified: Tue Sep 10 2019
+ * Last modified: Tue Sep 25 2019
  */
 /**
     \file semant3.c
@@ -1751,8 +1751,14 @@ errorstop_shared:
         /* 64-bit hack */
         if (DTY(DT_INT) == TY_INT8)
           i = get_int_cval(i);
-        snprintf(name, sizeof(name), "%5ld", (long)i);
-        ast2 = mk_cnst(getstring(name, 5));
+        snprintf(name, sizeof(name), "%5ld", (long) i);
+        // AOCC Begin
+        if (flg.std == F2008) {
+          ast2 = mk_cnst(getstring(name, strlen(name)));
+        } else {
+        // AOCC End
+          ast2 = mk_cnst(getstring(name, 5));
+        }
       }
     } else {
       if (DTY(SST_DTYPEG(RHS(1))) == TY_CHAR) {
