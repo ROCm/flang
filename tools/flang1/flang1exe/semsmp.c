@@ -4895,11 +4895,9 @@ semsmp(int rednum, SST *top)
    */
   case ACCEL_DATA1:
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
-#ifndef OMP_OFFLOAD_AMD // AOCC
     // Disabling this condition as <accel sub list> is also part of
     // target update
     if(is_in_omptarget(sem.doif_depth)) {
-#endif // AOCC
       //todo support array section in the map clause for openmp
       if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
         sptr = SST_SYMG(RHS(1));
@@ -4909,9 +4907,7 @@ semsmp(int rednum, SST *top)
       error(1206, ERR_Warning, gbl.lineno, sptr ? SYMNAME(sptr) : CNULL, CNULL);
       goto accel_data2;
       break;
-#ifndef OMP_OFFLOAD_AMD // AOCC
     }
-#endif // AOCC
 #endif
   accel_data1:
     if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {

@@ -541,7 +541,7 @@ Inhibit hlinduc0:memcopy idiom recognition
 .XB 0x20000000:
 Disable inhibiting strength reduction for address-mode expressions
 .XB 0x40000000:
-AVAILABLE
+reserved
 .XB 0x80000000:
 inhibit iltutil.c:merge_bih() - WARNING: in certain cases, merging must
 occur to complete an optimization, e.g. br_flatten().
@@ -2246,6 +2246,9 @@ Fortran character length for 64-bit target is integer*8 by default.
 .XB 0x40
 Use TLS to implemement OpenMP threadprivates instead of TP vectors. Has no
 effect if the ETLS switch is set.
+.XB 0x80
+Allow non-standard F2003 type bound procedure calls of the form z = x%foo
+(i.e., assume missing parenthesis as an empty arg list).
 
 .XF "69:"
 SMP implementation-defined behavior modifications.
@@ -5447,6 +5450,8 @@ FLANG flags
 The -ffast-math command-line option is present.
 .XB 0x02:
 Disable fast math attribute on floating-point addition.
+.XB 0x04:
+Disable fast math attribute on floating-point division.
 
 .XF "217:"
 POWER Modifications

@@ -115,6 +115,8 @@ typedef enum {
   // AOCC Begin
   mode_target_update,
   // AOCC End
+  mode_targetupdate_begin,
+  mode_targetupdate_end,
 } OMP_TARGET_MODE;
 /* The name of the modes of target related regions. */
 static const char *omp_target_mode_names[] = {
@@ -134,8 +136,10 @@ static const char *omp_target_mode_names[] = {
                                     "outlined teams region",
                                     "outlined parallel region",
                                     // AOCC Begin
-                                    "target update" };
+                                    "target update",
                                     // AOCC End
+                                    "target update begin",
+                                    "target update end" };
 
 
 /* Obtain a previously created task object, where scope_sptr is the BMPSCOPE

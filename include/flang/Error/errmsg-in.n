@@ -1526,4 +1526,5 @@ A DO CONCURRENT variable with LOCAL_INIT locality must have a host variable of t
 .MS S 1213 "OpenACC $ data clause may not follow a device_type clause."
 .MS S 1214 "PGI Accelerator $ data clause may not follow a device_type clause."
 .MS S 1215 "OpenACC data clause expected after $."
-.MS W 1216 "$ is uninitialized at $"
+.MS S 1216 "Expression in assignment statement contains type bound procedure name $. This may be a function call that's missing parentheses."
+.MS W 1220 "$ is uninitialized at $"

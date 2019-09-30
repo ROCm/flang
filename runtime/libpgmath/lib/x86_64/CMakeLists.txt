@@ -94,11 +94,11 @@ set(SRCS
   tan.c
   tanh.c)
 list(APPEND DEFINITIONS _GNU_SOURCE _ISOC99_SOURCE)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(${LIBPGMATH_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFINITIONS _GNU_SOURCE)
 endif()
 set(FLAGS "${FLAGS}-Wall -W -Wstrict-prototypes -Wwrite-strings ")
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if(NOT ${LIBPGMATH_SYSTEM_NAME} MATCHES "Windows")
   set(FLAGS "${FLAGS}-Werror ")
 endif()
 libmath_add_object_library("${SRCS}" "${FLAGS}" "${DEFINITIONS}" "isoc99")
@@ -143,7 +143,7 @@ set(SRCS
   tan.c
   tanh.c)
 set(FLAGS "${FLAGS} -mavx2 -mfma")
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if(NOT ${LIBPGMATH_SYSTEM_NAME} MATCHES "Windows")
   set(FLAGS "${FLAGS} -ffp-contract=fast")
 elseif (${CMAKE_COMPILER_ID} MATCHES "Clang")
   set(FLAGS "${FLAGS} -Xclang -ffp-contract=fast -Xclang -Wno-language-extension-token")

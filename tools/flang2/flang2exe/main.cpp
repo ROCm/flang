@@ -131,7 +131,7 @@ static int dodebug = 0;
 #define TR(str)
 #endif
 
-#if DEBUG && !defined(EXTRACTOR) && (defined(X86_64) || defined(TARGET_POWER))
+#if DEBUG && !defined(EXTRACTOR) && (defined(X86_64) || defined(TARGET_POWER) || defined(TARGET_ARM))
 #define DEBUGQQ 1
 #else
 #define DEBUGQQ 0
@@ -218,7 +218,7 @@ process_input(char *argv0, bool *need_cuda_constructor)
     if (malloc_verify() != 1)
       interr("main: malloc_verify failsB", errno, ERR_Fatal);
 #endif
-  xtimes[0] += getcpu();
+  xtimes[0] += get_rutime();
   /* don't increment if it is outlined function because it
    * uses STATICS/BSS from host routine.
    */
@@ -227,8 +227,8 @@ process_input(char *argv0, bool *need_cuda_constructor)
     is_omp_recompile = false;
   }
   gbl.func_count++;
+  gbl.multi_func_count = gbl.func_count;
 
-  if (gbl.multiversion <= 1) {
     TR("F90 ILM INPUT begins\n")
     if (!IS_PARFILE)
     {
@@ -237,10 +237,9 @@ process_input(char *argv0, bool *need_cuda_constructor)
         return false;
       upper_assign_addresses();
     }
-  }
 
   is_constructor = gbl.cuda_constructor;
-  xtimes[1] += getcpu();
+  xtimes[1] += get_rutime();
   DUMP("upper");
 
   if (gbl.cuda_constructor) {
@@ -257,15 +256,11 @@ process_input(char *argv0, bool *need_cuda_constructor)
     if (flg.debug)
       process_global_lifetime_debug();
 
-    gbl.multi_func_count++;
     gbl.nofperror = true;
     if (gbl.rutype == RU_BDATA) {
     } else {
-#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+#ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget) {
-        if(IS_OMP_DEVICE_CG)
-          gbl.ompaccel_intarget = ompaccel_tinfo_get_by_device(gbl.currsub) != NULL;
-        else
           gbl.ompaccel_intarget = ompaccel_tinfo_has(gbl.currsub);
         ompaccel_initsyms();
       }
@@ -353,13 +348,13 @@ process_input(char *argv0, bool *need_cuda_constructor)
         TR("F90 SCHEDULER begins\n");
         DUMP("before-schedule");
         schedule();
-        xtimes[5] += getcpu();
+        xtimes[5] += get_rutime();
         DUMP("schedule");
       } /* CUDAG(GBL_CURRFUNC) & CUDA_HOST */
     }
     TR("F90 ASSEMBLER begins\n");
     assemble();
-    xtimes[6] += getcpu();
+    xtimes[6] += get_rutime();
     upper_save_syminfo();
   }
 
@@ -399,7 +394,7 @@ process_input(char *argv0, bool *need_cuda_constructor)
 
   if (flg.xref) {
     xref(); /* write cross reference map */
-    xtimes[7] += getcpu();
+    xtimes[7] += get_rutime();
   }
   (void)summary(false, 0);
   cg_llvm_fnend();
@@ -422,14 +417,13 @@ main(int argc, char *argv[])
   bool need_constructor = false;
   int accel_cnt, accel_vendor = 0;
 
-  getcpu();
+  get_rutime();
   init(argc, argv);
 
   saveoptflag = flg.opt;
   savevectflag = flg.vect;
   savex8flag = flg.x[8];
   saverecursive = flg.recursive;
-  gbl.multiversion = 0;
   gbl.numversions = 1;
 
 #if DEBUG & sun
@@ -463,7 +457,7 @@ main(int argc, char *argv[])
     init_test();
     ompaccel_create_globalctor();
     gbl.func_count--;
-    gbl.multi_func_count--;
+    gbl.multi_func_count = gbl.func_count;
   }
 #endif
   do { /* loop once for each user program unit */
@@ -927,7 +921,7 @@ do_curr_file:
   assemble_init(argc, argv, cmdline);
 
   gbl.func_count = 0;
-  gbl.multi_func_count = 0;
+  gbl.multi_func_count = gbl.func_count;
   direct_init();
 
   if (XBIT(125, 0x8))
@@ -1061,6 +1055,7 @@ process_stb_file()
     reinit();
 
     gbl.func_count++;
+    gbl.multi_func_count = gbl.func_count;
 
     TR("F90 STBFILE INPUT begins\n")
     upper(1); /* should we generate upper_stbfil()? */
@@ -1089,6 +1084,7 @@ process_stb_file()
 
   gbl.eof_flag = false;
   gbl.func_count = 0;
+  gbl.multi_func_count = gbl.func_count;
 
   if (gbl.stbfil != NULL)
     fclose(gbl.stbfil);
@@ -1180,6 +1176,7 @@ ompaccel_create_reduction_wrappers()
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce, suffix);
 #else
       // AOCC End
+      gbl.multi_func_count = gbl.func_count;
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce);
       // AOCC Begin
@@ -1195,6 +1192,7 @@ ompaccel_create_reduction_wrappers()
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds, suffix);
 #else
       // AOCC End
+      gbl.multi_func_count = gbl.func_count;
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds);
       // AOCC Begin
@@ -1204,7 +1202,7 @@ ompaccel_create_reduction_wrappers()
       assemble();
       ompaccel_write_sharedvars();
       gbl.func_count++;
-      gbl.multi_func_count++;
+      gbl.multi_func_count = gbl.func_count;
       gbl.outlined = false;
       gbl.ompaccel_isdevice = false;
       gbl.currsub = cur_func_sptr;
