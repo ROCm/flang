@@ -2709,7 +2709,9 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     break;
 
   case IM_TARGETUPDATE:
-    // AOCC Begin
+  // AOCC Begin
+  case IM_BTARGETUPDATE:
+  // AOCC End
 #ifdef OMP_OFFLOAD_AMD
     dotarget = ILI_OF(ILM_OPND(ilmp, 1));
     beg_label = getlab();
@@ -2724,11 +2726,11 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     exp_label(beg_label);
     if (flg.amdgcn_target)
       exp_ompaccel_target_update(ilmp, curilm, opc);
+    exp_label(end_label);
 #endif
     // AOCC End
     break;
 
-  case IM_BTARGETUPDATE:
   case IM_BTARGETDATA:
   case IM_TARGETENTERDATA:
   case IM_TARGETEXITDATA:
@@ -2869,14 +2871,20 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_looptripcount(ilmp, curilm);
       break;
     case IM_MP_MAP:
-      if(flg.omptarget && !(IS_OMP_DEVICE_CG || gbl.ompaccel_intarget))
+      // AOCC : Modification
+      // Removed gbl.ompaccel_intarget from condition or else it will disable
+      // replacer, leading to usage of host symbols in device
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_map(ilmp, curilm, outlinedCnt);
       break;
     case IM_MP_EMAP:
-    if(flg.omptarget && !(IS_OMP_DEVICE_CG || gbl.ompaccel_intarget)) {
-      exp_ompaccel_emap(ilmp, curilm);
-    }
-    break;
+      // AOCC : Modification
+      // Removed gbl.ompaccel_intarget from condition or else it will disable
+      // replacer, leading to usage of host symbols in device
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG)) {
+        exp_ompaccel_emap(ilmp, curilm);
+      }
+      break;
     case IM_MP_TARGETMODE:
       if(flg.omptarget) {
         ompaccel_tinfo_set_mode_next_target((OMP_TARGET_MODE)ILM_OPND(ilmp, 1));

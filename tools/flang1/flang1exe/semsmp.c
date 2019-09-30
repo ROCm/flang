@@ -1678,9 +1678,8 @@ semsmp(int rednum, SST *top)
   }
     SST_ASTP(LHS, 0);
     // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-    do_tofrom();
-#endif
+    if (flg.amdgcn_target)
+      do_tofrom();
     // AOCC End
     break;
   /*
@@ -4897,7 +4896,7 @@ semsmp(int rednum, SST *top)
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
     // Disabling this condition as <accel sub list> is also part of
     // target update
-    if(is_in_omptarget(sem.doif_depth)) {
+    if(is_in_omptarget(sem.doif_depth) || flg.amdgcn_target) {
       //todo support array section in the map clause for openmp
       if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
         sptr = SST_SYMG(RHS(1));

@@ -965,6 +965,12 @@ init(int argc, char *argv[])
   if(omptp != NULL)
     flg.omptarget = TRUE;
 #endif
+  // AOCC Begin
+  flg.amdgcn_target = FALSE;
+  if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
+    flg.amdgcn_target = TRUE;
+  // AOCC End
+
   /* Vectorizer settings */
   flg.vect |= vect_val;
   if (flg.vect & 0x10)
