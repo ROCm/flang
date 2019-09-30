@@ -305,6 +305,10 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
         return ad3ili(IL_LDKR, ili, nme, MSZ_WORD);
       else
         return ad3ili(IL_LD, ili, nme, MSZ_WORD);
+    // AOCC Begin
+    case DT_INT8:
+      return ad3ili(IL_LDKR, ili, nme, MSZ_I8);
+    // AOCC End
     case DT_REAL:
       if (size_of(dtype) > 4)
         return ad3ili(IL_LDKR, ili, nme, MSZ_F8);
@@ -2239,6 +2243,12 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
       rili =
           mk_ompaccel_load(rili, DT_FLOAT, addnme(NT_VAR, sptrRedItem, 0, 0));
       rili = ad1ili(IL_DBLE, rili);
+    // AOCC Begin
+    } else if (dtypeReductionItem == DT_INT8) {
+      rili = mk_ompaccel_ld(rili, addnme(NT_IND, SPTR_NULL,
+                                         addnme(NT_VAR, sptrRedItem, 0, 0), 0));
+      rili = ad1ili(IL_DBLE, rili);
+    // AOCC End
     }
     ili = mk_ompaccel_store(rili, DT_DBLE, nmeShmem, ili);
     chk_block(ili);
@@ -2298,6 +2308,14 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
           ili, DT_FLOAT,
           addnme(NT_IND, NME_NULL, addnme(NT_VAR, sptrRedItemAddress, 0, 0), 0),
           rili);
+    // AOCC Begin
+    } else if (dtypeReductionItem == DT_INT8) {
+      ili = ad1ili(IL_DFIXK, ili);
+      ili = mk_ompaccel_store(
+          ili, DT_NONE,
+          addnme(NT_IND, NME_NULL, addnme(NT_VAR, sptrRedItemAddress, 0, 0), 0),
+          rili);
+    // AOCC End
     }
     chk_block(ili);
     iltb.callfg = 1;
