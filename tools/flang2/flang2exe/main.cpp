@@ -1121,12 +1121,20 @@ static void
 ompaccel_create_globalctor()
 {
   if (!XBIT(232, 0x10) && !ompaccel_is_tgt_registered()) {
+    // AOCC Begin
+    // This is a constructor and will not contain any subprograms
+    int temp_internal = gbl.internal;
+    gbl.internal = 0;
+    // AOCC End
     SPTR cur_func_sptr = gbl.currsub;
     ompaccel_emit_tgt_register();
     schedule();
     assemble();
     ompaccel_register_tgt();
     gbl.currsub = cur_func_sptr;
+    // AOCC Begin
+    gbl.internal = temp_internal;
+    // AOCC End
   }
 }
 

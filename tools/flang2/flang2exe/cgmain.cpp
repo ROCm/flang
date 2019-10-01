@@ -33,6 +33,9 @@
  *
  * Added some SPTR allocation code changes
  * Date of modification 19th September 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 1st October 2019
  */
 
 /**
@@ -13429,6 +13432,12 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     // AOCC End
       linkage = " ptx_kernel";
   }
+
+  // AOCC Begin
+  if (!linkage && CONSTRUCTORG(func_sptr) && flg.amdgcn_target) {
+    linkage = " linkonce";
+  }
+  // AOCC End
 #endif
   if (linkage)
     print_token(linkage);

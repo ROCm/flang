@@ -27,6 +27,7 @@
   * Changes to support AMDGPU OpenMP offloading.
   * Date of modification 16th September 2019
   * Date of modification 20th September 2019
+  * Date of modification 01st October 2019
   */
 
 
@@ -5163,6 +5164,10 @@ get_llvm_name(SPTR sptr)
     }
     if (stype != ST_ENTRY || gbl.rutype != RU_PROG) {
       q = SYMNAME(sptr);
+    // AOCC Begin
+    } else if (CONSTRUCTORG(sptr) && flg.amdgcn_target) {
+      q = SYMNAME(sptr);
+    // AOCC End
     } else if ((flg.smp || XBIT(34, 0x200) || gbl.usekmpc) && OUTLINEDG(sptr)) {
       q = SYMNAME(sptr);
     } else {
