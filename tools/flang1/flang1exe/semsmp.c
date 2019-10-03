@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 /** \file
     \brief  semantic analyzer routines which process SMP statements.
@@ -127,6 +134,12 @@ static LOGICAL is_in_omptarget(int d);
 #ifdef OMP_OFFLOAD_LLVM
 static void gen_reduction_ompaccel(REDUC *reducp, REDUC_SYM *reduc_symp,
                                    LOGICAL rmme, LOGICAL in_parallel);
+static OMP_TARGET_MODE get_omp_combined_mode(BIGINT64 type);
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+static int target_ast = 0;
+#endif
+// AOCC End
 #endif
 
 /*-------- define data structures and macros local to this file: --------*/
@@ -1666,6 +1679,12 @@ semsmp(int rednum, SST *top)
     if(flg.omptarget)
       A_COMBINEDTYPEP(DI_BTARGET(sem.doif_depth),
                     get_omp_combined_mode(BT_TARGET));
+    // AOCC Begin
+    // Store the target ast for future use
+#ifdef OMP_OFFLOAD_AMD
+    target_ast = DI_BTARGET(sem.doif_depth);
+#endif
+  // AOCC End
 #endif
     par_push_scope(TRUE);
     begin_parallel_clause(sem.doif_depth);
@@ -2078,6 +2097,17 @@ semsmp(int rednum, SST *top)
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD),
                   "OMP TEAMS DISTRIBUTE PARALLEL DO SIMD");
     begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    // mode_target_teams_distribute_parallel_for
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    }
+#endif
+    // AOCC End
     DI_ISSIMD(sem.doif_depth) = TRUE;
     break;
   /*

@@ -143,6 +143,9 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
     "Only include toolchain files in the 'install' target." OFF)
 
+  option(LLVM_INSTALL_RUNTIME
+     "Build and install the flang runtime. Do this last" OFF)
+
   option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
     "Set to ON to force using an old, unsupported host toolchain." OFF)
 
@@ -182,6 +185,8 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       set(LLVM_UTILS_PROVIDED ON)
     endif()
 
+  if (NOT LLVM_INSTALL_RUNTIME)
+
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       if(NOT LLVM_UTILS_PROVIDED)
@@ -202,6 +207,8 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
         DOC "Path to lit.py")
     endif()
+
+  endif()
 
     if(LLVM_LIT)
       # Define the default arguments to use with 'lit', and an option for the user
@@ -338,10 +345,12 @@ include_directories(BEFORE
 # Direct module files to build include directory
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
+if (FLANG_BUILD_RUNTIME)
 # Install Fortran module files
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
   DESTINATION include
   )
+endif()
 
 # Install Fortran OpenMP include file
 # Copy omp_lib.h file, not the symlink
@@ -377,10 +386,14 @@ set(FLANG_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(FLANG_RTE_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_definitions( -DPGFLANG )
 
-add_subdirectory(lib)
-add_subdirectory(runtime)
-add_subdirectory(utils)
-add_subdirectory(tools)
+if (LLVM_INSTALL_RUNTIME)
+   add_subdirectory(runtime)
+else()
+   add_subdirectory(lib)
+   add_subdirectory(utils)
+   add_subdirectory(tools)
+endif()
+
 #add_subdirectory(test)
 
 #option(FLANG_BUILD_EXAMPLES "Build FLANG example programs by default." OFF)
@@ -395,6 +408,13 @@ option(FLANG_OPENMP_GPU_NVIDIA "Enable OpenMP Accelerator Offload." OFF)
 if (FLANG_OPENMP_GPU_NVIDIA)
   add_definitions("-DOMP_OFFLOAD_LLVM")
 endif()
+
+# AOCC Begin
+option(FLANG_OPENMP_GPU_AMD "Enable OpenMP AMD Accelerator Offload." OFF)
+if (FLANG_OPENMP_GPU_AMD)
+  add_definitions("-DOMP_OFFLOAD_AMD")
+endif()
+# AOCC End
 
 if( FLANG_INCLUDE_TESTS )
 #  if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include/gtest/gtest.h)

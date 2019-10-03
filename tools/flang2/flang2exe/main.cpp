@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 /**
    \file
@@ -729,6 +736,7 @@ init(int argc, char *argv[])
   }
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   flg.omptarget = false;
+  flg.amdgcn_target = false;
   gbl.ompaccfilename = NULL;
 #endif
 #ifdef OMP_OFFLOAD_LLVM
@@ -737,6 +745,13 @@ init(int argc, char *argv[])
     flg.omptarget = true;
     gbl.ompaccfilename = ompfile;
   }
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
+    flg.amdgcn_target = true;
+#endif
+  // AOCC End
+
 #endif
   /* Vectorizer settings */
   flg.vect |= vect_val;

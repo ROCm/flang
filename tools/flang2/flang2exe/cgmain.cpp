@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 /**
    \file
@@ -1300,6 +1307,23 @@ remove_dead_instrs(void)
   }
 }
 
+// AOCC Begin
+/*
+ * \brief Static function to calculate alloca addrespace from DL string
+ *
+ */
+#ifdef OMP_OFFLOAD_AMD
+static int get_alloca_addrspace(LL_Module *module) {
+  const char *dl = module->datalayout_string;
+  while ((*dl) != 'A' && (*dl) != '\0')
+    dl++;  if (dl[0] == '\0')
+    return -1;
+  dl++;
+  return (*dl) - '0';
+}
+#endif
+// AOCC End
+
 /**
    \brief Perform code translation from ILI to LLVM for one routine
  */
@@ -1736,7 +1760,19 @@ restartConcur:
                            func_type);
 
   /* write out local variable defines */
+
+// AOCC Begin
+/*
+ * \brief Emitting allocas with addrespace
+ *
+ */
+#ifdef OMP_OFFLOAD_AMD
+  int alloca_addrspace = get_alloca_addrspace(current_module);
+  ll_write_local_objects(llvm_file(), llvm_info.curr_func, alloca_addrspace);
+#else
   ll_write_local_objects(llvm_file(), llvm_info.curr_func);
+#endif
+// AOCC End
   /* Emit alloca for local equivalence, c.f. get_local_overlap_var(). */
   write_local_overlap();
 
@@ -1822,6 +1858,7 @@ restartConcur:
   }
   gcTempMap();
   CG_cpu_compile = false;
+
 } /* schedule */
 
 INLINE static bool
@@ -5140,7 +5177,17 @@ static OPERAND *
 gen_gep_op(int ilix, OPERAND *base_op, LL_Type *llt, OPERAND *index_op)
 {
   base_op->next = index_op;
-  return ad_csed_instr(I_GEP, ilix, llt, base_op, InstrListFlagsNull, true);
+  OPERAND * op = ad_csed_instr(I_GEP, ilix, llt, base_op, InstrListFlagsNull, true);
+
+  // AOCC Begin
+  /*
+   * Setting name for generated ptrs.
+   */
+#ifdef OMP_OFFLOAD_AMD
+  set_llvm_sptr_name(op);
+#endif
+  // AOCC End
+  return op;
 }
 
 INLINE static OPERAND *
@@ -11681,6 +11728,11 @@ gen_sptr(SPTR sptr)
 #ifdef OMP_OFFLOAD_LLVM
 #endif
   DBGTRACEOUT1(" returns operand %p", sptr_operand)
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  set_llvm_sptr_name(sptr_operand);
+#endif
+  // AOCC End
   return sptr_operand;
 } /* gen_sptr */
 
@@ -12478,6 +12530,17 @@ isNVVM(char *fn_name)
     return false;
   return (strncmp(fn_name, "__kmpc", 6) == 0) ||
          (strncmp(fn_name, "llvm.nvvm", 9) == 0) ||
+         // AOCC Begin
+         /*
+          * We need some math intrinsics to be emitted.
+          * TODO : Handle special cases if any, which are not supported by target.
+          *
+          */
+#ifdef OMP_OFFLOAD_AMD
+         (strncmp(fn_name, "nvvm.", 5) == 0) ||
+         (strncmp(fn_name, "llvm.", 5) == 0) ||
+#endif
+         // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
          (strncmp(fn_name, "llvm.fma", 8) == 0);
 }
@@ -12995,7 +13058,14 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     linkage = " internal";
 #ifdef OMP_OFFLOAD_LLVM
   if (OMPACCFUNCKERNELG(func_sptr)) {
-    linkage = " ptx_kernel";
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (flg.amdgcn_target)
+      linkage = " amdgpu_kernel";
+    else
+#endif
+    // AOCC End
+      linkage = " ptx_kernel";
   }
 #endif
   if (linkage)
@@ -13466,22 +13536,38 @@ llvm_write_ctor_dtor_list(init_list_t *list, const char *global_name)
 {
   struct init_node *node;
   char int_str_buffer[20];
+  char * i8type;
+  char * i8typewithnull;
 
   if (list->size == 0)
     return;
+
+/* starting with llvm 9, need 3 arg for some type stuff, i8* null is sufficient */
+  if (get_llvm_version() >= LL_Version_9_0) {
+    i8type = ", i8*";
+    i8typewithnull = ", i8* null";
+  } else {
+    i8type = "";
+    i8typewithnull = "";
+  }
 
   print_token("@");
   print_token(global_name);
   print_token(" = appending global [");
   sprintf(int_str_buffer, "%d", list->size);
   print_token(int_str_buffer);
-  print_token(" x { i32, void ()* }][");
+  print_token(" x { i32, void ()*");
+  print_token(i8type);
+  print_token(" }][");
   for (node = list->head; node != NULL; node = node->next) {
-    print_token("{ i32, void ()* } { i32 ");
+    print_token("{ i32, void ()*");
+    print_token(i8type);
+    print_token(" } { i32 ");
     sprintf(int_str_buffer, "%d", node->priority);
     print_token(int_str_buffer);
     print_token(", void ()* @");
     print_token(node->name);
+    print_token(i8typewithnull);
     print_token(" }");
     if (node->next != NULL) {
       print_token(", ");
