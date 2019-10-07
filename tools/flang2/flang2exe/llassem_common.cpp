@@ -281,7 +281,7 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
       fprintf(ASMFIL, " i8* ");
       // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-      if (flg.amdgcn_target) {
+      if (flg.amdgcn_target || flg.x86_64_omptarget) {
         char *temp_ptr = *cptr;
         if (*temp_ptr == ',')
           temp_ptr++;

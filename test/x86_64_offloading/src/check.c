@@ -3,7 +3,7 @@
  *
  * x86_64 offloading regression test-suite
  *
- * Last modified: Aug 2019
+ * Last modified: Oct 2019
  */
 
 #include <stdio.h>
@@ -26,6 +26,19 @@ void dump_failed() {
 }
 
 void check_int_(int *res, int *exp, int *n) {
+  if (!res || !exp || !n) {
+    dump_failed();
+    exit(1);
+  }
+
+  for (int i = 0; i < *n; i++) {
+    if (res[i] != exp[i]) { dump_failed(); exit (1); }
+  }
+
+  dump_passed();
+}
+
+void check_double_(double *res, double *exp, int *n) {
   if (!res || !exp || !n) {
     dump_failed();
     exit(1);

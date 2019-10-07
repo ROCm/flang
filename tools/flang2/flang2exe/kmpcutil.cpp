@@ -768,7 +768,7 @@ ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt,
 
 // AOCC begin
 int
-ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist, bool refargs)
+ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist)
 {
   int argili, args[argc + 3];
   DTYPE arg_types[argc + 3];
@@ -783,11 +783,8 @@ ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist, bool refarg
   arg_types[2] = DT_CPTR;
 
   for (int i = 0; i < argc; i++) {
+    arg_types[2 + i + 1] = DT_CPTR;
     args[argc - i - 1] = ad_acon(sptrlist[i], 0);
-    if (refargs)
-      arg_types[2 + i + 1] = DT_CPTR;
-    else
-      arg_types[2 + i + 1] = DTYPEG(sptrlist[i]);
   }
 
   return mk_kmpc_api_call(KMPC_API_FORK_CALL, argc + 3, arg_types, args);

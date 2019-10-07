@@ -362,7 +362,7 @@ process_input(char *argv0, bool *need_cuda_constructor)
 #if defined(OMP_OFFLOAD_LLVM)
   if (flg.x86_64_omptarget) {
     gbl.ompaccel_isdevice = true;
-    gen_fork_wrapper(gbl.currsub);
+    ompaccel_x86_gen_fork_wrapper(gbl.currsub);
     gbl.ompaccel_isdevice = false;
   }
 #endif

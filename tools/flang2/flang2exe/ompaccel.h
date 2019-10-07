@@ -263,6 +263,16 @@ SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int);
 // AOCC Begin
 #endif
 
+SPTR
+mk_ompaccel_addsymbol(const char *name, DTYPE dtype, SC_KIND SCkind,
+                      SYMTYPE symtype);
+
+void
+mk_ompaccel_function_end(SPTR func_sptr);
+
+SPTR
+mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
+    bool isDeviceFunc);
 /**
  * \brief remembers \p func_sptr to be a parallel outlined function in target
  * region for x86 offloading
@@ -303,7 +313,7 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr);
 /**
  * \brief generates the "wrapper" that emits __kmpc_fork_call to \p target_func
  */
-void gen_fork_wrapper(SPTR target_func);
+void ompaccel_x86_gen_fork_wrapper(SPTR target_func);
 // AOCC End
 
 /* ################################################ */

@@ -73,107 +73,6 @@
 #define GV_Warp_Size 64
 #define GV_Warp_Size_Log2 6
 #define GV_Warp_Size_Log2_Mask 63
-
-std::set<SPTR> ompaccel_x86_parallel_func_set;
-std::set<SPTR> ompaccel_x86_fork_wrapper_func_set;
-
-void ompaccel_x86_add_parallel_func(SPTR func_sptr) {
-  bool debug_me = false;
-  if (debug_me)
-    printf("[ompaccel-x86]: adding as parallel: %s\n", SYMNAME(func_sptr));
-  ompaccel_x86_parallel_func_set.insert(func_sptr);
-  return;
-}
-
-bool ompaccel_x86_is_parallel_func(SPTR func_sptr) {
-  if (ompaccel_x86_parallel_func_set.find(func_sptr) !=
-      ompaccel_x86_parallel_func_set.end())
-    return true;
-  else
-    return false;
-}
-
-bool ompaccel_x86_is_toplevel_parallel_func(SPTR func_sptr) {
-  // TODO. must check for cases when the parallel func is invoked by another
-  // outlined func in device.
-  return ompaccel_x86_is_parallel_func(func_sptr);
-}
-
-void ompaccel_x86_add_fork_wrapper_func(SPTR func_sptr) {
-  ompaccel_x86_fork_wrapper_func_set.insert(func_sptr);
-  return;
-}
-
-bool ompaccel_x86_is_fork_wrapper_func(SPTR func_sptr) {
-  if (ompaccel_x86_fork_wrapper_func_set.find(func_sptr) !=
-      ompaccel_x86_fork_wrapper_func_set.end())
-    return true;
-  else
-    return false;
-}
-
-bool ompaccel_x86_is_entry_func(SPTR func_sptr) {
-  if (OMPACCFUNCKERNELG(func_sptr)) {
-    // Most likely an outlined parallel function, we should only add the
-    // fork_wrapper func corresponding to this.
-    if (ompaccel_x86_is_parallel_func(func_sptr)) {
-      return false;
-    } else {
-
-      // Should be a non parallel outlined function which we can enter directly.
-      return true;
-    }
-  }
-
-  // In the case of a non outlined function, the only functions considered as
-  // entry are the fork-wrapper generated ones.
-  if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
-    return true;
-  return false;
-}
-
-// TODO: Upstream flang devs forgot to add this is in the header file, maybe add
-// it ? For the moment, adding a forward decl.
-SPTR
-mk_ompaccel_addsymbol(const char *name, DTYPE dtype, SC_KIND SCkind,
-                      SYMTYPE symtype);
-void ompaccel_x86_add_tid_params(SPTR func_sptr) {
-  int func_dpsc = DPDSCG(func_sptr);
-  int func_paramct = PARAMCTG(func_sptr);
-  int sym;
-  SPTR orig_params[128];
-
-  // Store all the original params
-  for (int i = 0; i < func_paramct; i++) {
-    orig_params[i] = (SPTR)aux.dpdsc_base[func_dpsc + i];
-  }
-
-  // Expand the argument array memory
-  // (the +100 bit is copied from llMakeFtnOutlinedSignatureTarget())
-  NEED(aux.dpdsc_avl, aux.dpdsc_base, int, aux.dpdsc_size,
-    aux.dpdsc_size + func_paramct + 2 + 100);
-
-  DPDSCP(func_sptr, aux.dpdsc_avl);
-
-  // Prepend the thread-id params.
-  sym = mk_ompaccel_addsymbol("global_tid", DT_INT, SC_DUMMY, ST_VAR);
-  OMPACCDEVSYMP(sym, TRUE);
-  aux.dpdsc_base[aux.dpdsc_avl + 0] = sym;
-
-  sym = mk_ompaccel_addsymbol("bound_tid", DT_INT, SC_DUMMY, ST_VAR);
-  OMPACCDEVSYMP(sym, TRUE);
-  aux.dpdsc_base[aux.dpdsc_avl + 1] = sym;
-
-  // Append the original params.
-  for (int i = 0; i < func_paramct; i++) {
-    aux.dpdsc_base[aux.dpdsc_avl + 2 + i] = orig_params[i];
-  }
-
-  // Update the param-count and aux DS
-  PARAMCTP(func_sptr, func_paramct + 2);
-  aux.dpdsc_avl += func_paramct + 2;
-}
-
 // AOCC End
 #include "../../flang1/flang1exe/global.h"
 
@@ -627,7 +526,9 @@ mk_ompaccel_addsymbol(const char *name, DTYPE dtype, SC_KIND SCkind,
   return sptr;
 }
 
-static void
+// AOCC begin
+void
+// AOCC end
 mk_ompaccel_function_end(SPTR func_sptr)
 {
   int bihx, endlab;
@@ -646,7 +547,9 @@ mk_ompaccel_function_end(SPTR func_sptr)
   BIH_LABEL(bihx) = SPTR(endlab);
 }
 
-static SPTR
+// AOCC begin
+SPTR
+// AOCC end
 mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
                      bool isDeviceFunc)
 {
@@ -1012,6 +915,15 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   PASSBYVALP(sym, byval);
 
   OMPACCDEVSYMP(sym, TRUE);
+
+  // AOCC begin
+  // See the comments in ompaccel_x86_gen_fork_entry() regarding "x86 offloading
+  // friendly" variables. The same applies for args in target function that are
+  // entered via omp-runtime interfaces.
+  if (flg.x86_64_omptarget && DTY(dtype) != TY_ARRAY) {
+    DTYPEP(sym, DT_INT8);
+  }
+  // AOCC begin
   return sym;
 }
 
@@ -2015,86 +1927,6 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
 
   return sptrFn;
 }
-
-// AOCC begin
-void gen_fork_wrapper(SPTR target_func) {
-  // TODO: Perhaps add special "Q" flags for x86 offloading ?
-  bool debug_me = false;
-
-  // Must be a valid outlined function
-  if (!target_func || !gbl.outlined)
-    return;
-
-  // Must be a function that's expected to be parallelized.
-  if (!ompaccel_x86_is_toplevel_parallel_func(target_func))
-    return;
-
-  if (debug_me)
-    printf("[ompaccel-x86]: Fork wrapper target: %s\n", SYMNAME(target_func));
-
-  SPTR orig_func = gbl.currsub;
-  int orig_bih = expb.curbih;
-
-  char func_name[1024];
-  // device functions gets "_" in the end.
-  sprintf(func_name, "%s_x86_entry_", SYMNAME(target_func));
-  SPTR func_sptr;
-  SPTR func_args[128];
-
-  int target_func_args_count;
-  OMPACCEL_TINFO *omptinfo;
-  omptinfo = ompaccel_tinfo_get(target_func);
-  target_func_args_count = omptinfo->n_symbols;
-
-  for (int i = 0; i < target_func_args_count; ++i) {
-    SPTR sptr = omptinfo->symbols[i].device_sym;
-    int nme = addnme(NT_VAR, sptr, 0, (INT)0);
-    int ili = mk_address(sptr);
-    char new_arg_name[1024];
-    sprintf(new_arg_name, "%s_new", SYMNAME(sptr));
-
-    func_args[i] = mk_ompaccel_addsymbol(new_arg_name, DTYPEG(sptr), SC_DUMMY, STYPEG(sptr));
-  }
-
-  // FIXME: Not adding this "useless" argument results in wrong bitcasts in strange
-  // places!
-  func_args[target_func_args_count] = mk_ompaccel_addsymbol(".end", DT_INT, SC_DUMMY, ST_VAR);
-
-  func_sptr = mk_ompaccel_function(func_name, target_func_args_count + 1,
-      func_args, /* device_func */true);
-
-  // FIXME: The function we're generating is not an
-  // oulined function. If you see gen_ref_arg() which
-  // stb_process_routine_parameters() eventually call if params are references,
-  // there is a hard-coded "special" handling for outlined func.
-  //
-  // The following line is a lie! But a necessary one due to the inconsistency
-  // described above.
-  OUTLINEDP(func_sptr, 1);
-
-  cr_block();
-  int ilix = ll_make_kmpc_fork_call_variadic(target_func, target_func_args_count,
-      func_args, /* refargs */true);
-
-  iltb.callfg = 1;
-  chk_block(ilix);
-  wr_block();
-  mk_ompaccel_function_end(func_sptr);
-
-  ompaccel_x86_add_fork_wrapper_func(func_sptr);
-  schedule();
-  assemble();
-  gbl.currsub = orig_func;
-  gbl.func_count++;
-
-  if (debug_me) {
-    LL_Type *ll_ty = make_lltype_from_sptr(func_sptr);
-    printf("[ompaccel-x86]: Made fork wrapper %s of type %s\n",
-        SYMNAME(func_sptr), ll_ty->str);
-  }
-  return;
-}
-// AOCC end
 
 /**
    \brief This function emits code that gathers reduce_data from the first lane
