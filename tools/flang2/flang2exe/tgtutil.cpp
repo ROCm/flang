@@ -23,6 +23,7 @@
  * Date of modification 05th September 2019
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
+ * Date of modification 07th October 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -340,6 +341,28 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
         int numdim = AD_NUMDIM(ad);
         int j;
         ilix = ad_kconi(1);
+
+        // AOCC Begin
+        // For allocatable arrays section descriptor stores array size.
+#ifdef OMP_OFFLOAD_AMD
+        bool all_zero = true;
+        for (j = 0; j < numdim; ++j) {
+          if (AD_UPBD(ad, j) != 0 || AD_LWBD(ad, j) != 0) {
+            all_zero = false;
+          }
+        }
+        if (AD_SDSC(ad) && SDSCG(sptr) && all_zero) {
+          SPTR sdsc = AD_SDSC(ad);
+          int nme = addnme(NT_VAR, sdsc, 0, 0);
+
+          // 6th Element in section descriptor is size, 48 = 6 * 8(INT8)
+          ilix = ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
+          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
+          return ilix;
+        }
+#endif
+        // AOCC End
+
         // todo ompaccel we do not support partial arrays here.
         for (j = 0; j < numdim; ++j) {
           if (AD_UPBD(ad, j) != 0) {

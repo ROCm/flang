@@ -24,6 +24,7 @@
  * Date of modification 16th September 2019
  * Date of modification 20th September 2019
  * Date of modification 23rd September 2019
+ * Date of modification 07th October 2019
  *
  */
 
@@ -9895,8 +9896,16 @@ set_parref_flag(int sptr, int psptr, int stblk)
     return;
   if (STYPEG(sptr) == ST_MEMBER)
     return;
+  // AOCC Begin
+  // Flang uses certain global variable for offset calculation.
+  // Such variables need to be mapped to the device.
+#ifndef OMP_OFFLOAD_AMD
+  // AOCC End
   if (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC)
     return;
+  // AOCC Begin
+#endif
+  // AOCC End
   if (SCG(sptr) == SC_EXTERN && ST_ISVAR(sptr)) /* No global vars in uplevel */
     return;
   if (DINITG(sptr) || SAVEG(sptr)) {
