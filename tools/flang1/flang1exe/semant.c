@@ -52,6 +52,8 @@
 // Date of Modification: 16th July 2019
 // Suppressed a duplicate diagnostic message: "Redundant specification of array"
 //
+// 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
+//             types
 //===----------------------------------------------------------------------===//
 
 /**
@@ -150,6 +152,7 @@ static void record_func_result(int func_sptr, int func_result_sptr,
 static bool bindingNameRequiresOverloading(SPTR sptr);
 static void clear_iface(int i, SPTR iface);
 static bool do_fixup_param_vars_for_derived_arrays(bool, SPTR, int);
+static bool valid_base_type_intrinsic(char *np);
 
 static IFACE *iface_base;
 static int iface_avail;
@@ -2502,7 +2505,7 @@ semant1(int rednum, SST *top)
       gbl.internal++;
       host_present = 0x8;
       symutl.none_implicit = sem.none_implicit &= ~host_present;
-      SCP(sptr, SC_STATIC); 
+      SCP(sptr, SC_STATIC);
     }
     seen_implicit = FALSE;
     seen_parameter = FALSE;
@@ -4707,8 +4710,14 @@ semant1(int rednum, SST *top)
     sptr = refsym((int)SST_SYMG(RHS(3)), OC_OTHER);
   type_common:
     if (STYPEG(sptr) != ST_TYPEDEF) {
+      np = SYMNAME(sptr);
       if (STYPEG(sptr) == ST_USERGENERIC && GTYPEG(sptr)) {
         sptr = GTYPEG(sptr);
+      }
+      // AOCC begin
+      // Added support for f2008 feature: Type statement for intrinsic types
+      else if ((STYPEG(sptr) == ST_UNKNOWN) && valid_base_type_intrinsic(np)) {
+      // AOCC end
       } else if (STYPEG(sptr) == ST_UNKNOWN && sem.pgphase == PHASE_INIT) {
         sem.deferred_dertype = sptr;
         sem.deferred_kind_len_lineno = gbl.lineno;
@@ -16519,3 +16528,51 @@ do_fixup_param_vars_for_derived_arrays(bool inited, SPTR sptr, int sst_idg)
          /* found the tag has been initialized already with a valid sptr*/
          DINITG(DTY(DTY(DTYPEG(sptr)+1)+3));
 }
+
+// AOCC begin
+/** \brief
+       Added support for f2008 feature: Type statement for intrinsic types
+       <data type> ::= TYPE ( <id> <opt base type spec> )
+*/
+static bool
+valid_base_type_intrinsic(char *np)
+{
+  if (flg.std == F2008) {
+    /*
+     *      <base type> ::= INTEGER |
+     */
+    if (strcmp(np, "integer") == 0) {
+      sem.gdtype = sem.ogdtype = stb.user.dt_int;
+      sem.gty = TY_INT;
+      return true;
+    }
+    /*
+     *      <base type> ::= COMPLEX |
+     */
+    if (strcmp(np, "complex") == 0) {
+      sem.gdtype = sem.ogdtype = stb.user.dt_cmplx;
+      sem.gty = TY_CMPLX;
+      return true;
+    }
+    /*
+     *      <base type> ::= CHARACTER |
+     */
+    if (strcmp(np, "character") == 0) {
+      sem.gdtype = sem.ogdtype = DT_CHAR;
+      sem.gty = TY_CHAR;
+      return true;
+    }
+    /*
+     *      <base type> ::= BYTE
+     */
+    if (strcmp(np, "byte") == 0) {
+      if (flg.standard)
+        error(171, 2, gbl.lineno, "BYTE", CNULL);
+      sem.gdtype = sem.ogdtype = DT_BINT;
+      sem.gty = TY_BINT;
+      return true;
+    }
+  }
+  return false;
+}
+// AOCC end
