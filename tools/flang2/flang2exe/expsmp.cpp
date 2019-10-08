@@ -1410,11 +1410,13 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_NOMERGE(expb.curbih) = true;
     bihb.csfg = BIH_CS(expb.curbih) = true;
     // AOCC Begin
-    if (!flg.amdgcn_target)
+    // ili = addMpBcsNest();
+    if (!flg.amdgcn_target) {
     // AOCC End
       ili = addMpBcsNest();
-    iltb.callfg = 1;
-    chk_block(ili);
+       iltb.callfg = 1;
+      chk_block(ili);
+    }
     ccff_info(MSGOPENMP, "OMP003", gbl.findex, gbl.lineno,
               "Begin critical section", NULL);
     break;
@@ -1427,11 +1429,13 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_NOMERGE(expb.curbih) = true;
     BIH_CS(expb.curbih) = true;
     // AOCC Begin
-    if (!flg.amdgcn_target)
-    // AOCC End
+    // ili = addMpEcsNest();
+    if (!flg.amdgcn_target) {
       ili = addMpEcsNest();
-    iltb.callfg = 1;
-    chk_block(ili);
+      iltb.callfg = 1;
+      chk_block(ili);
+    }
+    // AOCC End
     wr_block();
     cr_block();
     if (critCnt <= 0)
