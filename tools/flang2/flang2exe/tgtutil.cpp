@@ -1200,7 +1200,7 @@ ll_make_tgt_target_update(int device_id, OMPACCEL_TINFO *targetinfo)
 {
   int call_ili, nargs;
   SPTR arg_base_sptr, arg_sptr, arg_size_sptr, arg_map_sptr;
-  char name[12];
+  char name[16];
   int local_args[12];
 
   DTYPE locarg_types[] = {DT_INT8, DT_INT, DT_ADDR, DT_ADDR, DT_ADDR, DT_ADDR};
