@@ -1008,7 +1008,7 @@ init_tgt_register_syms()
 {
   SPTR tptr1, tptr2, tptr3, tptr4;
 
-  tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin");
+  tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
   DTYPEP(tptr1, tgt_offload_entry_type);
   SCP(tptr1, SC_EXTERN);
   DCLDP(tptr1, 1);
@@ -1017,7 +1017,7 @@ init_tgt_register_syms()
   gbl.consts = tptr1;
   OMPACCRTP(tptr1, 1);
 
-  tptr2 = (SPTR)addnewsym(".omp_offloading.entries_end");
+  tptr2 = (SPTR)addnewsym("__stop_omp_offloading_entries"); // AOCC
   DTYPEP(tptr2, tgt_offload_entry_type);
   SCP(tptr2, SC_EXTERN);
   DCLDP(tptr2, 1);

@@ -13377,7 +13377,7 @@ emit_x86_device_offload_entry(SPTR func_sptr)
       strlen(omp_entry_sym_name) + 1,
       omp_entry_sym_name);
   fprintf(ll_file, "i64 0, i32 0, i32 0 }, ");
-  fprintf(ll_file, "section \".omp_offloading\.entries\", align 1\n");
+  fprintf(ll_file, "section \"omp_offloading_entries\", align 1\n");
 }
 #endif
 // AOCC end

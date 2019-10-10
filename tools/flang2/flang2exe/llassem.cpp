@@ -100,7 +100,7 @@ public:
     case NVIDIA_OLDFATBIN_SEC:
       return {".nv_fatbin", DoubleAlign};
     case OMP_OFFLOAD_SEC:
-      return {".omp_offloading.entries", OneAlign};  
+      return {"omp_offloading_entries", OneAlign}; // AOCC
     default:
       return {NULL, 0};
     }
@@ -1109,20 +1109,20 @@ write_libomtparget(void)
         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.amdgcn-amd-amdhsa = external constant i8 \n\
   @.omp_offloading.img_start.amdgcn-amd-amdhsa = external constant i8 \n\
-  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.amdgcn-amd-amdhsa, i8* @.omp_offloading.img_end.amdgcn-amd-amdhsa, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
-  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+  @__stop_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @__start_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.amdgcn-amd-amdhsa, i8* @.omp_offloading.img_end.amdgcn-amd-amdhsa, %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }, align 8\n\n");
       }
 
       else if (flg.x86_64_omptarget) {
         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.x86_64-pc-linux-gnu = external constant i8 \n\
   @.omp_offloading.img_start.x86_64-pc-linux-gnu = external constant i8 \n\
-  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.x86_64-pc-linux-gnu, i8* @.omp_offloading.img_end.x86_64-pc-linux-gnu, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
-  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+  @__stop_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @__start_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.x86_64-pc-linux-gnu, i8* @.omp_offloading.img_end.x86_64-pc-linux-gnu, %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries , %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }, align 8\n\n");
       } else {
 #endif
       // AOCC End
