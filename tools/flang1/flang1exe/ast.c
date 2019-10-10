@@ -750,7 +750,11 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
         rop = tmp;
         c2 = c1;
         c1 = 0;
-      } else if (ncons == 0 && lop > rop) {
+      } else if (ncons == 0 && optype != OP_LAND && lop > rop) {
+        // AOCC logic seem to be flawed above
+        // added LAND condition above to fix the issue
+        // faliling case present(c) .and. c/d. reordering this is wrong
+        // for LAND we need to follw the lexical order of evaluation
         tmp = lop;
         lop = rop;
         rop = tmp;
