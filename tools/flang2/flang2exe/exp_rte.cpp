@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 11th July 2019
+ *
+ */
 
 /**
    \file
@@ -51,6 +58,13 @@
 #include "dtypeutl.h"
 #include "upper.h"
 #include "symfun.h"
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+#include "ompaccel.h"
+#include "tgtutil.h"
+#include "kmpcutil.h"
+#endif
+// AOCC End
 
 static int exp_strx(int, STRDESC *, STRDESC *);
 static int exp_strcpy(STRDESC *, STRDESC *);
@@ -2117,6 +2131,23 @@ exp_end(ILM *ilmp, int curilm, bool is_func)
   int sym;
   finfo_t *pf;
   int exit_bih;
+
+  // AOCC Begin
+  /*
+   * De-Allocate the memory allocated via __kmpc_spmd_kernel_init()
+   * This function will be inserted right before return in main program
+   */
+#ifdef OMP_OFFLOAD_AMD
+  int ilix;
+  if (flg.omptarget && !is_func) {
+    if (XBIT(232, 0x40) /* && gbl.inomptarget */) {
+      ilix = ll_make_kmpc_spmd_kernel_deinit_v2();
+      iltb.callfg = 1;
+      chk_block(ilix);
+    }
+  }
+#endif
+  // AOCC End
 
   if (expb.retlbl != 0) {
     exp_label(expb.retlbl);

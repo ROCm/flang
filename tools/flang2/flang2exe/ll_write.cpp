@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 #include "gbldefs.h"
 #include "error.h"
@@ -678,6 +685,28 @@ ll_write_object_dbg_references(FILE *out, LL_Module *m, LL_ObjToDbgList *ods)
   llObjtodbgFree(ods);
 }
 
+// AOCC Begin
+/*
+ * \brief Static function to calculte the alloca addrespace from DL string
+ *
+ * As per https://llvm.org/docs/AMDGPUUsage.html#address-spaces address space
+ * for AMDGPU is only single digit number.
+ *
+ */
+#ifdef OMP_OFFLOAD_AMD
+static int get_alloca_addrspace(LL_Module *module) {
+  const char *dl = module->datalayout_string;
+  while ((*dl) != 'A' && (*dl) != '\0')
+    dl++;
+  if (dl[0] == '\0')
+    return -1;
+  dl++;
+  return (*dl) - '0';
+}
+#endif
+// AOCC End
+
+
 void
 ll_write_basicblock(FILE *out, LL_Function *function, LL_BasicBlock *block,
                     LL_Module *module, int no_return)
@@ -687,8 +716,16 @@ ll_write_basicblock(FILE *out, LL_Function *function, LL_BasicBlock *block,
   if (block->name)
     fprintf(out, "%s:\n", block->name);
 
-  if (block == function->first)
+  if (block == function->first) {
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    int addrspace = get_alloca_addrspace(module);
+    ll_write_local_objects(out, function, addrspace);
+#else
     ll_write_local_objects(out, function);
+#endif
+    // AOCC End
+  }
 
   while (inst) {
     ll_write_instruction(out, inst, module, no_return);
@@ -704,7 +741,11 @@ ll_write_basicblock(FILE *out, LL_Function *function, LL_BasicBlock *block,
    once per function.
  */
 void
+#ifdef OMP_OFFLOAD_AMD
+ll_write_local_objects(FILE *out, LL_Function *function, int alloca_addrspace)
+#else
 ll_write_local_objects(FILE *out, LL_Function *function)
+#endif
 {
   LL_Object *object;
 #ifdef TARGET_POWER
@@ -713,11 +754,33 @@ ll_write_local_objects(FILE *out, LL_Function *function)
   const char *name;
 #endif
 
+  int final_addrspace;
   for (object = function->first_local; object; object = object->next) {
+#ifdef OMP_OFFLOAD_AMD
+    final_addrspace = alloca_addrspace == -1 ? object->type->addrspace : alloca_addrspace;
+    if (final_addrspace != 0)
+      fprintf(out, "\t%s.tmp = alloca %s", object->address.data, object->type->str);
+    else
+      fprintf(out, "\t%s = alloca %s", object->address.data, object->type->str);
+    if (object->align_bytes)
+      fprintf(out, ", align %u", object->align_bytes);
+    if (final_addrspace != 0)
+      fprintf(out, ", addrspace(%d)",final_addrspace);
+    fputc('\n', out);
+    if (final_addrspace != 0) {
+      fprintf(out, "\t%s = addrspacecast %s addrspace(%d)* %s.tmp to %s*",
+                            object->address.data, object->type->str, final_addrspace,
+                            object->address.data, object->type->str);
+      fputc('\n', out);
+    }
+#else
     fprintf(out, "\t%s = alloca %s", object->address.data, object->type->str);
     if (object->align_bytes)
       fprintf(out, ", align %u", object->align_bytes);
     fputc('\n', out);
+#endif
+
+
 
 #ifdef TARGET_POWER
     if (XBIT(217, 0x1)) {
