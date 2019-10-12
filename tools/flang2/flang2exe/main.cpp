@@ -1176,15 +1176,13 @@ ompaccel_create_reduction_wrappers()
       schedule();
       assemble();
       gbl.func_count++;
-      gbl.multi_func_count++;
-
+      gbl.multi_func_count = gbl.func_count;
       // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce, suffix);
 #else
       // AOCC End
-      gbl.multi_func_count = gbl.func_count;
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce);
       // AOCC Begin
@@ -1193,14 +1191,13 @@ ompaccel_create_reduction_wrappers()
       schedule();
       assemble();
       gbl.func_count++;
-      gbl.multi_func_count++;
+      gbl.multi_func_count = gbl.func_count;
       // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds, suffix);
 #else
       // AOCC End
-      gbl.multi_func_count = gbl.func_count;
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds);
       // AOCC Begin

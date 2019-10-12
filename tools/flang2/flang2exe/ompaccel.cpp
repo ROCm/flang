@@ -622,8 +622,6 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
 #endif
     // AOCC End
   default:
-    ompaccelInternalFail(
-        "Rest of reduction operators are not implemented yet.");
     static_assert(true, "Rest of reduction operators are not implemented yet.");
     break;
   }
@@ -815,7 +813,9 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->n_symbols = 0;
   if (max_nargs != 0) {
     NEW(info->symbols, OMPACCEL_SYM, max_nargs);
+    BZERO(info->symbols, OMPACCEL_SYM, max_nargs);
     NEW(info->quiet_symbols, OMPACCEL_SYM, max_nargs);
+    BZERO(info->quiet_symbols, OMPACCEL_SYM, max_nargs);
   } else {
     info->symbols = nullptr;
     info->quiet_symbols = nullptr;
@@ -1368,6 +1368,7 @@ dumpomptarget(OMPACCEL_TINFO *tinfo)
     break;
   }
   fprintf(gbl.dbgfil, " \n");
+  //}
 
   if ((tinfo->mode != mode_target_data_region) &&
       (tinfo->mode != mode_target_data_enter_region) &&

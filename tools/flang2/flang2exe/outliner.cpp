@@ -621,6 +621,8 @@ ll_get_gtid_val_ili(void)
     name = (char *)malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
     sprintf(name, "%s%s", "__gtid_", getsname(GBL_CURRFUNC));
     gtid = llGetSym(name, DT_INT);
+    if (flg.omptarget)
+      PDALNP(gtid, 3);
     sym_is_refd(gtid);
     free(name);
   }
@@ -640,6 +642,8 @@ ll_get_gtid_addr_ili(void)
     name = (char *)malloc(strlen(getsname(GBL_CURRFUNC)) + 10);
     sprintf(name, "%s%s", "__gtid_", getsname(GBL_CURRFUNC));
     gtid = llGetSym(name, DT_INT);
+    if (flg.omptarget)
+      PDALNP(gtid, 3);
     sym_is_refd(gtid);
     free(name);
   }
@@ -2645,5 +2649,4 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
 
   return func_sptr;
 }
-#endif
-
+#endif /* End #ifdef OMP_OFFLOAD_LLVM */

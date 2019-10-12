@@ -165,7 +165,7 @@ static unsigned addressElementSize;
 
 #ifdef TARGET_LLVM_ARM
 /* TO DO: to be revisited, for now we assume we always target NEON unit */
-#define NEON_ENABLED TEST_FEATURE(FEATURE_NEON)
+#define NEON_ENABLED 0 /* TEST_FEATURE(FEATURE_NEON) */
 #endif
 
 /* debug switches:
@@ -224,6 +224,7 @@ SPTRINFO_T sptrinfo;
 
 /* This should live in llvm_info, but we need to access this module from other
  * translation units temporarily */
+LL_Module *current_module = NULL;
 LL_Module *cpu_llvm_module = NULL;
 #ifdef OMP_OFFLOAD_LLVM
 LL_Module *gpu_llvm_module = NULL;
@@ -456,7 +457,7 @@ static OPERAND *gen_vect_compare_operand(int);
 static OPERAND *gen_call_vminmax_power_intrinsic(int ilix, OPERAND *op1,
                                                  OPERAND *op2);
 #endif
-#if defined(TARGET_LLVM_ARM)
+#if defined(TARGET_LLVM_ARM) && NEON_ENABLED
 static OPERAND *gen_call_vminmax_neon_intrinsic(int ilix, OPERAND *op1,
                                                 OPERAND *op2);
 #endif
@@ -1512,7 +1513,6 @@ schedule(void)
   bool targetNVVM = false;
   bool processHostConcur = true;
   SPTR func_sptr = GBL_CURRFUNC;
-  LL_Module *current_module = NULL;
   bool first = true;
   // AOCC Begin
   bool is_ivdep_directive = false;
@@ -2342,7 +2342,7 @@ gen_call_vminmax_power_intrinsic(int ilix, OPERAND *op1, OPERAND *op2)
 }
 #endif
 
-#if defined(TARGET_LLVM_ARM)
+#if defined(TARGET_LLVM_ARM) && NEON_ENABLED
 static OPERAND *
 gen_call_vminmax_neon_intrinsic(int ilix, OPERAND *op1, OPERAND *op2)
 {
@@ -9513,7 +9513,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     if ((operand = gen_call_vminmax_power_intrinsic(ilix, op1, op2)) == NULL) {
       operand = gen_minmax_expr(ilix, op1, op2);
     }
-#elif defined(TARGET_LLVM_ARM)
+#elif defined(TARGET_LLVM_ARM) && NEON_ENABLED
     if ((operand = gen_call_vminmax_neon_intrinsic(ilix, op1, op2)) == NULL) {
       operand = gen_minmax_expr(ilix, op1, op2);
     }
@@ -12182,12 +12182,8 @@ gen_acon_expr(int ilix, LL_Type *expected_type)
     return make_constval_op(make_int_lltype(ptrbits), val[1], val[0]);
   }
   sym_is_refd(sptr);
-  /* In case of non-struct, e.g. a Fortran array may have ACON as sptr + offset,
-   * the "offset" works with "bound" and "index" together to calculate the 
-   * addresses of array elements. However, when generating debug metadata, the
-   * "offset" is not needed in the !DIExpression of the array variable. The
-   * array variable's location always starts from the beginning/first element. */
-  idx = (STYPEG(sptr) == ST_ARRAY || ACONOFFG(opnd) < 0) ? 0 : ACONOFFG(opnd);
+  idx = (STYPEG(sptr) == ST_STRUCT || STYPEG(sptr) == ST_ARRAY
+         || ACONOFFG(opnd) < 0) ? 0 : ACONOFFG(opnd);
   process_sptr_offset(sptr, variable_offset_in_aggregate(sptr, idx));
   idx = ACONOFFG(opnd); /* byte offset */
 
@@ -13102,10 +13098,20 @@ process_formal_arguments(LL_ABI_Info *abi)
         } else if (ll_type_is_fp(arg->type) && ll_type_is_fp(var_type)) {
           arg_op = convert_operand(arg_op, var_type, I_FPTRUNC);
         } else {
+#ifdef TARGET_LLVM_ARM64
+          /* Use a pointer bitcast on the address of the local variable to coerce
+           the argument to the local variable type. 
+           On ARM64 the ABI requires for instance that a 3 4-byte struct (12 bytes)
+            be coerced into 2 8-byte registers. This is achieved by casteing the input argument
+           of type { i32, i32, i32} into  [2 x i64] */
+          store_addr =
+            make_bitcast(store_addr, ll_get_pointer_type(arg_op->ll_type));
+#else
           assert(false,
                  "process_formal_arguments: Function argument with mismatched "
                  "size that is neither integer nor floating-point",
                  0, ERR_Fatal);
+#endif
         }
       } else {
         /* Use a pointer bitcast on the address of the local variable to coerce
@@ -13941,19 +13947,34 @@ llvm_write_ctor_dtor_list(init_list_t *list, const char *global_name)
   print_token(" = appending global [");
   sprintf(int_str_buffer, "%d", list->size);
   print_token(int_str_buffer);
-  print_token(" x { i32, void ()*, i8* }][");
-  for (node = list->head; node != NULL; node = node->next) {
-    print_token("{ i32, void ()*, i8* } { i32 ");
-    sprintf(int_str_buffer, "%d", node->priority);
-    print_token(int_str_buffer);
-    print_token(", void ()* @");
-    print_token(node->name);
-    print_token(", i8* null");
-    print_token(" }");
-    if (node->next != NULL) {
-      print_token(", ");
+  if (ll_feature_three_argument_ctor_and_dtor(&current_module->ir)) {
+    print_token(" x { i32, void ()*, i8* }][");
+    for (node = list->head; node != NULL; node = node->next) {
+      print_token("{ i32, void ()*, i8* } { i32 ");
+      sprintf(int_str_buffer, "%d", node->priority);
+      print_token(int_str_buffer);
+      print_token(", void ()* @");
+      print_token(node->name);
+      print_token(", i8* null }");
+      if (node->next != NULL) {
+        print_token(", ");
+      }
+    }
+  } else {
+    print_token(" x { i32, void ()* }][");
+    for (node = list->head; node != NULL; node = node->next) {
+      print_token("{ i32, void ()* } { i32 ");
+      sprintf(int_str_buffer, "%d", node->priority);
+      print_token(int_str_buffer);
+      print_token(", void ()* @");
+      print_token(node->name);
+      print_token(" }");
+      if (node->next != NULL) {
+        print_token(", ");
+      }
     }
   }
+
   print_token("]");
   print_nl();
 }

@@ -51,7 +51,8 @@ static void handle_nonalloc_template(void);
 static int exist_test(int, int);
 
 static void add_adjarr_bounds_extr_f77(int, int, int);
-static void allocate_one_auto(int);
+static bool allocate_one_auto(int);
+static void component_init_allocd_auto(int, int);
 static int bnd_assn_precedes(int, int, int);
 static void add_auto_bounds(int, int);
 static void mk_allocate_scalar(int memberast, int sptr, int before);
@@ -1496,12 +1497,10 @@ transform_wrapup(void)
         if ((gbl.internal <= 1 || INTERNALG(sptr)) && /* not host */
             AUTOBJG(sptr)) {                          /* automatic */
           if (!ERLYSPECG(sptr)) {
-            allocate_one_auto(sptr);
-            if (ADJARRG(sptr) && ASSNG(sptr) && XBIT(70, 2)) {
-              wrap_symbol(sptr, 0, sptr, STD_NEXT(Gbegin), 0);
-            } else {
-              wrap_symbol(sptr, 0, sptr, STD_PREV(Gbegin), 0);
-            }
+            bool need_init = allocate_one_auto(sptr);
+            wrap_symbol(sptr, 0, sptr, Gbegin, 0);
+            if (need_init)
+              component_init_allocd_auto(mk_id(sptr), Gbegin);
           }
         }
         break;
@@ -1525,8 +1524,10 @@ transform_wrapup(void)
              * some dependent compuation of a bound expression.
              *
              */
-            allocate_one_auto(sptr);
-            wrap_symbol(sptr, 0, sptr, STD_PREV(Gbegin), 0);
+            bool need_init = allocate_one_auto(sptr);
+            wrap_symbol(sptr, 0, sptr, Gbegin, 0);
+            if (need_init)
+              component_init_allocd_auto(mk_id(sptr), Gbegin);
           }
         }
         break;
@@ -2232,7 +2233,7 @@ set_type_in_descriptor(int descriptor_ast, int sptr, DTYPE dtype0,
     type_ast = mk_unop(OP_VAL, mk_cval1(dtype_arg_ast, DT_INT), DT_INT);
   }
 
-  if (type_ast > 0) {
+  if (type_ast > 0 && type_ast != descriptor_ast) {
     int argt = mk_argt(2), astnew;
     int func_ast = mk_id(sym_mkfunc_nodesc(mkRteRtnNm(func), DT_NONE));
     ARGT_ARG(argt, 0) = descriptor_ast;
@@ -4378,12 +4379,18 @@ component_init_allocd_auto(int ast, int std)
   }
 }
 
-static void
+/**
+   \brief Insert memory allocation code for a symbol.
+   \param sptr symbol table index for the symbol
+   \return true if \sptr is an array of derived type, and the caller must
+           initialize its components (by calling component_init_allocd_auto
+           after calling wrap_symbol for sptr)
+ */
+static bool
 allocate_one_auto(int sptr)
 {
-  int Lbegin;
-
-  Lbegin = Gbegin;
+  int Lbegin = Gbegin;
+  bool need_init = false;
 
   if (ADJLENG(sptr))
     add_auto_len(sptr, Lbegin);
@@ -4403,7 +4410,7 @@ allocate_one_auto(int sptr)
       ast = mk_id(sptr);
       mk_mem_allocate(ast, subscr, Lbegin, ast);
       if (DTYG(DTYPEG(sptr)) == TY_DERIVED) {
-        component_init_allocd_auto(ast, Lbegin);
+        need_init = true; // caller must initialize components
         dealloc_dt_auto(ast, sptr, Gend);
       } else {
         mk_mem_deallocate(ast, Gend);
@@ -4416,6 +4423,7 @@ allocate_one_auto(int sptr)
       mk_deallocate_scalar(0, sptr, Gend);
     }
   }
+  return need_init;
 } /* allocate_one_auto */
 
 static int

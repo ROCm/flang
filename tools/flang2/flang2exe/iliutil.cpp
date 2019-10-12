@@ -2401,6 +2401,8 @@ addarth(ILI *ilip)
   ISZ_T aconoff1v, /* constant ST one aconoff	 */
       aconoff2v;   /* constant ST two aconoff	 */
 
+  int is_int, pw;
+  
   int i, tmp, tmp1; /* temporary                 */
 
   union { /* constant value structure */
@@ -4606,6 +4608,7 @@ addarth(ILI *ilip)
       return ad2ili(IL_AND, op1, op2);
     }
 #ifndef TM_UIMOD
+#error TM_UIMOD undefined
     ilix = ad2func_int(IL_QJSR, MTH_I_UIMOD, op1, op2);
     return ilix;
 #else
@@ -4614,11 +4617,6 @@ addarth(ILI *ilip)
       if (ilix)
         return ad2altili(opc, op1, op2, ilix);
     }
-#if defined(TARGET_LLVM_ARM) && !defined(PGOCL)
-    (void)mk_prototype(MTH_I_UIMOD, "pure", DT_UINT, 2, DT_UINT, DT_UINT);
-    tmp = ad2func_int(IL_QJSR, MTH_I_UIMOD, op1, op2);
-    return ad2altili(opc, op1, op2, tmp);
-#endif
     break;
 #endif
   case IL_KUMOD:
@@ -6487,7 +6485,12 @@ addarth(ILI *ilip)
 
   case IL_FPOWI:
 #define __MAXPOW 10
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x200)) {
+    /* Even with -Kieee OK to make 1 multiply and get exact answer,
+     * instead of making an intrinsic call to pow(). Big performance gain.
+     * That is why we check specifically for the power of 2 below.
+     */
+    if ((!flg.ieee || con2v2 == 1 || con2v2 == 2) && 
+         ncons >= 2 && !XBIT(124, 0x200)) {
       if (con2v2 == 1)
         return op1;
       if (con2v2 > 1 && con2v2 <= __MAXPOW) {
@@ -6507,7 +6510,8 @@ addarth(ILI *ilip)
     ilix = ad2altili(opc, op1, op2, ilix);
     return ilix;
   case IL_FPOWK:
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x200) && con2v1 == 0) {
+    if ((!flg.ieee || con2v2 == 1 || con2v2 == 2) && 
+         ncons >= 2 && !XBIT(124, 0x200) && con2v1 == 0) {
       if (con2v2 == 1)
         return op1;
       if (con2v2 > 1 && con2v2 <= __MAXPOW) {
@@ -6568,12 +6572,11 @@ addarth(ILI *ilip)
       }
 #endif
     }
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x40000)) {
-      int pw;
-      if (xfisint(con2v2, &pw)) {
-        ilix = ad2ili(IL_FPOWI, op1, ad_icon(pw));
-        return ilix;
-      }
+    is_int = xfisint(con2v2, &pw);
+    if ((!flg.ieee || pw == 1 || pw == 2) && 
+         ncons >= 2 && is_int && !XBIT(124, 0x40000)) {
+      ilix = ad2ili(IL_FPOWI, op1, ad_icon(pw));
+      return ilix;
     }
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_pow, &funcsptr, 1, false, DT_FLOAT, 2, DT_FLOAT,
@@ -6618,7 +6621,8 @@ addarth(ILI *ilip)
     return ilix;
 
   case IL_DPOWI:
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x200)) {
+    if ((!flg.ieee || con2v2 == 1 || con2v2 == 2) 
+         && ncons >= 2 && !XBIT(124, 0x200)) {
       if (con2v2 == 1)
         return op1;
       if (con2v2 > 1 && con2v2 <= __MAXPOW) {
@@ -6638,7 +6642,8 @@ addarth(ILI *ilip)
     ilix = ad2altili(opc, op1, op2, ilix);
     return ilix;
   case IL_DPOWK:
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x200) && con2v1 == 0) {
+    if ((!flg.ieee || con2v2 == 1 || con2v2 == 2) 
+         && ncons >= 2 && !XBIT(124, 0x200) && con2v1 == 0) {
       if (con2v2 == 1)
         return op1;
       if (con2v2 > 1 && con2v2 <= __MAXPOW) {
@@ -6693,13 +6698,17 @@ addarth(ILI *ilip)
         return ilix;
       }
     }
-    if (!flg.ieee && ncons >= 2 && !XBIT(124, 0x40000)) {
-      int pw;
+    is_int = 0;
+    pw = 0;
+    if( ncons >= 2 && !XBIT(124, 0x40000) )
+    {
       GETVAL64(num2, cons2);
-      if (xdisint(num2.numd, &pw)) {
-        ilix = ad2ili(IL_DPOWI, op1, ad_icon(pw));
-        return ilix;
-      }
+      is_int = xdisint(num2.numd, &pw);
+    }
+    if ((!flg.ieee || pw == 1 || pw == 2) && 
+         ncons >= 2 && is_int && !XBIT(124, 0x40000)) {
+      ilix = ad2ili(IL_DPOWI, op1, ad_icon(pw));
+      return ilix;
     }
     if (XBIT_NEW_MATH_NAMES) {
       fname =
@@ -12090,7 +12099,10 @@ mk_address(SPTR sptr)
   if(!(gbl.outlined && flg.omptarget && gbl.ompaccel_intarget))
 #endif
   if ((PARREFG(sptr) || TASKG(sptr)) &&
-      (gbl.outlined || ISTASKDUPG(GBL_CURRFUNC))) {
+      (gbl.outlined || ISTASKDUPG(GBL_CURRFUNC))) 
+  {
+  /* If it's a host function, we skip loading from uplevel and load them directly */
+  if(((SCG(sptr) != SC_EXTERN && SCG(sptr) != SC_STATIC)) || THREADG(sptr))
     return ll_uplevel_addr_ili(sptr, is_task_priv);
   }
   if (SCG(sptr) == SC_DUMMY && !REDUCG(sptr)) {

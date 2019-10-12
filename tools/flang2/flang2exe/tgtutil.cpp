@@ -33,7 +33,6 @@
  * \brief tgtutil.c - Various definitions for the libomptarget runtime
  *
  */
-#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 
 #define _GNU_SOURCE // for vasprintf()
 #include <stdio.h>
@@ -64,12 +63,8 @@
 #include "dtypeutl.h"
 #include "llassem.h"
 #include "symfun.h"
+#include "ccffinfo.h"
 
-#ifdef OMP_OFFLOAD_LLVM
-static void change_target_func_smbols(int outlined_func_sptr, int stblk_sptr);
-// AOCC additional argument
-static SPTR init_tgt_target_syms(const char *kernelname, SPTR sptr = SPTR_NULL); 
-#endif
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 #include <vector>
@@ -77,14 +72,19 @@ static SPTR init_tgt_target_syms(const char *kernelname, SPTR sptr = SPTR_NULL);
 // Vector to keep track all array accesses with constant offset within device.
 extern std::vector<SPTR> constArraySymbolList;
 #endif
-// AOCC End
-
-#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
-#define MXIDLEN 100
-static int dataregion = 0;
-// AOCC Begin
 static int updateregion = 0;
 // AOCC End
+#ifdef OMP_OFFLOAD_LLVM
+static void change_target_func_smbols(int outlined_func_sptr, int stblk_sptr);
+// AOCC additional argument
+//static SPTR init_tgt_target_syms(const char *kernelname);
+static SPTR init_tgt_target_syms(const char *kernelname, SPTR sptr = SPTR_NULL); 
+#endif
+
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+
+#define MXIDLEN 100
+static int dataregion = 0;
 
 static DTYPE tgt_offload_entry_type = DT_NONE;
 
@@ -164,6 +164,47 @@ ld_sptr(SPTR sptr)
     else
       return ad3ili(IL_LD, ili, nme, mem_size(DTY(DTYPEG(sptr))));
   }
+}
+static char*
+getSPTRname(SPTR sptr){
+  char* name;
+  if(ST_CONST == STYPEG(sptr)) {
+    NEW(name, char, 100);
+    sprintf(name, "%d", CONVAL2G(sptr));
+    return name;
+  }
+  return getprint(sptr);
+}
+static char*
+getILIname(int ili)
+{
+  ILI_OP op = ilib.stg_base[ili].opc;
+  char *name, *fname;
+  switch(op)
+  {
+    case IL_ACON:
+    case IL_ICON:
+      return getSPTRname(ILI_SymOPND(ili, 1));
+    case IL_DFRIR:
+      name = getSPTRname(ILI_SymOPND((ILI_SymOPND(ili,1)),1));
+      NEW(fname, char, strlen(name)+5);
+      sprintf(fname,"%s()", name);
+      return fname;
+    case IL_LD:
+    case IL_LDA:
+    case IL_LD256:
+    case IL_LDDCMPLX:
+    case IL_LDDP:
+    case IL_LDHP:
+    case IL_LDKR:
+    case IL_LDQ:
+    case IL_LDQU:
+    case IL_LDSP:
+        return getSPTRname(NME_SYM(ILI_SymOPND(ili, 2)));
+      default:
+        return "[symbol name cannot be printed]";
+  }
+  return "[symbol name cannot be printed]";
 }
 
 #define TGT_CHK(_api) \
@@ -274,33 +315,6 @@ make_array_sptr(char *name, DTYPE atype, int arraysize)
   return array;
 } /* make_array_sptr*/
 
-static int
-_tgt_target_fill_base(SPTR sptr, bool isImplicit, DTYPE* ld_dtype) {
-  DTYPE dtype = DTYPEG(sptr);
-  int ilix;
-  *ld_dtype = DT_ADDR;
-  if (llis_pointer_kind(dtype)) {
-    ilix = ad3ili(IL_LDA, ad_acon(sptr, 0),
-                  addnme(NT_VAR, sptr, (INT)0, 0), MSZ_PTR);
-  } else if (llis_vector_kind(dtype)) {
-    ompaccelInternalFail("Vector data type is not implemented, cannot be passed to target region. ");
-  } else if (llis_struct_kind(dtype)) {
-    ompaccelInternalFail("Struct data type is not implemented, cannot be passed to target region. ");
-  } else if (llis_function_kind(dtype)) {
-    ompaccelInternalFail("Function data type is not implemented, cannot be passed to target region. ");
-  } else if (llis_integral_kind(dtype) || dtype == DT_DBLE || dtype == DT_FLOAT) {
-    if (isImplicit) {
-      ilix = ld_sptr(sptr);
-      *ld_dtype = dtype;
-    } else
-      ilix = ad_acon(sptr, 0);
-  } else if (llis_array_kind(dtype)) {
-    ilix = ad_acon(sptr, 0);
-  }  else {
-    ompaccelInternalFail("Unknown data type");
-  }
-  return ilix;
-}
 
 static int
 _tgt_target_fill_size(SPTR sptr, int map_type)
@@ -308,12 +322,12 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
   DTYPE dtype = DTYPEG(sptr);
   int ilix, rilix;
   ADSC *ad;
-
   if(llis_pointer_kind(dtype)) {
     if (map_type & OMP_TGT_MAPTYPE_IMPLICIT) {
       ilix = ad_kconi(0);
     } else
-      ompaccelInternalFail("Pointer data type is not implemented, cannot be passed to target region. ");
+      /* find the size of pointee */
+      ilix = ad_kconi(size_of(DTySeqTyElement(dtype)));
   }
   else if (llis_vector_kind(dtype)) {
     ompaccelInternalFail("Vector data type is not implemented, cannot be passed to target region. ");
@@ -390,7 +404,7 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
   if(isMidnum)
     final_maptype |= midnum_maptype;
   else if(maptype == 0)
-    final_maptype = OMP_TGT_MAPTYPE_IMPLICIT;
+    final_maptype = OMP_TGT_MAPTYPE_IMPLICIT | OMP_TGT_MAPTYPE_TARGET_PARAM;
   else
     final_maptype = maptype;
 
@@ -412,7 +426,6 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
       ompaccelInternalFail("Unknown data type");
     }
   }
-  final_maptype |= OMP_TGT_MAPTYPE_TARGET_PARAM;
   return final_maptype;
 }
 
@@ -421,6 +434,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
                        SPTR args_maptypes_sptr, OMPACCEL_TINFO *targetinfo)
 {
   int i, j, ilix, iliy;
+  char *name_base="", *name_length="";
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
   int temp_map_type = 0;
@@ -429,7 +443,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
   OMPACCEL_SYM midnum_sym;
   DTYPE param_dtype, load_dtype;
   SPTR param_sptr;
-  LOGICAL isPointer, isMidnum, isImplicit;
+  LOGICAL isPointer, isMidnum, isImplicit, isThis;
   /* fill the arrays */
   /* Build the list: (size, sptr) pairs. */
 
@@ -478,9 +492,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
 #endif
     // AOCC End
     /* assign map type */
-
     targetinfo->symbols[i].map_type = _tgt_target_fill_maptype(param_sptr, targetinfo->symbols[i].map_type, isMidnum, midnum_sym.map_type);
-
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     if (temp_map_type != 0) {
@@ -497,8 +509,10 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     chk_block(ilix);
 
     /* Find the base */
-    if(false && targetinfo->symbols[i].in_map) {
-      if(llis_array_kind(param_dtype) || llis_pointer_kind(param_dtype))
+    if(targetinfo->symbols[i].in_map) {
+      if(llis_array_kind(param_dtype))
+        param_dtype = array_element_dtype(param_dtype);
+      else if (llis_pointer_kind(param_dtype))
         param_dtype = DTySeqTyElement(param_dtype);
       iliy = targetinfo->symbols[i].ili_base;
       ilix = mk_ompaccel_store(iliy, DT_ADDR, nme_base,
@@ -512,10 +526,17 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = mk_ompaccel_add(iliy, DT_ADDR, ilix, DT_INT8);
       ilix = mk_ompaccel_store(ilix, DT_ADDR, nme_args,
                                ad_acon(args_sptr, i * TARGET_PTRSIZE));
+      name_base = getILIname(targetinfo->symbols[i].ili_lowerbound);
       chk_block(ilix);
     } else {
-      isImplicit = targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT;
-      iliy = _tgt_target_fill_base(param_sptr, isImplicit, &load_dtype);
+      /* Optimization - Pass by value for scalar */
+      if (TY_ISSCALAR(DTY(param_dtype)) && (targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT) || isMidnum || isThis ) {
+        iliy = mk_ompaccel_ldsptr(param_sptr);
+        load_dtype = param_dtype;
+      } else {
+        iliy = mk_address(param_sptr);
+        load_dtype = DT_ADDR;
+      }
       /* Assign args */
       ilix = mk_ompaccel_store(iliy, load_dtype, nme_args, ad_acon(args_sptr, i * TARGET_PTRSIZE));
       chk_block(ilix);
@@ -524,9 +545,10 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       chk_block(ilix);
     }
     /* assign size */
-    if(false && targetinfo->symbols[i].in_map) {
+    if(targetinfo->symbols[i].in_map) {
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
+      name_length = getILIname(targetinfo->symbols[i].ili_length);
     } else {
       if(isMidnum)
         ilix = _tgt_target_fill_size(midnum_sym.host_sym, targetinfo->symbols[i].map_type);
@@ -598,10 +620,8 @@ ll_make_tgt_target(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr)
     locargs[2] = ad_acon(args_sptr, 0);
     locargs[1] = ad_acon(arg_size_sptr, 0);
     locargs[0] = ad_acon(args_maptypes_sptr, 0);
-
 #ifdef OMP_OFFLOAD_LLVM
     change_target_func_smbols(outlined_func_sptr, stblk_sptr);
-
 #endif
     // call the RT
     int call_ili = mk_tgt_api_call(TGT_API_TARGET, 7, locarg_types, locargs);
@@ -623,6 +643,7 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   NEW(name, char, 100);
 #if OMP_OFFLOAD_LLVM
   // AOCC begin
+  // sptr = init_tgt_target_syms(rname);
   if (flg.x86_64_omptarget)
     sptr = init_tgt_target_syms(rname, outlined_func_sptr);
   else
@@ -656,11 +677,9 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   locargs[2] = ad_acon(args_maptypes_sptr, 0);
   locargs[1] = ad_icon(num_teams);
   locargs[0] = ad_icon(thread_limit);
-
 #ifdef OMP_OFFLOAD_LLVM
   change_target_func_smbols(outlined_func_sptr, stblk_sptr);
 #endif
-
   // call the RT
   int call_ili =
       mk_tgt_api_call(TGT_API_TARGET_TEAMS, 9, locarg_types, locargs);
@@ -670,8 +689,8 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
 
 int
 ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
-                         SPTR stblk_sptr, int32_t num_teams,
-                         int32_t thread_limit, int32_t num_threads, int32_t mode)
+                                  SPTR stblk_sptr, int32_t num_teams,
+                                  int32_t thread_limit, int32_t num_threads, int32_t mode)
 {
   SPTR sptr, arg_base_sptr, arg_size_sptr, args_sptr, args_maptypes_sptr;
   char *name, *rname;
@@ -715,8 +734,6 @@ ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
 
   return call_ili;
 }
-
-
 
 int
 ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)
@@ -941,17 +958,15 @@ ll_make_tgt_bin_descriptor(char *name, DTYPE entrytype, DTYPE deviceimagetype)
   return ll_make_struct(4, name, meminfo, 0);
 }
 
-SPTR
+static SPTR
 init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
 {
   char *kernelname;
   size_t size = 100 + strlen(_kernelname);
   NEW(kernelname, char, size);
   strcpy(kernelname, _kernelname);
-
   SPTR eptr1, eptr2, eptr3;
   char *kernelname_, *sname_region, *sname_entry;
-
   if (flg.x86_64_omptarget) {
     // Assuming that this function is called for outlined functions that are
     // entry points.
@@ -1008,6 +1023,7 @@ init_tgt_register_syms()
 {
   SPTR tptr1, tptr2, tptr3, tptr4;
 
+  // tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin"); // AOCC
   tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
   DTYPEP(tptr1, tgt_offload_entry_type);
   SCP(tptr1, SC_EXTERN);
@@ -1017,6 +1033,7 @@ init_tgt_register_syms()
   gbl.consts = tptr1;
   OMPACCRTP(tptr1, 1);
 
+  // tptr2 = (SPTR)addnewsym(".omp_offloading.entries_end"); //AOCC
   tptr2 = (SPTR)addnewsym("__stop_omp_offloading_entries"); // AOCC
   DTYPEP(tptr2, tgt_offload_entry_type);
   SCP(tptr2, SC_EXTERN);
@@ -1036,7 +1053,6 @@ init_tgt_register_syms()
 #endif
     // AOCC end
     tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.nvptx64-nvidia-cuda");
-
   DTYPEP(tptr3, DT_BINT);
   SCP(tptr3, SC_EXTERN);
   STYPEP(tptr3, ST_VAR);
@@ -1107,8 +1123,8 @@ ll_make_tgt_register_lib2()
       break;
     }
   }
-
   // AOCC begin
+  // assert(!tptr || !tptr2 || !tptr3 || !tptr4,
   /*
    * MODIFICATION
    * Changed assert expression from logical or to logical and
@@ -1210,7 +1226,6 @@ ll_make_tgt_register_lib2()
   return mk_tgt_api_call(TGT_API_REGISTER_LIB, 1, arg_types, args);
 }
 
-
 void
 init_tgtutil()
 {
@@ -1260,5 +1275,4 @@ ll_make_tgt_target_update(int device_id, OMPACCEL_TINFO *targetinfo)
 }
 // AOCC End
 
-#endif
 #endif

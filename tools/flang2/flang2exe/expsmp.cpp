@@ -2734,7 +2734,6 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 #endif
     // AOCC End
     break;
-
   case IM_BTARGETDATA:
   case IM_TARGETENTERDATA:
   case IM_TARGETEXITDATA:
@@ -2753,7 +2752,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     cr_block();
     exp_label(beg_label);
 
-    if(!IS_OMP_DEVICE_CG)
+    if(flg.amdgcn_target || !IS_OMP_DEVICE_CG)
       exp_ompaccel_targetdata(ilmp, curilm, opc);
 
     exp_label(end_label);
@@ -3052,7 +3051,7 @@ clear_tplnk(void)
   int sym;
   for (sym = gbl.threadprivate; sym > NOSYM; sym = TPLNKG(sym)) {
     TPLNKP(sym, 0);
-    THPRVTOPTP(sym, 0); /* so much trouble clear this too, damnit */
+    THPRVTOPTP(sym, 0); /* so much trouble clear this too */
   }
   gbl.threadprivate = NOSYM;
 }
