@@ -141,8 +141,8 @@ add_dependencies(flang1
   )
 
 if (FLANG_INCLUDE_DOCS)
-  add_dependencies(flang1_gen_sphinx_docs
-    flang1
+  add_dependencies(flang1
+    flang1_gen_sphinx_docs
     )
 endif()
 
