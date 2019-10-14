@@ -403,9 +403,12 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
   /*todo ompaccel there are many cases to be covered. It is not completed yet. */
   if(isMidnum)
     final_maptype |= midnum_maptype;
-  else if(maptype == 0)
-    final_maptype = OMP_TGT_MAPTYPE_IMPLICIT | OMP_TGT_MAPTYPE_TARGET_PARAM;
-  else
+  else if(maptype == 0) {
+    // AOCC Modification: Moving logical or of OMP_TGT_MAPTYPE_TARGET_PARAM
+    //                    to end of this function. This was moved here in
+    //                    Commit 1bd2b5172c227e09208b987cee27b2bcd720eed5
+    final_maptype = OMP_TGT_MAPTYPE_IMPLICIT;
+  } else
     final_maptype = maptype;
 
   DTYPE dtype = DTYPEG(sptr);
@@ -426,6 +429,10 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
       ompaccelInternalFail("Unknown data type");
     }
   }
+
+  // AOCC Modification: Adding back this, this was moved up in
+  //                    Commit 1bd2b5172c227e09208b987cee27b2bcd720eed5
+  final_maptype |= OMP_TGT_MAPTYPE_TARGET_PARAM;
   return final_maptype;
 }
 
@@ -530,7 +537,8 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       chk_block(ilix);
     } else {
       /* Optimization - Pass by value for scalar */
-      if (TY_ISSCALAR(DTY(param_dtype)) && (targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT) || isMidnum || isThis ) {
+      // AOCC Modification : Removed use of uninitalized variable isThis from condition
+      if (TY_ISSCALAR(DTY(param_dtype)) && (targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT) || isMidnum) {
         iliy = mk_ompaccel_ldsptr(param_sptr);
         load_dtype = param_dtype;
       } else {
