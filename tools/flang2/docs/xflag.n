@@ -5468,6 +5468,11 @@ This sets the maximum caller function size into which to Minline.
 .XF "222:"
 Functions whose size if smaller than this value will get inlined by Minline.
 
+.XF "230"
+Reserved : AMD GPU Offloading flags
+.XB 0x01
+Emit target mode mode_target_teams_distribute_parallel_for_simd whenever possible
+
 .XF "232:"
 OpenMP Accelerator Model flags for Flang compiler
 .XB 0x01:

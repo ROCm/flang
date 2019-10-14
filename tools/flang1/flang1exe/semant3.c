@@ -22,6 +22,10 @@
  * [CPUPC-2279]:F2008: Raise error for non integer 
  * and non character stop codes
  * Last modified: Tue Sep 25 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 14th October 2019
+ *
  */
 /**
     \file semant3.c
@@ -49,6 +53,7 @@
 #include "lower.h"
 #include "rtlRtns.h"
 #include "pd.h"
+#include "llmputil.h"
 
 static LOGICAL alloc_error = FALSE;
 static int alloc_source;
@@ -78,6 +83,10 @@ static int construct_association(int lhs_sptr, SST *rhs, int stmt_dtype,
 static void end_association(int sptr);
 static int get_sst_named_whole_variable(SST *rhs);
 static int get_derived_type(SST *, LOGICAL);
+// AOCC Begin
+extern int target_ast;
+extern int reduction_kernel;
+// AOCC End
 
 #define IN_OPENMP_ATOMIC (sem.mpaccatomic.ast && !(sem.mpaccatomic.is_acc))
 
@@ -1847,6 +1856,14 @@ errorstop_shared:
     named_construct = 0;
     sem.pgphase = PHASE_EXEC; /* set now, since may have IF (...) stmt */
     sem.stats.nodes++;
+    // AOCC Begin
+    // if there's an if_construct inside non-reduction kernel fallback to
+    // tgt_target mode.
+    if (flg.amdgcn_target &&
+        target_ast && DI_IN_NEST(sem.doif_depth, DI_DISTPARDO) && !reduction_kernel) {
+      A_COMBINEDTYPEP(target_ast, mode_target);
+    }
+    // AOCC End
     break;
   /*
    *	<if construct> ::= <check construct> : IF
