@@ -42,7 +42,7 @@ add_custom_command(
          ${FLANG1_DOC_BIN_DIR}/scanner.rst
          ${FLANG1_DOC_BIN_DIR}/semant.rst
          ${FLANG1_DOC_BIN_DIR}/transform.rst
-  COMMAND ${CMAKE_BINARY_DIR}/bin/fen2rst -v ${FLANG1_DOC_SRC_DIR}/ast.n
+	 COMMAND ${CMAKE_BINARY_DIR}/bin/fen2rst -v ${UTILS_AST_DIR}/ast.n
                                              ${FLANG1_DOC_SRC_DIR}/comms.n
                                              ${FLANG1_DOC_SRC_DIR}/controller.n
                                              ${FLANG1_DOC_SRC_DIR}/dinit.n
@@ -56,7 +56,7 @@ add_custom_command(
                                              ${FLANG1_DOC_SRC_DIR}/semant.n
                                              ${FLANG1_DOC_SRC_DIR}/transform.n
   WORKING_DIRECTORY ${FLANG1_DOC_BIN_DIR}
-  DEPENDS fen2rst ${FLANG1_DOC_SRC_DIR}/ast.n
+  DEPENDS fen2rst ${UTILS_AST_DIR}/ast.n
                   ${FLANG1_DOC_SRC_DIR}/comms.n
                   ${FLANG1_DOC_SRC_DIR}/controller.n
                   ${FLANG1_DOC_SRC_DIR}/dinit.n
