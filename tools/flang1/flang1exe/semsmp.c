@@ -9895,16 +9895,12 @@ set_parref_flag(int sptr, int psptr, int stblk)
     return;
   if (STYPEG(sptr) == ST_MEMBER)
     return;
-  // AOCC Begin
+  // AOCC Modification:
+  // Added condition !flg.amdgcn_target
   // Flang uses certain global variable for offset calculation.
   // Such variables need to be mapped to the device.
-#ifndef OMP_OFFLOAD_AMD
-  // AOCC End
-  if (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC)
+  if (!flg.amdgcn_target && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
     return;
-  // AOCC Begin
-#endif
-  // AOCC End
   if (SCG(sptr) == SC_EXTERN && ST_ISVAR(sptr)) /* No global vars in uplevel */
     return;
   if (DINITG(sptr) || SAVEG(sptr)) {
