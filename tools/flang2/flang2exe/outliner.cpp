@@ -21,6 +21,7 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 26th July 2019
  * Date of modification 16th September 2019
+ * Date of modification 15th October 2019
  *
  */
 
@@ -1069,6 +1070,21 @@ llCollectSymbolInfo(ILM *ilmpx)
   }
 }
 
+// AOCC Begin
+/// \brief Returns true if \p opc doesn't have any sym operand.
+bool
+is_no_symbol_ilm(ILM_T opc) {
+  switch(opc) {
+    case IM_DMUL:
+    case IM_DSUB:
+      return true;
+    default:
+      return false;
+   }
+  return false;
+}
+// AOCC End
+
 int
 ll_rewrite_ilms(int lineno, int ilmx, int len)
 {
@@ -1174,7 +1190,11 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             op1Pld = ILM_OPND(ilmpx, 1);
             ILM_OPND(ilmpx, 2) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 2));
-          } else if(gbl.ompaccel_intarget) {
+          } else if(gbl.ompaccel_intarget && !is_no_symbol_ilm(opc)) {
+            // AOCC Modification : Added condtion !is_no_symbol_ilm(opc).
+            //      No point in modifying 1st operand blindly without checking
+            //      if opc has sym operand or not. For such ILMs either control should
+            //      not reach here, or if reached should not to be modified blindly.
             /* replace host sptr with device sptrs */
             ILM_OPND(ilmpx, 1) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 1));
