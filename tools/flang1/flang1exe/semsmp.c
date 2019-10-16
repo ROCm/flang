@@ -27,6 +27,9 @@
  * Date of modification 07th October 2019
  * Date of modification 14th October 2019
  *
+ * Added support for !$omp target and !$omp teams blocks
+ * Date of modification 16th October 2019
+ *
  */
 
 /** \file
@@ -1716,6 +1719,12 @@ semsmp(int rednum, SST *top)
     (void)leave_dir(DI_TARGET, TRUE, 0);
     sem.target--;
     par_pop_scope();
+    // AOCC Begin
+    // Clear target ast
+#ifdef OMP_OFFLOAD_AMD
+    target_ast = 0;
+#endif
+    // AOCC End
     ast = emit_etarget();
     mp_create_escope();
     if (doif) {
@@ -1805,10 +1814,10 @@ semsmp(int rednum, SST *top)
     //       using correct data structures, mostly a stack would do. Since
     //       FLANG1 has little to do with target_mode, this can also be safely
     //       moved to FLANG2
-    if (target_ast && flg.amdgcn_target && XBIT(230, 0x01)) {
+    if (target_ast) {
       A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
                                   BT_TARGET | BT_TEAMS |
-                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+                                  BT_DISTRIBUTE | BT_PARDO));
     }
 #endif
     // AOCC End
@@ -1830,6 +1839,17 @@ semsmp(int rednum, SST *top)
                   "OMP DISTRIBUTE PARALLE DO SIMD");
     begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
     DI_ISSIMD(sem.doif_depth) = TRUE;
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    }
+#endif
+    // AOCC End
+
     SST_ASTP(LHS, ast);
     break;
   /*
@@ -2107,10 +2127,11 @@ semsmp(int rednum, SST *top)
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
-    if (flg.amdgcn_target && target_ast && XBIT(230, 0x01)) {
+    // mode_target_teams_distribute_parallel_for
+    if (target_ast) {
       A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
                                   BT_TARGET | BT_TEAMS |
-                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+                                  BT_DISTRIBUTE | BT_PARDO));
     }
 #endif
     // AOCC End
@@ -2151,7 +2172,7 @@ semsmp(int rednum, SST *top)
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
-    // mode_target_teams_distribute_parallel_for
+    // mode_target_teams_distribute_parallel_for_simd
     if (target_ast) {
       A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
                                   BT_TARGET | BT_TEAMS |
@@ -3009,8 +3030,6 @@ semsmp(int rednum, SST *top)
 #ifdef OMP_OFFLOAD_AMD
     if (target_ast) {
       reduction_kernel = 1;
-      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
-                                  BT_TARGET | BT_DISTRIBUTE | BT_PARDO));
     }
 #endif
     // AOCC End
@@ -8792,6 +8811,12 @@ begin_combine_constructs(BIGINT64 construct)
         // AOCC End
       }
       A_COMBINEDTYPEP(ast, combinedMode);
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      // Store the target ast for future use
+      target_ast = DI_BTARGET(sem.doif_depth);
+#endif
+      // AOCC End
     }
 #endif
     do_enter = TRUE;
@@ -8897,6 +8922,12 @@ end_target()
     A_LOPP(DI_BTARGET(doif), ast);
     A_LOPP(ast, DI_BTARGET(doif));
   }
+  // AOCC Begin
+  // Clear target ast
+#ifdef OMP_OFFLOAD_AMD
+  target_ast = 0;
+#endif
+  // AOCC End
 }
 
 void
