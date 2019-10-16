@@ -84,8 +84,10 @@ static void end_association(int sptr);
 static int get_sst_named_whole_variable(SST *rhs);
 static int get_derived_type(SST *, LOGICAL);
 // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
 extern int target_ast;
 extern int reduction_kernel;
+#endif
 // AOCC End
 
 #define IN_OPENMP_ATOMIC (sem.mpaccatomic.ast && !(sem.mpaccatomic.is_acc))
@@ -1859,10 +1861,12 @@ errorstop_shared:
     // AOCC Begin
     // if there's an if_construct inside non-reduction kernel fallback to
     // tgt_target mode.
+#ifdef OMP_OFFLOAD_AMD
     if (flg.amdgcn_target &&
         target_ast && DI_IN_NEST(sem.doif_depth, DI_DISTPARDO) && !reduction_kernel) {
       A_COMBINEDTYPEP(target_ast, mode_target);
     }
+#endif
     // AOCC End
     break;
   /*
