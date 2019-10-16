@@ -1217,6 +1217,7 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
     current_tinfo->symbols[current_tinfo->n_symbols].host_sym = host_symbol;
     current_tinfo->symbols[current_tinfo->n_symbols].device_sym = device_symbol;
     current_tinfo->symbols[current_tinfo->n_symbols].map_type = map_type;
+    current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0; // AOCC
     current_tinfo->n_symbols++;
   }
 
