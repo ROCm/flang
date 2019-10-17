@@ -102,6 +102,10 @@ public:
       return {"__INVALID_TGT_API_NAME__", -1, (DTYPE)-1};
     case TGT_API_REGISTER_LIB:
       return {"__tgt_register_lib", 0, DT_NONE};
+      // AOCC begin
+    case TGT_API_REGISTER_REQUIRES:
+      return {"__tgt_register_requires", 0, DT_NONE};
+      // AOCC end
     case TGT_API_TARGET:
       return {"__tgt_target", 0, DT_INT};
     case TGT_API_TARGET_TEAMS:
@@ -121,6 +125,9 @@ public:
 static const struct tgt_api_entry_t tgt_api_calls[] = {
     [TGT_API_BAD] = {"__INVALID_TGT_API_NAME__", -1, -1},
     [TGT_API_REGISTER_LIB] = {"__tgt_register_lib", 0, DT_VOID_NONE},
+    // AOCC begin
+    [TGT_API_REGISTER_REQUIRES] = {"__tgt_register_requires", 0, DT_VOID_NONE},
+    // AOCC end
     [TGT_API_TARGET] = {"__tgt_target", 0, DT_INT},
     [TGT_API_TARGET_TEAMS] = {"__tgt_target_teams", 0, DT_INT},
     [TGT_API_TARGET_TEAMS_PARALLEL] = {"__tgt_target_teams_parallel", 0, DT_INT},
@@ -1034,7 +1041,7 @@ init_tgt_register_syms()
   // tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin"); // AOCC
   tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
   DTYPEP(tptr1, tgt_offload_entry_type);
-  SCP(tptr1, SC_EXTERN);
+  /* SCP(tptr1, SC_EXTERN); */ SCP(tptr1, SC_PRIVATE); // AOCC
   DCLDP(tptr1, 1);
   STYPEP(tptr1, ST_VAR);
   SYMLKP(tptr1, gbl.consts);
@@ -1044,7 +1051,7 @@ init_tgt_register_syms()
   // tptr2 = (SPTR)addnewsym(".omp_offloading.entries_end"); //AOCC
   tptr2 = (SPTR)addnewsym("__stop_omp_offloading_entries"); // AOCC
   DTYPEP(tptr2, tgt_offload_entry_type);
-  SCP(tptr2, SC_EXTERN);
+  /* SCP(tptr2, SC_EXTERN); */ SCP(tptr2, SC_PRIVATE); // AOCC
   DCLDP(tptr2, 1);
   STYPEP(tptr2, ST_VAR);
   SYMLKP(tptr2, gbl.consts);
@@ -1062,7 +1069,7 @@ init_tgt_register_syms()
     // AOCC end
     tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.nvptx64-nvidia-cuda");
   DTYPEP(tptr3, DT_BINT);
-  SCP(tptr3, SC_EXTERN);
+  /* SCP(tptr3, SC_EXTERN); */ SCP(tptr3, SC_PRIVATE); // AOCC
   STYPEP(tptr3, ST_VAR);
   SYMLKP(tptr3, gbl.consts);
   gbl.consts = tptr3;
@@ -1080,7 +1087,7 @@ init_tgt_register_syms()
     tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.nvptx64-nvidia-cuda");
 
   DTYPEP(tptr4, DT_BINT);
-  SCP(tptr4, SC_EXTERN);
+  /* SCP(tptr4, SC_EXTERN); */ SCP(tptr4, SC_PRIVATE); // AOCC
   DCLDP(tptr4, 1);
   STYPEP(tptr4, ST_VAR);
   SYMLKP(tptr4, gbl.consts);
@@ -1111,6 +1118,31 @@ ll_make_tgt_register_lib()
   args[0] = ad_acon(sptr, 0);
   return mk_tgt_api_call(TGT_API_REGISTER_LIB, 1, arg_types, args);
 }
+
+// AOCC begin
+int
+ll_make_tgt_register_requires()
+{
+  SPTR sptr;
+  DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
+
+  dtype_entry = tgt_offload_entry_type;
+  dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
+  dtype_bindesc =
+    ll_make_tgt_bin_descriptor("__tgt_bin_desc", dtype_entry, dtype_devimage);
+
+  sptr = (SPTR)addnewsym(".omp_offloading.descriptor");
+  STYPEP(sptr, ST_STRUCT);
+  SCP(sptr, SC_EXTERN);
+  REFP(sptr, 1);
+  DTYPEP(sptr, dtype_bindesc);
+
+  int args[1];
+  DTYPE arg_types[1] = {DT_INT8};
+  args[0] = ad_kconi(1);
+  return mk_tgt_api_call(TGT_API_REGISTER_REQUIRES, 1, arg_types, args);
+}
+// AOCC end
 
 int
 ll_make_tgt_register_lib2()

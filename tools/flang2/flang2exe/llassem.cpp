@@ -1106,7 +1106,7 @@ write_libomtparget(void)
       // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
       if (flg.amdgcn_target) {
-        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  //      fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.amdgcn-amd-amdhsa = external constant i8 \n\
   @.omp_offloading.img_start.amdgcn-amd-amdhsa = external constant i8 \n\
   @__stop_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
@@ -1116,11 +1116,11 @@ write_libomtparget(void)
       }
 
       else if (flg.x86_64_omptarget) {
-        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
-  @.omp_offloading.img_end.x86_64-pc-linux-gnu = external constant i8 \n\
-  @.omp_offloading.img_start.x86_64-pc-linux-gnu = external constant i8 \n\
-  @__stop_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
-  @__start_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  //       fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
+  @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
+  @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
+  @__start_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
   @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.x86_64-pc-linux-gnu, i8* @.omp_offloading.img_end.x86_64-pc-linux-gnu, %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }], align 8\n\
   @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries , %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }, align 8\n\n");
       } else {

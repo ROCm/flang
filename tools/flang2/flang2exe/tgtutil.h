@@ -39,6 +39,7 @@ enum {
   TGT_API_BAD,
   TGT_API_REGISTER_LIB,
   TGT_API_UNREGISTER_LIB,
+  TGT_API_REGISTER_REQUIRES, // AOCC
   TGT_API_TARGET,
   TGT_API_TARGET_NOWAIT,
   TGT_API_TARGET_TEAMS,
@@ -74,6 +75,8 @@ struct tgt_api_entry_t {
    \brief Register the file and load cubin file
  */
 int ll_make_tgt_register_lib(void);
+
+int ll_make_tgt_register_requires(void); // AOCC
 
 /**
    \brief Register the file and load cubin file

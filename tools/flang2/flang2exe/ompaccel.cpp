@@ -1472,7 +1472,8 @@ ompaccel_emit_tgt_register()
   TEXTSTARTUPP(sptrFn, 1);
   PRIORITYP(sptrFn, 65535 /* LLVM_DEFAULT_PRIORITY */);
   cr_block();
-  ilix = ll_make_tgt_register_lib();
+  /* ilix = ll_make_tgt_register_lib(); */ // AOCC
+  ilix = ll_make_tgt_register_requires(); // AOCC
   iltb.callfg = 1;
   chk_block(ilix);
   wr_block();
