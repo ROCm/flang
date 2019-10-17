@@ -606,7 +606,7 @@ mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
   return func_sptr;
 }
 
-static int
+int // AOCC (made non-static)
 mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
 {
   switch (redop) {

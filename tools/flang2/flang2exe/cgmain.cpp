@@ -13341,6 +13341,15 @@ emit_x86_device_offload_entry(SPTR func_sptr)
       "This function should only be called for x86 offloading and only "
       "during it's device IR emission", func_sptr, ERR_Fatal);
 
+  static bool mp_defined = false;
+  // Even though we emit calls to _mp_*cs_nest_red APIs for reduction regions in
+  // the device IR, flang, misses out declaring them. We hard code this here
+  // regardless whether we use these APIs or not.
+  if (!mp_defined) {
+    fprintf(get_llasm_output_file(), "declare signext i32 @_mp_ecs_nest_red(...)\ndeclare signext i32 @_mp_bcs_nest_red(...)\n");
+    mp_defined = true;
+  }
+
   if (!ompaccel_x86_is_entry_func(func_sptr))
     return;
 
@@ -13440,7 +13449,8 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   }
 
   // AOCC Begin
-  if (!linkage && CONSTRUCTORG(func_sptr) && flg.amdgcn_target) {
+  if (!linkage && CONSTRUCTORG(func_sptr) &&
+      (flg.amdgcn_target || flg.x86_64_omptarget)) {
     linkage = " linkonce";
   }
   // AOCC End

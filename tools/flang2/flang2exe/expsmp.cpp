@@ -2728,7 +2728,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     wr_block();
     cr_block();
     exp_label(beg_label);
-    if (flg.amdgcn_target)
+    if (flg.amdgcn_target || flg.x86_64_omptarget)
       exp_ompaccel_target_update(ilmp, curilm, opc);
     exp_label(end_label);
 #endif
@@ -2818,7 +2818,12 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_MP_ATOMICUPDATE:
     if (ll_ilm_is_rewriting())
       break;
-    exp_mp_atomic_update(ilmp);
+    // AOCC begin
+#ifdef OMP_OFFLOAD_AMD
+    if (!(flg.x86_64_omptarget && gbl.ompaccel_intarget))
+#endif
+      exp_mp_atomic_update(ilmp);
+    // AOCC end
     break;
   case IM_MP_ATOMICCAPTURE:
     if (ll_ilm_is_rewriting())
@@ -2867,7 +2872,13 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_reductionitem(ilmp, curilm);
       break;
     case IM_MP_BREDUCTION:
+      break; // AOCC
     case IM_MP_EREDUCTION:
+      // AOCC begin
+      if (flg.x86_64_omptarget && gbl.ompaccel_intarget) {
+        ompaccel_x86_emit_reduce(ompaccel_tinfo_current_get());
+      }
+      // AOCC end
       break;
     case IM_MP_TARGETLOOPTRIPCOUNT:
       if(flg.omptarget)

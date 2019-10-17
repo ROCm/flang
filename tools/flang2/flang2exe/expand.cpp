@@ -487,12 +487,14 @@ eval_ilm(int ilmx)
   {
 #ifdef OMP_OFFLOAD_LLVM
     if (flg.omptarget && gbl.ompaccel_intarget) {
-      if (opcx == IM_MP_BREDUCTION) {
-        ompaccel_notify_reduction(true);
-        exp_ompaccel_reduction(ilmpx, ilmx);
-      } else if (opcx == IM_MP_EREDUCTION) {
-        ompaccel_notify_reduction(false);
-        return;
+      if (!flg.x86_64_omptarget) { // AOCC
+        if (opcx == IM_MP_BREDUCTION) {
+          ompaccel_notify_reduction(true);
+          exp_ompaccel_reduction(ilmpx, ilmx);
+        } else if (opcx == IM_MP_EREDUCTION) {
+          ompaccel_notify_reduction(false);
+          return;
+        }
       }
 
       if (ompaccel_is_reduction_region())

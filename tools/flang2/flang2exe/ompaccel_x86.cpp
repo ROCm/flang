@@ -35,9 +35,89 @@
 #include "ll_ftn.h"
 #include "symfun.h"
 #include <set>
+#include <map>
 
-std::set<SPTR> ompaccel_x86_parallel_func_set;
-std::set<SPTR> ompaccel_x86_fork_wrapper_func_set;
+static std::set<SPTR> ompaccel_x86_parallel_func_set;
+static std::set<SPTR> ompaccel_x86_fork_wrapper_func_set;
+static std::set<SPTR> ompaccel_x86_reduced_func_set;
+
+// Returns the ompaccel-sym that corresponds to \p reduction_sym in \p tinfo
+static OMPACCEL_SYM *get_ompaccel_sym_for(OMPACCEL_RED_SYM *reduction_sym, OMPACCEL_TINFO *tinfo) {
+  for (int i = 0; i < tinfo->n_symbols; i++) {
+    OMPACCEL_SYM *omp_sym = &(tinfo->symbols[i]);
+    if (strcmp(SYMNAME(omp_sym->host_sym), SYMNAME(reduction_sym->private_sym)) == 0) {
+      return omp_sym;
+    }
+  }
+
+  return NULL;
+}
+
+// Returns the nth reduction-sym in \p tinfo by keeping track of duplicate
+// MP_REDUCTIONITEMs.
+static OMPACCEL_RED_SYM *get_ompaccel_reduction_sym(OMPACCEL_TINFO *tinfo, int n) {
+  std::set<SPTR> seen_sym;
+
+  for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
+    OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
+
+    // There are scenarios in which flang emits 2 MP_REDUCTIONITEM ilms
+    // for a single reduction variable. We keep track of those duplicates to get
+    // the "real" nth reduction symbol.
+    if (seen_sym.find(reduction_sym->private_sym) == seen_sym.end())
+      seen_sym.insert(reduction_sym->private_sym);
+    else
+      n++;
+    if (i == n) { return reduction_sym; }
+  }
+
+  return NULL;
+}
+
+void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo) {
+  bool debug_me = false;
+  SPTR func_sptr = gbl.currsub;
+
+  // Emit the reduction code only for target function.
+  if (tinfo->func_sptr != func_sptr) {
+    return;
+  }
+
+  // If we already did the reduction, then ignore.
+  if (ompaccel_x86_reduced_func_set.find(func_sptr) !=
+      ompaccel_x86_reduced_func_set.end())
+    return;
+
+  std::set<SPTR> reduced_syms;
+  for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
+
+    OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
+    OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
+    SPTR device_sym = ompaccel_sym->device_sym;
+    SPTR host_sym = ompaccel_sym->device_sym;
+
+    // If already reduced (happens incase there are multiple MP_REDUCTIONITEM
+    // for one reduction variable).
+    if (reduced_syms.find(device_sym) != reduced_syms.end()) { continue; }
+
+    if (debug_me) {
+      printf("[ompaccel-x86] Reducing device_sym: %s private_sym: %s with redop: %d in %s\n",
+          getprint(device_sym), getprint(reduction_sym->private_sym), reduction_sym->redop,
+          getprint(func_sptr));
+    }
+
+    int ili = mk_reduction_op(reduction_sym->redop,
+        mk_ompaccel_ldsptr(device_sym), DTYPEG(host_sym),
+        mk_ompaccel_ldsptr(reduction_sym->private_sym), DTYPEG(reduction_sym->private_sym));
+
+    ili = mk_ompaccel_store(ili, DTYPEG(reduction_sym->private_sym), 0, mk_address(device_sym));
+
+    chk_block(ili);
+    reduced_syms.insert(device_sym);
+  }
+
+  ompaccel_x86_reduced_func_set.insert(func_sptr);
+}
 
 void ompaccel_x86_add_parallel_func(SPTR func_sptr) {
   bool debug_me = false;
@@ -104,7 +184,7 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
   int func_dpsc = DPDSCG(func_sptr);
   int func_paramct = PARAMCTG(func_sptr);
   int sym;
-  SPTR orig_params[128];
+  SPTR orig_params[func_paramct];
 
   // Store all the original params
   for (int i = 0; i < func_paramct; i++) {
@@ -113,7 +193,7 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
 
   // Expand the argument array memory
   // (the +100 bit is copied from llMakeFtnOutlinedSignatureTarget())
-  NEED(aux.dpdsc_avl, aux.dpdsc_base, int, aux.dpdsc_size,
+  NEED(aux.dpdsc_avl + func_paramct + 2, aux.dpdsc_base, int, aux.dpdsc_size,
     aux.dpdsc_size + func_paramct + 2 + 100);
 
   DPDSCP(func_sptr, aux.dpdsc_avl);
@@ -150,9 +230,6 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   if (!ompaccel_x86_is_toplevel_parallel_func(target_func))
     return;
 
-  if (debug_me)
-    printf("[ompaccel-x86]: Fork wrapper target: %s\n", SYMNAME(target_func));
-
   SPTR orig_func = gbl.currsub;
   int orig_bih = expb.curbih;
 
@@ -160,18 +237,25 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   // device functions gets "_" in the end.
   sprintf(func_name, "%s_x86_entry_", SYMNAME(target_func));
   SPTR func_sptr;
-  SPTR func_args[128];
 
   int target_func_args_count;
   OMPACCEL_TINFO *omptinfo;
   omptinfo = ompaccel_tinfo_get(target_func);
+
   target_func_args_count = omptinfo->n_symbols;
+  SPTR func_args[target_func_args_count];
+
+  if (debug_me) {
+    printf("[ompaccel-x86]: Fork wrapper target: %s (SPTR: %d) with %d args\n",
+        SYMNAME(target_func), target_func, target_func_args_count);
+  }
 
   for (int i = 0; i < target_func_args_count; ++i) {
     SPTR dev_sptr = omptinfo->symbols[i].device_sym;
     SPTR host_sptr = omptinfo->symbols[i].host_sym;
+
     char new_arg_name[1024];
-    sprintf(new_arg_name, "%s", SYMNAME(dev_sptr));
+    sprintf(new_arg_name, "%s_x86", SYMNAME(dev_sptr));
 
     // Every argument must be "x86 offloading friendly". ie it should transfer
     // correctly via ffi_call() of libomptarget. So far, I only found pointers and

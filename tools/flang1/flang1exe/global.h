@@ -271,6 +271,7 @@ typedef struct {
   char *std_string; /* input string arg of -std= */
   FORTRAN_STD std;
   LOGICAL disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
+  LOGICAL x86_64_omptarget; /* IF offloading target is x86-64 */
   LOGICAL amdgcn_target /* IF offloading target is AMDGPU */
   // AOCC end
 } FLG;

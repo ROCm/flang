@@ -1682,7 +1682,7 @@ semsmp(int rednum, SST *top)
   }
     SST_ASTP(LHS, 0);
     // AOCC Begin
-    if (flg.amdgcn_target)
+    if (flg.amdgcn_target || flg.x86_64_omptarget)
       do_tofrom();
     // AOCC End
     break;
@@ -4927,7 +4927,7 @@ semsmp(int rednum, SST *top)
    */
   case ACCEL_DATA1:
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
-    if(is_in_omptarget(sem.doif_depth) || flg.amdgcn_target) {
+    if(is_in_omptarget(sem.doif_depth) || flg.amdgcn_target || flg.x86_64_omptarget) {
       //todo support array section in the map clause for openmp
       if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
         sptr = SST_SYMG(RHS(1));
@@ -7711,7 +7711,7 @@ do_copyprivate()
 static void
 do_tofrom()
 {
-  if (!flg.omptarget)
+  if (!flg.omptarget || !flg.x86_64_omptarget)
     return;
 
   ITEM *item;
@@ -9927,10 +9927,11 @@ set_parref_flag(int sptr, int psptr, int stblk)
   if (STYPEG(sptr) == ST_MEMBER)
     return;
   // AOCC Modification:
-  // Added condition !flg.amdgcn_target
+  // Added condition !(flg.amdgcn_target || flg.x86_64_omptarget)
   // Flang uses certain global variable for offset calculation.
   // Such variables need to be mapped to the device.
-  if (!flg.amdgcn_target && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
+  if (!(flg.amdgcn_target || flg.x86_64_omptarget)
+      && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
     return;
   if (SCG(sptr) == SC_EXTERN && ST_ISVAR(sptr)) /* No global vars in uplevel */
     return;

@@ -967,8 +967,12 @@ init(int argc, char *argv[])
 #endif
   // AOCC Begin
   flg.amdgcn_target = FALSE;
+  flg.x86_64_omptarget = FALSE;
+
   if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
     flg.amdgcn_target = TRUE;
+  else if (omptp && strcmp(omptp, "x86_64-pc-linux-gnu") == 0)
+    flg.x86_64_omptarget = TRUE;
   // AOCC End
 
   /* Vectorizer settings */

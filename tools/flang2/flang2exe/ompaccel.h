@@ -314,6 +314,11 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr);
  * \brief generates the "wrapper" that emits __kmpc_fork_call to \p target_func
  */
 void ompaccel_x86_gen_fork_wrapper(SPTR target_func);
+
+/**
+ * \brief emits the reduction code for tinfo.
+ */
+void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo);
 // AOCC End
 
 /* ################################################ */
@@ -503,4 +508,8 @@ int mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2);
 int mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2);
 int mk_ompaccel_ldsptr(SPTR sptr);
 void init_test();
+
+// AOCC begin
+int mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2);
+// AOCC end
 #endif

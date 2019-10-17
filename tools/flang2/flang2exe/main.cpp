@@ -27,7 +27,7 @@
  * Date of modification 9th July 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Sept 2019
+ * Last modified: Oct 2019
  */
 
 
@@ -268,8 +268,10 @@ process_input(char *argv0, bool *need_cuda_constructor)
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget) {
         init_test();
-        ompaccel_initsyms();
-        ompaccel_create_reduction_wrappers();
+        if (!flg.x86_64_omptarget) { // AOCC
+          ompaccel_initsyms();
+          ompaccel_create_reduction_wrappers();
+        }
       }
 #endif
       if (gbl.cuda_constructor) {
@@ -361,9 +363,10 @@ process_input(char *argv0, bool *need_cuda_constructor)
   // AOCC begin
 #if defined(OMP_OFFLOAD_LLVM)
   if (flg.x86_64_omptarget) {
+    bool orig = gbl.ompaccel_isdevice;
     gbl.ompaccel_isdevice = true;
     ompaccel_x86_gen_fork_wrapper(gbl.currsub);
-    gbl.ompaccel_isdevice = false;
+    gbl.ompaccel_isdevice = orig;
   }
 #endif
   // AOCC end

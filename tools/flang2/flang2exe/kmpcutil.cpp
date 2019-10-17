@@ -507,6 +507,15 @@ ll_make_kmpc_proto(const char *nm, int kmpc_api, int argc, DTYPE *args)
   if (kmpc_api == KMPC_API_FORK_CALL) {
     LL_ABI_Info *abi = ll_proto_get_abi(nm);
     abi->is_varargs = true;
+
+    // AOCC begin
+    // We want the variadic version of __kmpc_fork_call to have the 4th arg as
+    // variadic, this won't effect the upstream fork_call for non-target
+    // parallel region
+    if (flg.x86_64_omptarget) {
+      abi->nargs = 3;
+    }
+    // AOCC end
   }
   /* Update ABI (special case) */
   if (kmpc_api == KMPC_API_FORK_TEAMS) {

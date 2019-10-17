@@ -22,7 +22,7 @@
   * Date of Modification: November 2018
   *
   * Support for x86-64 OpenMP offloading
-  * Last modified: Aug 2019
+  * Last modified: Oct 2019
   *
   * Changes to support AMDGPU OpenMP offloading.
   * Date of modification 16th September 2019
@@ -1275,7 +1275,7 @@ write_consts(void)
   FILE *llvmfile;
   FILE *asmfile;
 
-  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
+  if ((flg.amdgcn_target || flg.x86_64_omptarget) && gbl.ompaccel_isdevice) {
     //printf("Setting GPU file\n");
     llvmfile = get_llasm_output_file();
     asmfile = ASMFIL;
@@ -1327,7 +1327,7 @@ write_consts(void)
 
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
+  if ((flg.amdgcn_target || flg.x86_64_omptarget) && gbl.ompaccel_isdevice) {
     ASMFIL = asmfile;
     set_llasm_output_file(llvmfile);
   }
@@ -5113,7 +5113,8 @@ get_llvm_name(SPTR sptr)
     if (stype != ST_ENTRY || gbl.rutype != RU_PROG) {
       q = SYMNAME(sptr);
     // AOCC Begin
-    } else if (CONSTRUCTORG(sptr) && flg.amdgcn_target) {
+    } else if (CONSTRUCTORG(sptr) &&
+        (flg.amdgcn_target || flg.x86_64_omptarget)) {
       q = SYMNAME(sptr);
     // AOCC End
     } else if ((flg.smp || XBIT(34, 0x200) || gbl.usekmpc) && OUTLINEDG(sptr)) {
