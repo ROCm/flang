@@ -3965,15 +3965,18 @@ lower_intrinsic(int ast)
     case TY_SLOG:
     case TY_LOG:
     case TY_LOG8:
-      for (i = 0; i < 2; i++) {
-        arg = ARGT_ARG(args, i);
-        lower_expression(arg);
-        intrinsic_args[i] = lower_ilm(arg);
+      if (!((A_TYPEG(ARGT_ARG(args,2)) == A_INTR 
+	    && (A_OPTYPEG(ARGT_ARG(args,2)) == I_PRESENT)))) {
+       for (i = 0; i < 2; i++) {
+         arg = ARGT_ARG(args, i);
+         lower_expression(arg);
+         intrinsic_args[i] = lower_ilm(arg);
+       }
+       intrinsic_args[2] = lower_conv(ARGT_ARG(args, 2), DT_LOG4);
+       ilm = intrin_name("MERGE", ast, in_Il_K_R_D_C_CD);
+       nargs = 3;
+       break;
       }
-      intrinsic_args[2] = lower_conv(ARGT_ARG(args, 2), DT_LOG4);
-      ilm = intrin_name("MERGE", ast, in_Il_K_R_D_C_CD);
-      nargs = 3;
-      break;
     default:
       /* just treat like a function call */
 
