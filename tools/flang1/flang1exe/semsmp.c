@@ -7711,7 +7711,7 @@ do_copyprivate()
 static void
 do_tofrom()
 {
-  if (!flg.omptarget || !flg.x86_64_omptarget)
+  if (!flg.omptarget)
     return;
 
   ITEM *item;
