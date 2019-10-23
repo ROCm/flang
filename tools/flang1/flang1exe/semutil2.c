@@ -22,6 +22,10 @@
  *
  * Date of Modification: 1st March 2019
  *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ * Date of Modification: 24th October 2019
+ *
  */
 
 /** \file
@@ -3034,7 +3038,18 @@ _constructf90(int base_id, int in_indexast, bool in_array, ACL *aclp)
           ast = mk_assn_stmt(dest, src, dtype);
         }
         ast = ast_rewrite_indices(ast);
-        (void)add_stmt(ast);
+        //AOCC Begin
+        int ast_std = add_stmt(ast);
+        if(sem.acl_replace_temp && (sem.ido_body_std == 0)) {
+          sem.ido_body_std = ast_std;
+        } else {
+          if(sem.acl_replace_temp && (sem.ido_body_std > 0)) {
+             //this condition is true in case of nested implied dos
+	     sem.ido_body_std = 0;
+	     sem.acl_replace_temp = false;
+	  }
+	}
+        //AOCC End
         if (in_array) {
           indexast = mk_binop(OP_ADD, indexast, astb.bnd.one, astb.bnd.dtype);
           incr_element_cnt();

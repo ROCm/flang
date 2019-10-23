@@ -21,6 +21,10 @@
   *
   * Date of Modification: December 2018
   *
+  * Changes to support AMD GPU Offloading
+  * Added code to avoid allocations for implied do inside target region
+  * Date of Modification: 24th October 2019
+  *
   */
 
 
@@ -3358,6 +3362,23 @@ assign(SST *newtop, SST *stktop)
     }
   }
 
+  //AOCC Begin
+  // if rhs is an acl, we may have to replace the temporary used with
+  // lhs
+  //bool acl_replace_temp;
+  sem.acl_replace_temp = false;
+  ACL * aclp;
+  sem.ido_body_std = 0;
+  // check if it is an array assignment statement and rhs is an array constructor
+  if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
+     if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
+        aclp = SST_ACLG(stktop);
+        // if the temporary created is considered to have deferred shape
+        if(AD_DEFER(AD_DPTR( aclp->dtype)))
+          sem.acl_replace_temp = true;
+     }
+  }
+  //AOCC End
   mkexpr1(stktop);
   cngshape(stktop, newtop);
 
@@ -3366,6 +3387,71 @@ assign(SST *newtop, SST *stktop)
 
   check_derived_type_array_section(SST_ASTG(newtop));
 
+  //AOCC Begin
+  if(sem.acl_replace_temp && (sem.ido_body_std > 0)) {
+    SPTR acl_lhs;
+    int rhs;
+    SPTR arr_tmp;
+    int ast;
+
+    //acl_lhs = SST_LSYMG(newtop);
+    acl_lhs = SST_SYMG(newtop);
+    rhs = SST_ASTG(stktop);
+    arr_tmp = A_SPTRG(rhs);
+    ast_to_comment(rhs);
+
+    //The std which contains the assignment to temporary is
+    //read and all references to temporary are replaced with LHS
+    ast = STD_AST(sem.ido_body_std);
+    ast_visit(1, 1);
+    ast_replace(mk_id(arr_tmp),mk_id(acl_lhs));
+    ast = ast_rewrite(ast);
+    STD_AST(sem.ido_body_std) = ast;
+    ast_unvisit();
+
+    int idostd = sem.ido_body_std;
+    int findast = mk_id(arr_tmp);
+    int allocstd = 0;
+    int std;
+
+    //the allocation statements for temporary are removed
+    for (std = STD_PREV(idostd); std; std = STD_PREV(std)) {
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) == A_ALLOC && A_TKNG(ast) == TK_ALLOCATE) {
+        if (contains_ast(ast, findast)) {
+          allocstd = std;
+          break;
+        }
+      }
+    }
+    if(allocstd)
+      delete_stmt(allocstd);
+
+    //as the temporary is marked for deallocation, those
+    //entries are removed
+    ITEM *p, *t;
+    p = NULL;
+    for (t = sem.p_dealloc; t != NULL; t = t->next) {
+      if (t->ast == mk_id(arr_tmp)) {
+         if (p == NULL)
+           sem.p_dealloc = t->next;
+         else
+           p->next = t->next;
+         break;
+      }
+      p = t;
+    }
+    for (t = sem.p_dealloc_delete; t != NULL; t = t->next) {
+      if (t->ast == mk_id(arr_tmp)) {
+        delete_stmt(t->t.ilm);
+      }
+    }
+    //reset replace temporary
+    sem.acl_replace_temp = false;
+    sem.ido_body_std = 0;
+    return 0;
+  }
+  //AOCC End
   {
     int lhs;
     int rhs;
