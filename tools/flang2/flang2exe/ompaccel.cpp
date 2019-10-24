@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 /**
  *  \file
@@ -792,7 +799,14 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   return sym;
 }
 
-INLINE static SPTR
+// AOCC BEGIN
+/*
+ * This function doesn't return anything.
+ * Changed return type from SPTR  to void
+ *
+ */
+INLINE static void
+// AOCC END
 add_symbol_to_function(SPTR func, SPTR sym)
 {
   int dpdscp, paramct;

@@ -414,11 +414,21 @@ SET(FTN_SUPPORT_DESC_DEP
   transfer.c
   type.c
   util.c
+  ieee_exceptions.F95
+  ieee_arithmetic.F95
   )
 
 set(I8_FILES_DIR I8_sources)
 separate_arguments(SEPARATED_CMAKE_Fortran_FLAGS NATIVE_COMMAND ${CMAKE_Fortran_FLAGS})
 
+if(EXISTS bin/flang1)
+  set(FLANG1_DEP bin/flang1)
+  set(FLANG2_DEP bin/flang2)
+else()
+  # when just building runtime, flang1 flang2 binaries should have been installed
+  set(FLANG1_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang1)
+  set(FLANG2_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang2)
+endif()
 # Fortran files with macros as module names need to be preprocessed.
 # CMake has an internal Fortran parser that parses the module name, but it doesn't
 # consider macros which results in wrong dependencies.
@@ -429,7 +439,7 @@ add_custom_command(
   > "${I8_FILES_DIR}/ieee_arithmetic.F95"
   COMMENT "Preprocessing ieee_arithmetic.F95"
   VERBATIM
-  DEPENDS flang1 flang2
+  DEPENDS ${FLANG1_DEP} ${FLANG2_DEP}
 )
 
 add_custom_command(
@@ -439,7 +449,7 @@ add_custom_command(
   > "${I8_FILES_DIR}/ieee_exceptions.F95"
   COMMENT "Preprocessing ieee_exceptions.F95"
   VERBATIM
-  DEPENDS flang1 flang2
+  DEPENDS ${FLANG1_DEP} ${FLANG2_DEP}
 )
 
 add_custom_command(
@@ -449,7 +459,7 @@ add_custom_command(
   COMMAND "${CMAKE_Fortran_COMPILER}" -E -DPGFLANG -cpp ${SEPARATED_CMAKE_Fortran_FLAGS}
   ${CMAKE_CURRENT_SOURCE_DIR}/norm2.F95 > "norm2_1.F95"
   VERBATIM
-  DEPENDS flang1 flang2
+  DEPENDS ${FLANG1_DEP} ${FLANG2_DEP}
 )
 
 # The files lists FTN_INTRINSICS_DESC_DEP and FTN_SUPPORT_DESC_DEP need to be compiled twice (with and without 'DESC_I8' compile definition). So an actual copy is made in a temp file on which this is done.
@@ -638,14 +648,15 @@ target_include_directories(flang_shared
 
 # Make sure the compiler is built before we bootstrap
 add_dependencies(flang_static 
-  flang1
-  flang2
+  ${FLANG1_DEP}
+  ${FLANG2_DEP}
   )
 
 # Make sure the compiler is built before we bootstrap
-add_dependencies(flang_shared 
-  flang1
-  flang2
+add_dependencies(flang_shared
+  flang_static
+  ${FLANG1_DEP}
+  ${FLANG2_DEP}
   )
 
 target_compile_options(flang_static PRIVATE -fPIC)
