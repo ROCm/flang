@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 11th July 2019
+ *
+ */
 
 #ifndef KMPC_RUNTIME_H_
 #define KMPC_RUNTIME_H_
@@ -164,6 +171,11 @@ enum {
   KMPC_API_PUSH_TARGET_TRIPCOUNT,
   KMPC_API_FOR_STATIC_INIT_SIMPLE_SPMD,
   KMPC_API_SPMD_KERNEL_INIT,
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  KMPC_API_SPMD_KERNEL_DEINIT_V2,
+#endif
+  // AOCC End
   KMPC_API_KERNEL_INIT_PARAMS,
   KMPC_API_SHUFFLE_I32,
   KMPC_API_SHUFFLE_I64,
@@ -460,6 +472,15 @@ int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
   \brief SPMD mode - kernel init.
 */
 int ll_make_kmpc_spmd_kernel_init(int);
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+/**
+  \brief SPMD mode - kernel de_init_v2.
+*/
+int ll_make_kmpc_spmd_kernel_deinit_v2();
+#endif
+// AOCC End
 
 /**
   \brief Push the trip count of the loop that is going to be parallelized.

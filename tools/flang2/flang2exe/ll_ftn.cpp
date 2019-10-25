@@ -317,8 +317,10 @@ ll_process_routine_parameters(SPTR func_sptr)
   ref_dummy = make_generic_dummy_lltype();
 
   /* If an internal function */
+  /* openmp global ctor (ompaccel.register) is NOT internal, but is part of 
+     first routine compiled in each source file, FIX ME!!!! */
   if ((gbl.internal > 1 && STYPEG(func_sptr) == ST_ENTRY) &&
-      !OUTLINEDG(func_sptr)) {
+      !OUTLINEDG(func_sptr) && strcmp(SYMNAME(func_sptr),"ompaccel.register")) {
     /* get the display variable. This will be the last argument. */
     display_temp = aux.curr_entry->display;
     if (aux.curr_entry->display) {

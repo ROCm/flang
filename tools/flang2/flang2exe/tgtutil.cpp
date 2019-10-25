@@ -902,7 +902,13 @@ init_tgt_register_syms()
   gbl.consts = tptr2;
   OMPACCRTP(tptr2, 1);
 
-  tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.nvptx64-nvidia-cuda");
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target)
+    tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.amdgcn-amd-amdhsa");
+  else
+#endif
+    tptr3 = (SPTR)addnewsym(".omp_offloading.img_start.nvptx64-nvidia-cuda");
+
   DTYPEP(tptr3, DT_BINT);
   SCP(tptr3, SC_EXTERN);
   STYPEP(tptr3, ST_VAR);
@@ -910,7 +916,13 @@ init_tgt_register_syms()
   gbl.consts = tptr3;
   OMPACCRTP(tptr3, 1);
 
-  tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.nvptx64-nvidia-cuda");
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target)
+    tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.amdgcn-amd-amdhsa");
+  else
+#endif
+    tptr4 = (SPTR)addnewsym(".omp_offloading.img_end.nvptx64-nvidia-cuda");
+
   DTYPEP(tptr4, DT_BINT);
   SCP(tptr4, SC_EXTERN);
   DCLDP(tptr4, 1);
@@ -963,8 +975,18 @@ ll_make_tgt_register_lib2()
       break;
     }
   }
-  assert(!tptr || !tptr2 || !tptr3 || !tptr4,
+
+  // AOCC begin
+  /*
+   * MODIFICATION
+   * Changed assert expression from logical or to logical and
+   * because if it's logcal OR, assert will even if we find one variable.
+   * Assert shoudld fail only when we fail to find any of the variable
+   */
+
+  assert(tptr && tptr2 && tptr3 && tptr4,
          "OpenMP Offload structures are not found.", 0, ERR_Fatal);
+  // AOCC end
 
   dtype_entry =
       tgt_offload_entry_type; // ll_make_tgt_offload_entry("__tgt_offload_entry");

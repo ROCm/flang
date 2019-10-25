@@ -2814,13 +2814,15 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_looptripcount(ilmp, curilm);
       break;
     case IM_MP_MAP:
-      if(flg.omptarget && !(IS_OMP_DEVICE_CG || gbl.ompaccel_intarget))
+      // AOCC Modification : Removed condition gbl.ompaccel_intarget
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_map(ilmp, curilm, outlinedCnt);
       break;
     case IM_MP_EMAP:
-    if(flg.omptarget && !(IS_OMP_DEVICE_CG || gbl.ompaccel_intarget)) {
-      exp_ompaccel_emap(ilmp, curilm);
-    }
+      // AOCC Modification : Removed condition gbl.ompaccel_intarget
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG)) {
+        exp_ompaccel_emap(ilmp, curilm);
+      }
     break;
     case IM_MP_TARGETMODE:
       if(flg.omptarget) {

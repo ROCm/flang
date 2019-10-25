@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 19th July 2019
+ *
+ */
 
 /**
  *  \file
@@ -697,7 +704,9 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->n_symbols = 0;
   if (max_nargs != 0) {
     NEW(info->symbols, OMPACCEL_SYM, max_nargs);
+    BZERO(info->symbols, OMPACCEL_SYM, max_nargs);  // AOCC 
     NEW(info->quiet_symbols, OMPACCEL_SYM, max_nargs);
+    BZERO(info->quiet_symbols, OMPACCEL_SYM, max_nargs); // AOCC
   } else {
     info->symbols = nullptr;
     info->quiet_symbols = nullptr;
@@ -792,7 +801,14 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   return sym;
 }
 
-INLINE static SPTR
+// AOCC BEGIN
+/*
+ * This function doesn't return anything.
+ * Changed return type from SPTR  to void
+ *
+ */
+INLINE static void
+// AOCC END
 add_symbol_to_function(SPTR func, SPTR sym)
 {
   int dpdscp, paramct;
@@ -1047,6 +1063,7 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
     current_tinfo->symbols[current_tinfo->n_symbols].host_sym = host_symbol;
     current_tinfo->symbols[current_tinfo->n_symbols].device_sym = device_symbol;
     current_tinfo->symbols[current_tinfo->n_symbols].map_type = map_type;
+    current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0; // AOCC
     current_tinfo->n_symbols++;
   }
 }
