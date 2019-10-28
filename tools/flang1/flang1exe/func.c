@@ -24,6 +24,9 @@
  * Support for DNORM intrinsic
  * Date of Modification: 21st February 2019
  *
+ * Support for array expression in norm2
+ * Date of Modification: 28th October 2019
+ *
  * Support for Bit Sequence Comparsion intrinsic
  * Month of Modification: May 2019
  *
@@ -3485,6 +3488,19 @@ leave_arg(int ast, int i, int *parg, int lc)
     case I_NORM2:
       if (i != 0)
         return 0;
+
+      // AOCC Begin
+      // Argument with expression has to be rewritten
+      switch(A_TYPEG(arg)) {
+        default:
+          break;
+        case A_BINOP:
+        case A_UNOP:
+        case A_PAREN:
+          return 0;
+      }
+      // AOCC End
+
       args = A_ARGSG(ast);
       astdim = ARGT_ARG(args, 1);
       break;
