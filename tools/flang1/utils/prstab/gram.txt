@@ -34,6 +34,7 @@
                 <nii> <nim> <simple stmt> |
                 <nii> <nim> <GOTO stmt>   |
                 <nii> <nim> <control stmt> |
+                <nii> <nim> <block stmt> |
                 <nii> <nim> <format stmt>  |
 		<null stmt> |
                 <end> <end stmt>     |
@@ -131,6 +132,10 @@
 
 <opt ident> ::= |
 		<ident>
+
+<block stmt> ::= BLOCK |
+                 <check construct> : BLOCK |
+                 ENDBLOCK <construct name>
 
 <declaration> ::= <data type> <optional comma> <pgm> <typdcl list> |
                   <dimkeyword> <opt attr> <pgm> <dcl id list>    |
@@ -356,7 +361,8 @@
                <expression> : *  |
                * |
 	       : |
-	       <expression> :
+	       <expression> : |
+	       ..
 
 <explicit shape> ::= <expression> : <expression> |
                      <expression>
@@ -758,7 +764,8 @@
                     <proc dcl>
 
 <proc dcl> ::= <ident> |
-	       <ident> '=>' <id> ( )
+	       <ident> '=>' <id> ( ) |
+	       <ident> '=>' <id>
 
 <type bound procedure> ::= <tprocedure> <opt attr> <binding name list>
 

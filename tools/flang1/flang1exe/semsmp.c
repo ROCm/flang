@@ -1975,6 +1975,11 @@ semsmp(int rednum, SST *top)
     clause_errchk((BT_TARGET | BT_SIMD), "OMP TARGET SIMD");
     mp_create_bscope(0);
     DI_BTARGET(sem.doif_depth) = emit_btarget(A_MP_TARGET);
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+    if(flg.omptarget)
+      A_COMBINEDTYPEP(DI_BTARGET(sem.doif_depth),
+                      get_omp_combined_mode(BT_TARGET | BT_SIMD));
+#endif
     par_push_scope(TRUE);
     begin_parallel_clause(sem.doif_depth);
     SST_ASTP(LHS, 0);
@@ -6502,7 +6507,7 @@ do_dist_schedule(int doif, LOGICAL chk_collapse)
  *   2) parallel do loop
  */
 int
-do_distbegin(DOINFO *doinfo, int do_label, int named_construct)
+do_distbegin(DOINFO *doinfo, int do_label, int construct_name)
 {
   int iv, di_id, doif, sptr, initvar, limitvar, stepvar;
   int dast, dovar, step_expr;
@@ -6587,7 +6592,7 @@ do_distbegin(DOINFO *doinfo, int do_label, int named_construct)
   DI_DO_LABEL(doif) = do_label;
   DI_DO_AST(doif) = dast;
   DI_DOINFO(doif) = doinfo;
-  DI_NAME(doif) = named_construct;
+  DI_NAME(doif) = construct_name;
   direct_loop_enter();
   (void)add_stmt(dast);
 
@@ -6661,7 +6666,7 @@ do_distbegin(DOINFO *doinfo, int do_label, int named_construct)
   DI_DO_AST(doif) = past;
   DI_DOINFO(doif) = doinfo;
   DI_DO_LABEL(doif) = do_label;
-  DI_NAME(doif) = named_construct;
+  DI_NAME(doif) = construct_name;
   direct_loop_enter(); /* Check if we need this */
   A_DISTPARDOP(past, 1);
   A_ENDLABP(past, 0);
@@ -9926,12 +9931,9 @@ set_parref_flag(int sptr, int psptr, int stblk)
     return;
   if (STYPEG(sptr) == ST_MEMBER)
     return;
-  // AOCC Modification:
-  // Added condition !(flg.amdgcn_target || flg.x86_64_omptarget)
-  // Flang uses certain global variable for offset calculation.
-  // Such variables need to be mapped to the device.
-  if (!(flg.amdgcn_target || flg.x86_64_omptarget)
-      && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
+  if (!flg.omptarget && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
+  /* For OpenMP target offload, we put every symbols into the uplevel struct.
+   * Because every symbols must be sent to the target device, and are loaded from the uplevel struct.*/
     return;
   if (SCG(sptr) == SC_EXTERN && ST_ISVAR(sptr)) /* No global vars in uplevel */
     return;
@@ -10417,6 +10419,9 @@ get_omp_combined_mode(BIGINT64 type)
   combined_type = BT_TARGET | BT_PARDO | BT_SIMD;
   if ((type & combined_type) == combined_type)
     return mode_target_parallel_for_simd;
+  combined_type = BT_TARGET | BT_SIMD;
+  if ((type & combined_type) == combined_type)
+    return mode_target_simd;
   if ((type & BT_TARGET))
     return mode_target;
   return mode_none_target;

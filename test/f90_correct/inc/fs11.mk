@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 # Determine call instruction used
 INSN=call
+OPT=
 ifeq ($(findstring aarch64, $(UNAME)), aarch64)
     INSN=bl
 endif
@@ -31,22 +32,23 @@ build:  $(SRC)/fs11.f90
 	-$(RM) fs11.$(EXESUFFIX) core *.d *.mod FOR*.DAT FTN* ftn* fort.*
 	@echo ------------------------------------ building test $@
 	-$(CC) -c $(CFLAGS) $(SRC)/check.c -o check.$(OBJX)
-	-$(FC) $(FFLAGS) $(LDFLAGS) $(SRC)/fs11.f90 -S
-	-$(FC) -c $(FFLAGS) $(LDFLAGS) $(SRC)/fs11.f90 -o fs11.$(OBJX)
+	-$(FC) -c $(FFLAGS) $(LDFLAGS) $(SRC)/fs11.f90 -o fs11.$(OBJX) -Minfo > fs11.txt 2>&1
 	-$(FC) $(FFLAGS) $(LDFLAGS) fs11.$(OBJX) check.$(OBJX) $(LIBS) -o fs11.$(EXESUFFIX)
 
 # rank2 should not be inlined (except with -Minline=reshape).
 # Verify that by checking for exactly 3 calls to mmul.
-# This check isn't valid for flang because it allows LLVM to inline.
+# Due to the complexity of counting specific function calls in assembly
+# or .ll files, we are now checking -Minfo messages about whether rank2 is
+# being inlined.
 run:
 	@echo ------------------------------------ executing test fs11
-ifneq ($(FC), flang)
-	@mmul_calls=`grep -c '$(INSN).*mmul' fs11.s`; \
-	if [ $$mmul_calls -ne 3 ]; then \
-	    echo "RESULT: FAIL - expected exactly 3 calls to mmul, got $$mmul_calls" ; \
-	    exit 1; \
+	@mmul_calls=`grep -c 'rank2.*inlined' fs11.txt`; \
+	if [ $$mmul_calls -ne 0 ]; then \
+	  echo "RESULT: FAIL" ; \
+	  exit 1; \
+	else \
+	  echo "RESULT: PASS" ; \
 	fi
-endif
 	fs11.$(EXESUFFIX)
 
 verify: ;

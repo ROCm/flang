@@ -939,7 +939,8 @@ func_call2(SST *stktop, ITEM *list, int flag)
 
   if (list == NULL)
     list = ITEM_END;
-  if (STYPEG(func_sptr) == ST_PROC && SLNKG(func_sptr) == 0) {
+  if (STYPEG(func_sptr) == ST_PROC && SLNKG(func_sptr) == 0 && 
+      !sem.proc_initializer) { 
     SLNKP(func_sptr, aux.list[ST_PROC]);
     aux.list[ST_PROC] = func_sptr;
   }
@@ -2151,7 +2152,7 @@ gen_pointer_result(int array_value, int dscptr, int nactuals,
         (DTY(dt) == TY_NCHAR && dt != DT_DEFERNCHAR)) {
       add_auto_len(arr_tmp, 0);
       if (CVLENG(arr_tmp))
-        ERLYSPECP(CVLENG(arr_tmp), 1);
+        EARLYSPECP(CVLENG(arr_tmp), 1);
     }
   }
   if (gbl.internal > 1) {
@@ -3368,10 +3369,12 @@ try_next_hash_link:
           kwd_str = make_kwd_str(sptr);
         goto do_call;
       }
-      sptr2 = findByNameStypeScope(SYMNAME(sptr), ST_PROC, 0);
-      if (sptr2) {
-        sptr = sptr2;
-        goto try_next_sptr;
+      if (sptr != gbl.currsub) {
+        sptr2 = findByNameStypeScope(SYMNAME(sptr), ST_PROC, 0);
+        if (sptr2) {
+          sptr = sptr2;
+          goto try_next_sptr;
+        }
       }
       error(88, 3, gbl.lineno, SYMNAME(sptr), CNULL);
       ast = 0;
@@ -7963,8 +7966,7 @@ ref_pd(SST *stktop, ITEM *list)
       break;
     }
     sptr = find_pointer_variable(ast);
-    if (sptr && (POINTERG(sptr) || (ALLOCG(sptr) && SDSCG(sptr)))) {
-      /* pghpf_size(dim, static_descriptor) */
+    if (sptr && (POINTERG(sptr) || (ALLOCG(sptr) && SDSCG(sptr)) || ASSUMRANKG(sptr))) {
       if ((stkp = ARG_STK(1))) { /* dim */
         (void)mkexpr(stkp);
         XFR_ARGAST(1);

@@ -661,6 +661,10 @@ again:
           get_all_descriptors(sptr);
         }
       }
+      if (!SDSCG(sptr) && ASSUMRANKG(sptr)) {
+        get_static_descriptor(sptr);
+        ASSUMRANKP(SDSCG(sptr), 1);
+      }
       goto add_sym_arg;
     case ST_USERGENERIC:
       if (GSAMEG(sptr)) {
@@ -2256,9 +2260,12 @@ chk_arguments(int ext, int count, ITEM *list, char *kwd_str, int paramct,
           elddum = DDTG(elddum);
         } else if (dum_is_proc && DTY(eldact) == TY_PTR) {
           eldact = DTY(eldact + 1);
-          if (DTY(eldact) == TY_PROC && DTY(eldact + 5)) {
+          if (DTY(eldact) == TY_PROC && (DTY(eldact + 5) || DTY(eldact + 2))) {
+            /* Get eldact from either the result variable (i.e., DTY(eldact+5))
+             * or interface (i.e., DTY(eldact+2)).
+             */ 
             int ss;
-            ss = DTY(eldact + 5);
+            ss = DTY(eldact + 5) ? DTY(eldact + 5) : DTY(eldact + 2);
             if (FVALG(ss))
               eldact = DTYPEG(FVALG(ss));
             else
@@ -2272,7 +2279,7 @@ chk_arguments(int ext, int count, ITEM *list, char *kwd_str, int paramct,
             tmp = actual;
             if (A_TYPEG(tmp) == A_SUBSTR)
               tmp = A_LOPG(tmp);
-            if (ASSUMSHPG(arg)) {
+            if (ASSUMSHPG(arg) && !ASSUMRANKG(arg)) {
               /* if the dummy is assumed-shape,
                * the user is trying to pass a scalar, constant
                * or array element into an assumed-shape array
@@ -2633,7 +2640,8 @@ ignore_tkr(int arg, int tkr)
     return TRUE;
   if ((IGNORE_TKRG(arg) & tkr) &&
       (ignore_tkr_all(arg) ||
-       (!ASSUMSHPG(arg) && !POINTERG(arg) && !ALLOCATTRG(arg))))
+      ((!ASSUMSHPG(arg) || ASSUMRANKG(arg))
+      && !POINTERG(arg) && !ALLOCATTRG(arg))))
     return TRUE;
   return FALSE;
 }

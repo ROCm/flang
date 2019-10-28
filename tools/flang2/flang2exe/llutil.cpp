@@ -1102,6 +1102,76 @@ get_dtype_from_tytype(TY_KIND ty)
 }
 
 /**
+   \brief Convert a <tt>nme</tt><i>*</i> to a <tt>DT_</tt><i>*</i> value
+
+   If the DT_ value can't be determined, returns <tt>DT_NONE</tt>.
+ */
+DTYPE
+get_dtype_for_vect_type_nme(int nme) {
+  DTYPE dtype = DT_NONE;
+  if (nme) {
+    SPTR sym = basesym_of(nme);
+    if (sym != SPTR_NULL) {
+      dtype = DTYPEG(sym);
+      assert(DTY(dtype) == TY_VECT, "Not a vect type", dtype, ERR_Fatal);
+      switch(size_of(dtype)) {
+      case 1:
+        dtype = DT_CHAR;
+        break;
+      case 2:
+        dtype = DT_SINT;
+        break;
+      case 4:
+        switch (DTySeqTyElement(dtype)) {
+        case DT_FLOAT:
+          dtype = DT_FLOAT;
+          break;
+        default:
+          dtype = DT_INT;
+        }
+        break;
+      case 8:
+        switch (DTySeqTyElement(dtype)) {
+        case DT_FLOAT:
+        case DT_DBLE:
+          dtype = DT_DBLE;
+          break;
+        default:
+          dtype = DT_INT8;
+        }
+        break;
+      case 16:
+        switch (DTySeqTyElement(dtype)) {
+        case DT_FLOAT:
+          dtype = DT_128F;
+          break;
+        case DT_DBLE:
+          dtype = DT_128D;
+          break;
+        default:
+          dtype = DT_128;
+        }
+        break;
+      case 32:
+        switch (DTySeqTyElement(dtype)) {
+        case DT_FLOAT:
+          dtype = DT_256F;
+          break;
+        case DT_DBLE:
+          dtype = DT_256D;
+          break;
+        default:
+          dtype = DT_256;
+        }
+        break;
+      }
+    }
+  }
+
+  return dtype;
+}
+
+/**
    \brief Get the function return type coprresponding to an IL_DFR* opcode.
  */
 DTYPE
@@ -2774,14 +2844,40 @@ write_def_values(OPERAND *def_op, LL_Type *type)
       write_operand(def_op, "", FLG_OMIT_OP_TYPE);
       def_op = def_op->next;
       return def_op;
+    } else if (def_op->ot_type == OT_CONSTVAL &&
+               type->data_type == LL_ARRAY &&
+               def_op->ll_type->data_type == LL_ARRAY) {
+      /* We are initializing an array with a constant value that is also array type.
+         This means that every array element needs to get same value. */
+      if (def_op->val.conval[0] == 0 && def_op->val.conval[1] == 0 &&
+          def_op->val.conval[2] == 0 && def_op->val.conval[3] == 0) {
+        /* If value is zero, use zeroinitializer to improve readability */
+        print_token(" zeroinitializer ");
+        def_op = def_op->next;
+      } else {
+        OPERAND *new_def_op = def_op;
+        print_token(" [ ");
+        for (i = 0; i < type->sub_elements; i++) {
+          if (i)
+            print_token(", ");
+          /* The idea here is that we reuse the same def_op for each array member.
+             The new_def_op is supposed to be the next value and thus we only
+             make use of that once we are done processing each array member. */
+          new_def_op = write_def_values(def_op, type->sub_types[0]);
+        }
+        print_token(" ] ");
+        def_op = new_def_op;
+      }
+    } else {
+      print_token(" [ ");
+      for (i = 0; i < type->sub_elements; i++) {
+        if (i)
+          print_token(", ");
+        def_op = write_def_values(def_op, type->sub_types[0]);
+      }
+      print_token(" ] ");
     }
-    print_token(" [ ");
-    for (i = 0; i < type->sub_elements; i++) {
-      if (i)
-        print_token(", ");
-      def_op = write_def_values(def_op, type->sub_types[0]);
-    }
-    print_token(" ] ");
+
     return def_op;
 
   case LL_VECTOR:
@@ -3569,7 +3665,8 @@ ll_abi_complete_arg_info(LL_ABI_Info *abi, LL_ABI_ArgInfo *arg, DTYPE dtype)
   assert(kind != LL_ARG_COERCE, "Missing coercion type", 0, ERR_Fatal);
 
   type = ll_convert_dtype(abi->module, dtype);
-  if (kind == LL_ARG_INDIRECT || kind == LL_ARG_BYVAL) {
+  if (kind == LL_ARG_INDIRECT || kind == LL_ARG_INDIRECT_BUFFERED
+   || kind == LL_ARG_BYVAL) {
     assert(type->data_type != LL_VOID,
            "ll_abi_complete_arg_info: void function argument", dtype,
            ERR_Fatal);
@@ -3938,7 +4035,8 @@ get_ftn_static_lltype(SPTR sptr)
   assert(SCG(sptr) == SC_STATIC, "Expected SC_STATIC storage class", sptr, ERR_Fatal);
 
   dtype = DTYPEG(sptr);
-  if (is_function(sptr))
+  // In case of a FTN proc ptr generate lltype as its done for any ptr
+  if (is_function(sptr) && !IS_FTN_PROC_PTR(sptr))
     return get_ftn_func_lltype(sptr);
   if (STYPEG(sptr) == ST_CONST)
     return make_lltype_from_dtype(dtype);

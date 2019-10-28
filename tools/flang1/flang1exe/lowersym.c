@@ -259,7 +259,7 @@ lower_make_all_descriptors(void)
       if (ALLOCG(sptr) && !NODESCG(sptr)) {
         LNRZDP(sptr, 1);
       }
-      if (ENCLFUNCG(sptr) != 0) {
+      if (ENCLFUNCG(sptr) != 0 && !CONSTRUCTSYMG(sptr)) {
         /* module symbols */
         if (!POINTERG(sptr) && SDSCG(sptr) != 0 &&
             STYPEG(SDSCG(sptr)) != ST_PARAM) {
@@ -933,7 +933,7 @@ lower_prepare_symbols()
         break;
       if (CCSYMG(sptr) && !RESULTG(sptr))
         break;
-      if (ENCLFUNCG(sptr) != 0)
+      if (ENCLFUNCG(sptr) != 0 && !CONSTRUCTSYMG(sptr))
         break;
       if (POINTERG(sptr) || ALLOCG(sptr)) {
         /* this gets confused if the same ptr/off/desc are used
@@ -1192,7 +1192,11 @@ lower_pointer_init(void)
             /* 64-bit pointers */
           } else {
           }
-          rilm = lower_null();
+          if (!PTR_TARGETG(sptr)) {
+            rilm = lower_null();
+          } else {
+            rilm = plower("oS", "BASE", PTR_TARGETG(sptr));
+          }
           if (!XBIT(49, 0x20000000)) {
             plower("oii", "PST", lilm, rilm);
           } else if (XBIT(49, 0x100)) {
@@ -4042,8 +4046,11 @@ lower_symbol(int sptr)
        * emit this bit only if emitting ST_MODULE as ST_PROC
        * this conversion happens in putstype()
        */
-      if (sptr != gbl.currsub)
+      if (sptr != gbl.currsub) {
         putbit("is_interface", IS_INTERFACEG(sptr));
+        putval("assocptr", ASSOC_PTRG(sptr));
+        putval("ptrtarget",PTR_TARGETG(sptr));
+      }
 
       strip = 1;
     }
@@ -4270,6 +4277,8 @@ lower_symbol(int sptr)
 #else
     putbit("tpalloc", 0);
 #endif
+    putval("assocptr", ASSOC_PTRG(sptr));
+    putval("ptrtarget", PTR_TARGETG(sptr));
     strip = 1;
     break;
 
@@ -4317,6 +4326,8 @@ lower_symbol(int sptr)
     putbit("has_opts", 0);
     putbit("parref", 0);
     putbit("is_interface", 0);
+    putval("assocptr", 0);
+    putval("ptrtarget", 0);
     strip = 1;
     break;
 
@@ -4516,6 +4527,8 @@ lower_symbol(int sptr)
     putbit("is_interface", IS_INTERFACEG(sptr));
     if (SCG(sptr) == SC_DUMMY)
       putval("descriptor", IS_PROC_DUMMYG(sptr) ? SDSCG(sptr) : 0);
+    putsym("assocptr", ASSOC_PTRG(sptr));
+    putsym("ptrtarget", PTR_TARGETG(sptr));
     if (gbl.stbfil && DTY(DTYPEG(sptr) + 2)) {
       if (fvalfirst) {
         putsym(NULL, FVALG(sptr));
@@ -4748,6 +4761,18 @@ lower_symbols(void)
     }
     if (VISITG(sptr) && STYPEG(sptr) == ST_TYPEDEF && BASETYPEG(sptr)) {
       lower_put_datatype_stb(BASETYPEG(sptr));
+    }
+    if (VISITG(sptr) && STYPEG(sptr) == ST_PROC) {
+      SPTR sym = ASSOC_PTRG(sptr);
+      if (sym > NOSYM && !VISITG(sym)) {
+        lower_symbol(sym);
+        VISITP(sym, 1);
+      }
+      sym = PTR_TARGETG(sptr);
+      if (sym > NOSYM && !VISITG(sym)) {
+        lower_symbol(sym);
+        VISITP(sym, 1);
+      }
     }
     if (VISITG(sptr) && is_procedure_ptr(sptr)) {
       /* make sure we lower type and subtype of procedure ptr */

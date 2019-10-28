@@ -34,6 +34,10 @@
 #include <string.h>
 #include <limits.h>
 
+#ifdef TARGET_LLVM_ARM64
+#include "cgllvm.h"
+#endif
+
 #ifdef OMP_OFFLOAD_LLVM
 #include "ll_builder.h"
 #endif
@@ -782,6 +786,19 @@ ll_write_local_objects(FILE *out, LL_Function *function)
 
 
 
+#ifdef TARGET_LLVM_ARM64
+    // See process_formal_arguments in cgmain.c for handling on ARM64 of locals
+    // smaller than formals
+    if (object->kind == LLObj_LocalBuffered) {
+      assert(object->sptr && strcmp(object->address.data, SNAME(object->sptr)), 
+              "Missing local storage", object->sptr, ERR_Fatal);
+      LL_Type * llt = make_lltype_from_sptr((SPTR)object->sptr);
+      fprintf(out, "\t%s = bitcast %s* %s to %s",  
+        SNAME(object->sptr), object->type->str, object->address.data, llt->str);
+      fputc('\n', out);
+    }
+#endif
+
 #ifdef TARGET_POWER
     if (XBIT(217, 0x1)) {
       name = object->address.data;
@@ -1095,6 +1112,28 @@ static const MDTemplate Tmpl_DISubprogram[] = {
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
   { "retainedNodes",            NodeField},
+  { "scopeLine",                UnsignedField }
+};
+
+static const MDTemplate Tmpl_DISubprogram_90[] = {
+  { "DISubprogram", TF, 18 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "file",                     NodeField },
+  { "scope",                    NodeField },
+  { "name",                     StringField },
+  { "displayName",              StringField, FlgHidden },
+  { "linkageName",              StringField },
+  { "line",                     UnsignedField },
+  { "type",                     NodeField },
+  { "virtuality",               DWVirtualityField },
+  { "virtualIndex",             UnsignedField },
+  { "containingType",           NodeField },
+  { "flags",                    UnsignedField }, /* TBD: DIFlag... */
+  { "spFlags",                  UnsignedField }, /* TBD: DISPFlag... */
+  { "function",                 ValueField, FlgHidden },
+  { "templateParams",           NodeField },
+  { "declaration",              NodeField },
+  { "unit",                     NodeField },
   { "scopeLine",                UnsignedField }
 };
 
@@ -2051,6 +2090,12 @@ emitDISubprogram(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
                  unsigned mdi)
 {
   if (!ll_feature_debug_info_pre34(&mod->ir)) {
+    if (ll_feature_debug_info_ver90(&mod->ir)) {
+      // 9.0, 'isLocal:', 'isDefinition:', and 'isOptimized:' removed
+      // and 'spFlags:' added
+      emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubprogram_90);
+      return;
+    }
     if (ll_feature_debug_info_ver70(&mod->ir)) {
       // 7.0, 'variables:' was removed
       emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubprogram_70);

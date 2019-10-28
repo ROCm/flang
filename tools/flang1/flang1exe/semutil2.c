@@ -110,7 +110,8 @@ chk_adjarr(void)
   LOGICAL is_first;
   int stype;
 
-  if (gbl.rutype != RU_FUNC && gbl.rutype != RU_SUBR)
+  // An RU_PROG can contain adjustable arrays in blocks.
+  if (gbl.rutype != RU_FUNC && gbl.rutype != RU_SUBR && gbl.rutype != RU_PROG)
     return;
   if (gbl.currsub <= NOSYM)
     return;
@@ -870,6 +871,9 @@ mk_assumed_shape(SPTR sptr)
       AD_LWAST(ad, i) = astb.bnd.one;
     }
   AD_ASSUMSHP(ad) = 1;
+  if (sem.arrdim.assumedrank) {
+    AD_ASSUMRANK(ad) = 1;
+  }
 }
 
 /** \brief Get a compiler array temporary of type dtype which is used to
@@ -4225,9 +4229,17 @@ construct_acl_from_ast(int ast, DTYPE dtype, int parent_acltype)
 
   switch (A_TYPEG(ast)) {
   case A_FUNC:
-    errsev(87);
-    sem.dinit_error = TRUE;
-    return 0;
+    if (sem.equal_initializer) {
+      errsev(87);
+      sem.dinit_error = TRUE;
+      return 0;
+    }
+    aclp = GET_ACL(15);
+    aclp->id = AC_IDENT;
+    aclp->dtype = A_DTYPEG(ast);
+    aclp->is_const = 1;
+    aclp->u1.ast = A_LOPG(ast);
+    break;
   case A_ID:
     aclp = GET_ACL(15);
     aclp->id = AC_AST;
@@ -11819,7 +11831,7 @@ check_and_add_auto_dealloc_from_ast(int ast)
 void
 check_and_add_auto_dealloc(int sptr)
 {
-  if (gbl.rutype != RU_FUNC && gbl.rutype != RU_SUBR)
+  if (gbl.rutype != RU_FUNC && gbl.rutype != RU_SUBR && !CONSTRUCTSYMG(sptr))
     return;
   if (SCG(sptr) != SC_BASED)
     return;
@@ -12480,6 +12492,7 @@ gen_kind_parm_assignments(SPTR sptr, DTYPE dtype, int std, int flag)
   int pass;
   int memDtype;
   int orig_dtype;
+  int exit_std;
   static int parentMem = 0;
   static int firstAllocStd = 0;
 
@@ -12621,12 +12634,14 @@ gen_kind_parm_assignments(SPTR sptr, DTYPE dtype, int std, int flag)
           std = add_stmt_before(mk_stmt(A_CONTINUE, 0), std);
           std = init_sdsc(mem, DTYPEG(mem), std, sptr);
 
-          if (!flag && gbl.rutype != RU_PROG) {
+          if (!flag && (gbl.rutype != RU_PROG || CONSTRUCTSYMG(sptr))) {
+            exit_std = CONSTRUCTSYMG(sptr) ? STD_PREV(BLOCK_EXIT_STD(sptr)) :
+                                             gbl.exitstd;
             i = mk_stmt(A_ALLOC, 0);
             A_TKNP(i, TK_DEALLOCATE);
             A_SRCP(i, j);
             A_DALLOCMEMP(i, 1);
-            add_stmt_after(i, gbl.exitstd);
+            add_stmt_after(i, exit_std);
           }
         }
       } else if (USELENG(mem) && ALLOCG(mem) && DTY(DTYPEG(mem)) == TY_CHAR &&
@@ -12648,12 +12663,14 @@ gen_kind_parm_assignments(SPTR sptr, DTYPE dtype, int std, int flag)
 
           std = insert_assign(sdsc_mem, LENG(mem), std);
 
-          if (!flag && gbl.rutype != RU_PROG) {
+          if (!flag && (gbl.rutype != RU_PROG || CONSTRUCTSYMG(sptr))) {
+            exit_std = CONSTRUCTSYMG(sptr) ? STD_PREV(BLOCK_EXIT_STD(sptr)) :
+                                             gbl.exitstd;
             i = mk_stmt(A_ALLOC, 0);
             A_TKNP(i, TK_DEALLOCATE);
             A_SRCP(i, A_SRCG(ast));
             A_DALLOCMEMP(i, 1);
-            add_stmt_after(i, gbl.exitstd);
+            add_stmt_after(i, exit_std);
           }
         }
       } else if (!SETKINDG(mem) && !USEKINDG(mem) && KINDG(mem) &&
@@ -14043,15 +14060,19 @@ exit_lexical_block(int gen_debug)
   }
 }
 
-static char *di_name[] = {
+static char *di_name[] = { // order by DI_KIND enum in semant.h
     "block IF",
     "IFELSE",
     "DO",
+    "DOCONCURRENT",
     "DOWHILE",
     "WHERE",
     "ELSEWHERE",
     "FORALL",
     "SELECTCASE",
+    "SELECT TYPE",
+    "ASSOCIATE",
+    "BLOCK",
     "PARALLEL directive",
     "PARALLELDO directive",
     "OMP DO directive",
@@ -14065,6 +14086,26 @@ static char *di_name[] = {
     "WORKSHARE directive",
     "PARALLELWORKSHARE directive",
     "TASK directive",
+    "ACC ATOMIC CAPTURE construct",
+    "SIMD",
+    "TASKGROUP",
+    "TASKLOOP",
+    "TARGET",
+    "TARGETENTERDATA",
+    "TARGETEXITDATA",
+    "TARGETDATA",
+    "TARGETUPDATE",
+    "DISTRIBUTE",
+    "TEAMS",
+    "DECLARE TARGET",
+    "DISTRIBUTE PARALLEL DO",
+    "TARGET PARALLEL DO",
+    "TARGET SIMD",
+    "TARGET TEAMS DISTRIBUTE",
+    "TEAMS DISTRIBUTE",
+    "TARGET TEAMS DISTRIBUTE PARALLEL DO",
+    "TEAMS DISTRIBUTE PARALLEL DO",
+    "CUDA KERNEL directive",
     "ACC REGION directive",
     "ACC KERNELS construct",
     "ACC PARALLEL construct",
@@ -14078,30 +14119,7 @@ static char *di_name[] = {
     "ACC PARALLEL LOOP directive",
     "ACC KERNEL construct",
     "ACC DATA REGION construct",
-    "CUDA KERNEL directive",
-    "SELECT TYPE",
     "ACC HOST DATA construct",
-    "ACC ATOMIC CAPTURE construct",
-    "DOCONCURRENT",
-    "SIMD",
-    "TASKGROUP",
-    "TASKLOOP",
-    "TARGET",
-    "TARGETENTERDATA",
-    "TARGETEXITDATA",
-    "TARGETDATA",
-    "TARGETUPDATE",
-    "DISTRIBUTE",
-    "TEAMS",
-    "DECLARE TARGET",
-    "ASSOCIATE",
-    "DISTRIBUTE PARALLEL DO",
-    "TARGET PARALLEL DO",
-    "TARGET SIMD",
-    "TARGET TEAMS DISTRIBUTE",
-    "TEAMS DISTRIBUTE",
-    "TARGET TEAMS DISTRIBUTE PARALLEL DO",
-    "TEAMS DISTRIBUTE PARALLEL DO",
     "ACC SERIAL",
     "ACC SERIAL LOOP",
 };
@@ -14148,10 +14166,12 @@ _dmp_doif(int df, FILE *f)
     fprintf(f, "Unknown DI_ID(%d) == %d\n", df, id);
     return;
   }
-  fprintf(f, "[%3d] %.24s\n", df, di_name[id]);
-  fprintf(f, "      NAME:%d\n", DI_NAME(df));
-  switch (id) {
-  }
+  fprintf(f, "[%3d] %s - Line=%d", df, di_name[id], DI_LINENO(df));
+  if (DI_NAME(df))
+    fprintf(f, " ConstructName=%d", DI_NAME(df));
+  if (id == DI_DO && DI_DOINFO(df)->collapse)
+    fprintf(f, " Collapse=%d", DI_DOINFO(df)->collapse);
+  fprintf(f, "\n");
   if (DI_NEST(df)) {
     int i;
     fprintf(f, "      Nest:0x%08lx ", DI_NEST(df));
@@ -14159,10 +14179,6 @@ _dmp_doif(int df, FILE *f)
       if (DI_B(i) & DI_NEST(df))
         fprintf(f, "|%s", di_name[i]);
     }
-  }
-  if (id == DI_DO) {
-    fprintf(f, "      doinfo:%p  collapse:%d", DI_DOINFO(df),
-            DI_DOINFO(df)->collapse);
   }
   fprintf(f, "\n");
 }

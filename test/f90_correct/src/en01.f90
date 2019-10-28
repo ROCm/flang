@@ -13,46 +13,24 @@
 ! limitations under the License.
 !
 
-module mod
-logical expect(1), rslt(1)
-type obj
-contains
-procedure :: bar
-end type
-
-contains
 subroutine foo()
-!print *, 'in foo'
-end subroutine
+  print *, 'PASS'
+end subroutine foo
 
-subroutine foo2(i)
-integer :: i
-!print *, 'in foo2', i
-rslt(1) = i .eq. -99
-end subroutine
+subroutine bar(msg, func)
+  character(len=1) msg
+  external func
+  return
+  entry alt_bar(func)
+  call func()
+  return
+end subroutine bar
 
-subroutine bar(this)
-class(obj) :: this
-block
-type t
-contains
-procedure, nopass :: foo
-procedure, nopass :: foo2
-generic :: func => foo, foo2 
-end type
-type(t) :: o
+interface
+   subroutine foo()
+   end subroutine foo
+end interface
 
-call o%func(-99)
-end block
-end subroutine
+call alt_bar(foo)
+end program
 
-end module
-
-
-use mod
-type(obj) :: x
-expect = .true.
-rslt = .false.
-call x%bar()
-call check(rslt, expect, 1)
-end

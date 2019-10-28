@@ -86,6 +86,8 @@
 
 #include "upper.h"
 
+#define BITS_IN_BYTE 8
+
 typedef enum SincosOptimizationFlags {
   /* used only for sincos() optimization */
   SINCOS_SIN = 1,
@@ -2300,7 +2302,7 @@ gen_call_vminmax_intrinsic(int ilix, OPERAND *op1, OPERAND *op2)
     return NULL;
   }
   op1->next = op2;
-  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * 8;
+  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * BITS_IN_BYTE;
   sprintf(buf, "@llvm.%s.v%d%c%d", mstr, vect_size, type, type_size);
   return gen_call_to_builtin(ilix, buf, op1, make_lltype_from_dtype(vect_dtype),
                              NULL, I_PICALL);
@@ -2335,7 +2337,7 @@ gen_call_vminmax_power_intrinsic(int ilix, OPERAND *op1, OPERAND *op2)
     return NULL;
   }
   op1->next = op2;
-  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * 8;
+  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * BITS_IN_BYTE;
   sprintf(buf, "@llvm.ppc.vsx.xv%s%s", mstr, type);
   return gen_call_to_builtin(ilix, buf, op1, make_lltype_from_dtype(vect_dtype),
                              NULL, I_PICALL);
@@ -2381,7 +2383,7 @@ gen_call_vminmax_neon_intrinsic(int ilix, OPERAND *op1, OPERAND *op2)
     return NULL;
   }
   op1->next = op2;
-  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * 8;
+  type_size = zsize_of(DTySeqTyElement(vect_dtype)) * BITS_IN_BYTE;
   sprintf(buf, "@llvm.arm.neon.%s%c.v%d%c%d", mstr, sign, vect_size, type,
           type_size);
   return gen_call_to_builtin(ilix, buf, op1, make_lltype_from_dtype(vect_dtype),
@@ -4193,7 +4195,7 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
     bytes = bytes * 8;
     assert(bytes, "make_stmt(): expected smove byte size", 0, ERR_Fatal);
     from_nme = ILI_OPND(ilix, 4);
-    ts = 8 * size_of(DT_CPTR);
+    ts = BITS_IN_BYTE * size_of(DT_CPTR);
     src_op = gen_llvm_expr(from_ili, make_lltype_from_dtype(DT_CPTR));
     dst_op = gen_llvm_expr(to_ili, make_lltype_from_dtype(DT_CPTR));
     dtype = dt_nme(from_nme);
@@ -4222,10 +4224,11 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
            "make_stmt(): expected ARGAR/DAAR for ili ", to_ili, ERR_Fatal);
     to_ili = ILI_OPND(to_ili, 1);
     bytes = CONVAL2G(opnd);
-    assert(bytes, "make_stmt(): expected szero byte size", 0, ERR_Fatal);
-    ts = 8 * size_of(DT_CPTR);
-    dst_op = gen_llvm_expr(to_ili, make_lltype_from_dtype(DT_CPTR));
-    insert_llvm_memset(ilix, ts, dst_op, bytes, 0, 1, 0);
+    if (bytes) {
+      ts = BITS_IN_BYTE * size_of(DT_CPTR);
+      dst_op = gen_llvm_expr(to_ili, make_lltype_from_dtype(DT_CPTR));
+      insert_llvm_memset(ilix, ts, dst_op, bytes, 0, 1, 0);
+    }
     break;
   case STMT_ST:
     /* STORE statement */
@@ -4402,24 +4405,36 @@ gen_va_start(int ilix)
    \brief Create a variable of type \p dtype
    \param ilix
    \param dtype
-   \param align  Log of alignment (in bytes)
    \return an sptr to the newly created instance.
 
-   This is a convenience routine only used by gen_va_arg.
- */
-static int
-make_va_arg_tmp(int ilix, DTYPE dtype, int align)
+  */
+static SPTR
+make_arg_tmp(int ilix, DTYPE dtype)
 {
-  int tmp;
+  SPTR tmp;
+  SYMTYPE stype;
   char tmp_name[32];
-
   NEWSYM(tmp);
-  snprintf(tmp_name, sizeof(tmp_name), ".vargtmp.%d", ilix);
+  snprintf(tmp_name, sizeof(tmp_name), "argtmp.%d", ilix);
   NMPTRP(tmp, putsname(tmp_name, strlen(tmp_name)));
-  STYPEP(tmp, ST_STRUCT);
+
+  switch (DTY(dtype)) {
+  case TY_ARRAY:
+    stype = ST_ARRAY;
+    break;
+  case TY_STRUCT:
+    stype = ST_STRUCT;
+    break;
+  case TY_UNION:
+    stype = ST_UNION;
+    break;
+  default:
+    stype = ST_VAR;
+  }
+  STYPEP(tmp, stype);
   SCP(tmp, SC_AUTO);
   DTYPEP(tmp, dtype);
-  PDALNP(tmp, align);
+  PDALNP(tmp, align_bytes2power(align_of(dtype)));
   return tmp;
 }
 
@@ -4451,7 +4466,7 @@ gen_va_arg(int ilix)
    * store argtype* %next, %ap_cast
    * return argtype %ptr
    */
-  int tmp;
+  SPTR tmp;
   OPERAND *addr_op, *result_op, *next_op;
   const int ap_ili = ILI_OPND(ilix, 1);
   const DTYPE arg_dtype = ILI_DTyOPND(ilix, 2);
@@ -4515,8 +4530,8 @@ gen_va_arg(int ilix)
     OPERAND *tmp_op, *cmplx_op, *val_op;
 
     /* Pointer to temp real */
-    tmp = make_va_arg_tmp(ilix, arg_dtype, 0);
-    cmplx_op = tmp_op = make_var_op((SPTR)tmp); /* points to {float,float} */
+    tmp = make_arg_tmp(ilix, arg_dtype);
+    cmplx_op = tmp_op = make_var_op(tmp); /* points to {float,float} */
     tmp_op = make_bitcast(tmp_op, llt_cptr);
     tmp_op = gen_gep_index(tmp_op, llt_cptr, 0);
     tmp_op = make_bitcast(tmp_op, llt_float_ptr);
@@ -5386,14 +5401,14 @@ gen_resized_vect(OPERAND *vop, int new_size, int start)
   vop->next->ot_type = OT_UNDEF;
   vop->next->ll_type = vop->ll_type;
 
-  if ((ll_type_bytes(vop->ll_type) * 8) > new_size) {
+  if ((ll_type_bytes(vop->ll_type) * BITS_IN_BYTE) > new_size) {
     vop->next->next = gen_imask(
         get_vcon0_n(get_vector_dtype(DT_INT, new_size), start, new_size));
   } else {
-    for (i = 0; i < ll_type_bytes(vop->ll_type) * 8; i++)
+    for (i = 0; i < ll_type_bytes(vop->ll_type) * BITS_IN_BYTE; i++)
       v[i] = i + start;
     for (; i < new_size; i++)
-      v[i] = ll_type_bytes(vop->ll_type) * 8 + start;
+      v[i] = ll_type_bytes(vop->ll_type) * BITS_IN_BYTE + start;
     vop->next->next =
         gen_imask(get_vcon(v, get_vector_dtype(DT_INT, new_size)));
   }
@@ -6466,24 +6481,24 @@ convert_int_size(int ilix, OPERAND *convert_op, LL_Type *rslt_type)
     kind1 = ty1->sub_types[0]->data_type;
     size1 = ll_type_int_bits(ty1->sub_types[0]);
     if (!size1)
-      size1 = ll_type_bytes(ty1->sub_types[0]) * 8;
+      size1 = ll_type_bytes(ty1->sub_types[0]) * BITS_IN_BYTE;
   } else {
     kind1 = ty1->data_type;
     size1 = ll_type_int_bits(ty1);
     if (!size1)
-      size1 = ll_type_bytes(ty1) * 8;
+      size1 = ll_type_bytes(ty1) * BITS_IN_BYTE;
   }
   flags1 = convert_op->flags;
   if (ty2->data_type == LL_VECTOR) {
     kind2 = ty2->sub_types[0]->data_type;
     size2 = ll_type_int_bits(ty2->sub_types[0]);
     if (!size2)
-      size2 = ll_type_bytes(ty2->sub_types[0]) * 8;
+      size2 = ll_type_bytes(ty2->sub_types[0]) * BITS_IN_BYTE;
   } else {
     kind2 = ty2->data_type;
     size2 = ll_type_int_bits(ty2);
     if (!size2)
-      size2 = ll_type_bytes(ty2) * 8;
+      size2 = ll_type_bytes(ty2) * BITS_IN_BYTE;
   }
   if (ty1->data_type != LL_VECTOR) {
     assert(ll_type_int_bits(ty1),
@@ -6532,7 +6547,7 @@ convert_operand(OPERAND *convert_op, LL_Type *rslt_type,
   DBGDUMPLLTYPE("result type ", rslt_type)
 
   ty = convert_op->ll_type;
-  size = ll_type_bytes(ty) * 8;
+  size = ll_type_bytes(ty) * BITS_IN_BYTE;
   new_tmps = make_tmps();
   ll_type = rslt_type;
   op_tmp = make_tmp_op(ll_type, new_tmps);
@@ -6548,7 +6563,7 @@ convert_int_to_ptr(OPERAND *convert_op, LL_Type *rslt_type)
   const LL_Type *llt = convert_op->ll_type;
   OPERAND* operand;
   assert(llt,"convert_int_to_ptr(): missing incoming type",0,ERR_Fatal);
-  assert(ll_type_int_bits(llt) == 8 * size_of(DT_CPTR),
+  assert(ll_type_int_bits(llt) == BITS_IN_BYTE * size_of(DT_CPTR),
          "Unsafe type for inttoptr", ll_type_int_bits(llt), ERR_Fatal);
   return convert_operand(convert_op, rslt_type, I_INTTOPTR);
 }
@@ -7162,6 +7177,10 @@ gen_arg_operand(LL_ABI_Info *abi, unsigned abi_arg, int arg_ili)
       flags |= OPF_SRET_TYPE;
     break;
 
+  case LL_ARG_INDIRECT_BUFFERED:
+    assert(indirect_ili_value, "Indirect arg required", arg_ili, ERR_Fatal);
+    break;
+
   case LL_ARG_BYVAL:
     assert(indirect_ili_value, "Indirect arg required for byval", arg_ili,
            ERR_Fatal);
@@ -7180,6 +7199,16 @@ gen_arg_operand(LL_ABI_Info *abi, unsigned abi_arg, int arg_ili)
       operand = gen_llvm_expr(value_ili, arg_type);
   }
 
+  if (arg->kind == LL_ARG_INDIRECT_BUFFERED) {
+    /* Make a copy of the argument in the caller's scope and pass a pointer to it */
+    SPTR tmp = make_arg_tmp(value_ili, dtype);
+    OPERAND *new_op = make_var_op(tmp);
+    OPERAND *dest_op = make_bitcast(new_op, make_lltype_from_dtype(DT_CPTR));
+    OPERAND *src_op = make_bitcast(operand, make_lltype_from_dtype(DT_CPTR));
+    int ts = BITS_IN_BYTE * size_of(DT_CPTR);
+    insert_llvm_memcpy(0, ts, dest_op, src_op, size_of(dtype), align_of(dtype), 0);
+    operand = make_var_op(tmp);
+  }
   /* Set sret, byval, sign/zeroext flags. */
   operand->flags |= flags;
   return operand;
@@ -8813,7 +8842,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_CMPNEQSS: {
     OPERAND *op1;
     INSTR_LIST *instr1;
-    unsigned bits = 8 * size_of(DT_FLOAT);
+    unsigned bits = BITS_IN_BYTE * size_of(DT_FLOAT);
     LL_Type *iTy = make_int_lltype(bits);
     lhs_ili = ILI_OPND(ilix, 1);
     rhs_ili = ILI_OPND(ilix, 2);
@@ -8954,7 +8983,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     /* Explicitly truncate to a 32-bit int - convert_int_to_ptr() won't work
      * because it can't truncate. */
     operand =
-        convert_int_size(ilix, operand, make_int_lltype(8 * TARGET_PTRSIZE));
+        convert_int_size(ilix, operand, make_int_lltype(BITS_IN_BYTE * TARGET_PTRSIZE));
 #endif
     break;
 
@@ -9648,7 +9677,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     */
     OPERAND *op3, *op4, *op5, *op6;
     INSTR_LIST *instr2, *instr3;
-    unsigned bits = 8 * size_of(DT_FLOAT);
+    unsigned bits = BITS_IN_BYTE * size_of(DT_FLOAT);
     LL_Type *iTy = make_int_lltype(bits);
     LL_Type *fltTy = make_lltype_from_dtype(DT_FLOAT);
     OPERAND *op1 = gen_llvm_expr(ILI_OPND(ilix, 1), NULL);
@@ -11685,7 +11714,7 @@ match_types(LL_Type *ty1, LL_Type *ty2)
 
   if (ll_type_int_bits(ty1)) {
     DBGTRACEOUT4(" returns %d(%s) ty1 = %s%d", ret_type, match_names(ret_type),
-                 ty1->str, (int)(ll_type_bytes(ty1) * 8))
+                 ty1->str, (int)(ll_type_bytes(ty1) * BITS_IN_BYTE))
   } else {
     DBGTRACEOUT3(" returns %d(%s) ty1 = %s", ret_type, match_names(ret_type),
                  ty1->str)
@@ -12145,7 +12174,7 @@ gen_acon_expr(int ilix, LL_Type *expected_type)
   OPERAND *base_op, *index_op;
   OPERAND *operand = NULL;
   const SPTR opnd = ILI_SymOPND(ilix, 1);
-  const int ptrbits = 8 * size_of(DT_CPTR);
+  const int ptrbits = BITS_IN_BYTE * size_of(DT_CPTR);
   INT val[2];
   ISZ_T num;
 
@@ -12346,7 +12375,7 @@ gen_base_addr_operand(int ilix, LL_Type *expected_type)
     if (!operand) {
       ty1 = make_lltype_from_dtype(DT_CPTR);
       base_op = gen_base_addr_operand(ILI_OPND(ilix, 1), ty1);
-      ty2 = make_int_lltype(8 * size_of(DT_CPTR));
+      ty2 = make_int_lltype(BITS_IN_BYTE * size_of(DT_CPTR));
       index_op = gen_base_addr_operand(opnd, ty2);
       operand = gen_gep_op(ilix, base_op, ty1, index_op);
     }
@@ -13024,6 +13053,7 @@ process_formal_arguments(LL_ABI_Info *abi)
       }
     /* falls thru */
     case LL_ARG_INDIRECT:
+    case LL_ARG_INDIRECT_BUFFERED:
       /* For device pointer, we need to home it because we will need to pass it
        * as &&arg(pointer to pointer), make_var_op will call process_sptr later.
        */
@@ -13099,13 +13129,58 @@ process_formal_arguments(LL_ABI_Info *abi)
           arg_op = convert_operand(arg_op, var_type, I_FPTRUNC);
         } else {
 #ifdef TARGET_LLVM_ARM64
-          /* Use a pointer bitcast on the address of the local variable to coerce
-           the argument to the local variable type. 
-           On ARM64 the ABI requires for instance that a 3 4-byte struct (12 bytes)
-            be coerced into 2 8-byte registers. This is achieved by casteing the input argument
-           of type { i32, i32, i32} into  [2 x i64] */
-          store_addr =
-            make_bitcast(store_addr, ll_get_pointer_type(arg_op->ll_type));
+           /* 
+            On ARM64 the ABI requires for instance that a 3 4-byte struct (12 bytes)
+            be coerced into 2 8-byte registers. This is achieved by declaring the type of the 
+            formal argument to be a [2 x i64] and assigning its value to a local variable of 
+            type {i32, i32, i32}. This has been handled, so far, by performing a store of the 
+            formal to the address of the local which only really works when both are the same size 
+            otherwise the store spills over the next element on the stack. That's bad.
+            
+            To fix this:
+              - the local storage of {i32, i32, i32}, that has already been created at this point, 
+                is replaced with the bigger one of size [2 x i64]
+              - the store_addr operand is repurposed to point to the new storage
+              - in ll_write_local_objects the kind LLObj_LocalBuffered is detected so 
+                the appropriate bitcast is performed 
+            */
+          LL_Object * object, *local, *prev_object = NULL;
+          LL_Function * function = llvm_info.curr_func;
+          local = function->last_local;
+
+          // The last local variable introduced must have been for this argument otherwise error
+          if (local && strcmp(local->address.data, SNAME(arg->sptr)) == 0) {
+            // locals are singly chained so iterate from the start to find the previous one
+            for (object = function->first_local; object->next; object = object->next) {
+              prev_object = object;
+            }
+
+            LL_Object *bigger_local
+             = ll_create_local_object(llvm_info.curr_func, arg->type, 8,
+                               "%s.buffer", get_llvm_name(arg->sptr));
+
+            // Help detect discrepancy in ll_write_local_objects                 
+            bigger_local->sptr = arg->sptr;
+            bigger_local->kind = LLObj_LocalBuffered;
+
+            // Repurpose store_addr to the bigger storage
+            store_addr->ll_type = ll_get_pointer_type(arg->type);
+            store_addr->string = (char *)bigger_local->address.data;
+
+            // Replace last local in the list with the bigger one
+            if (prev_object == NULL) {
+              function->first_local = function->last_local = bigger_local;
+            } else {
+              prev_object->next = bigger_local;
+              function->last_local = bigger_local;
+            }
+          } else {
+            assert(false,
+                  "process_formal_arguments: Function argument with missing "
+                  "local storage",
+                  0, ERR_Fatal);
+          }
+          
 #else
           assert(false,
                  "process_formal_arguments: Function argument with mismatched "
@@ -13164,6 +13239,7 @@ print_arg_attributes(LL_ABI_ArgInfo *arg)
   case LL_ARG_DIRECT:
   case LL_ARG_COERCE:
   case LL_ARG_INDIRECT:
+  case LL_ARG_INDIRECT_BUFFERED:
     break;
   case LL_ARG_ZEROEXT:
     print_token(" zeroext");
@@ -13421,7 +13497,8 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     } else {
       for (int i = 0; i < tinfo->n_reduction_symbols; ++i) {
         reductionsize +=
-            (size_of(DTYPEG(tinfo->reduction_symbols[i].shared_sym)) * 8);
+            (size_of(DTYPEG(tinfo->reduction_symbols[i].shared_sym)) *
+             BITS_IN_BYTE);
       }
       add_property_struct(SYMNAME(func_sptr), tinfo->n_reduction_symbols,
                           reductionsize);

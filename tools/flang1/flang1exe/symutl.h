@@ -25,6 +25,10 @@
 
 #define SLIST_AREA 11
 
+#define BLOCK_ENTRY_STD(sptr) (LABSTDG(STARTLABG(ENCLFUNCG(sptr))))
+#define BLOCK_ENDPROLOG_STD(sptr) (ENTSTDG(ENCLFUNCG(sptr)))
+#define BLOCK_EXIT_STD(sptr)  (LABSTDG(ENDLABG(ENCLFUNCG(sptr))))
+
 int get_next_sym(char *, char *);
 SPTR get_symtype(SYMTYPE, SPTR);
 int get_next_user_sym(char *, char *);
@@ -77,6 +81,7 @@ void fixup_srcalloc_bounds(int *, int *, int);
 void check_alloc_ptr_type(int, int, DTYPE, int, int, int, int); /* func.c */
 LOGICAL contiguous_section(int arr_ast);                        /* func.c */
 
+int gen_set_len_ast(int ast, SPTR ddesc, int sz); /* outconv.c */
 LOGICAL inline_RTE_set_type(int, int, int, int, DTYPE, int); /* outconv.c */
 
 int get_forall_subscr(int, int, int *, int);

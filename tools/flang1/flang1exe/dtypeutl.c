@@ -2546,6 +2546,10 @@ getdtype(DTYPE dtype, char *ptr)
           strcpy(p, " assumedshape");
           p += strlen(p);
         }
+        if (AD_ASSUMRANK(ad) == 1) {
+          strcpy(p, " assumedrank");
+          p += strlen(p);
+        }
         if (AD_ASSUMSHP(ad) == 2) {
           strcpy(p, " wasassumedshape");
           p += strlen(p);
@@ -2779,6 +2783,7 @@ _dmp_dent(DTYPE dtypeind, FILE *outfile)
             numdim, AD_DEFER(ad), AD_ADJARR(ad), AD_ASSUMSZ(ad),
             AD_NOBOUNDS(ad));
     fprintf(outfile, "  assumshp:%d\n", AD_ASSUMSHP(ad));
+    fprintf(outfile, "  assumrank:%d\n", AD_ASSUMRANK(ad));
     fprintf(outfile, "        zbase: %d   numelm: %d\n", AD_ZBASE(ad),
             AD_NUMELM(ad));
     if (!is_legal_numdim(numdim)) /* AOCC */
