@@ -1588,6 +1588,7 @@ write_extern_inits(void)
     free(typed);
   }
 }
+static bool bss_written_through_ctor = false;
 
 static void
 write_bss(void)
@@ -1604,7 +1605,15 @@ write_bss(void)
   int gblsym;
   char *type_str = "internal global";
   char *bss_nm = bss_name;
-
+  // AOCC Begin
+  // For offload target, write_bss function is called for first function
+  // through ompaccel_create_globalctor function. dont process for first
+  // function if it is processed already
+  if (flg.omptarget && gbl.bss_addr && (gbl.multi_func_count == 0)) {
+      if (bss_written_through_ctor) return;
+      bss_written_through_ctor = true;
+  }
+  // AOCC end
   if (gbl.bss_addr) {
     fprintf(ASMFIL, "%%struct%s = type <{[%" ISZ_PF "d x i8]}>\n", bss_nm,
             gbl.bss_addr);
