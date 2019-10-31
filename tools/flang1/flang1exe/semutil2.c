@@ -22,6 +22,10 @@
  *
  * Date of Modification: 1st March 2019
  *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ * Date of Modification: 24th October 2019
+ *
  */
 
 /** \file
@@ -2302,7 +2306,9 @@ get_subscripting_tmp(int indexast)
     tmpids[sub_i] = mk_id(get_temp(astb.bnd.dtype));
   if (indexast != tmpids[sub_i]) {
     ast = mk_assn_stmt(tmpids[sub_i], indexast, astb.bnd.dtype);
-    add_stmt(ast);
+    //AOCC Begin
+    sem.acl_ido.subsc_assign_std = add_stmt(ast);
+    //AOCC End
   }
   return (tmpids[sub_i]);
 }
@@ -3034,7 +3040,18 @@ _constructf90(int base_id, int in_indexast, bool in_array, ACL *aclp)
           ast = mk_assn_stmt(dest, src, dtype);
         }
         ast = ast_rewrite_indices(ast);
-        (void)add_stmt(ast);
+        //AOCC Begin
+        int ast_std = add_stmt(ast);
+        if(sem.acl_ido.replace_temp && (sem.acl_ido.body_std == 0)) {
+          sem.acl_ido.body_std = ast_std;
+        } else {
+          if(sem.acl_ido.replace_temp && (sem.acl_ido.body_std > 0)) {
+            //this condition is true in case of nested implied dos
+            sem.acl_ido.body_std = 0;
+            sem.acl_ido.replace_temp = false;
+	  }
+	}
+        //AOCC End
         if (in_array) {
           indexast = mk_binop(OP_ADD, indexast, astb.bnd.one, astb.bnd.dtype);
           incr_element_cnt();
