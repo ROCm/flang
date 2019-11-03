@@ -3372,13 +3372,15 @@ assign(SST *newtop, SST *stktop)
   ACL * aclp;
   sem.acl_ido.body_std = 0;
   // check if it is an 1D-array assignment statement and rhs is an array constructor
-  if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
-     if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
-        aclp = SST_ACLG(stktop);
-        // if the temporary created is considered to have deferred shape
-        if(AD_DEFER(AD_DPTR( aclp->dtype)))
-          sem.acl_ido.replace_temp = true;
-     }
+  if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
+    if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
+       if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
+          aclp = SST_ACLG(stktop);
+          // if the temporary created is considered to have deferred shape
+          if(AD_DEFER(AD_DPTR( aclp->dtype)))
+            sem.acl_ido.replace_temp = true;
+       }
+    }
   }
   //AOCC End
 
@@ -3480,7 +3482,10 @@ assign(SST *newtop, SST *stktop)
  */
  static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs){
    SPTR acl_lhs;
-   int rhs;
+   int rhs_ast;
+   int temp_array_ast;
+   int lhs_ast;
+   int lhs_array_ast;
    SPTR arr_tmp;
    int ast;
    int dtype_lhs;
@@ -3507,21 +3512,30 @@ assign(SST *newtop, SST *stktop)
    ast_unvisit();
 
    acl_lhs = SST_SYMG(sst_lhs);
-   rhs = SST_ASTG(sst_rhstemp);
-   arr_tmp = A_SPTRG(rhs);
-   ast_to_comment(rhs);
+   rhs_ast = SST_ASTG(sst_rhstemp);
+   lhs_ast = SST_ASTG(sst_lhs);
+   arr_tmp = A_SPTRG(rhs_ast);
+   ast_to_comment(rhs_ast);
+
+   temp_array_ast = rhs_ast;
+   lhs_array_ast = lhs_ast;
+   //the assignment can be to an array or an array section
+   //If to an array section, it has the type SUBSCRIPT
+   if(A_TYPEG(lhs_ast) == A_SUBSCR) {
+     lhs_array_ast = A_LOPG(lhs_ast);
+   }
 
    //The std which contains the assignment to temporary is
    //read and all references to temporary are replaced with LHS
    ast = STD_AST(sem.acl_ido.body_std);
    ast_visit(1, 1);
-   ast_replace(mk_id(arr_tmp),mk_id(acl_lhs));
+   ast_replace(temp_array_ast,lhs_array_ast);
    ast = ast_rewrite(ast);
    STD_AST(sem.acl_ido.body_std) = ast;
    ast_unvisit();
 
    int idostd = sem.acl_ido.body_std;
-   int findast = mk_id(arr_tmp);
+   int findast = temp_array_ast;
    int allocstd = 0;
    int std;
 
@@ -3542,7 +3556,7 @@ assign(SST *newtop, SST *stktop)
    ITEM *p, *t;
    p = NULL;
    for (t = sem.p_dealloc; t != NULL; t = t->next) {
-     if (t->ast == mk_id(arr_tmp)) {
+     if (t->ast == temp_array_ast) {
         if (p == NULL)
           sem.p_dealloc = t->next;
         else
@@ -3552,7 +3566,7 @@ assign(SST *newtop, SST *stktop)
      p = t;
    }
    for (t = sem.p_dealloc_delete; t != NULL; t = t->next) {
-     if (t->ast == mk_id(arr_tmp)) {
+     if (t->ast == temp_array_ast) {
        delete_stmt(t->t.ilm);
      }
    }
