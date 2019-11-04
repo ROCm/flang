@@ -14,6 +14,12 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Date of Modification: 4th Nov 2019
+ * handling of common blocks in multiple subroutines
+ */
 
 /** \file
  * \brief SCFTN data initialization file utilities.
@@ -233,6 +239,7 @@ dinit_end(void)
     FREE(ilmb.ilm_base);
     ilmb.ilm_base = NULL;
   }
+  gbl.cmblks = NOSYM; // AOCC
   mode = ' '; /* no file */
 }
 
