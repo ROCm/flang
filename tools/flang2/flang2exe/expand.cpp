@@ -21,6 +21,9 @@
   *
   * Date of Modification: September 2018
   *
+  * Changes to support AMDGPU OpenMP offloading
+  * Date of modification 05th November 2019
+  *
   */
 
 
@@ -490,7 +493,22 @@ eval_ilm(int ilmx)
       if (!flg.x86_64_omptarget) { // AOCC
         if (opcx == IM_MP_BREDUCTION) {
           ompaccel_notify_reduction(true);
-          exp_ompaccel_reduction(ilmpx, ilmx);
+          if (!flg.amdgcn_target) {
+            exp_ompaccel_reduction(ilmpx, ilmx);
+          } else {
+            // AOCC Begin
+            // When reduction and non-reduction kernels are next to each other
+            // curr_tinfo for reduction kernel is not set properly. Set it
+            // properly by identifying tinfo from function name.
+            OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(gbl.currsub);
+            OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
+            if (ompaccel_tinfo_current_get()->n_reduction_symbols == 0
+                                                                && tinfo)
+              ompaccel_tinfo_current_set(tinfo);
+            exp_ompaccel_reduction(ilmpx, ilmx);
+            ompaccel_tinfo_current_set(temp_tinfo);
+            // AOCC End
+          }
         } else if (opcx == IM_MP_EREDUCTION) {
           ompaccel_notify_reduction(false);
           return;

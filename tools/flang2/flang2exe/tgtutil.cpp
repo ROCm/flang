@@ -24,6 +24,7 @@
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
  * Date of modification 07th October 2019
+ * Date if modification 05th November 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -966,7 +967,9 @@ init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
   // device functions gets "_" in the end.
   NEW(kernelname_, char, size);
   sprintf(kernelname_, "%s_\00", kernelname);
-  eptr2 = getstring(kernelname_, strlen(kernelname) + 1);
+  // AOCC Modification: Changed strlen(kernelname) to strlen(kernelname_)
+  //                    This is required to append null character at end
+  eptr2 = getstring(kernelname_, strlen(kernelname_) + 1);
   DINITP(eptr2, 1);
 
   NEW(sname_entry, char, size);

@@ -28,6 +28,7 @@
   * Date of modification 16th September 2019
   * Date of modification 20th September 2019
   * Date of modification 01st October 2019
+  * Date of modification 05th November 2019
   */
 
 
@@ -1488,8 +1489,15 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
     i8cnt = skip_size;
   }
   free(cptrCopy);
-  if (i8cnt)
+  // AOCC Begin
+  // i8cnt can be negattive
+  if (flg.amdgcn_target) {
+    if (i8cnt > 0)
+      fprintf(ASMFIL, "] ");
+  } else if (i8cnt)
+  // AOCC End
     fprintf(ASMFIL, "] ");
+
 
   return dsrtp;
 }

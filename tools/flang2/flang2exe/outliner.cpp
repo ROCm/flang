@@ -366,23 +366,8 @@ ll_get_outlined_funcname(int fileno, int lineno, bool isompaccel, ILM_OP opc) {
     name_currfunc = strtok(&name_currfunc[plen], "_");
   }
   nmSize = (3 * maxDigitLen) + 5 + strlen(name_currfunc) + 1;
-  // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-  nmSize += 10;
-#endif
-  // AOCC End
   name = (char *)malloc(nmSize + strlen(prefix));
-  // AOCC Begin
-  if (flg.amdgcn_target) {
-    // TODO: This is a temporary fix for naming issue with kernels.
-    //       WARNING: Removing this has side-effect during runtime for
-    //       offloading kernels.
-    r = snprintf(name, nmSize, "%s__kernel_%dF%dL%d", name_currfunc, funcNo, fileno, lineno);
-  }
-  else {
-  // AOCC End
-    r = snprintf(name, nmSize, "%s%s_%s_F%dL%d_%d", prefix, name_currfunc, name_opc, fileno, lineno, funcCnt);
-  }
+  r = snprintf(name, nmSize, "%s%s_%s_F%dL%d_%d", prefix, name_currfunc, name_opc, fileno, lineno, funcCnt);
   assert(r < nmSize, "buffer overrun", r, ERR_Fatal);
   return name;
 }

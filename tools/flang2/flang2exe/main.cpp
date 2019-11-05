@@ -270,7 +270,15 @@ process_input(char *argv0, bool *need_cuda_constructor)
         init_test();
         if (!flg.x86_64_omptarget) { // AOCC
           ompaccel_initsyms();
-          ompaccel_create_reduction_wrappers();
+          // AOCC Begin
+          // ompaccel_create_reduction_wrappers() emits reduction wrappers
+          // for current tinfo. But current tinfo doesn't always point to
+          // current subroutines tinfo.
+          if (flg.amdgcn_target)
+            ompaccel_create_amd_reduction_wrappers();
+          else
+          // AOCC End
+            ompaccel_create_reduction_wrappers();
         }
       }
 #endif

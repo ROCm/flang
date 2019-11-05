@@ -19,6 +19,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 23rd September 2019
+ * Date of modification 05th November 2019
  *
  */
 
@@ -511,5 +512,14 @@ void init_test();
 
 // AOCC begin
 int mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2);
-// AOCC end
+
+/**
+   \brief Set current target info.
+ */
+void ompaccel_tinfo_current_set(OMPACCEL_TINFO *);
+/**
+  \brief Creatre reduction wrappers
+  */
+void ompaccel_create_amd_reduction_wrappers();
+// AOCC End
 #endif

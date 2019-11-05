@@ -20,6 +20,7 @@
  * Changes for AMD GPU OpenMP offloading and bug fixes.
  *
  * Date of Modification: November 2018
+ * Date of Modification: 05th November 2019
  *
  */
 
@@ -157,7 +158,8 @@ put_skip(ISZ_T old, ISZ_T New)
       }
     }
   } else {
-    assert(amt == 0, "assem.c-put_skip old,new not in sync", New, ERR_Severe);
+    if (!flg.amdgcn_target) // AOCC
+     assert(amt == 0, "assem.c-put_skip old,new not in sync", New, ERR_Severe);
   }
   return amt;
 }

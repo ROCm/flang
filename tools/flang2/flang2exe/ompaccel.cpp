@@ -27,6 +27,7 @@
  * Date of modification 06th September 2019
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
+ * Date of modification 05th November  2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -88,6 +89,7 @@
 int tinfo_size = 50;
 int tinfo_size_reductions = 10;
 
+
 int num_tinfos = 0;
 OMPACCEL_TINFO **tinfos;
 OMPACCEL_TINFO *current_tinfo = nullptr;
@@ -97,7 +99,11 @@ OMPACCEL_TINFO *current_tinfo = nullptr;
 // source and there is too much dependency on current_tinfo I don't see any
 // other way to avoid overlapping of tinfo of target update with others.
 OMPACCEL_TINFO *old_tinfo = nullptr;
+
+// Store index of last emited tifno
+int last_tinfo_index = 0;
 // AOCC End
+
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
 
 const char *nvvm_target_triple;
@@ -1094,7 +1100,12 @@ ompaccel_tinfo_current_get_devsptr(SPTR host_symbol)
 
   device_symbol = get_devsptr(current_tinfo, host_symbol);
 
-  if (device_symbol == host_symbol && current_tinfo->parent_tinfo != nullptr)
+  // AOCC Modification: Added condition !flg.amdgcn_target.
+  //                    parent_tinfo is not set correctly. Sometimes it points
+  //                    to tinfo of another kernel. This leads to use of
+  //                    undefined symbols.
+  if (!flg.amdgcn_target && device_symbol == host_symbol &&
+      current_tinfo->parent_tinfo != nullptr)
     device_symbol = get_devsptr2(current_tinfo->parent_tinfo, host_symbol);
 
   if ((DBGBIT(61, 2)) && gbl.dbgfil != nullptr &&
@@ -2560,9 +2571,9 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
     // AOCC Begin
     wr_block();
     cr_block();
-    exp_ompaccel_ereduction(ilmp, curilm);
     // AOCC End
   }
+  exp_ompaccel_ereduction(ilmp, curilm);
   wr_block();
   cr_block();
   exp_label(lAssignReduction);
@@ -2779,5 +2790,85 @@ init_test()
   init_tgtutil();
 }
 
+// AOCC Begin
+/**
+   \brief Creates necessary reduction helper functions for the runtime.
+   Compiler passes their address to the runtime.
+   This function is used only for AMFGPU targets. Unkike to original
+   function, this function emits wrappers for all avaiable tinfos.
+ */
+void
+ompaccel_create_amd_reduction_wrappers()
+{
+  if (!flg.amdgcn_target) {
+    assert(0, "AMDGCN specific function called for another target.",
+                                                        0, ERR_Fatal);
+  }
+  int i;
+  for (i = last_tinfo_index; i < num_tinfos; ++i) {
+    if (gbl.ompaccel_intarget && gbl.currsub != NULL) {
+      int nreds = tinfos[i]->n_reduction_symbols;
+#ifdef OMP_OFFLOAD_AMD
+      /*
+       * Adding suffix to reduction function  names. This is to avoid duplicate
+       * function names in the case of multi kernel applications
+       *
+       */
+      char suffix[300];
+      sprintf(suffix, "%s", SYMNAME(gbl.currsub));
+#endif
+      if (nreds != 0) {
+        SPTR cur_func_sptr = gbl.currsub;
+        OMPACCEL_RED_SYM *redlist =
+            tinfos[i]->reduction_symbols;
+        gbl.outlined = false;
+        gbl.ompaccel_isdevice = true;
+#ifdef OMP_OFFLOAD_AMD
+        SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds, suffix);
+#else
+        SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds);
+#endif
+        schedule();
+        assemble();
+        gbl.func_count++;
+        gbl.multi_func_count = gbl.func_count;
+#ifdef OMP_OFFLOAD_AMD
+        tinfos[i]->reduction_funcs.shuffleFn =
+            ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce, suffix);
+#else
+        tinfos[i]->reduction_funcs.shuffleFn =
+            ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce);
+#endif
+        schedule();
+        assemble();
+        gbl.func_count++;
+        gbl.multi_func_count = gbl.func_count;
+#ifdef OMP_OFFLOAD_AMD
+        tinfos[i]->reduction_funcs.interWarpCopy =
+            ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds, suffix);
+#else
+        tinfos[i]->reduction_funcs.interWarpCopy =
+            ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds);
+#endif
+        schedule();
+        assemble();
+        ompaccel_write_sharedvars();
+        gbl.func_count++;
+        gbl.multi_func_count = gbl.func_count;
+        gbl.outlined = false;
+        gbl.ompaccel_isdevice = false;
+        gbl.currsub = cur_func_sptr;
+      }
+    }
+  }
+  last_tinfo_index = num_tinfos;
+}
+
+void
+ompaccel_tinfo_current_set(OMPACCEL_TINFO *tinfo)
+{
+  current_tinfo = tinfo;
+}
+// AOCC End
 #endif
 /* Expander - OpenMP Accelerator Model */
