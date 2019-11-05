@@ -51,6 +51,7 @@
  * Changes to support AMD GPU Offloading
  * Added code to avoid allocations for implied do inside target region
  * Date of Modification: 24th October 2019
+ * Date of Modification: 5h November 2019
  *
 */
 /**
@@ -1152,6 +1153,12 @@ typedef enum {
   PHASE_END = 9
 } PHASE_TYPE;
 
+//AOCC Begin
+typedef struct Implied_do_body_std {
+  int std;
+  struct Implied_do_body_std *next;
+} ido_body_std;
+//AOCC END
 /*  declare global semant variables:  */
 
 typedef struct {
@@ -1467,16 +1474,17 @@ typedef struct {
                                */
   //AOCC Begin
   struct {
-    int body_std;           /* holds the generated std for
-                                 the body of the implied do*/
-    bool replace_temp;      /* true if it is in an assignment statement
-                                 and the temporary created for RHS acl
-                                 can be replaced with lhs array
+    bool replace_temp;         /* true if it is in an assignment statement
+                                * and the temporary created for RHS acl
+                                * can be replaced with lhs array
                                 */
-   int subsc_assign_std;        /* std which assigns to subscript
-                                  of temporary
+   int subsc_assign_std;       /* std which assigns to subscript
+                                * of temporary
                                 */
-  } acl_ido
+   ido_body_std *body_stds;        /* holds the generated std for
+                                * the body of the implied do
+                                */
+   } acl_ido;
   //AOCC End
 } SEM;
 
