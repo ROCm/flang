@@ -54,6 +54,8 @@
 //
 // 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
 //             types
+// 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
+//             construct
 //===----------------------------------------------------------------------===//
 
 /**
@@ -1247,8 +1249,14 @@ semant1(int rednum, SST *top)
         sem.atomic[0] = sem.atomic[1];
         sem.atomic[1] = FALSE;
       }
+      // AOCC: Allows the omp atomics read/write construct declation inside
+      // omp critical construct
       if (sem.mpaccatomic.pending &&
-          sem.mpaccatomic.action_type != ATOMIC_CAPTURE) {
+          sem.mpaccatomic.action_type != ATOMIC_CAPTURE &&
+          // AOCC begin
+          (sem.mpaccatomic.action_type != ATOMIC_READ &&
+          sem.mpaccatomic.action_type != ATOMIC_WRITE)) {
+          // AOCC end
         error(155, 3, gbl.lineno,
               "Statement after ATOMIC UPDATE is not an assignment", CNULL);
       }
@@ -1257,8 +1265,10 @@ semant1(int rednum, SST *top)
         if ((!sem.mpaccatomic.is_acc && use_opt_atomic(sem.doif_depth))) {
          ;
         } else {
-          if (sem.mpaccatomic.is_acc)
-            sem.mpaccatomic.seen = FALSE;
+          // AOCC: removing this if condition as sem.mpaccatomic.is_acc is not
+          // a valid check here
+          /*if (sem.mpaccatomic.is_acc)*/
+          sem.mpaccatomic.seen = FALSE;
           sem.mpaccatomic.pending = TRUE;
         }
       }
