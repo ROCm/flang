@@ -25,6 +25,7 @@
  * Changes to support AMD GPU Offloading
  * Added code to avoid allocations for implied do inside target region
  * Date of Modification: 24th October 2019
+ * Date of Modification: 5th November 2019
  *
  */
 
@@ -3042,14 +3043,25 @@ _constructf90(int base_id, int in_indexast, bool in_array, ACL *aclp)
         ast = ast_rewrite_indices(ast);
         //AOCC Begin
         int ast_std = add_stmt(ast);
-        if(sem.acl_ido.replace_temp && (sem.acl_ido.body_std == 0)) {
-          sem.acl_ido.body_std = ast_std;
+        if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds == NULL)) {
+	  ido_body_std * newstd;
+	  newstd = (ido_body_std *)malloc(sizeof(ido_body_std));
+	  newstd->std = ast_std;
+	  newstd->next = NULL;
+	  sem.acl_ido.body_stds = newstd;
         } else {
-          if(sem.acl_ido.replace_temp && (sem.acl_ido.body_std > 0)) {
-            //this condition is true in case of nested implied dos
-            sem.acl_ido.body_std = 0;
-            sem.acl_ido.replace_temp = false;
-	  }
+          if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
+            //if it is a nested ido, insert std to the tail
+            ido_body_std *temp = sem.acl_ido.body_stds;
+            while(temp->next != NULL) {
+              temp = temp->next;
+            }
+            ido_body_std * newstd;
+            newstd = (ido_body_std *)malloc(sizeof(ido_body_std));
+            newstd->std = ast_std;
+            newstd->next = NULL;
+            temp->next = newstd;
+          }
 	}
         //AOCC End
         if (in_array) {

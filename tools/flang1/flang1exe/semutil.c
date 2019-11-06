@@ -24,6 +24,7 @@
   * Changes to support AMD GPU Offloading
   * Added code to avoid allocations for implied do inside target region
   * Date of Modification: 24th October 2019
+  * Date of Modification: 5th November 2019
   *
   */
 
@@ -3368,9 +3369,9 @@ assign(SST *newtop, SST *stktop)
   //AOCC Begin
   // if rhs is an acl, we may have to replace the temporary used with
   // lhs
+  sem.acl_ido.body_stds = NULL;
   sem.acl_ido.replace_temp = false;
   ACL * aclp;
-  sem.acl_ido.body_std = 0;
   // check if it is an 1D-array assignment statement and rhs is an array constructor
   if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
     if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
@@ -3393,7 +3394,7 @@ assign(SST *newtop, SST *stktop)
   check_derived_type_array_section(SST_ASTG(newtop));
 
   //AOCC Begin
-  if(sem.acl_ido.replace_temp && (sem.acl_ido.body_std > 0)) {
+  if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
     replace_acl_temp_with_lhs(stktop, newtop);
     return 0;
   }
@@ -3525,16 +3526,27 @@ assign(SST *newtop, SST *stktop)
      lhs_array_ast = A_LOPG(lhs_ast);
    }
 
-   //The std which contains the assignment to temporary is
+   //stds which contain the assignment to temporary is
    //read and all references to temporary are replaced with LHS
-   ast = STD_AST(sem.acl_ido.body_std);
-   ast_visit(1, 1);
-   ast_replace(temp_array_ast,lhs_array_ast);
-   ast = ast_rewrite(ast);
-   STD_AST(sem.acl_ido.body_std) = ast;
-   ast_unvisit();
+   ido_body_std *temp;
+   temp = sem.acl_ido.body_stds;
+   int idostd;
+   while (temp != NULL) {
+     int std_to_replace = temp->std;
+     ast = STD_AST(std_to_replace);
+     ast_visit(1, 1);
+     ast_replace(temp_array_ast,lhs_array_ast);
+     ast = ast_rewrite(ast);
+     ast_unvisit();
+     ast_visit(1, 1);
+     ast_replace(lb_tmp,lb_lhs);
+     ast = ast_rewrite(ast);
+     STD_AST(std_to_replace) = ast;
+     ast_unvisit();
+     idostd = std_to_replace;
+     temp = temp ->next;
+   }
 
-   int idostd = sem.acl_ido.body_std;
    int findast = temp_array_ast;
    int allocstd = 0;
    int std;
@@ -3570,9 +3582,16 @@ assign(SST *newtop, SST *stktop)
        delete_stmt(t->t.ilm);
      }
    }
-   //reset replace temporary
+   //reset replace temporar
    sem.acl_ido.replace_temp = false;
-   sem.acl_ido.body_std = 0;
+   ido_body_std *temp_next;
+   temp = sem.acl_ido.body_stds;
+   while (temp != NULL) {
+     temp_next = temp ->next;
+     free(temp);
+     temp = temp_next;
+   }
+   sem.acl_ido.body_stds = NULL;
  }
 //AOCC End
 
