@@ -1040,6 +1040,14 @@ finish()
   if (flg.smp) {
     ll_unlink_parfiles();
   }
+  // AOCC Begin
+  #ifdef OMP_OFFLOAD_LLVM
+  if (gbl.ompaccfile != NULL && gbl.ompaccfile != stdout) {
+    fclose(gbl.ompaccfile);
+    gbl.ompaccfile = NULL;
+  }
+  #endif
+  // AOCC End
 
   if (ccff_filename)
     ccff_close();
