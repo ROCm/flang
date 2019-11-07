@@ -3516,7 +3516,6 @@ assign(SST *newtop, SST *stktop)
    rhs_ast = SST_ASTG(sst_rhstemp);
    lhs_ast = SST_ASTG(sst_lhs);
    arr_tmp = A_SPTRG(rhs_ast);
-   ast_to_comment(rhs_ast);
 
    temp_array_ast = rhs_ast;
    lhs_array_ast = lhs_ast;
