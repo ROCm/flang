@@ -158,7 +158,7 @@ put_skip(ISZ_T old, ISZ_T New)
       }
     }
   } else {
-    if (!flg.amdgcn_target) // AOCC
+    if (!flg.amdgcn_target && !flg.x86_64_omptarget) // AOCC
      assert(amt == 0, "assem.c-put_skip old,new not in sync", New, ERR_Severe);
   }
   return amt;

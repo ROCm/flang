@@ -119,6 +119,40 @@ void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo) {
   ompaccel_x86_reduced_func_set.insert(func_sptr);
 }
 
+void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
+  bool debug_me = false;
+  int func_paramct = PARAMCTG(func_sptr);
+  int func_dpsc = DPDSCG(func_sptr);
+  int start_idx = 0, adjust_idx = 0;
+
+  // See the comments in ompaccel_x86_gen_fork_entry() regarding "x86 offloading
+  // friendly" variables. The same applies for args in target function that are
+  // entered via omp-runtime interfaces.
+  if (!gbl.ompaccel_intarget)
+    return;
+
+  if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
+    return;
+
+  if (ompaccel_x86_is_parallel_func(func_sptr)) {
+    // Then skip the first 2 tid args.
+    adjust_idx = 2;
+    func_paramct -= 2;
+  }
+
+  for (int i = 0; i < func_paramct; i++) {
+    SPTR arg_sptr = (SPTR)aux.dpdsc_base[func_dpsc + i + adjust_idx];
+    if (DTY(DTYPEG(arg_sptr)) != TY_ARRAY &&
+        (DTY(DTYPEG(arg_sptr)) != TY_PTR)) {
+      DTYPEP(arg_sptr, DT_INT8);
+      if (debug_me) {
+        printf("[ompaccel-x86]: setting %s's type as DT_INT8\n",
+            SYMNAME(arg_sptr));
+      }
+    }
+  }
+}
+
 void ompaccel_x86_add_parallel_func(SPTR func_sptr) {
   bool debug_me = false;
   if (debug_me)
@@ -174,11 +208,20 @@ bool ompaccel_x86_is_entry_func(SPTR func_sptr) {
   return false;
 }
 
+static std::set<SPTR> ompaccel_x86_tid_ready;
+
+bool ompaccel_x86_has_tid_args(SPTR func_sptr) {
+  if (ompaccel_x86_tid_ready.find(func_sptr)
+      != ompaccel_x86_tid_ready.end())
+    return true;
+  return false;
+}
+
 void ompaccel_x86_add_tid_params(SPTR func_sptr) {
-  static std::set<SPTR> processed_func;
 
   // If we already added the tid params for func_sptr then ignore.
-  if (processed_func.find(func_sptr) != processed_func.end())
+  if (ompaccel_x86_tid_ready.find(func_sptr)
+      != ompaccel_x86_tid_ready.end())
     return;
 
   int func_dpsc = DPDSCG(func_sptr);
@@ -215,12 +258,13 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
   // Update the param-count and aux DS
   PARAMCTP(func_sptr, func_paramct + 2);
   aux.dpdsc_avl += func_paramct + 2;
-  processed_func.insert(func_sptr);
+  ompaccel_x86_tid_ready.insert(func_sptr);
 }
 
 void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   // TODO: Perhaps add special "Q" flags for x86 offloading ?
   bool debug_me = false;
+  static long func_id = 0;
 
   // Must be a valid outlined function
   if (!target_func || !gbl.outlined)
@@ -229,6 +273,10 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   // Must be a function that's expected to be parallelized.
   if (!ompaccel_x86_is_toplevel_parallel_func(target_func))
     return;
+
+  assert(ompaccel_x86_has_tid_args(target_func),
+      "Expecting the fork-wrapper's target function to have tid args",
+      target_func, ERR_Fatal);
 
   SPTR orig_func = gbl.currsub;
   int orig_bih = expb.curbih;
@@ -242,20 +290,25 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   OMPACCEL_TINFO *omptinfo;
   omptinfo = ompaccel_tinfo_get(target_func);
 
-  target_func_args_count = omptinfo->n_symbols;
+  target_func_args_count = PARAMCTG(target_func) - 2; // - 2 to exclude tid args
   SPTR func_args[target_func_args_count];
 
   if (debug_me) {
-    printf("[ompaccel-x86]: Fork wrapper target: %s (SPTR: %d) with %d args\n",
+    printf("[ompaccel-x86]: Fork wrapper target: %s (SPTR: %d) with %d arg(s)\n",
         SYMNAME(target_func), target_func, target_func_args_count);
   }
 
+  int target_func_dpsc = DPDSCG(target_func);
   for (int i = 0; i < target_func_args_count; ++i) {
-    SPTR dev_sptr = omptinfo->symbols[i].device_sym;
-    SPTR host_sptr = omptinfo->symbols[i].host_sym;
+    SPTR dev_sptr = (SPTR)aux.dpdsc_base[target_func_dpsc + i + 2]; // + 2 to skip the tid args
 
+    // We make each sptr names unique so that we can work on them without
+    // accidentally modifying another sptr with the same name (and usually the
+    // same sptr number). Although naming is a trivial thing, flang's symbol
+    // creation APIs force us to make unique names across the working
+    // gbl.currsub.
     char new_arg_name[1024];
-    sprintf(new_arg_name, "%s_x86", SYMNAME(dev_sptr));
+    sprintf(new_arg_name, "%s_%d_%dx86", SYMNAME(dev_sptr), func_id, i);
 
     // Every argument must be "x86 offloading friendly". ie it should transfer
     // correctly via ffi_call() of libomptarget. So far, I only found pointers and
@@ -285,6 +338,7 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   chk_block(ilix);
   wr_block();
   mk_ompaccel_function_end(func_sptr);
+  func_id++;
 
   ompaccel_x86_add_fork_wrapper_func(func_sptr);
   schedule();

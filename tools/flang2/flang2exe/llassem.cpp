@@ -1491,7 +1491,7 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
   free(cptrCopy);
   // AOCC Begin
   // i8cnt can be negattive
-  if (flg.amdgcn_target) {
+  if (flg.amdgcn_target || flg.x86_64_omptarget) {
     if (i8cnt > 0)
       fprintf(ASMFIL, "] ");
   } else if (i8cnt)

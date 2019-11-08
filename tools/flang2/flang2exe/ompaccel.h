@@ -320,6 +320,17 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func);
  * \brief emits the reduction code for tinfo.
  */
 void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo);
+
+/**
+ * \brief returns true if func_sptr has tid args.
+ */
+bool ompaccel_x86_has_tid_args(SPTR func_sptr);
+
+/**
+ * \brief sets the type of each argument of \p func_sptr for
+ * x86 offloading.
+ */
+void ompaccel_x86_fix_arg_types(SPTR func_sptr);
 // AOCC End
 
 /* ################################################ */

@@ -353,6 +353,15 @@ process_input(char *argv0, bool *need_cuda_constructor)
 #if defined(OMP_OFFLOAD_LLVM)
         if (flg.omptarget && ompaccel_tinfo_has(gbl.currsub))
           gbl.ompaccel_isdevice = true;
+        // AOCC begin
+        // We do a late type modification. Doing this during
+        // ompaccel_create_device_symbol() can end up lowering incorrect code.
+        // And, in some scenarios there are assertion failures as well.
+        // So doing it right before the final schedule.
+        if (flg.x86_64_omptarget) {
+          ompaccel_x86_fix_arg_types(gbl.currsub);
+        }
+        // AOCC end
 #endif
 
         TR("F90 SCHEDULER begins\n");

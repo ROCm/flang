@@ -878,10 +878,28 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   char name[252];
   DTYPE dtype = DTYPEG(sptr);
   bool byval;
-  if (DTYPEG(sptr) == DT_ADDR || DTY(DTYPEG(sptr)) == TY_ARRAY)
-    byval = false;
-  else
-    byval = true;
+
+  // AOCC begin
+  bool isPointer = false;
+  if (flg.x86_64_omptarget || flg.amdgcn_target) {
+    for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j) {
+      if (MIDNUMG(current_tinfo->quiet_symbols[j].host_sym) == sptr)
+        if (POINTERG(current_tinfo->quiet_symbols[j].host_sym))
+          isPointer = true;
+    }
+    if (DTYPEG(sptr) == DT_ADDR || DTY(DTYPEG(sptr)) == TY_ARRAY || isPointer)
+      byval = false;
+    else
+      byval = true;
+
+  } else {
+  // AOCC end
+    if (DTYPEG(sptr) == DT_ADDR || DTY(DTYPEG(sptr)) == TY_ARRAY)
+      byval = false;
+    else
+      byval = true;
+  }
+
   if (byval) {
     sprintf(name, "Arg_%s_%d", SYMNAME(sptr), count);
   } else {
@@ -920,16 +938,18 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   STYPEP(sym, ST_VAR);
   PASSBYVALP(sym, byval);
 
+  // AOCC begin
+  if (flg.x86_64_omptarget || flg.amdgcn_target) {
+    for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j) {
+      if (MIDNUMG(current_tinfo->quiet_symbols[j].host_sym) == sptr) {
+        POINTERP(sym, POINTERG(current_tinfo->quiet_symbols[j].host_sym));
+      }
+    }
+  }
+  // AOCC end
+
   OMPACCDEVSYMP(sym, TRUE);
 
-  // AOCC begin
-  // See the comments in ompaccel_x86_gen_fork_entry() regarding "x86 offloading
-  // friendly" variables. The same applies for args in target function that are
-  // entered via omp-runtime interfaces.
-  if (flg.x86_64_omptarget && DTY(dtype) != TY_ARRAY) {
-    DTYPEP(sym, DT_INT8);
-  }
-  // AOCC begin
   return sym;
 }
 
@@ -1104,7 +1124,7 @@ ompaccel_tinfo_current_get_devsptr(SPTR host_symbol)
   //                    parent_tinfo is not set correctly. Sometimes it points
   //                    to tinfo of another kernel. This leads to use of
   //                    undefined symbols.
-  if (!flg.amdgcn_target && device_symbol == host_symbol &&
+  if (!(flg.amdgcn_target || flg.x86_64_omptarget) && device_symbol == host_symbol &&
       current_tinfo->parent_tinfo != nullptr)
     device_symbol = get_devsptr2(current_tinfo->parent_tinfo, host_symbol);
 
@@ -2340,7 +2360,13 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
     }
   case KMP_DISTRIBUTE_STATIC_CHUNKED:
   case KMP_DISTRIBUTE_STATIC:
-    ili = ll_make_kmpc_for_static_init_simple_spmd(&loop_args, sched);
+    // AOCC begin
+    if (flg.x86_64_omptarget) {
+      ili = ll_make_kmpc_for_static_init(&loop_args);
+    // AOCC end
+    } else {
+      ili = ll_make_kmpc_for_static_init_simple_spmd(&loop_args, sched);
+    }
     break;
   default:
     ili = ll_make_kmpc_dispatch_init(&loop_args);
