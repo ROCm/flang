@@ -6387,6 +6387,14 @@ make_bitcast(OPERAND *cast_op, LL_Type *rslt_type)
     instr = llvm_info.last_instr;
     while (instr) {
       switch (instr->i_name) {
+      // AOCC begin
+      // Restrict bitcast propagation till the CALL instruction
+      case I_SW:
+      case I_INVOKE:
+      case I_CALL:
+        instr = NULL;
+        break;
+      // AOCC end
       case I_BR:
       case I_INDBR:
       case I_NONE:
@@ -6682,6 +6690,7 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
   int ld_nme;
   int c;
 
+  return NULL;
   if (new_ebb || (!ilix) || (IL_TYPE(ILI_OPC(ilix)) != ILTY_LOAD))
     return NULL;
 
