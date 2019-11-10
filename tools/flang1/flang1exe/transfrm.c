@@ -1827,6 +1827,11 @@ collapse_assignment(int asn, int std)
   FtnRtlEnum rtlRtn;
   int rhs_isptr, lhs_isptr;
 
+  // AOCC Begin
+  // for device offload do not transform array assignments to runtime library
+  if (flg.omptarget) return 0;
+  // AOCC End
+
   if (flg.opt < 2)
     return 0;
 
