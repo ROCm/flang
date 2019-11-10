@@ -2512,7 +2512,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.pow.f32", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
       return ilix;
-
     case IL_FCOS:
       (void)mk_prototype("llvm.cos.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.cos.f32", 1, op1);
@@ -6498,6 +6497,31 @@ addarth(ILI *ilip)
         return ilix;
       }
     }
+    // AOCC Begin
+    // for constant int exponent values of 1,2,-1,-2 generate llvm intrinsic
+    // this will help in vectorizatio of few loops
+    if (flg.use_llvm_math_intrin && (IL_TYPE(ILI_OPC(op2)) == ILTY_CONS)) {
+      if ((con2v2 == 1) || (con2v2 == 2) || (con2v2 == -1) || (con2v2 == -2)) {
+        INT tmp[4];
+        int newili;
+        tmp[0] = 0;
+        if (con2v2 == 1) {
+         atoxf("1.0", &tmp[1], 3);
+        } else if (con2v2 == 2) {
+         atoxf("2.0", &tmp[1], 3);
+	} else if (con2v2 == -1) {
+         atoxf("-1.0", &tmp[1], 3);
+        } else if (con2v2 == -2) {
+         atoxf("-2.0", &tmp[1], 3);
+        } 
+	newili=ad1ili(IL_FCON, getcon(tmp, DT_FLOAT));
+        (void)mk_prototype("llvm.pow.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
+        ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.pow.f32", 2, op1, newili);
+        ilix = ad2altili(opc, op1,newili , ilix);
+        return ilix;
+      }
+    }
+    // AOCC End
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_powi, &funcsptr, 1, false, DT_FLOAT, 2, DT_FLOAT,
                         DT_INT);
