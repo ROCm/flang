@@ -3376,10 +3376,14 @@ assign(SST *newtop, SST *stktop)
   if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
     if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
        if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
-          aclp = SST_ACLG(stktop);
-          // if the temporary created is considered to have deferred shape
-          if(AD_DEFER(AD_DPTR( aclp->dtype)))
-            sem.acl_ido.replace_temp = true;
+	  SPTR lhs_sptr;
+	  lhs_sptr = SST_SYMG(newtop);
+	  if(!ALLOCATTRG(lhs_sptr)) {
+            aclp = SST_ACLG(stktop);
+            // if the temporary created is considered to have deferred shape
+            if(AD_DEFER(AD_DPTR( aclp->dtype)) )
+              sem.acl_ido.replace_temp = true;
+	  }
        }
     }
   }
