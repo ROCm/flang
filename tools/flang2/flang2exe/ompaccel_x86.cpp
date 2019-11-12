@@ -36,10 +36,23 @@
 #include "symfun.h"
 #include <set>
 #include <map>
+#include <string>
 
-static std::set<SPTR> ompaccel_x86_parallel_func_set;
-static std::set<SPTR> ompaccel_x86_fork_wrapper_func_set;
-static std::set<SPTR> ompaccel_x86_reduced_func_set;
+static std::set<std::string> ompaccel_x86_parallel_func_set;
+static std::set<std::string> ompaccel_x86_fork_wrapper_func_set;
+static std::set<std::string> ompaccel_x86_reduced_func_set;
+
+// flang reuses SPTR values, so we mangle the name with the SPTR to get globally
+// unique name for each func_sptr in a compilation unit.
+static std::string ompaccel_x86_get_mangled_sptr(SPTR func_sptr) {
+  std::string func_name(getprint(func_sptr));
+  // FIXME: The Concatenation below results in some strange memory violations
+  // in some test-cases. The outlined func_name itself is mangled at this point,
+  // so we rely on the name for uniquness.
+  // return func_name + std::to_string(func_sptr);
+
+  return func_name;
+}
 
 // Returns the ompaccel-sym that corresponds to \p reduction_sym in \p tinfo
 static OMPACCEL_SYM *get_ompaccel_sym_for(OMPACCEL_RED_SYM *reduction_sym, OMPACCEL_TINFO *tinfo) {
@@ -83,8 +96,10 @@ void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo) {
     return;
   }
 
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+
   // If we already did the reduction, then ignore.
-  if (ompaccel_x86_reduced_func_set.find(func_sptr) !=
+  if (ompaccel_x86_reduced_func_set.find(mangled_sptr) !=
       ompaccel_x86_reduced_func_set.end())
     return;
 
@@ -116,7 +131,7 @@ void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo) {
     reduced_syms.insert(device_sym);
   }
 
-  ompaccel_x86_reduced_func_set.insert(func_sptr);
+  ompaccel_x86_reduced_func_set.insert(mangled_sptr);
 }
 
 void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
@@ -157,12 +172,14 @@ void ompaccel_x86_add_parallel_func(SPTR func_sptr) {
   bool debug_me = false;
   if (debug_me)
     printf("[ompaccel-x86]: adding as parallel: %s\n", SYMNAME(func_sptr));
-  ompaccel_x86_parallel_func_set.insert(func_sptr);
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  ompaccel_x86_parallel_func_set.insert(mangled_sptr);
   return;
 }
 
 bool ompaccel_x86_is_parallel_func(SPTR func_sptr) {
-  if (ompaccel_x86_parallel_func_set.find(func_sptr) !=
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  if (ompaccel_x86_parallel_func_set.find(mangled_sptr) !=
       ompaccel_x86_parallel_func_set.end())
     return true;
   else
@@ -176,12 +193,14 @@ bool ompaccel_x86_is_toplevel_parallel_func(SPTR func_sptr) {
 }
 
 void ompaccel_x86_add_fork_wrapper_func(SPTR func_sptr) {
-  ompaccel_x86_fork_wrapper_func_set.insert(func_sptr);
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  ompaccel_x86_fork_wrapper_func_set.insert(mangled_sptr);
   return;
 }
 
 bool ompaccel_x86_is_fork_wrapper_func(SPTR func_sptr) {
-  if (ompaccel_x86_fork_wrapper_func_set.find(func_sptr) !=
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  if (ompaccel_x86_fork_wrapper_func_set.find(mangled_sptr) !=
       ompaccel_x86_fork_wrapper_func_set.end())
     return true;
   else
@@ -208,10 +227,11 @@ bool ompaccel_x86_is_entry_func(SPTR func_sptr) {
   return false;
 }
 
-static std::set<SPTR> ompaccel_x86_tid_ready;
+static std::set<std::string> ompaccel_x86_tid_ready;
 
 bool ompaccel_x86_has_tid_args(SPTR func_sptr) {
-  if (ompaccel_x86_tid_ready.find(func_sptr)
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  if (ompaccel_x86_tid_ready.find(mangled_sptr)
       != ompaccel_x86_tid_ready.end())
     return true;
   return false;
@@ -219,15 +239,22 @@ bool ompaccel_x86_has_tid_args(SPTR func_sptr) {
 
 void ompaccel_x86_add_tid_params(SPTR func_sptr) {
 
-  // If we already added the tid params for func_sptr then ignore.
-  if (ompaccel_x86_tid_ready.find(func_sptr)
-      != ompaccel_x86_tid_ready.end())
-    return;
-
   int func_dpsc = DPDSCG(func_sptr);
   int func_paramct = PARAMCTG(func_sptr);
   int sym;
   SPTR orig_params[func_paramct];
+
+  // If we already added the tid params for func_sptr then ignore.
+  if (ompaccel_x86_has_tid_args(func_sptr)) {
+    if (func_paramct >= 2) {
+      if (strcmp(getprint((SPTR)aux.dpdsc_base[func_dpsc + 0]),
+            "global_tid") == 0 &&
+          strcmp(getprint((SPTR)aux.dpdsc_base[func_dpsc + 1]),
+            "bound_tid") == 0) {
+        return;
+      }
+    }
+  }
 
   // Store all the original params
   for (int i = 0; i < func_paramct; i++) {
@@ -258,7 +285,9 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
   // Update the param-count and aux DS
   PARAMCTP(func_sptr, func_paramct + 2);
   aux.dpdsc_avl += func_paramct + 2;
-  ompaccel_x86_tid_ready.insert(func_sptr);
+
+  std::string mangled_sptr = ompaccel_x86_get_mangled_sptr(func_sptr);
+  ompaccel_x86_tid_ready.insert(mangled_sptr);
 }
 
 void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
