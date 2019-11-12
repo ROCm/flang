@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * [CPUPC-2386]
+ * Last modified: Nov 12, 2019
+ *
  */
 
 /** \file
@@ -6558,6 +6561,25 @@ dump_one_ast(int i)
 {
   _dump_one_ast(i, gbl.dbgfil);
 }
+
+// AOCC Begin
+/* routine must be externally visible */
+void
+get_subtree(int ast, int* par, int* sib)
+{
+  int i;
+  int astp, asts;
+
+  for (i = 1; i < astb.stg_avail; i++) {
+    if (i == ast)
+      break;
+
+    astp = i;
+  }
+  *par = astp;
+  *sib = i + 1;
+}
+// AOCC End
 
 /* routine must be externally visible */
 void

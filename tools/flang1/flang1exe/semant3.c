@@ -21,7 +21,7 @@
  * Changes to support,
  * [CPUPC-2279]:F2008: Raise error for non integer 
  * and non character stop codes
- * Last modified: Tue Sep 25 2019
+ * Last modified: Nov 12, 2019
  *
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 14th October 2019
@@ -87,6 +87,8 @@ static int get_derived_type(SST *, LOGICAL);
 extern int target_ast;
 extern int reduction_kernel;
 #endif
+void get_subtree(int ast, int* par, int* sib);
+int sib, par;
 // AOCC End
 
 #define IN_OPENMP_ATOMIC (sem.mpaccatomic.ast && !(sem.mpaccatomic.is_acc))
@@ -1805,6 +1807,18 @@ errorstop_shared:
         ast2 = astb.ptr0c;
         (void)mkarg(RHS(1), &dum);
         ast1 = SST_ASTG(RHS(1));
+        SST_TMPP(LHS, ast1);
+        get_subtree(ast1, &par, &sib);
+        // AOCC Begin
+        if (A_TYPEG(ast1) == A_ID || A_TYPEG(ast1) == A_CNST) {
+          snprintf(name, sizeof(name), "%s", getprint((int)A_SPTRG(par)));
+          if (flg.std == F2008) {
+            ast2 = mk_cnst(getstring(name, strlen(name)));
+          } else {
+          // AOCC End
+            ast2 = mk_cnst(getstring(name, 5));
+          }
+        }
       }
       if (flg.standard) {
         error(170, 2, gbl.lineno,
