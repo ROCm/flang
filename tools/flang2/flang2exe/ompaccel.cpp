@@ -28,6 +28,7 @@
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
  * Date of modification 05th November  2019
+ * Date of modification 13th November  2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -943,6 +944,7 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
     for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j) {
       if (MIDNUMG(current_tinfo->quiet_symbols[j].host_sym) == sptr) {
         POINTERP(sym, POINTERG(current_tinfo->quiet_symbols[j].host_sym));
+        DTYPEP(sym, DTYPE(DTYPEG(current_tinfo->quiet_symbols[j].host_sym) + 1));
       }
     }
   }
