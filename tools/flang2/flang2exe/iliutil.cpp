@@ -2523,8 +2523,8 @@ addarth(ILI *ilip)
       // AOCC Begin
       // AMDGPUIselLowering only handles cos.f32
       if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.amdgcn.cos.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.amdgcn.cos.f32", 1, op1);
+        (void)mk_prototype("llvm.cos.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.cos.f32", 1, op1);
         return ad1altili(opc, op1, ilix);
       }
       // AOCC End
@@ -2540,8 +2540,8 @@ addarth(ILI *ilip)
       // AOCC Begin
       // AMDGPUIselLowering only handles sin.f32
       if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.amdgcn.sin.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.amdgcn.sin.f32", 1, op1);
+        (void)mk_prototype("llvm.sin.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sin.f32", 1, op1);
         return ad1altili(opc, op1, ilix);
       }
       // AOCC End
