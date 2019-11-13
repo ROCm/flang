@@ -36,6 +36,9 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 1st October 2019
+ *
+ * Compile time improvement changes
+ * Date of modification 14th November 2019
  */
 
 /**
@@ -6690,13 +6693,13 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
   int ld_nme;
   int c;
 
-  return NULL;
   if (new_ebb || (!ilix) || (IL_TYPE(ILI_OPC(ilix)) != ILTY_LOAD))
     return NULL;
 
   ld_nme = ILI_OPND(ilix, 2);
   if (ld_nme == NME_VOL) /* don't optimize a VOLATILE load */
     return NULL;
+
 
   /* If there is a deletable store to 'ld_nme', 'del_store_li', set
    * its 'deletable' flag to false.  We do this because 'ld_ili'
@@ -6724,6 +6727,17 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
       last_instr = (instr->i_name != I_NONE) ? instr : instr->prev;
       break;
     }
+    //AOCC Begin
+    //check the exit condition similar to the loop below
+    //this is expected to reduce compilation time
+    if ((instr->i_name == I_INVOKE) || (instr->i_name == I_CALL)) {
+      if (!(instr->flags & FAST_CALL)) break;
+    }
+    if ((instr->i_name == I_NONE) || (instr->i_name == I_BR) ||
+        (instr->i_name == I_INDBR)) {
+      if (!ENABLE_ENHANCED_CSE_OPT) break;
+    }
+    //AOCC End
   }
 
   for (instr = llvm_info.last_instr; instr != last_instr; instr = instr->prev) {
