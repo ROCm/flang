@@ -9,6 +9,9 @@
  *
  * Lowering to amdgcn sin and cos
  * Date of Modification: November 2019
+ *
+ * Lowring llvm.exp.f64 to llvm.exp.f32 for AMDGPU
+ * Date of modification 15th November 2019
  */
 /*
  * Copyright (c) 1993-2019, NVIDIA CORPORATION.  All rights reserved.
@@ -2576,6 +2579,16 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.exp.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DEXP:
+      // AOCC Begin
+      // AMDGPUIselLowering expands to exp.f64 into libcall!
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("llvm.exp.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.exp.f32", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
+      // AOCC End
       (void)mk_prototype("llvm.exp.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.exp.f64", 1, op1);
       return ad1altili(opc, op1, ilix);

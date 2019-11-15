@@ -26,6 +26,7 @@
  * Date of modification 23rd September 2019
  * Date of modification 07th October 2019
  * Date of modification 14th October 2019
+ * Date of modification 15th November 2019
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -9972,8 +9973,10 @@ set_parref_flag(int sptr, int psptr, int stblk)
     if (SCG(sptr) != SC_LOCAL) {
       if (SCG(sptr) == SC_BASED) {
         int sym = MIDNUMG(sptr);
-        if (SCG(sym) != SC_LOCAL)
+        // AOCC Modification : Allowing global variables to be mapped.
+        if (!(flg.amdgcn_target && SCG(sym) == SC_CMBLK) && SCG(sym) != SC_LOCAL) {
           return;
+        }
       }
     }
   }
