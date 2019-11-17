@@ -955,7 +955,9 @@ want_descriptor_anyway(int sptr)
     if (ALLOCG(sptr))
       return TRUE;
   }
-  if (flg.debug && !XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr)) {
+  // AOCC changed the AND codition to OR as per above description
+  // if (flg.debug && (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
+  if (flg.debug || (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
     /* only need non-fixed bounds */
     int dtype;
     dtype = DTYPEG(sptr);
