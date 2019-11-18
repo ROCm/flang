@@ -15,6 +15,13 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Month of Modification: November 2019
+ *
+ */
+
 /**
    \file
    \brief Fortran data partitioning module, output.
@@ -942,7 +949,8 @@ make_secd_for_members(int dtype)
 LOGICAL
 want_descriptor_anyway(int sptr)
 {
-  if (gbl.internal == 1) {
+  // AOCC added check for function results
+  if (gbl.internal == 1 || RESULTG(sptr)) {
     int dtype;
     dtype = DTYPEG(sptr);
     if (DTY(dtype) != TY_ARRAY)
@@ -955,9 +963,7 @@ want_descriptor_anyway(int sptr)
     if (ALLOCG(sptr))
       return TRUE;
   }
-  // AOCC changed the AND codition to OR as per above description
-  // if (flg.debug && (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
-  if (flg.debug || (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
+  if (flg.debug && (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
     /* only need non-fixed bounds */
     int dtype;
     dtype = DTYPEG(sptr);
