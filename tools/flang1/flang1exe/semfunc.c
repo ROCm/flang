@@ -48,6 +48,9 @@
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
  * Month of Modification: July 2019
+ *
+ * Fixes for CP2K application build
+ * Month of Modification: November 2019
  */
 
 /** \file
@@ -7626,7 +7629,8 @@ ref_pd(SST *stktop, ITEM *list)
       XFR_ARGAST(3);
       dtype2 = SST_DTYPEG(stkp);
       if (!DT_ISINT(DTY(dtype2 + 1)) ||
-          count != get_int_cval(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2))))) {
+          ((STYPEG(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2)))) == ST_CONST) && // AOCC
+          count != get_int_cval(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2)))))) {
         E74_ARG(pdsym, 3, NULL);
         goto call_e74_arg;
       }

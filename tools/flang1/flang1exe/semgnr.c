@@ -14,6 +14,12 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Fixes for CP2K application build
+ * Month of Modification: November 2019
+ */
 
 /** \file
     \brief Fortran utility routines used by Semantic Analyzer to process
@@ -390,6 +396,7 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       E155("Empty generic procedure -", SYMNAME(sptr));
     }
 
+    bool renamed = true;
     for (gndsc = GNDSCG(sptrgen); gndsc; gndsc = SYMI_NEXT(gndsc)) {
       func = SYMI_SPTR(gndsc);
       func_sptrgen = sptrgen;
@@ -421,8 +428,12 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
         if (func == 0)
           continue;
       }
-      if (STYPEG(func) == ST_ALIAS)
+      // AOCC Begin
+      if (STYPEG(func) == ST_ALIAS) {
+        renamed = true;
         func = SYMLKG(func);
+      }
+      // AOCC End
       if (chk_elementals && ELEMENTALG(func)) {
         argdistance =
             args_match(func, arg_cnt, distance_sz, list, TRUE, try_device == 1);
@@ -431,7 +442,7 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
                                  try_device == 1);
       }
       if (found && func && found != func && *min_argdistance != INF_DISTANCE &&
-          !is_conflicted_generic(func_sptrgen, found_sptrgen) &&
+          (!renamed && !is_conflicted_generic(func_sptrgen, found_sptrgen)) && // AOCC
           cmp_arg_score(argdistance, min_argdistance, distance_sz) == 0) {
         int len;
         char *name, *name_cpy;
