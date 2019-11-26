@@ -25,6 +25,7 @@
  * Date of modification 23rd September 2019
  * Date of modification 07th October 2019
  * Date if modification 05th November 2019
+ * Date if modification 26th November 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -299,7 +300,11 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
   else if (llis_vector_kind(dtype)) {
     ompaccelInternalFail("Vector data type is not implemented, cannot be passed to target region. ");
   } else if (llis_struct_kind(dtype)) {
-    ompaccelInternalFail("Struct data type is not implemented, cannot be passed to target region. ");
+    // AOCC Begin
+//  ompaccelInternalFail("Struct data type is not implemented, cannot be passed to target region. ");
+    int size =  DTyArrayDesc(dtype);
+    ilix = ad_icon(size);
+    // AOCC End
   } else if (llis_function_kind(dtype)) {
     ompaccelInternalFail("Function data type is not implemented, cannot be passed to target region. ");
   } else if (llis_integral_kind(dtype) || dtype == DT_DBLE || dtype == DT_FLOAT) {
@@ -355,7 +360,8 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
             rilix = ad2ili(IL_KADD, ad_kconi(0), ad_kconi(1));
           ilix = ad2ili(IL_KMUL, ilix, rilix);
         }
-        ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
+	if (DTY( (DTYPE) DTY((DTYPE) (dtype + 1))) != TY_STRUCT)  // AOCC
+          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
       }
     }
   }else {

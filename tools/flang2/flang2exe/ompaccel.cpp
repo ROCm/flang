@@ -29,6 +29,7 @@
  * Date of modification 23rd September 2019
  * Date of modification 05th November  2019
  * Date of modification 13th November  2019
+ * Date of modification 26th November  2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -2896,6 +2897,20 @@ void
 ompaccel_tinfo_current_set(OMPACCEL_TINFO *tinfo)
 {
   current_tinfo = tinfo;
+}
+// AOCC Begin
+bool
+is_nvvm_sreg_function(SPTR func_sptr)
+{
+  const char* fname = get_llvm_name(func_sptr);
+#ifdef OMP_OFFLOAD_AMD
+  if (strncmp(fname,"nvvm.read.ptx.sreg",18)) return false;
+#else
+  if (strncmp(fname,"llvm.nvvm.read.ptx.sreg",23)) return false;
+#endif
+  for (int i=0; i<sizeof(NVVM_SREG); i++)
+     if (!strcmp(NVVM_SREG[i], fname)) return true;
+  return false;
 }
 // AOCC End
 #endif

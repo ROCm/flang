@@ -14,6 +14,12 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 26th Nov 2019
+ */
 
 /**
    \file
@@ -52,6 +58,7 @@
 #define MAXARGLEN 256
 #define LLVM_SHORTTERM_AREA 14
 
+bool is_nvvm_sreg_function(SPTR funcsptr); //AOCC
 typedef struct char_len {
   SPTR sptr;
   struct char_len *next;
@@ -318,6 +325,9 @@ ll_process_routine_parameters(SPTR func_sptr)
 
   /* If an internal function */
   if ((gbl.internal > 1 && STYPEG(func_sptr) == ST_ENTRY) &&
+#ifdef OMP_OFFLOAD_LLVM
+      !is_nvvm_sreg_function(func_sptr) &&  // AOCC
+#endif
       !OUTLINEDG(func_sptr)) {
     /* get the display variable. This will be the last argument. */
     display_temp = aux.curr_entry->display;
