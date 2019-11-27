@@ -37,6 +37,14 @@
 !    are access private
 ! +  for windows, the contained routines are forced to be 'cref'
 !
+!
+! * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+! *
+! * Bug fixes.
+! *
+!  * Date of Modification: November 2019
+!
+
 
 #if defined(TARGET_WIN_X8632) || defined(TARGET_WIN_X8664)
 #define DECDIR !DEC$
@@ -190,7 +198,7 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_thread_limit_,omp_get_thread_limit_) :
   end interface
 
   interface
-    function omp_get_num_procs ()
+    function omp_get_num_procs () bind(C, name='omp_get_num_procs')
     use omp_lib_kinds
     integer ( kind=omp_integer_kind ) :: omp_get_num_procs
 DECDIR ATTRIBUTES C :: omp_get_num_procs
@@ -200,7 +208,7 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_num_procs_,omp_get_num_procs_) :: omp_
   end interface
 
   interface
-    function omp_get_num_threads ()
+    function omp_get_num_threads ()  bind(C, name='omp_get_num_threads')
     use omp_lib_kinds
     integer ( kind=omp_integer_kind ) :: omp_get_num_threads
 DECDIR ATTRIBUTES C :: omp_get_num_threads
@@ -210,7 +218,7 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_num_threads_,omp_get_num_threads_) :: 
   end interface
 
   interface
-    function omp_get_thread_num ()
+    function omp_get_thread_num () bind(C, name='omp_get_thread_num')
     use omp_lib_kinds
     integer ( kind=omp_integer_kind ) :: omp_get_thread_num
 DECDIR ATTRIBUTES C :: omp_get_thread_num
