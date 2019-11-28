@@ -5311,7 +5311,7 @@ exp_strcpy(STRDESC *str1, STRDESC *str2)
   if (str1->dtype == TY_CHAR) {
     // AOCC restrict the checks for target overloading
     // we need to inline all f90_strcpy calls
-    if (flg.omptarget || !strovlp(str1, str2)) {
+    if (!strovlp(str1, str2)) {
 /*
  * single source, no overlap
  */
@@ -5517,6 +5517,10 @@ strovlp(STRDESC *lhs, STRDESC *rhs)
 
   if (rhs->next != NULL) /* single rhs only */
     return true;
+  // AOCC. if rhs is a constant string it cannot overlap
+  // TODO: omptarget check is not required
+  if (flg.omptarget && rhs->liscon)
+    return false;
   if (!rhs->aisvar) /* rhs must be simple var or constant */
     return true;
   rsym = CONVAL1G(rhs->aval);
