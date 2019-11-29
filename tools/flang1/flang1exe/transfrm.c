@@ -94,6 +94,106 @@ struct pure_gbl pure_gbl;
 extern int pghpf_type_sptr;
 int pghpf_local_mode_sptr = 0;
 
+// AOCC BEGIN
+/* maximum number of AST statement clones */
+#define MAX_CLONES 1000
+static void rewrite_omp_target_construct() {
+
+  int std = 0;
+  int ast = 0, ifast = 0, new_if = 0, new_end = 0, new_else = 0;
+  int cloned_stmts[MAX_CLONES];
+  int begin_std = 0, target_ast = 0;
+  int curr = 0;
+  int new_stmt = 0;
+
+  ast_visit(1,1);
+  for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+
+    // Search for BMPSCOPE.
+    if (A_TYPEG(ast) != A_MP_BMPSCOPE) {
+     continue;
+    }
+    begin_std = std;
+
+    // Next AST Statement should be Target
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+    if (A_TYPEG(ast) != A_MP_TARGET) {
+      continue;
+    }
+    target_ast = ast;
+
+    ifast = A_IFPARG(target_ast);
+    if (!ifast)
+      continue;
+
+    // Create new if-then-else structure.
+    new_if = mk_stmt(A_IFTHEN, 0);
+    new_else = mk_stmt(A_ELSE, 0);
+    new_end = mk_stmt(A_ENDIF, 0);
+    // Copy the condition from the TARGET statement.
+    A_IFEXPRP(new_if, ifast);
+    // Place if-then before the A_MP_BMPSCOPE.
+    add_stmt_before(new_if, begin_std);
+    A_IFPARP(ast, 0);
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    while (A_TYPEG(ast) != A_MP_EMAP) {
+      assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
+    std = STD_NEXT(std);
+
+    // clone all the statements found below.
+    while (std > 0) {
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) == A_MP_ENDTARGET)
+        break;
+      new_stmt = ast_rewrite(ast);
+      A_DESTP(new_stmt, A_DESTG(ast));
+      A_SRCP(new_stmt, A_SRCG(ast));
+      assert(curr < MAX_CLONES,
+             "rewrite_omp_target_construct: Too many AST "
+             "statements to clone",ast,4);
+      cloned_stmts[curr++] = new_stmt;
+      std = STD_NEXT(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_ENDTARGET, "", ast, 4);
+
+    // Match for A_EMPSCOPE.
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+    assert(A_TYPEG(ast) == A_MP_EMPSCOPE, "", ast, 4);
+
+    // Insert else-then {cloned nodes} statements after
+    // A_MP_EMPSCOPE.
+    add_stmt_after(new_end, std);
+    // Insert the cloned statements in the
+    // else part.
+    while (curr > 0)
+      add_stmt_after(cloned_stmts[--curr],std);
+    add_stmt_after(new_else, std);
+
+    // Move to next node.
+    std = STD_NEXT(std);
+  }
+
+  ast_unvisit();
+}
+// AOCC END
+
 void
 transform(void)
 {
@@ -181,6 +281,20 @@ transform(void)
       dstda();
     }
 #endif
+
+// AOCC BEGIN
+    if (flg.omptarget) {
+      /* Handle if-clause in OpenMP statements.
+      */
+      rewrite_omp_target_construct();
+#if DEBUG
+      if (DBGBIT(50, 4)) {
+        fprintf(gbl.dbgfil, "After rewrite_omp_target_construct\n");
+        dstda();
+      }
+#endif
+    }
+// AOCC END
 
 #if DEBUG
     if (DBGBIT(50, 2)) {
