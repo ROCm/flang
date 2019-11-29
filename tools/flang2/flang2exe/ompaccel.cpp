@@ -2479,6 +2479,12 @@ exp_ompaccel_etarget(ILM *ilmp, int curilm, SPTR targetfunc_sptr,
     // Create kernel with single team.
     ili = ll_make_tgt_target_teams(
         gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID, uplevel_sptr, 1, 0);
+   // AOCC Begin
+   // target simd (without parallel clause) need to be executed on single thread. 
+  } else if (ompaccel_tinfo_current_target_mode() == mode_target_simd) {
+    ili = ll_make_tgt_target_teams(
+        gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID, uplevel_sptr, 1, 1);
+   // AOCC End
   } else {
     ili = ll_make_tgt_target_teams(
         gbl.ompoutlinedfunc, OMPACCEL_DEFAULT_DEVICEID, uplevel_sptr, 0, 0);
