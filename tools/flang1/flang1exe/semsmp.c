@@ -9974,7 +9974,7 @@ set_parref_flag(int sptr, int psptr, int stblk)
       if (SCG(sptr) == SC_BASED) {
         int sym = MIDNUMG(sptr);
         // AOCC Modification : Allowing global variables to be mapped.
-        if (!(flg.amdgcn_target && SCG(sym) == SC_CMBLK) && SCG(sym) != SC_LOCAL) {
+        if (!(flg.omptarget && SCG(sym) == SC_CMBLK) && SCG(sym) != SC_LOCAL) {
           return;
         }
       }
