@@ -27,6 +27,7 @@
  * Date of modification 07th October 2019
  * Date of modification 14th October 2019
  * Date of modification 15th November 2019
+ * Date of modification 30th November 2019
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -8800,8 +8801,13 @@ begin_combine_constructs(BIGINT64 construct)
         errwarn(1203);
         combinedMode = mode_target_parallel_for;
       } else if (combinedMode == mode_target_teams_distribute) {
+        // AOCC Begin
+        // Commenting this as generated code is correct
+#ifndef OMP_OFFLOAD_AMD
         error(1202, ERR_Severe, gbl.lineno, "target teams distribute",
               "parallel do");
+#endif
+        // AOCC End
       } else if (combinedMode == mode_target_teams) {
         // AOCC Begin
         // Commenting this as generated code is correct
