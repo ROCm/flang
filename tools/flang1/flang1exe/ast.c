@@ -3451,6 +3451,10 @@ simply_contiguous(int arr_ast)
     }
     break;
   case A_SUBSCR:
+    sptr = memsym_of_ast(arr_ast);
+    if (POINTERG(sptr)) {
+      return CONTIGATTRG(sptr);
+    }
     return contiguous_array_section(arr_ast);
   }
 
