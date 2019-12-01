@@ -818,6 +818,12 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
 
   NEW(info, OMPACCEL_TINFO, 1);
   info->func_sptr = func_sptr;
+  // AOCC Begin
+  // Add function name also. It is possible that the different
+  // functions get same sptr (they are in diferent scope). 
+  NEW(info->func_name,char,strlen(SYMNAME(func_sptr))+1);
+  strcpy(info->func_name,SYMNAME(func_sptr));
+  // AOCC End
   info->n_symbols = 0;
   if (max_nargs != 0) {
     NEW(info->symbols, OMPACCEL_SYM, max_nargs);
@@ -854,7 +860,8 @@ bool
 ompaccel_tinfo_has(int func_sptr)
 {
   for (int i = 0; i < num_tinfos; ++i) {
-    if (tinfos[i]->func_sptr == func_sptr) {
+    // AOCC added additional check to check function name
+    if (tinfos[i]->func_sptr == func_sptr && !(strcmp(tinfos[i]->func_name,SYMNAME(func_sptr)))) {
       return true;
     }
   }
@@ -866,7 +873,8 @@ ompaccel_tinfo_get(int func_sptr)
 {
   int i;
   for (i = 0; i < num_tinfos; ++i) {
-    if (tinfos[i]->func_sptr == func_sptr) {
+    // AOCC added additional check to check function name
+    if (tinfos[i]->func_sptr == func_sptr && !(strcmp(tinfos[i]->func_name,SYMNAME(func_sptr)))) {
       return tinfos[i];
     }
   }

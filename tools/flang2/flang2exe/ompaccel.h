@@ -90,6 +90,7 @@ struct _OMPACCEL_TARGET{
   int n_reduction_symbols;                /*  Number of reduction symbols */
   OMPACCEL_RED_SYM *reduction_symbols;    /*  Reduction symbols along with the reduction operator */
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
+  char *func_name;                        /*  Function name */  // AOCC
 };
 
 static bool isOmpaccelRegistered = false;
