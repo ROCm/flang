@@ -89,7 +89,7 @@
 /* Initial Max target region */
 #define INC_EXP 2
 int tinfo_size = 50;
-int tinfo_size_reductions = 10;
+int tinfo_size_reductions = 20; // AOCC
 
 
 int num_tinfos = 0;
