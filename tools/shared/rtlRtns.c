@@ -146,9 +146,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"dmodulov", "", false, ""},
     {"errorstop08a_char", "", false, ""},
     {"errorstop08a_int", "", false, ""},
-    /* AOCC begin */
-    {"execute_command_line", "", false, ""},
-    /* AOCC end */
+    {"execcmdline", "", false, ""},
     {"exit", "", false, ""},
     {"expon", "", false, "k"},
     {"expond", "", false, "k"},
