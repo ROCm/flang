@@ -28,6 +28,7 @@
  * Date of modification 14th October 2019
  * Date of modification 15th November 2019
  * Date of modification 30th November 2019
+ * Date of modification 02nd December 2019
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -2010,8 +2011,11 @@ semsmp(int rednum, SST *top)
       sem.collapse = CL_VAL(CL_COLLAPSE);
     }
     sem.expect_simd_do = TRUE;
+    // AOCC Commenting repeated code
+#ifndef OMP_OFFLOAD_AMD
     par_push_scope(TRUE);
     begin_parallel_clause(sem.doif_depth);
+#endif
     apply_nodepchk(gbl.lineno, 1);
     SST_ASTP(LHS, 0);
 
