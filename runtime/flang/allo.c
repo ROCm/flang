@@ -398,6 +398,7 @@ I8(__alloc04)(__NELEM_T nelem, dtype kind, size_t len,
 
   if (*pointer && I8(__fort_allocated)(*pointer)
       && ISPRESENT(stat) && *stat == 2) {
+      printf("came here \n");
     int i;
     char *mp;
     MP_P_STDIO;
@@ -954,7 +955,9 @@ ENTF90(ALLOC04A, alloc04a)(__NELEM_T *nelem, __INT_T *kind, __INT_T *len,
 {
   ALLHDR();
 
-  if (ISPRESENT(stat) && *firsttime && *stat != 2)
+  // AOCC
+  // if (ISPRESENT(stat) && *firsttime && *stat != 2)
+  if (ISPRESENT(stat) && *firsttime)
     *stat = 0;
 
   if (!ISPRESENT(stat) && !*align) {
