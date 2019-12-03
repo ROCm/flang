@@ -21,6 +21,8 @@
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Dec 2019
  */
 
 /** \file
@@ -1219,6 +1221,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_BTEAMSN:
 #ifdef OMP_OFFLOAD_LLVM
       if(flg.omptarget && gbl.ompaccel_intarget) {
+        // AOCC begin
+        if (flg.x86_64_omptarget && opc == IM_BTEAMSN) {
+          int iliarg, nteams, n_limit;
+          nteams = ILI_OF(ILM_OPND(ilmp, 1));
+          n_limit = ILI_OF(ILM_OPND(ilmp, 2));
+          ili = ll_make_kmpc_push_num_teams(nteams, n_limit);
+          iltb.callfg = 1;
+          chk_block(ili);
+        }
+        // AOCC end
         exp_ompaccel_bteams(ilmp, curilm, outlinedCnt, uplevel_sptr, scopeSptr, incrOutlinedCnt);
         break;
       }
