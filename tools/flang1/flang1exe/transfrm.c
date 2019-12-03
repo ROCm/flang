@@ -105,6 +105,7 @@ static void rewrite_omp_target_construct() {
   int begin_std = 0, target_ast = 0;
   int curr = 0;
   int new_stmt = 0;
+  int found_inner_scope = 0;
 
   ast_visit(1,1);
   for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
@@ -153,13 +154,47 @@ static void rewrite_omp_target_construct() {
 
     assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
     std = STD_NEXT(std);
+    ast = STD_AST(std);
+
+    // There might be another inner BMPSCOPE for
+    // some constructs. Handle them too.
+    // TODO: Add more patterns.
+    found_inner_scope = 0;
+    if (A_TYPEG(ast) == A_MP_BMPSCOPE) {
+      found_inner_scope = 1;
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_TEAMS) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
 
     // clone all the statements found below.
     while (std > 0) {
       ast = STD_AST(std);
-      if (A_TYPEG(ast) == A_MP_ENDTARGET)
+      if (A_TYPEG(ast) == A_MP_ENDTARGET ||
+          A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
         break;
       new_stmt = ast_rewrite(ast);
+      // Disable the parallel execution of A_MP_PDO for now.
+      // TODO: Does this need to be enabled for any case?
+      if (A_TYPEG(ast) == A_MP_PDO) {
+        A_DISTPARDOP(new_stmt, 0);
+        A_DISTRIBUTEP(new_stmt,0);
+        A_TASKLOOPP(new_stmt, 0);
+        A_SCHED_TYPEP(new_stmt, 0);
+        A_ORDEREDP(new_stmt, 0);
+      }
       A_DESTP(new_stmt, A_DESTG(ast));
       A_SRCP(new_stmt, A_SRCG(ast));
       assert(curr < MAX_CLONES,
@@ -169,6 +204,24 @@ static void rewrite_omp_target_construct() {
       std = STD_NEXT(std);
     }
 
+    if (found_inner_scope) {
+      assert(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_EMPSCOPE) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
     assert(A_TYPEG(ast) == A_MP_ENDTARGET, "", ast, 4);
 
     // Match for A_EMPSCOPE.
