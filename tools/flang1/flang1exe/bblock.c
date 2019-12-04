@@ -21,6 +21,9 @@
  *
  * Date of Modification: April 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Dec 2019
+ *
  */
 
 /** \file bblock.c
@@ -44,6 +47,7 @@
 #include "rtlRtns.h"
 /* AOCC begin */
 #include "flang/ADT/hash.h"
+#include "llmputil.h"
 /* AOCC end */
 
 static int entry_point;
@@ -2279,4 +2283,353 @@ void warn_uninit_use() {
 
   ast_unvisit();
 }
+/* AOCC end */
+
+/* AOCC begin */
+#ifdef OMP_OFFLOAD_LLVM
+static int emit_toplevel_std(int atype) {
+  int ast;
+
+  ast = new_node(atype);
+  return mk_std(ast);
+}
+
+/* return true if \p std is a parallel section closure */
+static bool is_end_omp_parsec_std(int std) {
+  switch (A_TYPEG(STD_AST(std))) {
+  case A_MP_ENDPDO: case A_MP_ENDDISTRIBUTE: case A_MP_ENDTEAMS:
+  case A_MP_ENDPARALLEL:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
+/* return true if \p std is a parallel section beginning */
+static bool is_beg_omp_parsec_std(int std) {
+  switch (A_TYPEG(STD_AST(std))) {
+  case A_MP_PDO: case A_MP_DISTRIBUTE: case A_MP_TEAMS:
+  case A_MP_PARALLEL:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
+/*
+ * returns the next target std starting from
+ * \p std
+ */
+static int get_next_target_std(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+
+    if (asttype == A_MP_TARGET) {
+      return std;
+    }
+  }
+
+  return -1;
+}
+
+/*
+ * returns the next parallel section beginning starting
+ * from \p std
+ */
+static int get_next_beg_omp_parsec_std(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    if (is_beg_omp_parsec_std(std)) {
+      return std;
+    }
+  }
+
+  return -1;
+}
+
+/*
+ * returns the next parallel section closure starting
+ * from \p std
+ */
+static int get_next_end_omp_parsec_std(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    if (is_end_omp_parsec_std(std)) {
+      return std;
+    }
+  }
+
+  return -1;
+}
+
+/*
+ * returns the std after the parallel section closure at
+ * \p std
+ */
+static int get_std_after_end_omp_parsec(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    if (A_TYPEG(STD_AST(std)) == A_MP_EMPSCOPE)
+      continue;
+    if (!is_end_omp_parsec_std(std))
+      return std;
+  }
+
+  return -1;
+}
+
+/*
+ * returns the std after the parallel section beginning at
+ * \p std
+ */
+static int get_std_after_beg_omp_parsec(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    if (A_TYPEG(STD_AST(std)) == A_MP_BMPSCOPE)
+      continue;
+    if (!is_beg_omp_parsec_std(std))
+      return std;
+  }
+
+  return -1;
+}
+
+/* returns the related omp-std of \p std */
+static int get_omp_buddy_std(int std) {
+  return A_STDG(A_LOPG(STD_AST(std)));
+}
+
+/* returns true if \p std has MAP clause */
+static bool has_map(int std) {
+  int std_next = STD_NEXT(std);
+  if (std_next > 0) {
+    int ast = STD_AST(std_next);
+    if (A_TYPEG(ast) == A_MP_MAP)
+      return true;
+  }
+  return false;
+}
+
+/* return the TEAMS std of TARGET \p std */
+static int get_target_teams_std(int std) {
+  /* Skip the target-std */
+  std = STD_NEXT(std);
+
+  for (; std > 0; std = STD_NEXT(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    if (asttype == A_MP_MAP || asttype == A_MP_EMAP ||
+        asttype == A_MP_BMPSCOPE)
+      continue;
+    if (asttype == A_MP_TEAMS)
+      return std;
+    else
+      return -1;
+  }
+
+  return -1;
+}
+
+/* return true if \p std is TARGET */
+static bool is_target_teams(int std) {
+  if (get_target_teams_std(std) == -1)
+    return false;
+  return true;
+}
+
+/* returns the BMPSCOPE of TARGET \p std */
+static int get_target_scope_std(int std) {
+  return STD_PREV(std);
+}
+
+/* returns the BMPSCOPE of TEAMS std of target at \p std */
+static int get_target_teams_scope_std(int std) {
+  return STD_PREV(std);
+}
+
+/* returns a cloned TARGET of \p std */
+static int clone_target_std(int std) {
+  int new_ast = new_node(A_MP_TARGET);
+  A_IFPARP(new_ast, A_IFPARG(STD_AST(std)));
+  A_COMBINEDTYPEP(new_ast, A_COMBINEDTYPEG(STD_AST(std)));
+  A_LOOPTRIPCOUNTP(new_ast, A_LOOPTRIPCOUNTG(STD_AST(std)));
+  A_LOPP(new_ast, A_LOPG(STD_AST(std)));
+
+  return mk_std(new_ast);
+}
+
+/* returns a cloned BMPSCOPE of \p std */
+static int clone_bmpscope_std(int std) {
+  int new_ast = new_node(A_MP_BMPSCOPE);
+  A_STBLKP(new_ast, A_STBLKG(STD_AST(std)));
+  A_LOPP(new_ast, A_LOPG(STD_AST(std)));
+
+  return mk_std(new_ast);
+}
+
+/*
+ * links omp asts \p ast1 and ast2 by their LOP. This establishes their
+ * relationship
+ */
+static void make_omp_buddies_ast(int ast1, int ast2) {
+  A_LOPP(ast1, ast2);
+  A_LOPP(ast2, ast1);
+}
+
+/* Does the same as make_omp_buddies_ast() but for STD */
+static void make_omp_buddies_std(int std1, int std2) {
+  int ast1 = STD_AST(std1);
+  int ast2 = STD_AST(std2);
+  make_omp_buddies_ast(ast1, ast2);
+}
+
+/*
+ * closes the target region of \p curr_target_std at \p
+ * at_std
+ */
+static void end_target_std(int curr_target_std, int at_std) {
+  if (is_target_teams(curr_target_std)) {
+    int curr_target_teams_std = get_target_teams_std(curr_target_std);
+    int curr_target_endteams_std = emit_toplevel_std(A_MP_ENDTEAMS);
+    make_omp_buddies_std(curr_target_teams_std, curr_target_endteams_std);
+    insert_stmt_before(curr_target_endteams_std, at_std);
+
+    int curr_target_teams_bmpscope_std = get_target_teams_scope_std(curr_target_std);
+    int curr_target_teams_empscope_std = emit_toplevel_std(A_MP_EMPSCOPE);
+    make_omp_buddies_std(curr_target_teams_bmpscope_std, curr_target_teams_empscope_std);
+    insert_stmt_before(curr_target_teams_empscope_std, at_std);
+  }
+
+  int curr_endtarget_std = emit_toplevel_std(A_MP_ENDTARGET);
+  make_omp_buddies_std(curr_target_std, curr_endtarget_std);
+  insert_stmt_before(curr_endtarget_std, at_std);
+
+  int curr_target_bmpscope_std = get_target_scope_std(curr_target_std);
+  int curr_target_empscope_std = emit_toplevel_std(A_MP_EMPSCOPE);
+  make_omp_buddies_std(curr_target_bmpscope_std, curr_target_empscope_std);
+  insert_stmt_before(curr_target_empscope_std, at_std);
+}
+
+/*
+ * emits STDs to begin a new target region by cloning \p curr_target_std
+ * at \p at_std
+ */
+static int begin_target_std(int curr_target_std, int at_std) {
+  bool debug_me = false;
+  int new_target_bmpscope_std =
+    clone_bmpscope_std(get_target_scope_std(curr_target_std));
+  A_LOPP(STD_AST(new_target_bmpscope_std), 0);
+  insert_stmt_before(new_target_bmpscope_std, at_std);
+
+  int new_target_std = clone_target_std(curr_target_std);
+  A_LOPP(STD_AST(new_target_std), 0);
+  insert_stmt_before(new_target_std, at_std);
+  if (debug_me)
+    printf("[ompaccel-x86] creating a new target region at %d\n", STD_LINENO(new_target_std));
+
+  if (is_target_teams(curr_target_std)) {
+    int curr_target_teams_std = get_target_teams_std(curr_target_std);
+    int new_target_teams_bmpscope_std =
+      clone_bmpscope_std(get_target_teams_scope_std(curr_target_teams_std));
+    insert_stmt_before(new_target_teams_bmpscope_std, at_std);
+
+    int new_target_teams_std = emit_toplevel_std(A_MP_TEAMS);
+    insert_stmt_before(new_target_teams_std, at_std);
+  }
+  return new_target_std;
+}
+
+/* The main driver for openmp x86 offloading AST transformation */
+void ompaccel_x86_transform_ast() {
+  bool debug_me = false;
+  ast_visit(1, 1);
+
+  bool intarget = false;
+  int curr_target_ast = 0;
+  int curr_target_std = -1;
+  int std_next = -1;
+
+  for (int std = STD_NEXT(0); std > 0; std = std_next) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+    std_next = STD_NEXT(std);
+
+    if (asttype == A_MP_TARGET) {
+      curr_target_ast = ast;
+      curr_target_std = std;
+      intarget = true;
+
+    } else if (asttype == A_MP_ENDTARGET) {
+      if (A_LOPG(curr_target_ast) <= 0) {
+        make_omp_buddies_std(curr_target_std, std);
+        make_omp_buddies_std(get_target_scope_std(curr_target_std),
+            STD_NEXT(std));
+
+        if (is_target_teams(curr_target_std)) {
+          make_omp_buddies_std(get_target_teams_scope_std(
+                get_target_teams_std(curr_target_std)),
+              STD_PREV(std));
+
+          make_omp_buddies_std(get_target_teams_std(curr_target_std),
+              STD_PREV(STD_PREV(std)));
+        }
+      }
+      intarget = false;
+    }
+
+    if (intarget && is_end_omp_parsec_std(std)) {
+      int next_beg_parsec_std = get_next_beg_omp_parsec_std(std);
+      int curr_end_target_std = get_omp_buddy_std(curr_target_std);
+
+      if (next_beg_parsec_std > 0) {
+        if (!has_map(curr_target_std) &&
+            STD_LINENO(next_beg_parsec_std) < STD_LINENO(curr_end_target_std)) {
+          if (debug_me) {
+            printf("[ompaccel-x86] in %s, non first parsec at %d\n", gbl.src_file, STD_LINENO(next_beg_parsec_std));
+            printf("[ompaccel-x86] in target region that ends at %d\n", STD_LINENO(curr_end_target_std));
+          }
+
+          int insert_pt = get_std_after_end_omp_parsec(std);
+          if (is_target_teams(curr_target_std)) {
+            int target_teams_std = get_target_teams_std(curr_target_std);
+            A_THRLIMITP(STD_AST(target_teams_std), mk_cnst(stb.i1));
+            A_NTEAMSP(STD_AST(target_teams_std), mk_cnst(stb.i1));
+          }
+
+          std_next = get_omp_buddy_std(curr_target_std);
+
+          /* Attempt to enclose the target region with critical sections.
+           * Not the best way, but this doesn't solve the inconsistenct with the
+           * multi-parallec section target region issue */
+#if 0
+            int critical_std = emit_toplevel_std(A_MP_CRITICAL);
+            int endcritical_std = emit_toplevel_std(A_MP_ENDCRITICAL);
+            make_omp_buddies_std(critical_std, endcritical_std);
+            insert_stmt_before(critical_std, get_next_beg_omp_parsec_std(curr_target_std));
+            insert_stmt_before(endcritical_std, get_omp_buddy_std(curr_target_std));
+            std_next = get_omp_buddy_std(curr_target_std);
+
+            insert_stmt_before(endcritical_std,
+              get_next_end_omp_parsec_std(next_beg_parsec_std));
+#endif
+
+          /* Attempt to segregate target region. The ideal thing to do, but fails at
+           * flang2, mostly due to the STBLK flag of MP_BMPSCOPE) */
+#if 0
+            /* insert_stmt_before(critical_std, insert_pt); */
+            /* insert_stmt_before(endcritical_std, */
+                  /* get_next_end_omp_parsec_std(next_beg_parsec_std)); */
+
+            /* end_target_std(curr_target_std, insert_pt); */
+            /* curr_target_std = begin_target_std(curr_target_std, insert_pt); */
+            /* curr_target_ast = STD_AST(curr_target_std); */
+
+            /* std_next = get_std_after_beg_omp_parsec(next_beg_parsec_std); */
+#endif
+        }
+      }
+    }
+  }
+
+  ast_unvisit();
+}
+#endif
 /* AOCC end */

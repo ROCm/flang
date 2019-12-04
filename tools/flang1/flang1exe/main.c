@@ -255,6 +255,14 @@ main(int argc, char *argv[])
       parser(); /* parse and do semantic analysis */
 
       /* AOCC begin */
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.x86_64_omptarget) {
+        ompaccel_x86_transform_ast();
+      }
+#endif
+      /* AOCC end */
+
+      /* AOCC begin */
       /* to be used at a later call for checking inherited symbols from parent
        * subprogram to child subprogram (if any). This is used by
        * warn_uninit_use() */

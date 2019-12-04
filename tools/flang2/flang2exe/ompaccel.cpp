@@ -33,7 +33,7 @@
  * Date of modification 28th November  2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Sept 2019
+ * Last modified: Dec 2019
  */
 /**
  *  \file
@@ -899,6 +899,8 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
       byval = false;
     else
       byval = true;
+    if (flg.x86_64_omptarget && DTY(DTYPEG(sptr)) == TY_PTR)
+      byval = false;
 
   } else {
   // AOCC end
