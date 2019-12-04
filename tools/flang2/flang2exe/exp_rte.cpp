@@ -5315,7 +5315,7 @@ exp_strcpy(STRDESC *str1, STRDESC *str2)
 /*
  * single source, no overlap
  */
-#define STR_MOVE_THRESH 16
+#define STR_MOVE_THRESH 120 // AOCC
       if (!XBIT(125, 0x800) && str1->liscon && str2->liscon &&
 	  // AOCC (allow strcpy inlining for target offloading )
           (flg.omptarget || str1->lval <= STR_MOVE_THRESH)) { 
