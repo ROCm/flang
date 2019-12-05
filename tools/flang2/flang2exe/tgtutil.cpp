@@ -24,8 +24,9 @@
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
  * Date of modification 07th October 2019
- * Date if modification 05th November 2019
- * Date if modification 26th November 2019
+ * Date of modification 05th November 2019
+ * Date of modification 26th November 2019
+ * Date of modification 05th December 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -464,13 +465,12 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     temp_map_type = 0;
-    if (targetinfo->symbols[i].map_type == 0) {
-      if (std::find(constArraySymbolList.begin(), constArraySymbolList.end(),
-                    targetinfo->symbols[i].device_sym) !=
-                                          constArraySymbolList.end()) {
-        // TODO: For such arrays map type should be decided at runtime.
-        temp_map_type = OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_TARGET_PARAM;
-      }
+    // As per OpenMP standards 4.5 data mapping rules, from section 2.15.5
+    //   " If a variable is not a scalar then it is treated as if it had
+    //     appeared in a map clause with a map-type of tofrom."
+    if (targetinfo->symbols[i].map_type == 0 && llis_array_kind(DTYPEG(param_sptr))) {
+      temp_map_type = OMP_TGT_MAPTYPE_FROM |
+                      OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_TARGET_PARAM;
     }
 #endif
     // AOCC End
