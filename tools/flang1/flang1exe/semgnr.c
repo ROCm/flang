@@ -9,6 +9,9 @@
  *
  * Fixes for CP2K application build
  * Month of Modification: November 2019
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ * Date of Modification: December 2019
  */
 
 /** \file
@@ -320,6 +323,10 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
   int dscptr;
   int paramct, curr_paramct;
   SPTR found_sptrgen, func_sptrgen;
+  // AOCC Begin
+  ITEM *list_bkp = list;
+  int arg_cnt_bkp = arg_cnt;
+  // AOCC End
 
   /* find the generic's max nbr of formal args and use it to compute
    * the size of the arg distatnce data item.
@@ -390,6 +397,11 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
     for (gndsc = GNDSCG(sptrgen); gndsc; gndsc = SYMI_NEXT(gndsc)) {
       func = SYMI_SPTR(gndsc);
       func_sptrgen = sptrgen;
+      // AOCC Begin
+      // Restore the argument list and argument count
+      list = list_bkp;
+      arg_cnt = arg_cnt_bkp;
+      // AOCC End
       if (IS_TBP(func)) {
         /* For generic type bound procedures, use the implementation
          * of the generic bind name for the argument comparison.
@@ -407,8 +419,18 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
         if (!func)
           continue;
         mem = get_generic_member(dty, bind);
-        if (NOPASSG(mem) && generic_tbp_has_pass_and_nopass(dty, BINDG(mem)))
-          continue;
+        // AOCC Begin
+        // Commented the below code to fix issues with type bound procedures
+        // with and without nopass clause.
+        // if (NOPASSG(mem) && generic_tbp_has_pass_and_nopass(dty, BINDG(mem)))
+        //  continue;
+        if (NOPASSG(mem)) {
+          // skip the tbp arg which has been added while processing the call
+          // type bound procedures with nopass clause will not have tbp argument.
+          list = list->next;
+          arg_cnt--;
+        }
+        // AOCC End
         if (mem && PRIVATEG(mem) && SCOPEG(stb.curr_scope) != SCOPEG(mem))
           continue;
       } else
