@@ -2768,6 +2768,7 @@ const_prop(void)
 
   if (XBIT(6, 0x1))
     return FALSE;
+  return false;
 #if DEBUG
   if (OPTDBG(9, 32768)) {
     fprintf(gbl.dbgfil, "const_prop: file %s, function %s\n", gbl.src_file,
