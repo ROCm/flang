@@ -10489,6 +10489,12 @@ static void
 check_valid_data_sharing(int sptr)
 {
   int count = 0;
+  
+  //AOCC Begin
+  /* Is sptr a constant? */
+  if (PARAMG(sptr))
+    error(155, ERR_Severe, gbl.lineno, SYMNAME(sptr),"is not a variable");
+  //AOCC End
 
   /* In shared list? */
   if (is_in_list(CL_SHARED, sptr))
