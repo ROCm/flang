@@ -31,6 +31,7 @@
  * Date of modification 13th November  2019
  * Date of modification 26th November  2019
  * Date of modification 28th November  2019
+ * Date of modification 10th December  2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -3127,6 +3128,19 @@ ompaccel_create_amd_reduction_wrappers()
     }
   }
   last_tinfo_index = num_tinfos;
+}
+
+/// \brief Update map type for device symbols \p dev_symbol
+void
+ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type)
+{
+  int i;
+  for (i = 0; i < current_tinfo->n_symbols; ++i) {
+    if (current_tinfo->symbols[i].device_sym == dev_symbol) {
+      current_tinfo->symbols[i].map_type |= map_type;
+      PASSBYVALP(dev_symbol, 0);
+    }
+  }
 }
 
 void
