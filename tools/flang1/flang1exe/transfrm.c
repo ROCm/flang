@@ -101,7 +101,7 @@ int pghpf_local_mode_sptr = 0;
 static void rewrite_omp_targetdata_construct() {
 
   int std = 0;
-  int ast = 0, ifast = 0, new_if = 0, new_end = 0;
+  int ast = 0, ifast = 0, new_if = 0, new_end = 0, ast_type = 0;
   int begin_std = 0, target_ast = 0;
 
   ast_visit(1,1);
@@ -165,6 +165,53 @@ static void rewrite_omp_targetdata_construct() {
     new_end = ast_rewrite(new_end);
 
     add_stmt_before(new_if, std);
+    add_stmt_after(new_end, std);
+  }
+  ast_unvisit();
+
+  // Handle targetenterdata and targetexitdata.
+  ast_visit(1,1);
+  for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+
+    // Search for targetdata.
+    ast_type = A_TYPEG(ast);
+    if (ast_type != A_MP_TARGETENTERDATA && ast_type != A_MP_TARGETEXITDATA) {
+     continue;
+    }
+    begin_std = std;
+
+    ast = STD_AST(std);
+    target_ast = ast;
+
+    ifast = A_IFPARG(target_ast);
+    if (!ifast)
+      continue;
+
+    // Create new if-then-endif structure.
+    new_if = mk_stmt(A_IFTHEN, 0);
+    new_end = mk_stmt(A_ENDIF, 0);
+    // Copy the condition from the TARGET(ENTER|EXIT)DATA statement.
+    A_IFEXPRP(new_if, ifast);
+    // Place if-then before the targetdata
+    add_stmt_before(new_if, begin_std);
+    A_IFPARP(ast, 0);
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    while (A_TYPEG(ast) != A_MP_EMAP) {
+      assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
+    // Insert else-then {cloned nodes} statements after
+    // A_MP_EMAP
     add_stmt_after(new_end, std);
   }
 
