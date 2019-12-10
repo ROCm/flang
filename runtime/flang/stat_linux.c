@@ -14,12 +14,21 @@
  * limitations under the License.
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Using clock_gettime to gather CPU times of all threads.
+ * Date of modification 9th Dec 2019
+ *
+ */
 
 /** \file
  * \brief Fill in statistics structure (Linux version)
  */
 
 #include <sys/time.h>
+// AOCC Modification : include for clock_gettime
+#include <time.h>
 #include <sys/resource.h>
 #include <sys/utsname.h>
 #include <string.h>
@@ -105,16 +114,25 @@ static double first = 0.0;
 double
 __fort_second()
 {
-  struct timeval v;
-  struct timezone t;
+  // AOCC Modification : struct variable holding the cpu time
+  // struct timeval v;
+  // struct timezone t;
+  struct timespec v;
   double d;
   int s;
 
-  s = gettimeofday(&v, &t);
+  // AOCC Modification : system call  from gettimeofday to gather CPU times of
+  // all threads in the current process
+  // s = gettimeofday(&v, &t);
+  s = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &v);
   if (s == -1) {
-    __fort_abortp("gettimeofday");
+    // AOCC Modification : throw error for clock_gettime instead of gettimeofday
+    // __fort_abortp("gettimeofday");
+    __fort_abortp("clock_gettime");
   }
-  d = (double)v.tv_sec + (double)v.tv_usec / 1000000;
+  // AOCC Modification : change denominator to 1000000000 for nano-seconds
+  // d = (double)v.tv_sec + (double)v.tv_usec / 1000000;
+  d = (double)v.tv_sec + (double)v.tv_nsec / 1000000000;
   if (first == 0.0) {
     first = d;
   }
