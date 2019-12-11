@@ -424,7 +424,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
   OMPACCEL_SYM midnum_sym;
   DTYPE param_dtype, load_dtype;
   SPTR param_sptr;
-  LOGICAL isPointer, isMidnum, showMinfo, isThis;
+  LOGICAL isPointer, isArray, isMidnum, showMinfo, isThis; //AOCC
   /* fill the arrays */
   /* Build the list: (size, sptr) pairs. */
 
@@ -439,6 +439,9 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     param_sptr = targetinfo->symbols[i].host_sym;
     param_dtype = DTYPEG(param_sptr);
     isPointer = llis_pointer_kind(param_dtype);
+    //AOCC Begin
+    isArray = llis_array_kind(param_dtype);
+    //AOCC End
 
     /* This is for fortran allocatable arrays.
      * We keep the base symbol as a quiet symbol that has the map type info.
@@ -468,7 +471,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     // As per OpenMP standards 4.5 data mapping rules, from section 2.15.5
     //   " If a variable is not a scalar then it is treated as if it had
     //     appeared in a map clause with a map-type of tofrom."
-    if (targetinfo->symbols[i].map_type == 0 && llis_array_kind(DTYPEG(param_sptr))) {
+    if (targetinfo->symbols[i].map_type == 0 && (isArray || isPointer)) {
       temp_map_type = OMP_TGT_MAPTYPE_FROM |
                       OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_TARGET_PARAM;
     }
