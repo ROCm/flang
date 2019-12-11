@@ -20,6 +20,7 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 23rd September 2019
  * Date of modification 05th November 2019
+ * Date of modification 10th December 2019
  *
  */
 
@@ -533,5 +534,9 @@ void ompaccel_tinfo_current_set(OMPACCEL_TINFO *);
   \brief Creatre reduction wrappers
   */
 void ompaccel_create_amd_reduction_wrappers();
+/**
+  \brief Update maptype for given symbol
+  */
+void ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type);
 // AOCC End
 #endif

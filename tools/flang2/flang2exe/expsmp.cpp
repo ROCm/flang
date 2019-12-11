@@ -20,6 +20,7 @@
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
+ * Date of modification 10th December  2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -2827,8 +2828,20 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     exp_mp_atomic_write(ilmp);
     break;
   case IM_MP_ATOMICUPDATE:
-    if (ll_ilm_is_rewriting())
+    if (ll_ilm_is_rewriting()) {
+      // AOCC Begin
+      // For non teams reduction flang1 will generate only atomic updates. Here
+      // we capture such symbols and marks the tofrom. This will not have side
+      // effects as even teams reduction variable should be tofrom.
+      ILM *ilm = (ILM *)(ilmb.ilm_base+ILM_OPND(ilmp, 1));
+      if (flg.omptarget && ILM_OPC(ilm) == IM_BASE) {
+        SPTR sym = ILM_SymOPND(ilm, 1);
+        ompaccel_update_devsym_maptype(sym, OMP_TGT_MAPTYPE_TO |
+                                            OMP_TGT_MAPTYPE_FROM);
+      }
+      // AOCC End
       break;
+    }
     exp_mp_atomic_update(ilmp);
     break;
   case IM_MP_ATOMICCAPTURE:
