@@ -2833,12 +2833,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       // For non teams reduction flang1 will generate only atomic updates. Here
       // we capture such symbols and marks the tofrom. This will not have side
       // effects as even teams reduction variable should be tofrom.
+#ifdef OMP_OFFLOAD_LLVM
       ILM *ilm = (ILM *)(ilmb.ilm_base+ILM_OPND(ilmp, 1));
       if (flg.omptarget && ILM_OPC(ilm) == IM_BASE) {
         SPTR sym = ILM_SymOPND(ilm, 1);
         ompaccel_update_devsym_maptype(sym, OMP_TGT_MAPTYPE_TO |
                                             OMP_TGT_MAPTYPE_FROM);
       }
+#endif
       // AOCC End
       break;
     }
