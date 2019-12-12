@@ -419,7 +419,7 @@ SET(FTN_SUPPORT_DESC_DEP
   )
 
 set(I8_FILES_DIR I8_sources)
-separate_arguments(SEPARATED_CMAKE_Fortran_FLAGS NATIVE_COMMAND ${CMAKE_Fortran_FLAGS})
+separate_arguments(SEPARATED_CMAKE_Fortran_FLAGS UNIX_COMMAND ${CMAKE_Fortran_FLAGS})
 
 if(EXISTS bin/flang1)
   set(FLANG1_DEP bin/flang1)
