@@ -724,7 +724,7 @@ ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)
 {
   int call_ili, nargs;
   SPTR arg_base_sptr, args_sptr, arg_size_sptr, args_maptypes_sptr;
-  char name[12];
+  char name[16];
 
   int locargs[6];
   DTYPE locarg_types[] = {DT_INT8, DT_INT, DT_ADDR, DT_ADDR, DT_ADDR, DT_ADDR};
@@ -766,7 +766,7 @@ _tgt_target_fill_targetdata(int device_id, OMPACCEL_TINFO *targetinfo, int tgt_a
 {
   int call_ili, nargs;
   SPTR arg_base_sptr, args_sptr, arg_size_sptr, args_maptypes_sptr;
-  char name[12];
+  char name[16];
 
   int locargs[6];
   DTYPE
