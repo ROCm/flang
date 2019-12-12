@@ -21,7 +21,7 @@
 !
 
 program bitcmp03
-  integer, parameter :: N = 8
+  integer, parameter :: N = 9
   logical exp(N), res(N)
 
   exp(1:4) = (/.true., .true., .false., .true./)
@@ -30,6 +30,9 @@ program bitcmp03
   exp(5:8) = (/.false., .true., .true., .false./)
   res(5:8) = (/bge(z'ffab', z'ffac'), ble(o'177', o'777'), bge(b'1111', b'0111'), &
     blt(z'ffffffffffffffff', z'fffffffffffffffe')/)
+
+  exp(9) = blt(-129, -129)
+  res(9) = .false.
 
   call check(res, exp, N)
 end program

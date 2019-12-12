@@ -1953,7 +1953,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
         case I_BLE:
           return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
         case I_BLT:
-          return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+          return mk_binop(OP_LT, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
       }
     }
 
