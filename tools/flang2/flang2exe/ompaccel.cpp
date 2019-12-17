@@ -900,7 +900,7 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
       byval = false;
     else
       byval = true;
-    if (flg.x86_64_omptarget && DTY(DTYPEG(sptr)) == TY_PTR)
+    if (flg.omptarget && DTY(DTYPEG(sptr)) == TY_PTR)
       byval = false;
 
   } else {
