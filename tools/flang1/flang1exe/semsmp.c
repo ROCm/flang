@@ -6739,7 +6739,13 @@ mk_firstprivate(int sptr1, int taskdupstd)
 
     std = 0;
     if (!POINTERG(sptr)) {
-      if (!XBIT(54, 0x1) && ALLOCATTRG(sptr)) {
+        // AOCC
+        // If the construct is target based, copy the
+        // original value of the firstprivate variable
+        // before the BMSCOPE AST node or else the code
+        // will end up in kernel.
+      if ((!XBIT(54, 0x1) && ALLOCATTRG(sptr)) ||
+          (is_in_omptarget(sem.doif_depth))) { // AOCC
         std = sem.scope_stack[sem.scope_level].end_prologue;
         if (std == 0) {
           std = STD_PREV(0);
