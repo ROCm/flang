@@ -9894,7 +9894,16 @@ findUplevelForSharedVar(int sptr, int stblk)
     }
     return NULL;
   } else {
-    up = llmp_outermost_uplevel(stblk);
+    // AOCC BEGIN
+    // Return the current target related uplevel structure instead of
+    // the outermost one (parallel)  in the nested constructs.
+    if ((SCG(sptr) != SC_PRIVATE) && is_in_omptarget(sem.doif_depth) &&
+         DI_IN_NEST(sem.doif_depth-1,DI_PAR)) {
+      up = llmp_get_uplevel(stblk);
+    } else {
+    // AOCC END
+      up = llmp_outermost_uplevel(stblk);
+    }
     return up;
   }
 }
