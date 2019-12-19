@@ -26,6 +26,9 @@
   * Date of Modification: 24th October 2019
   * Date of Modification: 5th November 2019
   *
+  * Changes to emit proper error message when pointer is associated with 
+  * a constant
+  * Date of Modification: 17th December 2019
   */
 
 
@@ -1284,6 +1287,13 @@ mkexpr2(SST *stkptr)
   int sptr;
 
   switch (SST_IDG(stkptr)) {
+  //AOCC Begin
+  //Pointers cannot be associated with constants
+  case S_SCONST:
+  case S_ACONST:
+  case S_CONST:
+    return 1;
+  //AOCC End
   case S_IDENT:
     sptr = SST_SYMG(stkptr);
     switch (STYPEG(sptr)) {
