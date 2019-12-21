@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes made to support f2008 support of change in maximum array dimensions
+ * Date of Modification: 26th June 2019
+ *
+ */
 /**
    \file interf.c
    \brief Routines for importing symbols from .mod files and from IPA.
@@ -2088,10 +2095,6 @@ import(lzhandle *fdlz, WantPrivates wantPrivates, int ivsn)
         STYPEP(sptr, ST_PD);
       } else if (strcmp(module_name, "iso_fortran_env") == 0) {
         STYPEP(sptr, ST_PD);
-      // AOCC begin
-      } else if (strcmp(module_name, "gnu_extensions") == 0) {
-        STYPEP(sptr, ST_PD);
-      // AOCC end
       }
       break;
 

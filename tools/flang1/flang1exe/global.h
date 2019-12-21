@@ -226,7 +226,6 @@ typedef struct {
   char *cmdline; /* command line used to invoke the compiler */
   LOGICAL func_args_alias;      /* assume function arguments are aliasing */ // AOCC
   // AOCC begin
-  LOGICAL allow_gnu_extensions; /* allow GNU fortran extensions */
   char *std_string; /* input string arg of -std= */
   FORTRAN_STD std;
   LOGICAL disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */

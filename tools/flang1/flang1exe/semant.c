@@ -4,49 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-//===----------------------------------------------------------------------===//
-//====  Copyright (c) 2015 Advanced Micro Devices, Inc.  All rights reserved.
-//
-//               Developed by: Advanced Micro Devices, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// with the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// Redistributions of source code must retain the above copyright notice, this
-// list of conditions and the following disclaimers.
-//
-// Redistributions in binary form must reproduce the above copyright notice,
-// this list of conditions and the following disclaimers in the documentation
-// and/or other materials provided with the distribution.
-//
-// Neither the names of Advanced Micro Devices, Inc., nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// Software without specific prior written permission.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-// THE SOFTWARE.
-//===----------------------------------------------------------------------===//
-//
-// Date of Modification : 9th July 2019
-// Support for AMDGPU OpenMP offloading
-//
-// Date of Modification: 16th July 2019
-// Suppressed a duplicate diagnostic message: "Redundant specification of array"
-//
-// 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
-//             types
-// 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
-//             construct
-//===----------------------------------------------------------------------===//
+
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ *
+ * Date of Modification : 9th July 2019
+ * Support for AMDGPU OpenMP offloading
+ *
+ * Date of Modification: 16th July 2019
+ * Suppressed a duplicate diagnostic message: "Redundant specification of array"
+ *
+ * 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
+ *             types
+ * 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
+ *             construct
+ */
 
 /**
     \file
@@ -916,16 +889,6 @@ semant1(int rednum, SST *top)
     sem.is_hpf = scn.is_hpf;
     sem.alloc_std = 0;
     sem.p_dealloc_delete = NULL;
-
-    // AOCC begin
-    if (gbl.currsub != 0 && sem.pgphase > PHASE_USE) {
-      if (flg.allow_gnu_extensions &&
-          is_inbuilt_module(SYMNAME(sem.mod_sym)) == 0) {
-      apply_gnu_ext();
-      apply_use_stmts();
-      }
-    }
-    // AOCC end
 
     if (sem.pgphase == PHASE_USE) {
       switch (scn.stmtyp) {

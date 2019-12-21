@@ -840,8 +840,6 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "func_args_alias", 
                        (bool *)&(flg.func_args_alias), false); // AOCC
   // AOCC begin
-  register_boolean_arg(arg_parser, "allow_gnu_extensions",
-                       (bool *)&(flg.allow_gnu_extensions), false);
   register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
                        (bool *)&(flg.disable_loop_vectorize_pragmas), false);
