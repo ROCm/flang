@@ -1,3 +1,4 @@
+#
 # Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
 #
 # F2008 Compliance Tests: Flang-F2008-Impure elemental procedures

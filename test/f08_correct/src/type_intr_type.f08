@@ -1,4 +1,8 @@
+!
+! Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+!
 !*
+! F2008-New Unit Specifier feature compliance test
 !* F2008 feature: Type statement for intrinsic types
 !*
 !* AOCC test

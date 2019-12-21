@@ -1,3 +1,7 @@
+!
+! Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+!
+! F2008-New Unit Specifier feature compliance test
 !*
 !* F2008 feature Parity intrinsic
 !* Calculates the parity (i.e. the reduction using .xor.) of mask along
