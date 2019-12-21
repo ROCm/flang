@@ -388,7 +388,6 @@ I8(__alloc04)(__NELEM_T nelem, dtype kind, size_t len,
 
   if (*pointer && I8(__fort_allocated)(*pointer)
       && ISPRESENT(stat) && *stat == 2) {
-      printf("came here \n");
     int i;
     char *mp;
     MP_P_STDIO;
