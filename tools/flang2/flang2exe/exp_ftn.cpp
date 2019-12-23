@@ -5,6 +5,8 @@
  *
  */
 
+/* Modified on 23rd December 2019*/
+
 /** \file
  * \brief Fortran-specific expander routines
  */
@@ -3463,9 +3465,10 @@ exp_bran(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_AGOTO: /* assigned goto */
     exp_agoto(ilmp, curilm);
     break;
-
+  //AOCC Begin
   case IM_KAIF: /* integer*8 arithmetic IF */
-    type = 4;
+    type = 3;
+  //AOCC End
     goto comaif;
   case IM_IAIF: /* integer arithmetic IF */
     type = 0;
