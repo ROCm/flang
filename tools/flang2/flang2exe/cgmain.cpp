@@ -4925,7 +4925,13 @@ gen_const_expr(int ilix, LL_Type *expected_type)
              expected_type->data_type, ERR_Fatal);
       operand->ll_type = expected_type;
     } else {
-      operand->ll_type = make_lltype_from_dtype(DT_INT);
+      // AOCC Begin
+      // operand->ll_type = make_lltype_from_dtype(DT_INT);
+      if (expected_type && ll_type_int_bits(expected_type))
+        operand->ll_type = make_lltype_from_dtype(DT_INT);
+      else
+        operand->ll_type = make_lltype_from_dtype(DT_INT8);
+      // AOCC End
       operand->val.sptr = sptr;
     }
     break;
