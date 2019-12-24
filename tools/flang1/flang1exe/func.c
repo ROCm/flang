@@ -7258,9 +7258,11 @@ matmul(int func_ast, int func_args, int lhs)
   LOGICAL tmp_lhs_array;
   LOGICAL matmul_transpose;
 
-  retval = mmul(func_ast, func_args, lhs);
-  if (retval >= 0)
-    return retval;
+  if (flg.opt >= 2) {   // AOCC
+    retval = mmul(func_ast, func_args, lhs);
+    if (retval >= 0)
+      return retval;
+  }
 
   tmp_lhs_array = FALSE;
   /* it only handles calls */
