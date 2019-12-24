@@ -130,6 +130,8 @@ static void do_tofrom();
 // AOCC End
 static LOGICAL use_atomic_for_reduction(int);
 
+static LOGICAL is_in_omptarget(int d);
+
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 static char *map_type;
 bool isalways = false;
@@ -139,7 +141,6 @@ static void mp_handle_map_clause(SST *, int, char *, int, int, bool);
 static void mp_handle_motion_clause(SST *, int, int);
 // AOCC End
 static void mp_check_maptype(const char *maptype);
-static LOGICAL is_in_omptarget(int d);
 static LOGICAL is_in_omptarget_data(int d);
 #endif
 #ifdef OMP_OFFLOAD_LLVM
@@ -10560,6 +10561,7 @@ static LOGICAL is_in_omptarget_data(int d)
 }
 static LOGICAL is_in_omptarget(int d)
 {
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   if(flg.omptarget && (DI_IN_NEST(d, DI_TARGET) ||
       DI_IN_NEST(d, DI_TARGTEAMSDISTPARDO) ||
       DI_IN_NEST(d, DI_TARGPARDO) ||
@@ -10567,6 +10569,7 @@ static LOGICAL is_in_omptarget(int d)
       DI_IN_NEST(d, DI_TARGTEAMSDIST) ||
       DI_IN_NEST(d, DI_TARGETENTERDATA)))
     return TRUE;
+#endif
   return FALSE;
 }
 /**
