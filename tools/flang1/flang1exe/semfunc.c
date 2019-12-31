@@ -2137,8 +2137,13 @@ gen_pointer_result(int array_value, int dscptr, int nactuals,
     get_all_descriptors(arr_tmp);
     /* need to have different MIDNUM than arr_value */
     /* otherwise multiple declaration */
-    pvar = sym_get_ptr(arr_tmp);
-    MIDNUMP(arr_tmp, pvar);
+    // AOCC: Issue with CP2k
+    // the following code is incorrect and it makes
+    // the pointer to point to invalid locations 
+    // due to wrong offset
+//    pvar = sym_get_ptr(arr_tmp);
+//    MIDNUMP(arr_tmp, pvar);
+    MIDNUMP(arr_tmp, 0);
     NODESCP(arr_tmp, 0);
     ddt = DDTG(dt);
     if ((DTY(dt) == TY_CHAR && dt != DT_DEFERCHAR) ||
