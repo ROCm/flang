@@ -17,6 +17,7 @@
  * Date of modification 05th November 2019
  * Date of modification 26th November 2019
  * Date of modification 05th December 2019
+ * Date of modification 06th January 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -351,8 +352,13 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
             rilix = ad2ili(IL_KADD, ad_kconi(0), ad_kconi(1));
           ilix = ad2ili(IL_KMUL, ilix, rilix);
         }
-	if (DTY( (DTYPE) DTY((DTYPE) (dtype + 1))) != TY_STRUCT)  // AOCC
+        if (DTY( (DTYPE) DTY((DTYPE) (dtype + 1))) != TY_STRUCT)  // AOCC
           ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
+        // AOCC Begin
+        else
+          ilix = ad2ili(IL_KMUL, ilix,
+                     ad_kconi(DTyArrayDesc(DTYPE((DTY((DTYPE)(dtype + 1)))))));
+        // AOCC End
       }
     }
   }else {
