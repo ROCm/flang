@@ -17,6 +17,9 @@
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
  * Month of Modification: July 2019
+ *
+ * Complex datatype support for acosh , asinh , atanh
+ * Modified on 07 January 2020
  */
 
 /**
@@ -3226,15 +3229,17 @@ lower_intrinsic(int ast)
   case I_HYPOT:
     ilm = intrin_name("HYPOT", ast, in_r_D);
     break;
+  //AOCC Begin  
   case I_ACOSH:
-    ilm = intrin_name("ACOSH", ast, in_r_D);
+    ilm = intrin_name("ACOSH", ast, in_r_D_C_CD);
     break;
   case I_ASINH:
-    ilm = intrin_name("ASINH", ast, in_r_D);
+    ilm = intrin_name("ASINH", ast, in_r_D_C_CD);
     break;
   case I_ATANH:
-    ilm = intrin_name("ATANH", ast, in_r_D);
+    ilm = intrin_name("ATANH", ast, in_r_D_C_CD);
     break;
+  //AOCC End
   case I_BESSEL_J0:
     ilm = intrin_name("BESSEL_J0", ast, in_r_D);
     break;

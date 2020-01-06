@@ -45,6 +45,8 @@
  * Fixed issues related to type bound procedures with and without nopass clause
  * Date of Modification: December 2019
  *
+ * Complex datatype support for acosh , asinh , atanh
+ * Modified on 08 January 2020
  */
 
 /** \file
@@ -4179,7 +4181,11 @@ gen_newer_intrin(int sptrgenr, int dtype)
   if (strcmp(intrin_nmptr, "acos") == 0 || strcmp(intrin_nmptr, "asin") == 0 ||
       strcmp(intrin_nmptr, "atan") == 0 || strcmp(intrin_nmptr, "cosh") == 0 ||
       strcmp(intrin_nmptr, "sinh") == 0 || strcmp(intrin_nmptr, "tanh") == 0 ||
-      strcmp(intrin_nmptr, "tan") == 0) {
+      strcmp(intrin_nmptr, "tan") == 0  ||
+       //AOCC begin
+      strcmp(intrin_nmptr, "asinh") == 0|| strcmp(intrin_nmptr, "atanh") == 0|| 
+      strcmp(intrin_nmptr, "acosh") == 0 ) {
+      //AOCC end 
     if (DT_ISCMPLX(dtype)) {
       switch (DTY(dtype)) {
       case TY_DCMPLX:
@@ -8990,6 +8996,17 @@ ref_pd(SST *stktop, ITEM *list)
   case PD_acosh:
   case PD_asinh:
   case PD_atanh:
+    if (count != 1) {
+      E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 1, KWDARGSTR(pdsym)))
+      goto exit_;
+    stkp = ARG_STK(0);
+    dtyper = SST_DTYPEG(stkp);
+    shaper = SST_SHAPEG(stkp);
+    dtype1 = DDTG(dtyper);
+    break;
   case PD_bessel_j0:
   case PD_bessel_j1:
   case PD_bessel_y0:

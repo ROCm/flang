@@ -3,6 +3,10 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+#Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+#
+#Complex type support for acosh , asinh , atanh
+#Modified on 07 January 2020
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -172,6 +176,11 @@ set(MTH_CMPLX_SRCS
   catan.c
   ccos.c
   ccosh.c
+  #AOCC Begin
+  casinh.c
+  cacosh.c
+  catanh.c
+  #AOCC End
   cdabs.c
   cdacos.c
   cdasin.c
