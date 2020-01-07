@@ -2467,10 +2467,10 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
 
   // check whether it is allocatable or not
   ADSC *new_ad;
-  ADSC *org_ad = AD_DPTR(DTYPEG(arg_sptr));
   TY_KIND atype = DTY(DTYPE(DTYPEG(arg_sptr) + 1));
-  int numdim = AD_NUMDIM(org_ad);
+  int numdim = AD_NUMDIM((ADSC*)AD_DPTR(DTYPEG(arg_sptr)));
   dtype = get_array_dtype(numdim, (DTYPE)atype);
+  ADSC *org_ad = AD_DPTR(DTYPEG(arg_sptr));
 
   new_ad = AD_DPTR(dtype);
   AD_NUMDIM(new_ad) = numdim;

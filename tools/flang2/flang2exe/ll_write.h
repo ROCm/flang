@@ -52,7 +52,14 @@ void ll_write_llvm_used(FILE *out, LLVMModuleRef module);
 /**
    \brief ...
  */
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+void ll_write_local_objects(FILE *out, LL_Function *function,
+                            int alloca_addrspace);
+#else
 void ll_write_local_objects(FILE *out, LL_Function *function);
+#endif
+// AOCC End
 
 /**
    \brief ...

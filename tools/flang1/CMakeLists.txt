@@ -26,6 +26,13 @@ if (FLANG_OPENMP_GPU_NVIDIA)
     add_definitions("-DOMP_OFFLOAD_LLVM")
 endif()
 
+#AOCC Begin
+option(FLANG_OPENMP_GPU_AMD "Enable OpenMP AMD Accelerator Offload." OFF)
+if (FLANG_OPENMP_GPU_AMD)
+  add_definitions("-DOMP_OFFLOAD_AMD")
+endif()
+#AOCC End
+
 add_subdirectory(include)
 add_subdirectory(utils)
 add_subdirectory(flang1exe)
