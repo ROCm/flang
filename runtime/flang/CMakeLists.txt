@@ -516,7 +516,7 @@ set_property(TARGET flang_shared PROPERTY OUTPUT_NAME flang)
 #
 add_dependencies(flang_shared flang_static)
 
-target_link_libraries(flang_shared ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/libflangrti.so -Wl,-rpath,\$ORIGIN)
+target_link_libraries(flang_shared ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/libflangrti.so)
 # Resolve symbols against libm and librt
 target_link_libraries(flang_shared m rt)
 
