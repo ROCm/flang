@@ -3,9 +3,14 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  */
 
-/* Modified on 23rd December 2019*/
+/* Modified on 23rd December 2019
+ *
+ *Complex datatype support for acosh , asinh , atanh
+ * Modified on 07 January 2020
+ */
 
 /** \file
  * \brief Fortran-specific expander routines
@@ -642,6 +647,17 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDTAN:
     exp_qjsr("__mth_i_cdtan", DT_DCMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CACOSH:
+    exp_qjsr("__mth_i_cacosh", DT_CMPLX, ilmp, curilm);
+    return;
+  case IM_CASINH:
+    exp_qjsr("__mth_i_casinh", DT_CMPLX, ilmp, curilm);
+    return;
+  case IM_CATANH:
+    exp_qjsr("__mth_i_catanh", DT_CMPLX, ilmp, curilm);
+    return;
+  //AOCC end 
   case IM_CDIV:
     {
       if (XBIT(70, 0x40000000)) {

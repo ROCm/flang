@@ -3,6 +3,11 @@
 \" * See https://llvm.org/LICENSE.txt for license information.
 \" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 \" *
+\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+\" *
+\" * Complex data types support for acosh, asinh and atanh
+\" * Date of Modification: 08 January 2020
+\" *
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -369,6 +374,12 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDTAN arth lnk
 .AT spec dcmplx
+.IL CACOSH arth lnk
+.AT spec
+.IL CASINH arth lnk
+.AT spec
+.IL CATANH arth lnk
+.AT spec
 .IL ALOG arth lnk
 .OP FLOG r p1
 .IL DLOG arth lnk
