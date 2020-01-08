@@ -1249,6 +1249,25 @@ smp_conflict(int fg1, int fg2)
     }
   }
 
+  // AOCC Begin
+  // do not fuse the loops which are offload targets
+  if (flg.omptarget) {
+    for (fg = fg1; fg != fg2; fg = FG_LNEXT(fg)) {
+      rdilts(fg);
+      for (std = FG_STDFIRST(fg); std; std = STD_NEXT(std)) {
+        ast = STD_AST(std);
+        switch (A_TYPEG(ast)) {
+        case A_MP_TARGET:
+        case A_MP_MAP:
+        case A_MP_EMAP:
+          wrilts(fg);
+          return TRUE;
+        }
+      }
+      wrilts(fg);
+    }
+  }
+  // AOCC End
   return FALSE;
 }
 
