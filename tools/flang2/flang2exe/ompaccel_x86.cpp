@@ -155,10 +155,25 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
     func_paramct -= 2;
   }
 
+  OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(func_sptr);
+
+  // Remember all the reduction symbols of func_sptr so that we can blacklist
+  // them during the type update.
+  std::set<SPTR> reduc_syms;
+  for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
+    OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
+    OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
+    SPTR device_sym = ompaccel_sym->device_sym;
+    reduc_syms.insert(device_sym);
+  }
+
   for (int i = 0; i < func_paramct; i++) {
     SPTR arg_sptr = (SPTR)aux.dpdsc_base[func_dpsc + i + adjust_idx];
     if (DTY(DTYPEG(arg_sptr)) != TY_ARRAY &&
         (DTY(DTYPEG(arg_sptr)) != TY_PTR)) {
+      // We skip reduction variables since they'll be lowered as pointers.
+      if (reduc_syms.find(arg_sptr) != reduc_syms.end()) { continue; }
+
       DTYPEP(arg_sptr, DT_INT8);
       if (debug_me) {
         printf("[ompaccel-x86]: setting %s's type as DT_INT8\n",

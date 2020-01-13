@@ -2527,8 +2527,7 @@ static int begin_target_std(int curr_target_std, int at_std) {
   return new_target_std;
 }
 
-/* The main driver for openmp x86 offloading AST transformation */
-void ompaccel_x86_transform_ast() {
+static void ompaccel_x86_segregate_parsec() {
   bool debug_me = false;
   ast_visit(1, 1);
 
@@ -2587,32 +2586,32 @@ void ompaccel_x86_transform_ast() {
           std_next = get_omp_buddy_std(curr_target_std);
 
           /* Attempt to enclose the target region with critical sections.
-           * Not the best way, but this doesn't solve the inconsistenct with the
-           * multi-parallec section target region issue */
+           * Not the best way, but this doesn't solve the inconsistency with the
+           * multi-parallel section target region issue */
 #if 0
-            int critical_std = emit_toplevel_std(A_MP_CRITICAL);
-            int endcritical_std = emit_toplevel_std(A_MP_ENDCRITICAL);
-            make_omp_buddies_std(critical_std, endcritical_std);
-            insert_stmt_before(critical_std, get_next_beg_omp_parsec_std(curr_target_std));
-            insert_stmt_before(endcritical_std, get_omp_buddy_std(curr_target_std));
-            std_next = get_omp_buddy_std(curr_target_std);
+          int critical_std = emit_toplevel_std(A_MP_CRITICAL);
+          int endcritical_std = emit_toplevel_std(A_MP_ENDCRITICAL);
+          make_omp_buddies_std(critical_std, endcritical_std);
+          insert_stmt_before(critical_std, get_next_beg_omp_parsec_std(curr_target_std));
+          insert_stmt_before(endcritical_std, get_omp_buddy_std(curr_target_std));
+          std_next = get_omp_buddy_std(curr_target_std);
 
-            insert_stmt_before(endcritical_std,
+          insert_stmt_before(endcritical_std,
               get_next_end_omp_parsec_std(next_beg_parsec_std));
 #endif
 
           /* Attempt to segregate target region. The ideal thing to do, but fails at
            * flang2, mostly due to the STBLK flag of MP_BMPSCOPE) */
 #if 0
-            /* insert_stmt_before(critical_std, insert_pt); */
-            /* insert_stmt_before(endcritical_std, */
-                  /* get_next_end_omp_parsec_std(next_beg_parsec_std)); */
+          insert_stmt_before(critical_std, insert_pt);
+          insert_stmt_before(endcritical_std,
+              get_next_end_omp_parsec_std(next_beg_parsec_std));
 
-            /* end_target_std(curr_target_std, insert_pt); */
-            /* curr_target_std = begin_target_std(curr_target_std, insert_pt); */
-            /* curr_target_ast = STD_AST(curr_target_std); */
+          end_target_std(curr_target_std, insert_pt);
+          curr_target_std = begin_target_std(curr_target_std, insert_pt);
+          curr_target_ast = STD_AST(curr_target_std);
 
-            /* std_next = get_std_after_beg_omp_parsec(next_beg_parsec_std); */
+          std_next = get_std_after_beg_omp_parsec(next_beg_parsec_std);
 #endif
         }
       }
@@ -2620,6 +2619,11 @@ void ompaccel_x86_transform_ast() {
   }
 
   ast_unvisit();
+}
+
+/* The main driver for openmp x86 offloading AST transformation */
+void ompaccel_x86_transform_ast() {
+  ompaccel_x86_segregate_parsec();
 }
 #endif
 /* AOCC end */

@@ -153,6 +153,7 @@ int reduction_kernel = 0;
 #endif
 // AOCC End
 #endif
+int teams_ast = 0; // AOCC
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -2969,6 +2970,27 @@ semsmp(int rednum, SST *top)
     reducp->opr = OP_ADD;
     rhstop = 1;
   reduction_shared:
+    /* AOCC begin */
+    if (flg.x86_64_omptarget) {
+      /* This is a temporary workaround for dynamic array reduction where we
+       * serialize the kernel.
+       */
+      bool skip_reduction = false;
+      for (itemp = SST_BEGG(RHS(rhstop)); itemp != ITEM_END;
+          itemp = itemp->next) {
+        if (ALLOCG(itemp->t.sptr)) {
+          if (teams_ast) {
+            A_THRLIMITP(teams_ast, mk_cnst(stb.i1));
+            A_NTEAMSP(teams_ast, mk_cnst(stb.i1));
+          }
+          skip_reduction = true;
+        }
+      }
+      if (skip_reduction)
+        break;
+    }
+    /* AOCC end */
+
     if (CL_FIRST(CL_REDUCTION) == NULL)
       CL_FIRST(CL_REDUCTION) = reducp;
     else
@@ -8581,6 +8603,7 @@ do_bteams(int doif)
   A_NTEAMSP(ast, num_teams);
   A_THRLIMITP(ast, thread_limit);
   add_stmt(ast);
+  teams_ast = ast;
 
   sem.teams++;
   par_push_scope(FALSE);
@@ -8921,6 +8944,7 @@ end_teams()
     A_LOPP(ast, DI_BTEAMS(doif));
     mp_create_escope();
   }
+  teams_ast = 0;
 }
 
 void
