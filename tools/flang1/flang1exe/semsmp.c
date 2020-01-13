@@ -2659,6 +2659,14 @@ semsmp(int rednum, SST *top)
   case PAR_ATTR37:
     add_clause(CL_NOGROUP, TRUE);
     break;
+  // AOCC BEGIN
+  /*
+   *	<par attr> ::= NOWAIT
+   */
+  case PAR_ATTR38:
+    add_clause(CL_NOWAIT, TRUE);
+    break;
+  // AOCC END
   /* ------------------------------------------------------------------ */
   /*
    *    <opt expression> ::= |
