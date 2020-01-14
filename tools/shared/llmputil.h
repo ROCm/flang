@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 23rd September 2019
+ *
+ */
 
 #ifndef LLMPUTIL_H_
 #define LLMPUTIL_H_
@@ -96,6 +103,9 @@ typedef enum {
   mode_target_data_region,
   mode_outlinedfunc_teams,
   mode_outlinedfunc_parallel,
+  // AOCC Begin
+  mode_target_update,
+  // AOCC End
   mode_targetupdate_begin,
   mode_targetupdate_end,
 } OMP_TARGET_MODE;
@@ -120,6 +130,9 @@ static const char *omp_target_mode_names[] = {
                                     "target data",
                                     "outlined teams region",
                                     "outlined parallel region",
+                                    // AOCC Begin
+                                    "target update",
+                                    // AOCC End
                                     "target update begin",
                                     "target update end" };
 

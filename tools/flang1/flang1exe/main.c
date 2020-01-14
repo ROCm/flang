@@ -1,7 +1,15 @@
+
 /*
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ */
+
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Month of modification : May 2019 - Added OMP offload support
  *
  */
 
@@ -206,8 +214,25 @@ main(int argc, char *argv[])
     } else {
       TR(DNAME " PARSER begins\n")
       parser(); /* parse and do semantic analysis */
+
+      /* AOCC begin */
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.x86_64_omptarget) {
+        ompaccel_x86_transform_ast();
+      }
+#endif
+      /* AOCC end */
+
+      /* AOCC begin */
+      /* to be used at a later call for checking inherited symbols from parent
+       * subprogram to child subprogram (if any). This is used by
+       * warn_uninit_use() */
+      if (XBIT(1, 0x100000))
+        remember_curr_symcnt();
+      /* AOCC end */
       set_tag();
     }
+
     gbl.func_count++;
     ccff_open_unit_f90();
     if (gbl.internal <= 1) {
@@ -406,6 +431,13 @@ main(int argc, char *argv[])
           convert_forall();
           DUMP("convert-forall");
           TR1("- after convert_forall");
+
+          /* AOCC begin */
+          /* We want to have all forall constructs to be in do-loop form so that
+           * we can fetch their "dovars" easily */
+          if (XBIT(1, 0x100000))
+            warn_uninit_use();
+          /* AOCC end */
 
           TR(DNAME " CONVERT_OUTPUT begins\n");
           convert_output();
@@ -773,6 +805,11 @@ init(int argc, char *argv[])
   /* x flags */
   register_xflag_arg(arg_parser, "x", flg.x,
                      (sizeof(flg.x) / sizeof(flg.x[0])));
+  /* AOCC: z flags */
+  register_xflag_arg(arg_parser, "z", flg.z,
+                     (sizeof(flg.z) / sizeof(flg.z[0])));
+  /* FIXME : temporary. Needs to be removed once the driver is updated */
+  //set_xflag(68, 1);
   register_yflag_arg(arg_parser, "y", flg.x);
   /* Debug flags */
   register_qflag_arg(arg_parser, "q", flg.dbg,
@@ -800,6 +837,13 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
                        false);
   register_string_arg(arg_parser, "cmdline", &(flg.cmdline), NULL);
+  register_boolean_arg(arg_parser, "func_args_alias", 
+                       (bool *)&(flg.func_args_alias), false); // AOCC
+  // AOCC begin
+  register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
+  register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
+                       (bool *)&(flg.disable_loop_vectorize_pragmas), false);
+  // AOCC end
   register_boolean_arg(arg_parser, "es", (bool *)&(flg.es), false);
   register_boolean_arg(arg_parser, "pp", (bool *)&(flg.p), false);
 
@@ -828,6 +872,17 @@ init(int argc, char *argv[])
       }
     }
   }
+
+  // AOCC begin
+  /* setting the fortran standard */
+  if (strcmp(flg.std_string, "f2008") == 0) {
+    flg.std = F2008;
+  } else if (strcmp(flg.std_string, "unknown") == 0) {
+    flg.std = STD_UNKNOWN;
+  } else {
+    interr("Erroneous -std option", 0, ERR_Fatal);
+  }
+  // AOCC end
 
   /* Set preporocessor and Fortran source form
    * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -877,6 +932,16 @@ init(int argc, char *argv[])
   if(omptp != NULL)
     flg.omptarget = TRUE;
 #endif
+  // AOCC Begin
+  flg.amdgcn_target = FALSE;
+  flg.x86_64_omptarget = FALSE;
+
+  if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
+    flg.amdgcn_target = TRUE;
+  else if (omptp && strcmp(omptp, "x86_64-pc-linux-gnu") == 0)
+    flg.x86_64_omptarget = TRUE;
+  // AOCC End
+
   /* Vectorizer settings */
   flg.vect |= vect_val;
   if (flg.vect & 0x10)

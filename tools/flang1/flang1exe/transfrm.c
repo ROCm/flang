@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ */
 
 /** \brief Fortran transformation module */
 
@@ -75,6 +84,280 @@ struct pure_gbl pure_gbl;
 extern int pghpf_type_sptr;
 int pghpf_local_mode_sptr = 0;
 
+// AOCC BEGIN
+/* maximum number of AST statement clones */
+#define MAX_CLONES 1000
+
+static void rewrite_omp_targetdata_construct() {
+
+  int std = 0;
+  int ast = 0, ifast = 0, new_if = 0, new_end = 0, ast_type = 0;
+  int begin_std = 0, target_ast = 0;
+
+  ast_visit(1,1);
+  for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+
+    // Search for targetdata.
+    if (A_TYPEG(ast) != A_MP_TARGETDATA) {
+     continue;
+    }
+    begin_std = std;
+
+    ast = STD_AST(std);
+    target_ast = ast;
+
+    ifast = A_IFPARG(target_ast);
+    if (!ifast)
+      continue;
+
+    // Create new if-then-endif structure.
+    new_if = mk_stmt(A_IFTHEN, 0);
+    new_end = mk_stmt(A_ENDIF, 0);
+    // Copy the condition from the TARGETDATA statement.
+    A_IFEXPRP(new_if, ifast);
+    // Place if-then before the targetdata
+    add_stmt_before(new_if, begin_std);
+    A_IFPARP(ast, 0);
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    while (A_TYPEG(ast) != A_MP_EMAP) {
+      assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
+    // Insert else-then {cloned nodes} statements after
+    // A_MP_EMAP
+    add_stmt_after(new_end, std);
+
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    // Search for endtargetdata node and insert the
+    // same if-then-endif condition around it as well.
+    while (A_TYPEG(ast) != A_MP_ENDTARGETDATA) {
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_ENDTARGETDATA, "", ast, 4);
+    // Clone the if and end statements.
+    new_if = ast_rewrite(new_if);
+    new_end = ast_rewrite(new_end);
+
+    add_stmt_before(new_if, std);
+    add_stmt_after(new_end, std);
+  }
+  ast_unvisit();
+
+  // Handle targetenterdata and targetexitdata.
+  ast_visit(1,1);
+  for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+
+    // Search for targetdata.
+    ast_type = A_TYPEG(ast);
+    if (ast_type != A_MP_TARGETENTERDATA && ast_type != A_MP_TARGETEXITDATA) {
+     continue;
+    }
+    begin_std = std;
+
+    ast = STD_AST(std);
+    target_ast = ast;
+
+    ifast = A_IFPARG(target_ast);
+    if (!ifast)
+      continue;
+
+    // Create new if-then-endif structure.
+    new_if = mk_stmt(A_IFTHEN, 0);
+    new_end = mk_stmt(A_ENDIF, 0);
+    // Copy the condition from the TARGET(ENTER|EXIT)DATA statement.
+    A_IFEXPRP(new_if, ifast);
+    // Place if-then before the targetdata
+    add_stmt_before(new_if, begin_std);
+    A_IFPARP(ast, 0);
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    while (A_TYPEG(ast) != A_MP_EMAP) {
+      assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
+    // Insert else-then {cloned nodes} statements after
+    // A_MP_EMAP
+    add_stmt_after(new_end, std);
+  }
+
+  ast_unvisit();
+}
+
+static void rewrite_omp_target_construct() {
+
+  int std = 0;
+  int ast = 0, ifast = 0, new_if = 0, new_end = 0, new_else = 0;
+  int cloned_stmts[MAX_CLONES];
+  int begin_std = 0, target_ast = 0;
+  int curr = 0;
+  int new_stmt = 0;
+  int found_inner_scope = 0;
+
+  ast_visit(1,1);
+  for (std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+
+    // Search for BMPSCOPE.
+    if (A_TYPEG(ast) != A_MP_BMPSCOPE) {
+     continue;
+    }
+    begin_std = std;
+
+    // Next AST Statement should be Target
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+    if (A_TYPEG(ast) != A_MP_TARGET) {
+      continue;
+    }
+    target_ast = ast;
+
+    ifast = A_IFPARG(target_ast);
+    if (!ifast)
+      continue;
+
+    // Create new if-then-else structure.
+    new_if = mk_stmt(A_IFTHEN, 0);
+    new_else = mk_stmt(A_ELSE, 0);
+    new_end = mk_stmt(A_ENDIF, 0);
+    // Copy the condition from the TARGET statement.
+    A_IFEXPRP(new_if, ifast);
+    // Place if-then before the A_MP_BMPSCOPE.
+    add_stmt_before(new_if, begin_std);
+    A_IFPARP(ast, 0);
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+
+    while (A_TYPEG(ast) != A_MP_EMAP) {
+      assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    assert(A_TYPEG(ast) == A_MP_EMAP, "", ast, 4);
+    std = STD_NEXT(std);
+    ast = STD_AST(std);
+
+    // There might be another inner BMPSCOPE for
+    // some constructs. Handle them too.
+    // TODO: Add more patterns.
+    found_inner_scope = 0;
+    if (A_TYPEG(ast) == A_MP_BMPSCOPE) {
+      found_inner_scope = 1;
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_TEAMS) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+
+    // clone all the statements found below.
+    while (std > 0) {
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) == A_MP_ENDTARGET ||
+          A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
+        break;
+      new_stmt = ast_rewrite(ast);
+      // Disable the parallel execution of A_MP_PDO for now.
+      // TODO: Does this need to be enabled for any case?
+      if (A_TYPEG(ast) == A_MP_PDO) {
+        A_DISTPARDOP(new_stmt, 0);
+        A_DISTRIBUTEP(new_stmt,0);
+        A_TASKLOOPP(new_stmt, 0);
+        A_SCHED_TYPEP(new_stmt, 0);
+        A_ORDEREDP(new_stmt, 0);
+      }
+      A_DESTP(new_stmt, A_DESTG(ast));
+      A_SRCP(new_stmt, A_SRCG(ast));
+      assert(curr < MAX_CLONES,
+             "rewrite_omp_target_construct: Too many AST "
+             "statements to clone",ast,4);
+      cloned_stmts[curr++] = new_stmt;
+      std = STD_NEXT(std);
+    }
+
+    if (found_inner_scope) {
+      assert(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE, "", ast, 4);
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+      if (A_TYPEG(ast) != A_MP_EMPSCOPE) {
+        assert(false, "", ast, 4);
+      }
+      std = STD_NEXT(std);
+      assert(std > 0, "", ast, 4);
+      ast = STD_AST(std);
+    }
+    assert(A_TYPEG(ast) == A_MP_ENDTARGET, "", ast, 4);
+
+    // Match for A_EMPSCOPE.
+    std = STD_NEXT(std);
+    assert(std > 0, "", ast, 4);
+    ast = STD_AST(std);
+    assert(A_TYPEG(ast) == A_MP_EMPSCOPE, "", ast, 4);
+
+    // Insert else-then {cloned nodes} statements after
+    // A_MP_EMPSCOPE.
+    add_stmt_after(new_end, std);
+    // Insert the cloned statements in the
+    // else part.
+    while (curr > 0)
+      add_stmt_after(cloned_stmts[--curr],std);
+    add_stmt_after(new_else, std);
+
+    // Move to next node.
+    std = STD_NEXT(std);
+  }
+
+  ast_unvisit();
+}
+// AOCC END
+
 void
 transform(void)
 {
@@ -85,6 +368,21 @@ transform(void)
     set_initial_s1();
     /* create descriptors */
     trans_get_descrs();
+
+// AOCC BEGIN
+    if (flg.omptarget) {
+      /* Handle if-clause in OpenMP statements.
+      */
+      rewrite_omp_target_construct();
+      rewrite_omp_targetdata_construct();
+#if DEBUG
+      if (DBGBIT(50, 4)) {
+        fprintf(gbl.dbgfil, "After rewrite_omp_target_construct\n");
+        dstda();
+      }
+#endif
+    }
+// AOCC END
 
 /* turn block wheres into single wheres */
 #if DEBUG
@@ -1808,6 +2106,11 @@ collapse_assignment(int asn, int std)
   FtnRtlEnum rtlRtn;
   int rhs_isptr, lhs_isptr;
 
+  // AOCC Begin
+  // for device offload do not transform array assignments to runtime library
+  if (flg.omptarget) return 0;
+  // AOCC End
+
   if (flg.opt < 2)
     return 0;
 
@@ -2283,6 +2586,10 @@ inline_spread_shifts(int asgn_ast, int forall_ast, int inlist)
   case I_PRODUCT:
   case I_MAXVAL:
   case I_MINVAL:
+  case I_PARITY:      // AOCC
+  case I_IPARITY:     // AOCC
+  case I_IALL:        // AOCC
+  case I_IANY:        // AOCC
   case I_ALL:
   case I_ANY:
   case I_COUNT:

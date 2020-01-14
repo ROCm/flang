@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes made to support f2008 support of change in maximum array dimensions
+ * Date of Modification: 26th June 2019
+ *
+ */
 /**
    \file interf.c
    \brief Routines for importing symbols from .mod files and from IPA.
@@ -174,7 +181,7 @@ typedef struct {/* info on a shd item read from file */
     int lwb;
     int upb;
     int stride;
-  } shp[7];
+  } shp[MAXSUBS]; // AOCC
 } SHDITEM;
 
 typedef struct {     /* info on argt item read from file */
@@ -188,7 +195,7 @@ typedef struct {     /* info on ASD item read from file */
   int old;           /* old asd index */
   LOGICAL installed; /* this entry has been processed */
   int ndim;          /* number of dimensions */
-  int subs[7];       /* subscripts */
+  int subs[MAXSUBS];       /* AOCC: subscripts */
 } ASDITEM;
 
 typedef struct {     /* info on astli list read file */

@@ -53,9 +53,9 @@ static void emit_scatterx(int);
 static void emit_scatterx_gatherx(int std, int result, int array, int mask,
                                   int allocstd, int tempast0, int lhssec,
                                   int comm_type);
-static void compute_permute(int lhs, int rhs, int list, int order[7]);
-static int put_data(int permute[7], int no);
-static LOGICAL is_permuted(int array, int per[7], int per1[7], int *nper1);
+static void compute_permute(int lhs, int rhs, int list, int order[MAXSUBS]); /* AOCC */
+static int put_data(int permute[MAXSUBS], int no); /* AOCC */
+static LOGICAL is_permuted(int array, int per[MAXSUBS], int per1[MAXSUBS], int *nper1); /* AOCC */
 static int scalar_communication(int ast, int std);
 static int tag_call_comm(int std, int forall);
 static void call_comm(int cstd, int fstd, int forall);
@@ -459,7 +459,7 @@ is_same_number_of_idx(int dest, int src, int list)
 int
 reference_for_temp(int sptr, int a, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int list;
   int i, ndim, k;
   int astnew, vector;
@@ -700,7 +700,7 @@ forall_opt1(int ast)
   FT_IGNORE(nd) = 0;
   FT_SECTL(nd) = 0;
   FT_CYCLIC(nd) = getcyclic();
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < MAXSUBS; i++) { /* AOCC */
     FT_NFUSE(nd, i) = 0;
     for (j = 0; j < MAXFUSE; j++)
       FT_FUSELP(nd, i, j) = 0;
@@ -989,7 +989,7 @@ is_scatter(int std)
 static int
 simple_reference_for_temp(int sptr, int a, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int list;
   int i, ndim, k;
   int astnew;
@@ -1042,7 +1042,7 @@ static int
 temp_gatherx(int std, int forall, int lhs, int rhs, int dty, int *allocast)
 {
   int sptr;
-  int subscr[7];
+  int subscr[MAXSUBS]; /* AOCC */
   int ast;
   int nd;
   int astnew;
@@ -1074,7 +1074,7 @@ static int
 temp_copy_section(int std, int forall, int lhs, int rhs, int dty, int *allocast)
 {
   int sptr;
-  int subscr[7];
+  int subscr[MAXSUBS]; /* AOCC */
   int ast;
   int nd;
   int astnew;
@@ -1111,7 +1111,7 @@ temp_copy_section(int std, int forall, int lhs, int rhs, int dty, int *allocast)
 static int
 gatherx_temp_before(int sptr, int rhs, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int k, j;
   int asd;
   int ndim;
@@ -1227,7 +1227,7 @@ forall_2_sec(int a, int forall)
   int triple;
   int l, u, s;
   int t1, t2, t3;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int sptr;
   int astli;
   int base;
@@ -1576,7 +1576,7 @@ insert_forall_comm(int ast)
   int rhs_is_dist;
   int sptr;
   int asd, ndim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int nd, nd1, nd2;
   int src;
   int cnt;
@@ -1781,7 +1781,7 @@ emit_copy_section(int a, int std)
   int nd;
   int sptr;
   int allocast;
-  int order2[7];
+  int order2[MAXSUBS]; /* AOCC */
   int no;
   int header;
   int lhssec;
@@ -1925,7 +1925,7 @@ emit_permute_section(int a, int std)
   int asd;
   int ndim;
   int ast1;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int astnew;
   int tempast, tempast0;
   int argt, nargs;
@@ -1936,7 +1936,7 @@ emit_permute_section(int a, int std)
   int arref;
   int lhs;
   LOGICAL use_lhs;
-  int order2[7];
+  int order2[MAXSUBS]; /* AOCC */
   int no;
   int func;
   int new_a;
@@ -2019,7 +2019,7 @@ emit_permute_section(int a, int std)
 static int
 copy_section_temp_before(int sptr, int rhs, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int k, j;
   int asd;
   int ndim;
@@ -2054,7 +2054,7 @@ copy_section_temp_before(int sptr, int rhs, int forall)
 static int
 eliminate_extra_idx(int lhs, int a, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int k, i;
   int asd;
   int ndim;
@@ -2110,20 +2110,20 @@ eliminate_extra_idx(int lhs, int a, int forall)
  * bit can be zeroed and the axis argument omitted.
  */
 static void
-permute_axis(int result, int array, int list, int permute[7])
+permute_axis(int result, int array, int list, int permute[MAXSUBS]) /* AOCC */
 {
 
-  int order2[7];
+  int order2[MAXSUBS]; /* AOCC */
   int no;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int newresult;
   int astli, nidx;
   int asd, ndim;
   int i, j;
-  int per[7], per1[7];
+  int per[MAXSUBS], per1[MAXSUBS]; /* AOCC */
   int nper1;
 
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < MAXSUBS; i++) /* AOCC */
     permute[i] = 0;
 
   /* find out for indirection array */
@@ -2182,7 +2182,7 @@ get_pertbl(void)
 }
 
 static int
-put_data(int permute[7], int no)
+put_data(int permute[MAXSUBS], int no) /* AOCC */
 {
   ADSC *ad;
   int dtype;
@@ -2247,17 +2247,17 @@ put_data(int permute[7], int no)
  * permute will be /0,3,1,2/
  */
 static void
-compute_permute(int lhs, int rhs, int list, int order[7])
+compute_permute(int lhs, int rhs, int list, int order[MAXSUBS]) /* AOCC */
 {
   int asd, ndim;
   int i, j;
   int count, count1;
-  int order1[7];
+  int order1[MAXSUBS]; /* AOCC */
   LOGICAL found;
   int astli, nidx;
   int iloc;
 
-  for (j = 0; j < 7; j++)
+  for (j = 0; j < MAXSUBS; j++) /* AOCC */
     order[j] = 0;
 
   assert(!is_duplicate(lhs, list), "compute_permute:something is wrong", lhs,
@@ -2310,7 +2310,7 @@ compute_permute(int lhs, int rhs, int list, int order[7])
 }
 
 static LOGICAL
-is_permuted(int array, int per[7], int per1[7], int *nper1)
+is_permuted(int array, int per[MAXSUBS], int per1[MAXSUBS], int *nper1) /* AOCC */
 {
   int asd;
   int ndim;
@@ -2348,7 +2348,7 @@ emit_sum_scatterx(int std)
   int asd1;
   int ndim1;
   int ast1;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int astnew;
   int tempast, tempast0;
   int argt, nargs;
@@ -2368,7 +2368,7 @@ emit_sum_scatterx(int std)
   int base;
   int array;
   int func;
-  int permute[7];
+  int permute[MAXSUBS]; /* AOCC */
   int npermute;
   int ndim, asd;
   int nv;
@@ -2607,7 +2607,7 @@ emit_scatterx_gatherx(int std, int result, int array, int mask, int allocstd,
   int asd1;
   int ndim1;
   int ast1;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int astnew;
   int tempast;
   int argt, nargs;
@@ -2624,7 +2624,7 @@ emit_scatterx_gatherx(int std, int result, int array, int mask, int allocstd,
   int result_sec, base_sec, array_sec, mask_sec;
   int newresult;
   int func;
-  int permute[7];
+  int permute[MAXSUBS]; /* AOCC */
   int npermute;
   int ndim, asd;
   int newbase;
@@ -3070,7 +3070,7 @@ emit_overlap(int a)
   int cp, xfer;
   int nd;
   int sptr;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int forall;
   int std;
   int ns, ps;
@@ -3174,7 +3174,7 @@ getcyclic(void)
   ct->ifast = 0;
   ct->endifast = 0;
   ct->inner_cyclic = clist();
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < MAXSUBS; i++) { /* AOCC */
     ct->c_lof[i] = 0;
     ct->c_dupl[i] = 0;
     ct->idx[i] = 0;
@@ -3454,7 +3454,7 @@ construct_list_for_pure(int arg, int mask, int list)
 static int
 reference_for_pure_temp(int sptr, int lhs, int arg, int forall)
 {
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int list;
   int i, j;
   int asd;
@@ -3546,7 +3546,7 @@ handle_pure_temp_too_large(int expr, int std)
   int shape, std1;
   int sptr;
   int eledtype;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int asn;
 
   if (expr == 0)
@@ -3929,7 +3929,7 @@ forall_dependency_scalarize(int std, int *std1, int *std2)
   int ast, ast1, ast2;
   int asn;
   int asd;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int i;
   int ndim;
   int sptr;
@@ -4052,7 +4052,7 @@ canonical_conversion(int ast)
   int i, k;
   int zero = astb.bnd.zero;
   int ifexpr;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int newdest;
   int nd, nd1;
   int ip, pstd, past;
@@ -4212,7 +4212,7 @@ scalar_communication(int ast, int std)
   int rhs_is_dist;
   int sptr;
   int asd, ndim;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
   int nd, nd1, nd2;
   int src;
   int cnt;

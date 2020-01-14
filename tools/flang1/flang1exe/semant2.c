@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ * Date of Modification: December 2019
+*/
+
 /**
     \file
     \brief This file contains part 2 of the compiler's semantic actions
@@ -768,16 +775,21 @@ semant2(int rednum, SST *top)
       } else {
         int dty = TBPLNKG(sptr);
         itemp = ITEM_END;
-        if (generic_tbp_has_pass_and_nopass(dty, sptr)) {
-          int parent, sp;
-          e1 = (SST *)getitem(0, sizeof(SST));
-          sp = sym_of_ast(ast);
-          SST_SYMP(e1, sp);
-          SST_DTYPEP(e1, DTYPEG(sp));
-          mkident(e1);
-          mkexpr(e1);
-          itemp = mkitem(e1);
-        }
+        // AOCC Begin
+        // Comment the below code.
+        // tbp arg will be added to Type bound procedures with nopass clause
+        // in a common place (func_call2).
+        //if (generic_tbp_has_pass_and_nopass(dty, sptr)) {
+        //  int parent, sp;
+        //  e1 = (SST *)getitem(0, sizeof(SST));
+        //  sp = sym_of_ast(ast);
+        //  SST_SYMP(e1, sp);
+        //  SST_DTYPEP(e1, DTYPEG(sp));
+        //  mkident(e1);
+        //  mkexpr(e1);
+        //  itemp = mkitem(e1);
+        //}
+        // AOCC End
         goto var_ref_common;
       }
     }
@@ -966,7 +978,12 @@ semant2(int rednum, SST *top)
           mem2 = get_specific_member(TBPLNKG(sptr), VTABLEG(mem));
           argno = get_tbp_argno(BINDG(mem2), TBPLNKG(sptr));
           if (!argno && NOPASSG(mem2)) {
-            goto var_ref_common; /* assume NOPASS tbp */
+            // AOCC Begin
+            // To add tbp arg, below goto is commented
+            //goto var_ref_common; /* assume NOPASS tbp */
+            // Need to add tbp arg to keep it consistant.
+            argno = 1;
+            // AOCC End
           }
         } else {
           argno = get_tbp_argno(sptr, DTYPEG(pass_sym_of_ast(ast)));

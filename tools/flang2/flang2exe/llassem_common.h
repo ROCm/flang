@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: November 2018
+  *
+  */
+
 
 #ifndef LLASSEM_COMMON_H_
 #define LLASSEM_COMMON_H_
@@ -77,7 +86,7 @@ void init_Mcuda_compiled(void);
 /**
    \brief ...
  */
-void put_addr(SPTR sptr, ISZ_T off, DTYPE dtype);
+void put_addr(SPTR sptr, ISZ_T off, DTYPE dtype, bool initptrwithzero=false);
 
 /**
    \brief ...

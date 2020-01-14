@@ -4,13 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
- *
- */
+
 /**
    \file
    \brief LLVM bridge representation

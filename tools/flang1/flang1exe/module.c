@@ -5,6 +5,14 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Date of Modification: 26th Nov 2019
+ *   Resolving the module scope of aliased symbols
+ *
+ */
+
 /** \file
     \brief Fortran module support.
  */
@@ -545,7 +553,8 @@ find_def_in_most_recent_scope(int sptr, int save_sem_scope_level)
           in private USE or a private module variable */
       if (!is_except_in_scope(scope, sptr1) &&
           !is_private_in_scope(scope, sptr1) &&
-          (STYPEG(ng) == ST_USERGENERIC || !PRIVATEG(ng))) {
+          (STYPEG(ng) == ST_PROC) ||  // AOCC
+          (STYPEG(ng) == ST_USERGENERIC || !PRIVATEG(ng))  ) {
         return sptr1;
       }
     }

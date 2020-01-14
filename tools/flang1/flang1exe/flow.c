@@ -5,6 +5,18 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ * Support for parity and bit transformational intrinsic iparity, iany, iall
+ * Date of Modification: July 2019
+ *
+ */
+
 /**
     \file
     \brief Optimizer submodule responsible for performing flow analysis
@@ -683,6 +695,10 @@ bld_ud(int ast, int *dummy)
     switch (A_OPTYPEG(ast)) {
     case I_ALL:
     case I_ANY:
+    case I_IALL:                 // AOCC
+    case I_IANY:                 // AOCC
+    case I_IPARITY:              // AOCC
+    case I_PARITY:               // AOCC
     case I_COUNT:
     case I_PRODUCT:
     case I_SUM:
@@ -690,6 +706,9 @@ bld_ud(int ast, int *dummy)
     case I_MAXVAL:
     case I_MINVAL:
     case I_CSHIFT:
+    // AOCC Begin
+    case I_NORM2:
+    // AOCC Begin
     case I_DOT_PRODUCT:
     case I_EOSHIFT:
     case I_MAXLOC:
@@ -2739,6 +2758,7 @@ const_prop(void)
 
   if (XBIT(6, 0x1))
     return FALSE;
+  return false;
 #if DEBUG
   if (OPTDBG(9, 32768)) {
     fprintf(gbl.dbgfil, "const_prop: file %s, function %s\n", gbl.src_file,

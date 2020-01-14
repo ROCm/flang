@@ -1,3 +1,4 @@
+
 /*
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -5,6 +6,11 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Month of Modification: May 2019 : f2008 support
+ */
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
 
@@ -18,6 +24,13 @@ typedef enum SPTR {
   SPTR_NULL = 0,
   SPTR_MAX = 67108864 /* Maximum allowed value */
 } SPTR;
+
+// AOCC begin
+typedef enum {
+  STD_UNKNOWN, /* default */
+  F2008
+} FORTRAN_STD;
+// AOCC end
 
 #ifdef __cplusplus
 // Enable symbol table traversals to work.
@@ -140,7 +153,7 @@ typedef struct {
 #define MAXCPUS 256
 
 /* Max number of dimensions.  F'2008 requires 15,  Intel is 31. */
-#define MAXRANK 7
+#define MAXRANK 15 /* AOCC */
 
 extern GBL gbl;
 #define GBL_CURRFUNC gbl.currsub
@@ -185,6 +198,7 @@ typedef struct {
   LOGICAL terse;
   int dollar;   /* defines the char to which '$' is translated */
   int x[251];   /* x flags */
+  int z[31];    /* AOCC: z flags */
   LOGICAL quad; /* quad align "unconstrained objects" if sizeof >= 16 */
   int anno;
   LOGICAL qa; /* TRUE => -qa appeared on command line */
@@ -210,8 +224,21 @@ typedef struct {
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
   int accmp;
   char *cmdline; /* command line used to invoke the compiler */
+  LOGICAL func_args_alias;      /* assume function arguments are aliasing */ // AOCC
+  // AOCC begin
+  char *std_string; /* input string arg of -std= */
+  FORTRAN_STD std;
+  LOGICAL disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
+  LOGICAL x86_64_omptarget; /* IF offloading target is x86-64 */
+  LOGICAL amdgcn_target /* IF offloading target is AMDGPU */
+  // AOCC end
 } FLG;
 
 extern FLG flg;
+
+// AOCC begin
+extern unsigned get_legal_maxdim();
+extern bool is_legal_numdim(int numdim);
+// AOCC end
 
 #endif

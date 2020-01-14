@@ -16,19 +16,21 @@ typedef struct {
   int ifast;
   int endifast;
   LITEMF *inner_cyclic;
-  int c_lof[7];
-  int idx[7];
-  int cb_init[7]; /* cyclic_block initilization asts */
-  int cb_do[7];
-  int cb_block[7];
-  int cb_inc[7];
-  int cb_enddo[7];
+  // AOCC begin
+  int c_lof[MAXSUBS];
+  int idx[MAXSUBS];
+  int cb_init[MAXSUBS]; /* cyclic_block initilization asts */
+  int cb_do[MAXSUBS];
+  int cb_block[MAXSUBS];
+  int cb_inc[MAXSUBS];
+  int cb_enddo[MAXSUBS];
 
-  int c_init[7]; /* cyclic initilization asts */
-  int c_inc[7];
-  int c_dupl[7];
-  int c_idx[7];
-  int c_dstt[7];
+  int c_init[MAXSUBS]; /* cyclic initilization asts */
+  int c_inc[MAXSUBS];
+  int c_dupl[MAXSUBS];
+  int c_idx[MAXSUBS];
+  int c_dstt[MAXSUBS];
+  // AOCC end
 } CTYPE;
 
 typedef union {
@@ -70,9 +72,11 @@ typedef union {
     int sectvsub;
     int sectnvsub;
     int sectm;
-    int sectv[7];
-    int v[7];
-    int permute[7];
+    // AOCC begin
+    int sectv[MAXSUBS];
+    int v[MAXSUBS];
+    int permute[MAXSUBS];
+    // AOCC end
     int vflag;
     int pflag;
     int vdim;
@@ -155,9 +159,11 @@ typedef union {
     int nsget;
     LITEMF *sget;
     CTYPE *cyclic;
-    int fuselp[7][MAXFUSE];
-    int fusedstd[7][MAXFUSE];
-    int nfuse[7];
+    // AOCC begin
+    int fuselp[MAXSUBS][MAXFUSE];
+    int fusedstd[MAXSUBS][MAXFUSE];
+    int nfuse[MAXSUBS];
+    // AOCC end
     int header;
     int barr1;
     int barr2;

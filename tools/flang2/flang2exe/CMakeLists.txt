@@ -73,6 +73,9 @@ set(SOURCES
   kmpcutil.cpp
   verify.cpp
   ompaccel.cpp
+  # AOCC begin
+  ompaccel_x86.cpp
+  # AOCC end
   tgtutil.cpp
   )
 

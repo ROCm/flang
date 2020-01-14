@@ -3,6 +3,11 @@
 \" * See https://llvm.org/LICENSE.txt for license information.
 \" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 \" *
+\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+\" *
+\" * Complex data types support for acosh, asinh and atanh
+\" * Date of Modification: 08 January 2020
+\" *
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -50,6 +55,12 @@ stc2 - current file index, default is 1.
 stc3 - number of words for this ILM block (including the BOS).
 .fi
 .AT spec trm
+\" AOCC BEGIN
+.IL RISNAN arth lnk
+.AT spec trm
+.IL DISNAN arth lnk
+.AT spec trm
+\" AOCC END
 .IL FLOAT arth lnk
 Convert integer to real number (REAL and FLOAT intrinsics).
 .OP FLOAT r p1
@@ -363,6 +374,12 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDTAN arth lnk
 .AT spec dcmplx
+.IL CACOSH arth lnk
+.AT spec
+.IL CASINH arth lnk
+.AT spec
+.IL CATANH arth lnk
+.AT spec
 .IL ALOG arth lnk
 .OP FLOG r p1
 .IL DLOG arth lnk
@@ -980,8 +997,19 @@ Real valued SIGN intrinsic.
 .OP FABS t2 p1
 .OP FNEG t3 t2
 .OP FSELECT r t1 t2 t3
+.IL SIGNNZ arth lnk lnk
+Real valued SIGN intrinsic that distinguishes negative zero.
+.OP FCMPZNZ t1 p2 lt
+.OP FABS t2 p1
+.OP FNEG t3 t2
+.OP FSELECT r t1 t2 t3
 .IL DSIGN arth lnk lnk
 .OP DCMPZ t1 p2 lt
+.OP DABS t2 p1
+.OP DNEG t3 t2
+.OP DSELECT r t1 t2 t3
+.IL DSIGNNZ arth lnk lnk
+.OP DCMPZNZ t1 p2 lt
 .OP DABS t2 p1
 .OP DNEG t3 t2
 .OP DSELECT r t1 t2 t3

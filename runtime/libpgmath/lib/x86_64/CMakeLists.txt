@@ -21,6 +21,8 @@ add_subdirectory("relaxed")
 get_property(FLAGS GLOBAL PROPERTY "FLAGS_X8664_L1")
 get_property(DEFINITIONS GLOBAL PROPERTY "DEFINITIONS_X8664_L1")
 
+enable_language(C ASM)
+
 set(ASM_SRCS
   aint.S
   anint.S

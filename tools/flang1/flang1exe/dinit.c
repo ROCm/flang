@@ -603,6 +603,9 @@ setConval(int sptr, int conval, int op)
     case AC_LOR:
       val |= conval;
       break;
+    case AC_LXOR:           // AOCC
+      val ^= conval;
+      break;
     case AC_LAND:
       val &= conval;
       break;
@@ -640,10 +643,11 @@ setConval(int sptr, int conval, int op)
 static void
 process_real_kind(int sptr, ACL *ict, int op)
 {
-  int ast, con1, conval;
+  int ast, con1, conval, p, r;
 
   ast = ict->u1.ast;
-  conval = 0;
+  conval = 4;
+  p = 0, r = 0;  // AOCC
   if (A_TYPEG(ast) == A_CNST) {
 
     con1 = A_SPTRG(ast);
@@ -652,10 +656,12 @@ process_real_kind(int sptr, ACL *ict, int op)
       conval = 4;
     else if (con1 <= 15)
       conval = 8;
-    else if (con1 <= 31 && !XBIT(57, 4))
-      conval = 16;
-    else
+    /*else if (con1 <= 31 && !XBIT(57, 4))
+      conval = 16; Currently real 16 is not supported */
+    else {
       conval = -1;
+      p = -1;
+    }
   }
 
   ict = ict->next;
@@ -668,35 +674,75 @@ process_real_kind(int sptr, ACL *ict, int op)
       if (XBIT(49, 0x40000)) {
         /* Cray C90 */
         if (con1 <= 37) {
-          if (conval > 0 && conval < 4)
+          if (conval > 0 && conval <= 4)
             conval = 4;
         } else if (con1 <= 2465) {
-          if (conval > 0 && conval < 8)
+          if (conval > 0 && conval <= 8)
             conval = 8;
         } else {
           if (conval > 0)
             conval = 0;
-          conval -= 2;
+          conval = -2;
+	  r = -2;
         }
       } else {
         /* ANSI */
         if (con1 <= 37) {
-          if (conval > 0 && conval < 4)
+          if (conval > 0 && conval <= 4)
             conval = 4;
         } else if (con1 <= 307) {
-          if (conval > 0 && conval < 8)
+          if (conval > 0 && conval <= 8)
             conval = 8;
-        } else if (con1 <= 4931 && !XBIT(57, 4)) {
-          if (conval > 0 && conval < 16)
+        } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+          if (conval > 0 && conval <= 16)
             conval = 16;
-        } else {
+        }*/ else {
           if (conval > 0)
             conval = 0;
-          conval -= 2;
+          conval = -2;
+	  r = -2;
         }
       }
     }
   }
+  // AOCC begin
+  ict = ict->next;
+  if (ict) {
+    ast = ict->u1.ast;
+
+    if (A_TYPEG(ast) == A_CNST) {
+      con1 = A_SPTRG(ast);
+      con1 = CONVAL2G(con1);
+      if (XBIT(49, 0x40000)) {
+        /* Cray C90 */
+        if (con1 == 2) {
+          if (conval > 0 && conval <= 4)
+            conval = 4;
+	  else if (conval > 0 && conval <= 8)
+            conval = 8;
+          else if (p < 0 && r < 0)
+	    conval = -3;
+        }
+	else if (con1 != 2)
+            conval = -5;
+      } else {
+        /* ANSI */
+          if (con1 == 2 || con1 == 0) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    /*else if (conval > 0 && conval <= 16)
+              conval = 16;*/
+            else if (p < 0 && r < 0)
+	    conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        }
+    }
+  }
+  // AOCC end
   if (conval) {
     setConval(sptr, conval, op);
   }
@@ -720,6 +766,7 @@ dinit_acl_val2(int sptr, int dtype, ACL *ict, int op)
     case AC_DIV:
     case AC_EXP:
     case AC_LOR:
+    case AC_LXOR:     // AOCC
     case AC_LAND:
     case AC_LEQV:
     case AC_LNEQV:
@@ -1305,6 +1352,9 @@ ac_opname(int id)
     break;
   case AC_LOR:
     strcpy(bf, "LOR");
+    break;
+  case AC_LXOR:           // AOCC
+    strcpy(bf, "XOR");
     break;
   case AC_LAND:
     strcpy(bf, "LAND");

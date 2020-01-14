@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: March 2019
+  *
+  */
+
 
 /** \file rest.c
     \brief various ast transformations
@@ -2603,6 +2612,7 @@ handle_seq_section(int entry, int arr, int loc, int std, int *retval,
   if (DTY(topdtype) == TY_ARRAY)
     topdtype = DTY(topdtype + 1);
 
+#if 0
   if (simplewholearray && !is_pointer && CONTIGATTRG(arraysptr)) {
     /* Note: The call to first_element() uses the descriptor of the declared
      * dtype of arr which is fine for simple regular arrays. But it does not 
@@ -2617,6 +2627,7 @@ handle_seq_section(int entry, int arr, int loc, int std, int *retval,
       check_member(arrayast, mk_id(DESCRG(arraysptr))) : 0;
     return;
   }
+#endif
 
   /* whole array with no distribution */
   if (!is_seq_pointer

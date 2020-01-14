@@ -2141,8 +2141,18 @@ Single float compare with zero; result is TRUE or FALSE.
 .AT arth null ir cse
 .CG notCG
 
+.IL FCMPZNZ splnk stc
+Single float compare with zero which distinguishes negative zero; result is TRUE or FALSE.
+.AT arth null ir cse
+.CG notCG
+
 .IL DCMPZ dplnk stc
 Double precision compare with zero.
+.AT arth null ir cse
+.CG notCG
+
+.IL DCMPZNZ dplnk stc
+Double precision compare with zero which distinguishes negative zero.
 .AT arth null ir cse
 .CG notCG
 

@@ -5,6 +5,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support,
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 14th October 2019
+ *
+ */
 /**
     \file semant3.c
     \brief This file contains part 3 of the compiler's semantic actions
@@ -31,6 +40,7 @@
 #include "lower.h"
 #include "rtlRtns.h"
 #include "pd.h"
+#include "llmputil.h"
 
 static LOGICAL alloc_error = FALSE;
 static int alloc_source;
@@ -58,6 +68,14 @@ static int construct_association(int lhs_sptr, SST *rhs, int stmt_dtype,
 static void end_association(int sptr);
 static int get_sst_named_whole_variable(SST *rhs);
 static int get_derived_type(SST *, LOGICAL);
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+extern int target_ast;
+extern int reduction_kernel;
+#endif
+void get_subtree(int ast, int* par, int* sib);
+int sib, par;
+// AOCC End
 
 #define IN_OPENMP_ATOMIC (sem.mpaccatomic.ast && !(sem.mpaccatomic.is_acc))
 
@@ -1583,6 +1601,26 @@ semant3(int rednum, SST *top)
       error(1050, ERR_Severe, gbl.lineno, "STOP in", CNULL); // 2018-C1137
     ast1 = SST_TMPG(RHS(2));
     ast2 = SST_ASTG(RHS(2));
+
+    // AOCC Begin
+    /* 
+     * Error not thrown for other 
+     * than integer/character type STOP CODE 
+    */
+    if (DTY(A_DTYPEG(ast1)) == TY_INT ||
+            DTY(A_DTYPEG(ast1)) == TY_SINT ||
+            DTY(A_DTYPEG(ast1)) == TY_INT8 ||
+            DTY(A_DTYPEG(ast1)) == TY_CHAR ||
+            DTY(A_DTYPEG(ast1)) == TY_NCHAR) {
+      goto stop_common;
+    }
+    else {
+      error(95, ERR_Warning, gbl.lineno, SYMNAME(gbl.currsub),
+        "-STOP code must be either INTEGER or CHARACTER type-\n");
+    }
+    // AOCC End
+
+stop_common:
     if (XBIT(54, 0x10)) {
       rtlRtn = RTE_stopa;
       goto pause_shared;
@@ -1738,8 +1776,14 @@ errorstop_shared:
         /* 64-bit hack */
         if (DTY(DT_INT) == TY_INT8)
           i = get_int_cval(i);
-        snprintf(name, sizeof(name), "%5ld", (long)i);
-        ast2 = mk_cnst(getstring(name, 5));
+        snprintf(name, sizeof(name), "%5ld", (long) i);
+        // AOCC Begin
+        if (flg.std == F2008) {
+          ast2 = mk_cnst(getstring(name, strlen(name)));
+        } else {
+        // AOCC End
+          ast2 = mk_cnst(getstring(name, 5));
+        }
       }
     } else {
       if (DTY(SST_DTYPEG(RHS(1))) == TY_CHAR) {
@@ -1749,6 +1793,18 @@ errorstop_shared:
         ast2 = astb.ptr0c;
         (void)mkarg(RHS(1), &dum);
         ast1 = SST_ASTG(RHS(1));
+        SST_TMPP(LHS, ast1);
+        get_subtree(ast1, &par, &sib);
+        // AOCC Begin
+        if (A_TYPEG(ast1) == A_ID || A_TYPEG(ast1) == A_CNST) {
+          snprintf(name, sizeof(name), "%s", getprint((int)A_SPTRG(par)));
+          if (flg.std == F2008) {
+            ast2 = mk_cnst(getstring(name, strlen(name)));
+          } else {
+          // AOCC End
+            ast2 = mk_cnst(getstring(name, 5));
+          }
+        }
       }
       if (flg.standard) {
         error(170, 2, gbl.lineno,
@@ -1801,6 +1857,16 @@ errorstop_shared:
     construct_name = 0;
     sem.pgphase = PHASE_EXEC; /* set now, since may have IF (...) stmt */
     sem.stats.nodes++;
+    // AOCC Begin
+    // if there's an if_construct inside non-reduction kernel fallback to
+    // tgt_target mode.
+#ifdef OMP_OFFLOAD_AMD
+    if (flg.amdgcn_target &&
+        target_ast && DI_IN_NEST(sem.doif_depth, DI_DISTPARDO) && !reduction_kernel) {
+      A_COMBINEDTYPEP(target_ast, mode_target);
+    }
+#endif
+    // AOCC End
     break;
   /*
    *	<if construct> ::= <check construct> : IF
@@ -4667,7 +4733,7 @@ errorstop_shared:
              itemp = itemp->next) {
           SST *stkp;
 
-          if (sem.arrdim.ndim >= 7) {
+          if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
             error(47, 3, gbl.lineno, CNULL, CNULL);
             alloc_error = TRUE;
             break;

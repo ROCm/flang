@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Changes to support character arrays as subroutine internal variables.
+  *
+  * Date of Modification: December 2018
+  *
+  */
+
 
 /** \file
     \brief Fortran Semantic action routines to resolve symbol references as to
@@ -122,6 +131,7 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
   bestsptr = bestsptrloop = 0;
   bestuse = bestuse2 = bestusecount = bestuse2count = 0;
   bestsl = -1;
+
   for (sptrloop = first_hash(first); sptrloop; sptrloop = HASHLKG(sptrloop)) {
     int want_scope, usecount, sptrlink;
     SCOPESTACK *scope;
@@ -255,7 +265,10 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
               !CONSTRUCTSYMG(sptrlink))) {
             int sl = get_scope_level(scope);
             if (sl > bestsl &&
-                (scope->kind != SCOPE_BLOCK || sptr >= scope->symavl)) {
+                (scope->kind != SCOPE_BLOCK || sptr >= scope->symavl) 
+                // AOCC BEGIN
+                || (STYPEG(sptr) == ST_TYPEDEF && sl == bestsl && STYPEG(first) == ST_PROC)) {
+                // AOCC END
               if (scope->kind == SCOPE_USE &&
                   STYPEG(sptrlink) != ST_USERGENERIC &&
                   STYPEG(sptrlink) != ST_ENTRY && !VTOFFG(sptrlink) &&
@@ -275,6 +288,7 @@ sym_in_scope(int first, OVCLASS overloadclass, int *paliassym, int *plevel,
             } else if (bestuse && scope->kind == SCOPE_USE &&
                        /* for submodule, use-association overwrites host-association*/
                        STYPEG(scope->sptr) == ST_MODULE && 
+		       bestuse2 &&   // AOCC
                        ANCESTORG(gbl.currmod) != scope->sptr &&
                        scope->sptr != bestuse &&
                        STYPEG(sptrlink) != ST_USERGENERIC &&
@@ -566,6 +580,8 @@ set_internref_flag(int sptr)
 {
   INTERNREFP(sptr, 1);
   if (DTY(DTYPEG(sptr)) == TY_ARRAY || POINTERG(sptr) || ALLOCATTRG(sptr) ||
+  // AOCC: changes to support character arrays as subroutine internal variables
+     (DTY(DTYPEG(sptr)) == TY_CHAR || DTY(DTYPEG(sptr)) == TY_NCHAR) ||
       IS_PROC_DUMMYG(sptr) || ADJLENG(sptr)) {
     int descr, sdsc, midnum, devcopy;
     int cvlen = 0;
@@ -588,7 +604,14 @@ set_internref_flag(int sptr)
     if (devcopy)
       INTERNREFP(devcopy, 1);
   }
-  if (DTY(DTYPEG(sptr)) == TY_ARRAY) {
+  // AOCC: changes to support character arrays as subroutine internal variables
+  if (DTY(DTYPEG(sptr)) == TY_CHAR || DTY(DTYPEG(sptr)) == TY_NCHAR ) {
+   if (ADJLENG(sptr)) {
+      int cvlen = CVLENG(sptr);
+      if (cvlen) INTERNREFP(cvlen, 1);
+   }
+  }
+  if (DTY(DTYPEG(sptr)) == TY_ARRAY ) {
     ADSC *ad;
     ad = AD_DPTR(DTYPEG(sptr));
     if (AD_ADJARR(ad) || ALLOCATTRG(sptr) || ASSUMSHPG(sptr)) {
@@ -841,6 +864,31 @@ declsym(int first, SYMTYPE stype, LOGICAL errflg)
       sptr = sptralias;
       goto return1;
     }
+    // AOCC BEGIN
+    if (stype == ST_PROC && st == ST_TYPEDEF) {
+      /* the existing symbol is  typedef and creating a type bound procedure.
+       * in the same name is acceptable. Hide the type bound procedure symbol.
+       */
+      oldsptr = sptr;
+      /* create new one for type bound procedure */
+      sptr = insert_sym(first);
+      IGNOREP(sptr, 1); /* hide the procedure symbol */
+      goto return1;
+    }
+    if (stype == ST_TYPEDEF && st == ST_PROC && VTOFFG(sptr)) {
+      /* the existing symbol is the type bound procedure and a new typedef
+       * in the same name is acceptable. Hide the type bound procedure symbol.
+       */
+      IGNOREP(sptr, 1); /* hide the procedure symbol */
+      oldsptr = sptr;
+      /* create new one for typedef */
+      sptr = insert_sym(first);
+      /* make sure this is the first symbol on the hash list */
+      pop_sym(sptr);
+      push_sym(sptr);
+      goto return1;
+    }
+    // AOCC END
     if (stype == ST_ENTRY && sptralias == sptr && sem.mod_sym &&
         st == ST_PROC && ENCLFUNCG(sptr) == sem.mod_sym) {
       /* the existing symbol is the interface (ST_PROC) for

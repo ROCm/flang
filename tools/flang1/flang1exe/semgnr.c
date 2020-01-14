@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Fixes for CP2K application build
+ * Month of Modification: November 2019
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ * Date of Modification: December 2019
+ */
 
 /** \file
     \brief Fortran utility routines used by Semantic Analyzer to process
@@ -100,8 +109,9 @@ static struct optabstruct {
     {0, ""},       /* OP_LOC	26 */
     {0, ""},       /* OP_REF	27 */
     {0, ""},       /* OP_VAL	28 */
+    {0, ".xor."},  /* OP_LXOR	29 */   // AOCC
 };
-#define OPTABSIZE 29
+#define OPTABSIZE 30
 
 /** \brief Determines if we should (re)generate generic type bound procedure
  *  (tbp) bindings based on scope. This should only be done once per scope.
@@ -313,6 +323,10 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
   int dscptr;
   int paramct, curr_paramct;
   SPTR found_sptrgen, func_sptrgen;
+  // AOCC Begin
+  ITEM *list_bkp = list;
+  int arg_cnt_bkp = arg_cnt;
+  // AOCC End
 
   /* find the generic's max nbr of formal args and use it to compute
    * the size of the arg distatnce data item.
@@ -379,9 +393,15 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       E155("Empty generic procedure -", SYMNAME(sptr));
     }
 
+    bool renamed = true;
     for (gndsc = GNDSCG(sptrgen); gndsc; gndsc = SYMI_NEXT(gndsc)) {
       func = SYMI_SPTR(gndsc);
       func_sptrgen = sptrgen;
+      // AOCC Begin
+      // Restore the argument list and argument count
+      list = list_bkp;
+      arg_cnt = arg_cnt_bkp;
+      // AOCC End
       if (IS_TBP(func)) {
         /* For generic type bound procedures, use the implementation
          * of the generic bind name for the argument comparison.
@@ -399,8 +419,18 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
         if (!func)
           continue;
         mem = get_generic_member(dty, bind);
-        if (NOPASSG(mem) && generic_tbp_has_pass_and_nopass(dty, BINDG(mem)))
-          continue;
+        // AOCC Begin
+        // Commented the below code to fix issues with type bound procedures
+        // with and without nopass clause.
+        // if (NOPASSG(mem) && generic_tbp_has_pass_and_nopass(dty, BINDG(mem)))
+        //  continue;
+        if (NOPASSG(mem)) {
+          // skip the tbp arg which has been added while processing the call
+          // type bound procedures with nopass clause will not have tbp argument.
+          list = list->next;
+          arg_cnt--;
+        }
+        // AOCC End
         if (mem && PRIVATEG(mem) && SCOPEG(stb.curr_scope) != SCOPEG(mem))
           continue;
       } else
@@ -410,8 +440,12 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
         if (func == 0)
           continue;
       }
-      if (STYPEG(func) == ST_ALIAS)
+      // AOCC Begin
+      if (STYPEG(func) == ST_ALIAS) {
+        renamed = true;
         func = SYMLKG(func);
+      }
+      // AOCC End
       if (chk_elementals && ELEMENTALG(func)) {
         argdistance =
             args_match(func, arg_cnt, distance_sz, list, TRUE, try_device == 1);
@@ -420,7 +454,7 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
                                  try_device == 1);
       }
       if (found && func && found != func && *min_argdistance != INF_DISTANCE &&
-          !is_conflicted_generic(func_sptrgen, found_sptrgen) &&
+          (!renamed && !is_conflicted_generic(func_sptrgen, found_sptrgen)) && // AOCC
           cmp_arg_score(argdistance, min_argdistance, distance_sz) == 0) {
         int len;
         char *name, *name_cpy;

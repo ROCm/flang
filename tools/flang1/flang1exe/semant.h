@@ -5,6 +5,19 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes made to create single team for omp target parallel block as well
+ * Date of Modification: 26th June 2019
+ *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ * Date of Modification: 24th October 2019
+ * Date of Modification: 5h November 2019
+ *
+ */
+
 /**
     \file
     \brief Semantic analyzer data definitions.
@@ -551,6 +564,7 @@ struct _aexpr {
 #define AC_LNOT 23
 #define AC_EXPX 24
 #define AC_TRIPLE 25
+#define AC_LXOR 26         // AOCC
 
 typedef enum {
   AC_I_NONE = 0,
@@ -609,6 +623,14 @@ typedef enum {
   AC_I_minloc,
   AC_I_minval,
   AC_I_scale,
+  /* AOCC begin */
+  AC_I_transpose,
+  AC_I_merge_bits,
+  AC_I_shiftl,
+  AC_I_shiftr,
+  AC_I_dshiftl,
+  AC_I_dshiftr
+  /* AOCC end */
 } AC_INTRINSIC;
 
 #define BINOP(p) ((p)->op != AC_NEG && (p)->op != AC_CONV)
@@ -862,7 +884,7 @@ void mod_end_subprogram_two(void);
 /* semantio.c */
 int get_nml_array(int);
 
-#define MAXDIMS 7
+#define MAXDIMS MAXSUBS /* AOCC */
 typedef struct {
   struct _sem_bounds {
     int lowtype;
@@ -1094,6 +1116,12 @@ typedef enum {
   PHASE_END = 9
 } PHASE_TYPE;
 
+//AOCC Begin
+typedef struct Implied_do_body_std {
+  int std;
+  struct Implied_do_body_std *next;
+} ido_body_std;
+//AOCC END
 /*  declare global semant variables:  */
 
 typedef struct {
@@ -1407,6 +1435,20 @@ typedef struct {
   bool proc_initializer;      /* true if we are initializing a pointer 
                                * with a procedure name.
                                */
+  //AOCC Begin
+  struct {
+    bool replace_temp;         /* true if it is in an assignment statement
+                                * and the temporary created for RHS acl
+                                * can be replaced with lhs array
+                                */
+   int subsc_assign_std;       /* std which assigns to subscript
+                                * of temporary
+                                */
+   ido_body_std *body_stds;        /* holds the generated std for
+                                * the body of the implied do
+                                */
+   } acl_ido;
+  //AOCC End
 } SEM;
 
 extern SEM sem;

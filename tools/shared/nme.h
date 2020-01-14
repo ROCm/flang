@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support voltile flag in nme.
+ * This is used in Accelarator codegen.
+ * Date of modification 05th September 2019
+ *
+ */
 
 #ifndef NME_H_
 #define NME_H_
@@ -40,6 +48,9 @@ typedef struct {
   int exp_loop;  /* Dependent on type. */
   int f6;        /* Dependent on type. */
   ISZ_T cnst;    /* Dependent on type. */
+  // AOCC Begin
+  int nme_vol;   /* if this nme is volatile */
+  // AOCC End
   int sub;       /* subscript info (0 if NA or not array) */
   int f13;       /* dependent on type */
   int base;      /* base nme */
@@ -112,6 +123,9 @@ typedef struct {
 #define NME_TYPE(i) nmeb.stg_base[NMECHECK(i)].type
 #define NME_INLARR(i) nmeb.stg_base[NMECHECK(i)].inlarr
 #define NME_SYM(i) nmeb.stg_base[NMECHECK(i)].sym
+// AOCC Begin
+#define NME_VOLATILE(i) nmeb.stg_base[NMECHECK(i)].nme_vol
+// AOCC End
 #define NME_NM(i) nmeb.stg_base[NMECHECK(i)].nm
 #define NME_HSHLNK(i) nmeb.stg_base[NMECHECK(i)].hshlnk
 #define NME_RFPTR(i) nmeb.stg_base[NMECHECK(i)].rfptr

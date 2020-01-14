@@ -5,6 +5,22 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ *
+ * Date of Modification : 9th July 2019
+ * Support for AMDGPU OpenMP offloading
+ *
+ * Date of Modification: 16th July 2019
+ * Suppressed a duplicate diagnostic message: "Redundant specification of array"
+ *
+ * 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
+ *             types
+ * 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
+ *             construct
+ */
+
 /**
     \file
     \brief This file contains part 1 of the compiler's semantic actions
@@ -32,7 +48,6 @@
 #include "fih.h"
 
 #include "atomic_common.h"
-
 
 static void gen_dinit(int, SST *);
 static void pop_subprogram(void);
@@ -102,6 +117,7 @@ static void record_func_result(int func_sptr, int func_result_sptr,
 static bool bindingNameRequiresOverloading(SPTR sptr);
 static void clear_iface(int i, SPTR iface);
 static bool do_fixup_param_vars_for_derived_arrays(bool, SPTR, int);
+static bool valid_base_type_intrinsic(char *np);
 static void gen_unique_func_ast(int ast, SPTR sptr, SST *stkptr);
 
 static IFACE *iface_base;
@@ -778,6 +794,7 @@ end_subprogram_checks()
 
 static int restored = 0;
 
+
 /** \brief Semantic actions - part 1.
     \param rednum reduction number
     \param top    top of stack after reduction
@@ -872,6 +889,7 @@ semant1(int rednum, SST *top)
     sem.is_hpf = scn.is_hpf;
     sem.alloc_std = 0;
     sem.p_dealloc_delete = NULL;
+
     if (sem.pgphase == PHASE_USE) {
       switch (scn.stmtyp) {
       case TK_USE:
@@ -1184,8 +1202,14 @@ semant1(int rednum, SST *top)
         sem.atomic[0] = sem.atomic[1];
         sem.atomic[1] = FALSE;
       }
+      // AOCC: Allows the omp atomics read/write construct declation inside
+      // omp critical construct
       if (sem.mpaccatomic.pending &&
-          sem.mpaccatomic.action_type != ATOMIC_CAPTURE) {
+          sem.mpaccatomic.action_type != ATOMIC_CAPTURE &&
+          // AOCC begin
+          (sem.mpaccatomic.action_type != ATOMIC_READ &&
+          sem.mpaccatomic.action_type != ATOMIC_WRITE)) {
+          // AOCC end
         error(155, 3, gbl.lineno,
               "Statement after ATOMIC UPDATE is not an assignment", CNULL);
       }
@@ -1194,8 +1218,10 @@ semant1(int rednum, SST *top)
         if ((!sem.mpaccatomic.is_acc && use_opt_atomic(sem.doif_depth))) {
          ;
         } else {
-          if (sem.mpaccatomic.is_acc)
-            sem.mpaccatomic.seen = FALSE;
+          // AOCC: removing this if condition as sem.mpaccatomic.is_acc is not
+          // a valid check here
+          /*if (sem.mpaccatomic.is_acc)*/
+          sem.mpaccatomic.seen = FALSE;
           sem.mpaccatomic.pending = TRUE;
         }
       }
@@ -2459,7 +2485,7 @@ semant1(int rednum, SST *top)
       gbl.internal++;
       host_present = 0x8;
       symutl.none_implicit = sem.none_implicit &= ~host_present;
-      SCP(sptr, SC_STATIC); 
+      SCP(sptr, SC_STATIC);
     }
     seen_implicit = FALSE;
     seen_parameter = FALSE;
@@ -4798,8 +4824,14 @@ semant1(int rednum, SST *top)
     sptr = refsym((int)SST_SYMG(RHS(3)), OC_OTHER);
   type_common:
     if (STYPEG(sptr) != ST_TYPEDEF) {
+      np = SYMNAME(sptr);
       if (STYPEG(sptr) == ST_USERGENERIC && GTYPEG(sptr)) {
         sptr = GTYPEG(sptr);
+      }
+      // AOCC begin
+      // Added support for f2008 feature: Type statement for intrinsic types
+      else if ((STYPEG(sptr) == ST_UNKNOWN) && valid_base_type_intrinsic(np)) {
+      // AOCC end
       } else if (STYPEG(sptr) == ST_UNKNOWN && sem.pgphase == PHASE_INIT) {
         sem.deferred_dertype = sptr;
         sem.deferred_kind_len_lineno = gbl.lineno;
@@ -6097,11 +6129,10 @@ semant1(int rednum, SST *top)
     rhstop = 1;
     SST_IDP(RHS(1), S_STAR);
   dim_spec:
-    if (sem.arrdim.ndim >= MAXDIMS) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }
-
     /* check upper bound expression */
     constarraysize = 1;
     arraysize = 0;
@@ -6164,7 +6195,6 @@ semant1(int rednum, SST *top)
     }
 
     /* check lower bound expression */
-
     if (rhstop == 1) { /* set default lower bound */
       sem.bounds[sem.arrdim.ndim].lowtype = S_CONST;
       sem.bounds[sem.arrdim.ndim].lowb = 1;
@@ -6218,7 +6248,7 @@ semant1(int rednum, SST *top)
    *      <dim spec> ::= : |
    */
   case DIM_SPEC4:
-    if (sem.arrdim.ndim >= MAXDIMS) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }
@@ -6230,7 +6260,7 @@ semant1(int rednum, SST *top)
    *      <dim spec> ::= <expression> : |
    */
   case DIM_SPEC5:
-    if (sem.arrdim.ndim >= MAXDIMS) {
+    if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
       break;
     }
@@ -6622,6 +6652,9 @@ semant1(int rednum, SST *top)
    *	<init beg> ::= =
    */
   case INIT_BEG1:
+  /* AOCC begin */
+  case INIT_BEG2:
+  /* AOCC end */
     sem.dinit_data = TRUE;
     sem.equal_initializer = true;
     break;
@@ -9193,6 +9226,18 @@ semant1(int rednum, SST *top)
             goto entity_decl_end;
           }
         }
+
+        /* AOCC begin */
+        if (flg.std == F2008) {
+          if (POINTERG(sptr) && !IN_MODULE_SPEC) {
+            ast = assign_pointer(RHS(1), RHS(3));
+            add_stmt(ast);
+            SST_ASTP(RHS(1), ast);
+            goto entity_decl_end;
+          }
+        }
+        /* AOCC end */
+
         construct_acl_for_sst(RHS(3), DTYPEG(SST_SYMG(RHS(1))));
         if (!SST_ACLG(RHS(3))) {
           goto entity_decl_end;
@@ -9576,7 +9621,7 @@ semant1(int rednum, SST *top)
           ndim = AD_NUMDIM(ad1);
           if (ndim != AD_NUMDIM(ad2)) {
             error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
-            break;
+	     break;
           }
           for (i = 0; i < ndim; i++)
             if (AD_LWBD(ad1, i) != AD_LWBD(ad2, i) ||
@@ -9586,7 +9631,10 @@ semant1(int rednum, SST *top)
             error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
             break;
           }
-          error(119, 2, gbl.lineno, SYMNAME(sptr), CNULL);
+          //AOCC begin
+          // Removing the following line as it produces duplicate warnings
+          // error(119, 2, gbl.lineno, SYMNAME(sptr), CNULL);
+          //AOCC end
         } else if (stype1 != ST_UNKNOWN && stype1 != ST_IDENT &&
                    stype1 != ST_VAR) {
           error(43, 3, gbl.lineno, "symbol", SYMNAME(sptr));
@@ -12377,10 +12425,14 @@ proc_dcl_init:
    */
   case MP_DECL2:
 #ifdef OMP_OFFLOAD_LLVM
+    // AOCC Begin
+#ifndef OMP_OFFLOAD_AMD
     if(flg.omptarget) {
       error(1200, ERR_Severe, gbl.lineno, "declare target",
             NULL);
     }
+    // AOCC End
+#endif
 #endif
     break;
   /*
@@ -16737,3 +16789,51 @@ do_fixup_param_vars_for_derived_arrays(bool inited, SPTR sptr, int sst_idg)
          /* found the tag has been initialized already with a valid sptr*/
          DINITG(DTY(DTY(DTYPEG(sptr)+1)+3));
 }
+
+// AOCC begin
+/** \brief
+       Added support for f2008 feature: Type statement for intrinsic types
+       <data type> ::= TYPE ( <id> <opt base type spec> )
+*/
+static bool
+valid_base_type_intrinsic(char *np)
+{
+  if (flg.std == F2008) {
+    /*
+     *      <base type> ::= INTEGER |
+     */
+    if (strcmp(np, "integer") == 0) {
+      sem.gdtype = sem.ogdtype = stb.user.dt_int;
+      sem.gty = TY_INT;
+      return true;
+    }
+    /*
+     *      <base type> ::= COMPLEX |
+     */
+    if (strcmp(np, "complex") == 0) {
+      sem.gdtype = sem.ogdtype = stb.user.dt_cmplx;
+      sem.gty = TY_CMPLX;
+      return true;
+    }
+    /*
+     *      <base type> ::= CHARACTER |
+     */
+    if (strcmp(np, "character") == 0) {
+      sem.gdtype = sem.ogdtype = DT_CHAR;
+      sem.gty = TY_CHAR;
+      return true;
+    }
+    /*
+     *      <base type> ::= BYTE
+     */
+    if (strcmp(np, "byte") == 0) {
+      if (flg.standard)
+        error(171, 2, gbl.lineno, "BYTE", CNULL);
+      sem.gdtype = sem.ogdtype = DT_BINT;
+      sem.gty = TY_BINT;
+      return true;
+    }
+  }
+  return false;
+}
+// AOCC end

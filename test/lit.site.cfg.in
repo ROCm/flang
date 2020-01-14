@@ -24,6 +24,9 @@ config.have_zlib = "@HAVE_LIBZ@"
 config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = "@ENABLE_BACKTRACES@"
 config.host_arch = "@HOST_ARCH@"
+# AOCC begin
+config.omp_offloading_build="@OMP_OFFLOADING_BUILD@"
+# AOCC end
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

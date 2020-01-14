@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 23rd September 2019
+ * Date of modification 05th November 2019
+ * Date of modification 10th December 2019
+ *
+ */
 
 /**
  *  \file
@@ -72,6 +81,7 @@ struct _OMPACCEL_TARGET{
   int n_reduction_symbols;                /*  Number of reduction symbols */
   OMPACCEL_RED_SYM *reduction_symbols;    /*  Reduction symbols along with the reduction operator */
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
+  char *func_name;                        /*  Function name */  // AOCC
 };
 
 static bool isOmpaccelRegistered = false;
@@ -96,6 +106,18 @@ typedef enum NVVM_SREG_ENUM {
   warpSize
 } nvvm_sregs;
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+static const char *NVVM_SREG[] = {
+    "nvvm.read.ptx.sreg.tid.x",    "nvvm.read.ptx.sreg.tid.y",
+    "nvvm.read.ptx.sreg.tid.z",    "nvvm.read.ptx.sreg.ctaid.x",
+    "nvvm.read.ptx.sreg.ctaid.y",  "nvvm.read.ptx.sreg.ctaid.z",
+    "nvvm.read.ptx.sreg.ntid.x",   "nvvm.read.ptx.sreg.ntid.y",
+    "nvvm.read.ptx.sreg.ntid.z",   "nvvm.read.ptx.sreg.nctaid.x",
+    "nvvm.read.ptx.sreg.nctaid.y", "nvvm.read.ptx.sreg.nctaid.z",
+    "nvvm.read.ptx.sreg.warpsize"};
+#else
+// AOCC End
 static const char *NVVM_SREG[] = {
     "llvm.nvvm.read.ptx.sreg.tid.x",    "llvm.nvvm.read.ptx.sreg.tid.y",
     "llvm.nvvm.read.ptx.sreg.tid.z",    "llvm.nvvm.read.ptx.sreg.ctaid.x",
@@ -104,11 +126,24 @@ static const char *NVVM_SREG[] = {
     "llvm.nvvm.read.ptx.sreg.ntid.z",   "llvm.nvvm.read.ptx.sreg.nctaid.x",
     "llvm.nvvm.read.ptx.sreg.nctaid.y", "llvm.nvvm.read.ptx.sreg.nctaid.z",
     "llvm.nvvm.read.ptx.sreg.warpsize"};
+// AOCC Begin
+#endif
+// AOCC End
 
 typedef enum NVVM_INTRINSICS_ENUM { barrier0, barrier } nvvm_intrinsics;
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+static const char *NVVM_INTRINSICS[] = {"nvvm.barrier0",
+                                        "nvvm.barrier"};
+#else
+// AOCC End
 static const char *NVVM_INTRINSICS[] = {"llvm.nvvm.barrier0",
                                         "llvm.nvvm.barrier"};
+// AOCC Begin
+#endif
+// AOCC End
+
 
 typedef enum NVVM_BARRIERS { CTA_BARRIER, PARTIAL_BARRIER } nvvm_barriers;
 
@@ -189,6 +224,24 @@ int ompaccel_nvvm_get_gbl_tid(void);
 /**
    \brief Emit shuffle reduce for reduction. (nvvm device only)
  */
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+SPTR ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *, int, SPTR,
+                                       const char *);
+
+/**
+   \brief Emit reduce for reduction. (nvvm device only)
+ */
+SPTR ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *, int, const char *);
+
+/**
+   \brief Emit inter warp copy for reduction. (nvvm device only)
+ */
+SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int,
+                                        const char *);
+#else
+// AOCC End
 SPTR ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *, int, SPTR);
 
 /**
@@ -200,6 +253,77 @@ SPTR ompaccel_nvvm_emit_reduce(OMPACCEL_RED_SYM *, int);
    \brief Emit inter warp copy for reduction. (nvvm device only)
  */
 SPTR ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *, int);
+// AOCC Begin
+#endif
+
+SPTR
+mk_ompaccel_addsymbol(const char *name, DTYPE dtype, SC_KIND SCkind,
+                      SYMTYPE symtype);
+
+void
+mk_ompaccel_function_end(SPTR func_sptr);
+
+SPTR
+mk_ompaccel_function(char *name, int n_params, const SPTR *param_sptrs,
+    bool isDeviceFunc);
+/**
+ * \brief remembers \p func_sptr to be a parallel outlined function in target
+ * region for x86 offloading
+ */
+void ompaccel_x86_add_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if \p func_sptr is a parallel func (as described above)
+ */
+bool ompaccel_x86_is_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if we need to fork-call \p func_sptr
+ */
+bool ompaccel_x86_is_toplevel_parallel_func(SPTR func_sptr);
+
+/**
+ * \brief remembers \p func_sptr as fork-wrapper function
+ */
+void ompaccel_x86_add_fork_wrapper_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if \p func_sptr is a fork-wrapper function
+ */
+bool ompaccel_x86_is_fork_wrapper_func(SPTR func_sptr);
+
+/**
+ * \brief returns true if the function \p func_sptr needs to go into the
+ * .omp_offloading.entries data section.
+ */
+bool ompaccel_x86_is_entry_func(SPTR func_sptr);
+
+/**
+ * \briefs prepends global_tid and bound_tid params to \p func_sptr
+ */
+void ompaccel_x86_add_tid_params(SPTR func_sptr);
+
+/**
+ * \brief generates the "wrapper" that emits __kmpc_fork_call to \p target_func
+ */
+void ompaccel_x86_gen_fork_wrapper(SPTR target_func);
+
+/**
+ * \brief emits the reduction code for tinfo.
+ */
+void ompaccel_x86_emit_reduce(OMPACCEL_TINFO *tinfo);
+
+/**
+ * \brief returns true if func_sptr has tid args.
+ */
+bool ompaccel_x86_has_tid_args(SPTR func_sptr);
+
+/**
+ * \brief sets the type of each argument of \p func_sptr for
+ * x86 offloading.
+ */
+void ompaccel_x86_fix_arg_types(SPTR func_sptr);
+// AOCC End
 
 /* ################################################ */
 /* OpenMP ACCEL - Target Information data structure */
@@ -368,6 +492,12 @@ void exp_ompaccel_looptripcount(ILM *, int);
    \brief Expand ILM and emit code for reductionitem
  */
 void exp_ompaccel_reductionitem(ILM *, int);
+// AOCC Begin
+/**
+   \brief Expand ILM and emit code for target update
+ */
+void exp_ompaccel_target_update(ILM *, int, ILM_OP);
+// AOCC End
 /**
    \brief Expand ILM and emit code for targetdata
  */
@@ -382,4 +512,21 @@ int mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2);
 int mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2);
 int mk_ompaccel_ldsptr(SPTR sptr);
 void init_test();
+
+// AOCC begin
+int mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2);
+
+/**
+   \brief Set current target info.
+ */
+void ompaccel_tinfo_current_set(OMPACCEL_TINFO *);
+/**
+  \brief Creatre reduction wrappers
+  */
+void ompaccel_create_amd_reduction_wrappers();
+/**
+  \brief Update maptype for given symbol
+  */
+void ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type);
+// AOCC End
 #endif

@@ -4346,12 +4346,11 @@ __INT8_T
 ENTF90(KSEL_REAL_KIND, ksel_real_kind)
 (char *pb, char *rb, F90_Desc *pd, F90_Desc *rd)
 {
-
-  /* 
+  /*
    * -i8 variant of SEL_REAL_KIND
    */
 
-  int p, r, e, k;
+  int p, r, e, k, prec, range, radix;
 
   e = 0;
   k = 0;
@@ -4382,35 +4381,70 @@ ENTF90(KSEL_REAL_KIND, ksel_real_kind)
 
 __INT_T
 ENTF90(SEL_REAL_KIND, sel_real_kind)
-(char *pb, char *rb, F90_Desc *pd, F90_Desc *rd)
+(char *pb, char *rb, char *radixb, F90_Desc *pd, F90_Desc *rd, F90_Desc *radixd)
 {
-  int p, r, e, k;
+  int p, r, e, k, radix, range, prec;
 
   e = 0;
   k = 0;
+  range = 0;  // AOCC
+  prec = 0;   // AOCC
   if (ISPRESENT(pb)) {
     p = I8(__fort_fetch_int)(pb, pd);
     if (p <= 6)
       k = 4;
     else if (p <= 15)
       k = 8;
-    else
+// Real kind 16 is not supported currently
+#if 0
+    else if (p <= 31)
+      k = 16;
+#endif
+    else {
       e -= 1;
+      prec = -1;
+    }
   }
   if (ISPRESENT(rb)) {
     r = I8(__fort_fetch_int)(rb, rd);
     if (r <= 37) {
-      if (k < 4)
+      if (k <= 4)
         k = 4;
     }
     else if (r <= 307) {
-      if (k < 8)
+      if (k <= 8)
         k = 8;
     }
-
-    else
+#if 0
+    else if (r <= 4931) {
+      if (k <= 16)
+        k = 16;
+    }
+#endif
+    else {
       e -= 2;
+      range = -2;
+    }
   }
+  // AOCC begin
+  if (radixb && ISPRESENT(radixb)) {
+    radix = I8(__fort_fetch_int)(radixb, radixd);
+    if (radix == 2) {
+      if (k <= 4)
+        k = 4;
+      else if (k <= 8)
+        k = 8;
+#if 0
+      else if (k <= 16)
+        k = 16;
+#endif
+      else if (prec < 0 && range < 0)
+	k = -3;
+    }
+    else if (radix != 2)
+	  e -= 5;
+  }
+  // AOCC end
   return e ? e : k;
 }
 

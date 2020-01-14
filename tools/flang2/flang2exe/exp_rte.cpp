@@ -9,8 +9,8 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 11th July 2019
- * Date of modification 11th October 2019
  *
+ * Date of modification 26th Nov 2019
  */
 
 /**
@@ -2130,11 +2130,13 @@ exp_end(ILM *ilmp, int curilm, bool is_func)
    */
 #ifdef OMP_OFFLOAD_AMD
   int ilix;
-  if (flg.omptarget && !is_func && gbl.ompaccel_intarget && XBIT(232, 0x40)) {
+  if (flg.omptarget && !is_func) {
+    if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
       ilix = ll_make_kmpc_spmd_kernel_deinit_v2();
       iltb.callfg = 1;
       chk_block(ilix);
     }
+  }
 #endif
   // AOCC End
 
@@ -5297,13 +5299,16 @@ exp_strcpy(STRDESC *str1, STRDESC *str2)
   init_ainfo(&ainfo);
 
   if (str1->dtype == TY_CHAR) {
+    // AOCC restrict the checks for target overloading
+    // we need to inline all f90_strcpy calls
     if (!strovlp(str1, str2)) {
 /*
  * single source, no overlap
  */
-#define STR_MOVE_THRESH 16
+#define STR_MOVE_THRESH 120 // AOCC
       if (!XBIT(125, 0x800) && str1->liscon && str2->liscon &&
-          str1->lval <= STR_MOVE_THRESH) {
+	  // AOCC (allow strcpy inlining for target offloading )
+          (flg.omptarget || str1->lval <= STR_MOVE_THRESH)) { 
         /*
          * perform a 'block move' of the rhs to the lhs -- the move
          * will move a combination of 8 (64-bit only) 4, 2, and 1
@@ -5502,6 +5507,10 @@ strovlp(STRDESC *lhs, STRDESC *rhs)
 
   if (rhs->next != NULL) /* single rhs only */
     return true;
+  // AOCC. if rhs is a constant string it cannot overlap
+  // TODO: omptarget check is not required
+  if (flg.omptarget && rhs->liscon)
+    return false;
   if (!rhs->aisvar) /* rhs must be simple var or constant */
     return true;
   rsym = CONVAL1G(rhs->aval);

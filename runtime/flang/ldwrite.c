@@ -5,6 +5,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Modification for output splitting
+ *
+ * Date of Modification: 17th July 2019
+ *
+ */
+
 /* clang-format off */
 
 /** \file
@@ -167,6 +176,48 @@ free_gbl()
 /* list-directed external file write initialization */
 /* **************************************************/
 
+// AOCC Begin
+/* CPUPC-2012 - F2008 : Recursive I/O */
+#include "llcrit.h"
+#include <ctype.h>
+
+MP_SEMAPHORE(static, sem);
+
+#define NO_UNIT -9999
+#define MAX_UNITS 32
+
+static int active_unit_list[MAX_UNITS];
+static int last_unit;
+
+static int
+chk_unit(int unit) {
+  int i;
+
+  MP_P(sem);
+
+  if (DBGBIT(0x1)) {
+    printf("chk_unit: unit = %d\n", unit);
+  }
+
+  for (i = 0; i < last_unit; i++) {
+   if (DBGBIT(0x1)) {
+     printf("chk_unit: active_unit = %d\n", active_unit_list[i]);
+   }
+
+   if (unit == active_unit_list[i]) {
+     MP_V(sem);
+     return(1);
+   }
+  }
+
+  MP_V(sem);
+  return(0);
+}
+
+static int flang_recursive_io_support;
+static int fris_checked;
+// AOCC End
+
 static int
 _f90io_ldw_init(__INT_T *unit,   /* unit number */
                __INT_T *rec,    /* record number for direct access I/O */
@@ -176,6 +227,39 @@ _f90io_ldw_init(__INT_T *unit,   /* unit number */
   G *tmp_gbl;
   int i;
   save_gbl();
+
+// AOCC Begin
+  if (!fris_checked) {
+    char* fris;
+    fris = getenv("FLANG_RECURSIVE_IO_SUPPORT");
+    if (fris && isdigit(fris[0])) {
+      flang_recursive_io_support = atoi(fris);
+    }
+    fris_checked = 1;
+  }
+
+  if (flang_recursive_io_support >= 1) {
+    if (DBGBIT(0x1)) {
+      printf("_f90io_ldw_init: flang_recursive_io_support = %d\n", flang_recursive_io_support);
+    }
+    if (chk_unit(*unit)) {
+      char msg[256];
+      sprintf(msg, "Detected Recursive-I/O on Unit-%d\n", *unit);
+      printf("%s", msg);
+      exit(127);
+#if 0
+//TBD:
+       __fort_abort(msg);
+#endif
+    }
+
+    MP_P(sem);
+    active_unit_list[last_unit] = *unit;
+    last_unit++;
+    assert(last_unit < MAX_UNITS);
+    MP_V(sem);
+  }
+// AOCC End
 
   __fortio_errinit03(*unit, *bitv, iostat, "list-directed write");
 
@@ -374,7 +458,7 @@ ENTF90IO(LDW_INIT03, ldw_init03)
 {
   return ENTF90IO(LDW_INIT03A, ldw_init03a) (istat, CADR(decimal), CADR(delim),
                               CADR(sign), (__CLEN_T)CLEN(decimal),
-			      (__CLEN_T)CLEN(delim), (__CLEN_T)CLEN(sign));
+ (__CLEN_T)CLEN(delim), (__CLEN_T)CLEN(sign));
 }
 
 /* **************************************************/
@@ -600,7 +684,7 @@ __f90io_ldw(int type,    /* data type (as defined in pghpft.h) */
       p = __fortio_default_convert(tmpitem, type, item_length, &width, FALSE,
                                   plus_sign, gbl->round);
     if (Is_complex(type) && byte_cnt > 0) {
-      /*	complex is a bit strange since blanks are removed from
+      /* complex is a bit strange since blanks are removed from
           the beginning and end of the constant.  A blank is needed
           at the beginning. */
       ret_err = write_item(" ", 1);
@@ -653,6 +737,7 @@ ldw_error:
   free_gbl();
   restore_gbl();
   __fortio_errend03();
+
   return (ret_err);
 }
 
@@ -777,7 +862,7 @@ write_item(char *p, int len)
 
   record_written = FALSE;
 
-  /*	compute the number of bytes written AFTER this item is written.
+  /* compute the number of bytes written AFTER this item is written.
       NOTE that ByteCnt is set after the item is written since we may split
       lines.  */
 
@@ -815,19 +900,38 @@ write_item(char *p, int len)
       if (len && FWRITE(p, len, 1, fcb->fp) != 1)
         return __io_errno();
     } else { /* sequential write */
-             /*	split lines if necessary; watch for the case where a long
+             /* split lines if necessary; watch for the case where a long
                  character item is the first item for the record.  */
 
-      if (byte_cnt && ((fcb->reclen && newlen > fcb->reclen) ||
-                       (!fcb->reclen && newlen > 79))) {
-        ret_err = write_record();
-        if (ret_err)
-          return ret_err;
-        if (FWRITE(" ", 1, 1, fcb->fp) != 1)
-          return __io_errno();
-        newlen = len + 1;
-        record_written = FALSE;
+      // AOCC Begin
+      const char *wrap_output = getenv("FLANG_WRAP_MESSAGE_OUTPUT");
+      if (wrap_output && strcmp(wrap_output, "no") == 0) {
+        if (byte_cnt && (fcb->reclen && newlen > fcb->reclen)) {
+          ret_err = write_record();
+          if (ret_err)
+            return ret_err;
+          if (FWRITE(" ", 1, 1, fcb->fp) != 1)
+            return __io_errno();
+          newlen = len + 1;
+          record_written = FALSE;
+        }
       }
+      else {
+      // AOCC End
+          if (byte_cnt && ((fcb->reclen && newlen > fcb->reclen) ||
+                         (!fcb->reclen && newlen > 79))) {
+          ret_err = write_record();
+          if (ret_err)
+            return ret_err;
+          if (FWRITE(" ", 1, 1, fcb->fp) != 1)
+            return __io_errno();
+          newlen = len + 1;
+          record_written = FALSE;
+        }
+      // AOCC Begin
+      }
+      // AOCC End
+
       if (len && FWRITE(p, len, 1, fcb->fp) != 1)
         return __io_errno();
     }
@@ -890,6 +994,14 @@ write_record(void)
 static int
 _f90io_ldw_end()
 {
+// AOCC Begin
+  if (flang_recursive_io_support >= 1) {
+    MP_P(sem);
+    last_unit--;
+    assert(last_unit > 0);
+    MP_V(sem);
+  }
+// AOCC End
 
   if (internal_file && in_curp != in_recp)
     in_recp += rec_len; /* update internal file pointer */

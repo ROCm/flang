@@ -5,6 +5,15 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for transpose intrinsic during initialization
+ *
+ * Date of Modification: 1st March 2019
+ *
+ */
+
 #ifndef SEMANT_H_
 #define SEMANT_H_
 
@@ -56,6 +65,7 @@
 #define OP_LT 24
 #define OP_NE 25
 #define OP_LNOT 26
+#define OP_XOR 27   // AOCC
 
 /* Different types of atomic actions. */
 #define ATOMIC_UNDEF -1
@@ -366,6 +376,7 @@ struct CONST {
 #define AC_LNOT 23
 #define AC_EXPX 24
 #define AC_TRIPLE 25
+#define AC_LXOR 26          // AOCC
 
 #define AC_I_adjustl 1
 #define AC_I_adjustr 2
@@ -422,6 +433,14 @@ struct CONST {
 #define AC_I_minloc 53
 #define AC_I_minval 54
 #define AC_I_scale 55
+/* AOCC begin */
+#define AC_I_transpose 56
+#define AC_I_merge_bits 57
+#define AC_I_shiftl 58
+#define AC_I_shiftr 59
+#define AC_I_dshiftl 60
+#define AC_I_dshiftr 61
+/* AOCC end */
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 
 typedef struct {  /* STRUCTURE stack entries */
@@ -599,7 +618,7 @@ typedef struct {
     int uptype;
     ISZ_T lowb;
     ISZ_T upb;
-  } bounds[7];
+  } bounds[MAXSUBS]; /* AOCC */
   struct {       /* mark assumed size and adjustable arrays */
     int ndim;    /* number of dimensions */
     int assumsz; /*  0, not assumed size

@@ -4,6 +4,23 @@
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
 .\" */
+.\"/*
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Support for DNORM intrinsic
+.\" *
+.\" * Date of Modification: 21st February 2019
+.\" *
+.\" * Support for EXECUTE_COMMAND_LINE intrinsic
+.\" *
+.\" * Date of Modification: July 2019
+.\" *
+.\" * Support for parity intrinsic.
+.\" * Month of Modification: July 2019
+.\" *
+.\" * Support for Bit transformational intrinsic iany, iall, iparity.
+.\" * Month of Modification: July 2019
+.\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
 .sp
@@ -1080,6 +1097,32 @@ Translates to a call to either \*(cfftn_imvbits\*(rf or
 .\" ---------------------
 .\" Predeclared Functions
 .\" ---------------------
+.PD BGE - -
+.AT elemental i j
+.PD BGT - -
+.AT elemental i j
+.PD BLE - -
+.AT elemental i j
+.PD BLT - -
+.AT elemental i j
+
+.PD MASKL - -
+.AT elemental i *kind
+.PD MASKR - -
+.AT elemental i *kind
+
+.PD SHIFTL - -
+.AT elemental i j
+.PD SHIFTR - -
+.AT elemental i j
+
+.PD DSHIFTL - -
+.AT elemental i j shift
+.PD DSHIFTR - -
+.AT elemental i j shift
+
+.PD MERGE_BITS - -
+.AT elemental i j mask
 .PD REAL - -
 .AT elemental a *kind
 .PD CMPLX - -
@@ -1114,10 +1157,24 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT elemental --
 .PD ANY - -
 .AT transformational mask *dim
+.PD PARITY - -
+.AT transformational mask *dim
+.PD IALL - -
+.AT transformational array *dim *mask
+.PD IANY - -
+.AT transformational array *dim *mask
+.PD IPARITY - -
+.AT transformational array *dim *mask
 .PD COMPL - -
 .AT elemental --
 .PD COUNT - -
 .AT transformational mask *dim
+.PD NORM2 - -
+.AT transformational array *dim
+.PD ISNAN - -
+.AT elemental x
+.PD EXECUTE_COMMAND_LINE - -
+.AT subroutine command *wait *exitstat *cmdstat *cmdmsg
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -
@@ -1129,11 +1186,11 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .PD MAXLOC - -
 .AT transformational array *dim *mask *kind *back
 .PD MAXVAL - -
-.AT transformational array *dim *mask 
+.AT transformational array *dim *mask
 .PD MINLOC - -
 .AT transformational array *dim *mask *kind *back
 .PD MINVAL - -
-.AT transformational array *dim *mask 
+.AT transformational array *dim *mask
 .PD MERGE - -
 .AT elemental tsource fsource mask
 .PD NEQV - -
@@ -1198,8 +1255,8 @@ of its single-precision (double-precision) argument.
 .AT inquiry x
 .PD SELECTED_INT_KIND - -
 .AT transformational r
-.PD SELECTED_REAL_KIND - -
-.AT transformational *p *r
+.PD SELECTED_REAL_KIND - - -
+.AT transformational *p *r *radix
 .PD .DLBOUND - -
 CM Fortran's version of LBOUND.
 .AT inquiry array *dim
@@ -1698,14 +1755,6 @@ Internal subroutine to perform a copy out of an ordinary argument.
 .AT elemental x
 .H4 DCOT * -
 .AT elemental x
-.H4 SHIFTL - -
-.AT elemental i j
-.H4 SHIFTR - -
-.AT elemental i j
-.H4 DSHIFTL - -
-.AT elemental i j k
-.H4 DSHIFTR - -
-.AT elemental i j k
 .H4 MASK - -
 .AT elemental i
 .bp
@@ -1779,7 +1828,7 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .H5 IEEE_VALUE - -
 .AT elemental x class
 .H5 IEEE_SELECTED_REAL_KIND - -
-.AT transformational *p *r
+.AT transformational *p *r *radix
 .H5 IEEE_GET_ROUNDING_MODE - -
 .AT subroutine round value
 .H5 IEEE_GET_UNDERFLOW_MODE - -
@@ -1824,14 +1873,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i
 .H7 .TRAILZ - -
 .AT elemental i
-.H7 .BGE - -
-.AT elemental i j
-.H7 .BGT - -
-.AT elemental i j
-.H7 .BLE - -
-.AT elemental i j
-.H7 .BLT - -
-.AT elemental i j
 .H7 .MASKL - -
 .AT elemental i *kind
 .H7 .MASKR - -
@@ -1842,12 +1883,6 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i shift
 .H7 .SHIFTR - -
 .AT elemental i shift
-.H7 .DSHIFTL - -
-.AT elemental i j shift
-.H7 .DSHIFTR - -
-.AT elemental i j shift
-.H7 .MERGE_BITS - -
-.AT elemental i j mask
 .H7 .IALL - -
 .AT transformational array *dim *mask
 .H7 .IANY - -

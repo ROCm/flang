@@ -944,7 +944,9 @@ ENTF90(ALLOC04A, alloc04a)(__NELEM_T *nelem, __INT_T *kind, __INT_T *len,
 {
   ALLHDR();
 
-  if (ISPRESENT(stat) && *firsttime && *stat != 2)
+  // AOCC
+  // if (ISPRESENT(stat) && *firsttime && *stat != 2)
+  if (ISPRESENT(stat) && *firsttime)
     *stat = 0;
 
   if (!ISPRESENT(stat) && !*align) {

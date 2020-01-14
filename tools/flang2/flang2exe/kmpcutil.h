@@ -9,6 +9,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 11th July 2019
+ * Date of modification 05th September 2019
  *
  */
 
@@ -169,6 +170,9 @@ enum {
   KMPC_API_KERNEL_INIT_PARAMS,
   KMPC_API_SHUFFLE_I32,
   KMPC_API_SHUFFLE_I64,
+  // AOCC Begin
+  KMPC_API_SHUFFLE_F32,
+  // AOCC End
   KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD,
   KMPC_API_NVPTX_END_REDUCE_NOWAIT,
   /* End - OpenMP Accelerator RT (libomptarget-nvptx) - non standard - */
@@ -282,6 +286,14 @@ int ll_make_kmpc_flush(void);
    \brief ...
  */
 int ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt, int ngangs_ili);
+
+// AOCC begin
+/**
+ * \brief the variadic version of ll_make_kmpc_fork_call which uses \p argc args
+ * from \p sptrlist.  Set refargs to true if they are passed by ref.
+ */
+int ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist);
+// AOCC end
 
 /**
    \brief ...
@@ -452,6 +464,13 @@ void reset_kmpc_ident_dtype(void);
    \brief cuda special register shuffling for int 32 or int 64
  */
 int ll_make_kmpc_shuffle(int, int, int, bool);
+
+// AOCC Begin
+/**
+   \brief cuda special register shuffling for int 32 or int 64
+ */
+int ll_make_kmpc_shuffle_f32(int, int, int);
+// AOCC End
 
 /**
   \brief SPMD mode - static loop init

@@ -430,6 +430,12 @@ print_ast(int ast)
       o = ".or.";
       commutable = TRUE;
       break;
+    // AOCC begin
+    case OP_LXOR:
+      o = ".xor.";
+      commutable = TRUE;
+      break;
+    // AOCC end
     case OP_LAND:
     case OP_SCAND:
       o = ".and.";

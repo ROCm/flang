@@ -1,14 +1,16 @@
 /*
+ *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
+ * Changed the metadata name as per llvm trunk.
+ * Date of Modification: May 2018
  *
  */
 
@@ -1115,7 +1117,7 @@ static const MDTemplate Tmpl_DISubprogram[] = {
   { "function",                 ValueField },
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
-  { "variables",                NodeField },
+  { "retainedNodes",            NodeField},
   { "scopeLine",                UnsignedField }
 };
 
@@ -1185,7 +1187,7 @@ static const MDTemplate Tmpl_DISubprogram_38[] = {
   { "function",                 ValueField, FlgHidden },
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
-  { "variables",                NodeField },
+  { "retainedNodes",                NodeField },
   { "scopeLine",                UnsignedField }
 };
 
@@ -1211,7 +1213,7 @@ static const MDTemplate Tmpl_DISubprogram_39[] = {
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
   { "unit",                     NodeField },
-  { "variables",                NodeField },
+  { "retainedNodes",                NodeField },
   { "scopeLine",                UnsignedField }
 };
 
@@ -1249,13 +1251,9 @@ static const MDTemplate Tmpl_DIExpression[] = {
 
 static const MDTemplate Tmpl_DILocalVariable[] = {
   { "DILocalVariable", TF, 9 },
-  { "tag",                      DWTagField },
   { "scope",                    NodeField },
-  { "name",                     StringField },
   { "arg",                      UnsignedField },
-  { "file",                     NodeField },
   { "line",                     UnsignedField },
-  { "type",                     NodeField },
   { "flags",                    UnsignedField }, /* TBD: DIFlag... */
   { "inlinedAt",                UnsignedField }  /* TBD: NodeField */
 };

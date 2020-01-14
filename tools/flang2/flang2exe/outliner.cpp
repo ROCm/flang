@@ -5,6 +5,17 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 26th July 2019
+ * Date of modification 16th September 2019
+ * Date of modification 15th October 2019
+ * Date of modification 05th December 2019
+ *
+ */
+
 /**
    \file
    \brief extract regions into subroutines; add uplevel references as
@@ -313,10 +324,10 @@ get_opc_name(ILM_OP opc)
     break;
   }
 }
-
 static char *
 ll_get_outlined_funcname(int fileno, int lineno, bool isompaccel, ILM_OP opc) {
   char *name;
+  const char* name_opc = get_opc_name(opc);
   static unsigned nmLen = 0;
   const unsigned maxDigitLen = 10; /* Len of 2147483647 */
   unsigned nmSize;
@@ -326,21 +337,22 @@ ll_get_outlined_funcname(int fileno, int lineno, bool isompaccel, ILM_OP opc) {
   int plen;
   char *host_prefix = "__nv_";
   char *device_prefix = "nvkernel_";
+  int funcNo = funcCnt;
   if(isompaccel) {
     prefix = device_prefix;
   } else {
     funcCnt++;
     prefix = host_prefix;
   }
+  plen = strlen(prefix);
   if(gbl.outlined) {
-    {
-      plen = strlen(host_prefix);
-      name_currfunc = strtok(&name_currfunc[plen], "_");
-    }
+    assert(!strncmp(name_currfunc, prefix, plen),
+	 "Outlined function doesn't start with correct prefix", r, ERR_Fatal);
+    name_currfunc = strtok(&name_currfunc[plen], "_");
   }
   nmSize = (3 * maxDigitLen) + 5 + strlen(name_currfunc) + 1;
   name = (char *)malloc(nmSize + strlen(prefix));
-  r = snprintf(name, nmSize, "%s%s_F%dL%d_%d", prefix, name_currfunc, fileno, lineno, funcCnt);
+  r = snprintf(name, nmSize, "%s%s_%s_F%dL%d_%d", prefix, name_currfunc, name_opc, fileno, lineno, funcCnt);
   assert(r < nmSize, "buffer overrun", r, ERR_Fatal);
   return name;
 }
@@ -1028,6 +1040,21 @@ llCollectSymbolInfo(ILM *ilmpx)
   }
 }
 
+// AOCC Begin
+/// \brief Returns true if \p opc doesn't have any sym operand.
+bool
+is_no_symbol_ilm(ILM_T opc) {
+  switch(opc) {
+    case IM_DMUL:
+    case IM_DSUB:
+      return true;
+    default:
+      return false;
+   }
+  return false;
+}
+// AOCC End
+
 int
 ll_rewrite_ilms(int lineno, int ilmx, int len)
 {
@@ -1080,6 +1107,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
     len = llGetILMLen(ilmx);
   }
   ilmpx = (ILM *)(ilmb.ilm_base + ilmx);
+
   if (!gbl.outlined)
     llCollectSymbolInfo(ilmpx);
   {
@@ -1099,6 +1127,10 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             ompaccel_symreplacer(true);
           } else if (opc == IM_BCS) {
             ompaccel_symreplacer(false);
+          // AOCC Begin
+          } else if (opc == IM_ECS) {
+            ompaccel_symreplacer(true);
+          // AOCC End
           } else if (ILM_OPC(ilmpx) == IM_ELEMENT && gbl.ompaccel_intarget ) {
             /* replace dtype for allocatable arrays */
             ILM_OPND(ilmpx, 3) =
@@ -1109,7 +1141,11 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             op1Pld = ILM_OPND(ilmpx, 1);
             ILM_OPND(ilmpx, 2) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 2));
-          } else if(gbl.ompaccel_intarget) {
+          } else if(gbl.ompaccel_intarget && !is_no_symbol_ilm(opc)) {
+            // AOCC Modification : Added condtion !is_no_symbol_ilm(opc).
+            //      No point in modifying 1st operand blindly without checking
+            //      if opc has sym operand or not. For such ILMs either control should
+            //      not reach here, or if reached should not to be modified blindly.
             /* replace host sptr with device sptrs */
             ILM_OPND(ilmpx, 1) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 1));
@@ -2467,6 +2503,10 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
 
   // check whether it is allocatable or not
   ADSC *new_ad;
+  // AOCC
+  // moved org_ad declaration from here to beow get_array_dtype
+  // get_array_dtype function will do reallocation of aux.arrdsc_base.
+  // if it gets reallocaed org_ad will point to invalid address.
   TY_KIND atype = DTY(DTYPE(DTYPEG(arg_sptr) + 1));
   int numdim = AD_NUMDIM((ADSC*)AD_DPTR(DTYPEG(arg_sptr)));
   dtype = get_array_dtype(numdim, (DTYPE)atype);
@@ -2482,7 +2522,7 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
   // check global in the module?
   AD_SDSC(new_ad) = ompaccel_tinfo_current_get_devsptr((SPTR)AD_SDSC(org_ad));
 
-  if (numdim >= 1 && numdim <= 7) {
+  if (is_legal_numdim(numdim)) { // AOCC
     int i;
     for (i = 0; i < numdim; ++i) {
       AD_LWBD(new_ad, i) =

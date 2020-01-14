@@ -5,6 +5,32 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *
+ * Month of Modification: July 2019
+ */
+
 /** \file Provides the front-end access to the run time library structure
  *  defined  in rte_rtns.h
  */
@@ -54,6 +80,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"auto_dealloc", "", true, ""},
     {"auto_deallocm", "", true, ""},
     {"auto_deallocp", "", true, ""},
+    /* AOCC begin */
+    {"bitcmp", "", false, ""},
+    {"bitmask", "", false, ""},
+    /* AOCC end */
     {"c_f_procptr", "", false, ""},
     {"c_f_ptr", "", true, ""},
     {"calloc03a", "", true, ""},
@@ -253,6 +283,13 @@ FtnRteRtn ftnRtlRtns[] = {
     {"nearestx", "", false, ""},
     {"nlena", "", true, ""},
     {"nlentrim", "", false, ""},
+    // AOCC Begin
+    // Enable i8 descriptor to access the dims in library
+    {"norm2_real4", "", true, ""},
+    {"norm2_real4_dim", "", true, ""},
+    {"norm2_real8", "", true, ""},
+    {"norm2_real8_dim", "", true, ""},
+    // AOCC End
     {"nrepeat", "", false, ""},
     {"nscan", "", false, "k"},
     {"nstr_copy", "", false, ""},
@@ -394,10 +431,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"uboundaz8", "", false, ""},
     {"verifya", "", false, "k"},
     {"END_OF_PFX_F90,", "", false, ""},
-    {"all", "", false, ""},
+    {"all", "", true, ""},
     {"all_scatterx", "", false, ""},
     {"alls", "", true, ""},
-    {"any", "", false, ""},
+    {"any", "", true, ""},
     {"any_scatterx", "", false, ""},
     {"anys", "", true, ""},
     {"associated", "", true, ""},
@@ -411,7 +448,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"comm_gatherx", "", false, ""},
     {"comm_scatterx", "", false, ""},
     {"copy_out", "", true, ""},
-    {"count", "", false, ""},
+    {"count", "", true, ""},
     {"counts", "", true, ""},
     {"cpu_time", "", false, ""},
     {"cpu_timed", "", false, ""},
@@ -463,8 +500,15 @@ FtnRteRtn ftnRtlRtns[] = {
     {"global_product", "", false, ""},
     {"global_sum", "", false, ""},
     {"globalize", "", false, ""},
+    {"iparity", "", false, ""},
+    {"iparity_scatterx", "", false, ""},
+    {"iparitys", "", true, ""},
+    {"iall", "", false, ""},
     {"iall_scatterx", "", false, ""},
+    {"ialls", "", true, ""},
+    {"iany", "", false, ""},
     {"iany_scatterx", "", false, ""},
+    {"ianys", "", true, ""},
     {"idate", "", false, ""},
     {"ilen", "", false, ""},
     {"indexa", "", true, "k"},
@@ -473,7 +517,6 @@ FtnRteRtn ftnRtlRtns[] = {
     {"indexx_cr_nma", "", true, "k"},
     {"init", "", false, ""},
     {"instance", "", true, ""},
-    {"iparity_scatterx", "", false, ""},
     {"islocal_idx", "", false, ""},
     {"jdate", "", false, ""},
     {"lastval", "", false, ""},

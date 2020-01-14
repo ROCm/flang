@@ -3,6 +3,19 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+#
+# Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+#
+#
+# AMD Support for DNORM intrinsic
+# Date of Modification: 21st February 2019
+#
+# [AMD] Support for Bit Sequence Comparsion intrinsic
+# Month of Modification: May 2019
+#
+# [AMD] Support for Bit Masking intrinsics.
+# Month of Modification: May 2019
+#===----------------------------------------------------------------------===#
 
 enable_language(C ASM Fortran) # Enable assembly and Fortran
 
@@ -308,6 +321,7 @@ SET(FTN_SUPPORT_DESC_INDEP
 SET(FTN_SUPPORT_DESC_DEP
   aligned.c
   allo.c
+  bitwise.c
   comm.c
   copy.c
   cshift.c
@@ -317,6 +331,7 @@ SET(FTN_SUPPORT_DESC_DEP
   descFioUtil.c
   descIntrins.c
   dist.c
+  dnormreal.c
   dynam.c
   eoshift.c
   fill.c

@@ -666,7 +666,7 @@ replace_expr(int sub_expr, int isptr, int expr, int indirection)
   int expr1;
   int expr2;
   int sptr;
-  int subs[7];
+  int subs[MAXSUBS]; // AOCC
   int nargs, argt;
 
   if (sub_expr == 0)

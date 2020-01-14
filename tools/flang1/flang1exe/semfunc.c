@@ -5,6 +5,50 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Avoiding generation of _mth_aint and _mth_dint lib calls for the aint input;
+ * instead handling it in flang
+ * Date of Modification: May 2018
+ *
+ * Support for DNORM intrinsic
+ * Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ * Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ * Month of Modification: May 2019
+ *
+ * Support for Bit Shifting intrinsics.
+ * Month of Modification: June 2019
+ *
+ * Support for MERGE_BITS intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ * Month of Modification: July 2019
+ *
+ * Support for Combined Bit Shifting intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ *
+ * Fixes for CP2K application build
+ * Month of Modification: November 2019
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ * Date of Modification: December 2019
+ *
+ * Complex datatype support for acosh , asinh , atanh
+ * Modified on 08 January 2020
+ */
+
 /** \file
     \brief Fortran front-end utility routines used by Semantic Analyzer to
            process functions, subroutines, predeclareds, etc.
@@ -460,7 +504,7 @@ get_byval(int func_sptr, int param_sptr)
    c-_ptr->member
  */
 static int
-rewrite_cptr_references(int ast)
+rewrite_cptr_references(int ast, bool cassociated)
 {
   int past, mast;
   int new_ast = 0;
@@ -481,7 +525,8 @@ rewrite_cptr_references(int ast)
   default:
     /* no need to process further  all cases of possible
        nested C_PTR must be in cases above  */
-    return 0;
+    if (cassociated) mast=ast;
+    else return 0;
   }
 
   /* check for type C_PTR, C_FUNC_PTR, and process */
@@ -520,7 +565,7 @@ byvalue_ref_arg(SST *e1, int *dtype, int op, int func_sptr)
        */
       A_DTYPEP(SST_ASTG(e1), DT_PTR);
     } else {
-      new_ast = rewrite_cptr_references(SST_ASTG(e1));
+      new_ast = rewrite_cptr_references(SST_ASTG(e1),false);
       if (new_ast) {
         SST_ASTP(e1, new_ast);
         SST_IDP(e1, S_EXPR);
@@ -653,6 +698,36 @@ is_ptr_arg(SST *sst_actual)
 
   return sptr > NOSYM && POINTERG(sptr);
 }
+
+// AOCC Begin
+// Add a tbp arg when there is a call to type bound procedures
+static ITEM*
+add_tbp_arg (SST *stktop, ITEM *itemp)
+{
+  ITEM *itemp2;
+  SST *e1em;
+  int sp;
+  int ast = SST_ASTG(stktop);
+  e1em = (SST *)getitem(0, sizeof(SST));
+  sp = sym_of_ast(ast);
+  SST_SYMP(e1em, sp);
+  SST_DTYPEP(e1em, DTYPEG(sp));
+  mkident(e1em);
+  mkexpr(e1em);
+  itemp2 = (ITEM *)getitem(0, sizeof(ITEM));
+  itemp2->t.stkp = e1em;
+  itemp2->next = ITEM_END;
+
+  //tbp arg will be the first argument
+  if (itemp == ITEM_END) {
+    itemp = itemp2;
+  } else {
+    itemp2->next = itemp;
+    itemp = itemp2;
+  }
+  return itemp;
+} // add_tbp_arg
+// AOCC End
 
 /* Non-pointer passed to a pointer dummy: geneerate a pointer temp, associate
  * the temp with the actual arg, and pass the temp.
@@ -850,6 +925,16 @@ func_call2(SST *stktop, ITEM *list, int flag)
       dtype = DTY(dtype + 1);
     if (STYPEG(BINDG(callee)) == ST_USERGENERIC) {
       int mem;
+      // AOCC Begin
+      int imp, mem1;
+      // For type bound procedures with no "nopass" clause, tbp arg
+      // has already been added to the list. Need to do the same for type bound
+      // procedures with "nopass" clause as well.
+      sptr1 = BINDG(callee);
+      imp = get_implementation(TBPLNKG(sptr1), sptr1, 0, &mem1);
+      if (imp && NOPASSG(mem1))
+        list = add_tbp_arg(stktop, list);
+      // AOCC End
       func_sptr = generic_tbp_func(BINDG(callee), stktop, list);
       if (func_sptr) {
         if (get_implementation(dtype, func_sptr, 0, &mem) == 0) {
@@ -867,6 +952,14 @@ func_call2(SST *stktop, ITEM *list, int flag)
         } else {
           SST_ASTP(stktop, replace_memsym_of_ast(SST_ASTG(stktop), mem));
           callee = mem;
+          // AOCC Begin
+          // For the type bound procedures with nopass clause,
+          // tbg arg should be removed before matching the actual arguments.
+          // First argument is tbp arg.
+          if (NOPASSG(mem)) {
+            list = list->next;
+          }
+          // AOCC End
         }
       }
     }
@@ -2098,8 +2191,13 @@ gen_pointer_result(int array_value, int dscptr, int nactuals,
     get_all_descriptors(arr_tmp);
     /* need to have different MIDNUM than arr_value */
     /* otherwise multiple declaration */
-    pvar = sym_get_ptr(arr_tmp);
-    MIDNUMP(arr_tmp, pvar);
+    // AOCC: Issue with CP2k
+    // the following code is incorrect and it makes
+    // the pointer to point to invalid locations 
+    // due to wrong offset
+//    pvar = sym_get_ptr(arr_tmp);
+//    MIDNUMP(arr_tmp, pvar);
+    MIDNUMP(arr_tmp, 0);
     NODESCP(arr_tmp, 0);
     ddt = DDTG(dt);
     if ((DTY(dt) == TY_CHAR && dt != DT_DEFERCHAR) ||
@@ -2578,7 +2676,7 @@ rewrite_subscr(int ast_subscr, int dscptr, int nactuals)
   int i;
   int actarr;
   int asd, numdim;
-  int subs[7]; /* maximum number of dimensions */
+  int subs[MAXSUBS]; /* AOCC: maximum number of dimensions */
   int triple;
   int subscr;
 
@@ -3262,6 +3360,15 @@ try_next_hash_link:
     }
     if (stype == ST_USERGENERIC && check_generic) {
       if (CLASSG(sptr)) {
+        // AOCC Begin
+        int imp, mem;
+        imp = get_implementation(TBPLNKG(sptr), sptr, 0, &mem);
+        // For type bound procedures with no "nopass" clause, tbp arg
+        // has already been added to the list. Need to do the same for type bound
+        // procedures with "nopass" clause as well.
+        if (imp && NOPASSG(mem))
+          list = add_tbp_arg(stktop, list);
+        // AOCC End
         sptr = generic_tbp_call(sptr, stktop, list, 0);
         goto do_call;
       }
@@ -3427,6 +3534,16 @@ do_call:
           sptr1 = 0;
           break;
         }
+        // AOCC Begin
+        // For the type bound procedures with nopass clause,
+        // tbg arg should be removed before matching the actual arguments.
+        // First argument is tbp arg.
+        if (NOPASSG(mem)) {
+          list = list->next;
+          count_actuals(list);
+          count = carg.nent;
+        }
+        // AOCC End
         ast = replace_memsym_of_ast(ast, mem);
         SST_ASTP(stktop, ast);
         sptr = BINDG(mem);
@@ -3594,7 +3711,7 @@ do_call:
                do not rewrite iso c_loc
              */
 
-            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp));
+            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp),false);
           } else if (get_byval(sptr, param_dummy)
                     && PASSBYVALG(param_dummy)
                     && OPTARGG(param_dummy)) {
@@ -3908,7 +4025,7 @@ ptrsubr_call(SST *stktop, ITEM *list)
                do not rewrite iso c_loc
              */
 
-            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp));
+            ARGT_ARG(argt, ii) = rewrite_cptr_references(SST_ASTG(sp),false);
             ii++;
           } else if (pass_char_no_len(sptr, param_dummy)) {
             byvalue_ref_arg(sp, &dum, OP_REF, sptr);
@@ -4064,7 +4181,11 @@ gen_newer_intrin(int sptrgenr, int dtype)
   if (strcmp(intrin_nmptr, "acos") == 0 || strcmp(intrin_nmptr, "asin") == 0 ||
       strcmp(intrin_nmptr, "atan") == 0 || strcmp(intrin_nmptr, "cosh") == 0 ||
       strcmp(intrin_nmptr, "sinh") == 0 || strcmp(intrin_nmptr, "tanh") == 0 ||
-      strcmp(intrin_nmptr, "tan") == 0) {
+      strcmp(intrin_nmptr, "tan") == 0  ||
+       //AOCC begin
+      strcmp(intrin_nmptr, "asinh") == 0|| strcmp(intrin_nmptr, "atanh") == 0|| 
+      strcmp(intrin_nmptr, "acosh") == 0 ) {
+      //AOCC end 
     if (DT_ISCMPLX(dtype)) {
       switch (DTY(dtype)) {
       case TY_DCMPLX:
@@ -5454,13 +5575,13 @@ _c_associated(SST *stkp, int count)
   lop = ARG_AST(0);
   if (!is_iso_cptr(A_DTYPEG(lop)))
     return 0;
-  lop = rewrite_cptr_references(lop);
+  lop = rewrite_cptr_references(lop, true);
   ARG_AST(0) = lop;
   if (count == 2) {
     rop = ARG_AST(1);
     if (!is_iso_cptr(A_DTYPEG(rop)))
       return 0;
-    rop = rewrite_cptr_references(rop);
+    rop = rewrite_cptr_references(rop, true);
     ARG_AST(1) = rop;
   }
   return 1;
@@ -5810,6 +5931,175 @@ ref_pd(SST *stktop, ITEM *list)
       XFR_ARGAST(1);
     }
     break;
+
+  // AOCC Begin
+  case PD_iparity:
+  case PD_iall:
+  case PD_iany:
+    if (flg.std != F2008) {
+      char buf[64];
+      sprintf(buf, "iall and iany is supported only in f2008, use -std=f2008 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    if (count == 0 || count > 3) {
+      E74_CNT(pdsym, count, 1, 3);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
+      goto exit_;
+    argt_count = 3;
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    if (!DT_ISNUMERIC_ARR(dtype1)) {
+      if (pdtype == PD_iany || pdtype == PD_iall || pdtype == PD_iparity) {
+        if (!(DTY(dtype1) == TY_ARRAY &&
+              (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) {
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+        }
+
+      } else {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+    }
+    if (pdtype == PD_iany || pdtype == PD_iall || pdtype == PD_iparity) {
+      if ((!DT_ISINT_ARR(dtype1) && !DT_ISREAL_ARR(dtype1) &&
+           !(DTY(dtype1) == TY_ARRAY &&
+             (DTYG(dtype1) == TY_CHAR || DTYG(dtype1) == TY_NCHAR))) ||
+          DT_ISLOG_ARR(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+    }
+    dtyper = DTY(dtype1 + 1);
+    if ((stkp = ARG_STK(2))) { /* mask */
+      dtype2 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISLOG(dtype2)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      if (!chkshape(stkp, ARG_STK(0), FALSE)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      XFR_ARGAST(2);
+    }
+    if ((stkp = ARG_STK(1))) { /* dim */
+      dtype2 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype2)) {
+        if (count == 2) {
+          if (DT_ISLOG(DDTG(dtype2)) && chkshape(stkp, ARG_STK(0), FALSE)) {
+            XFR_ARGAST(1);
+            /* shift args over */
+            ARG_AST(2) = ARG_AST(1); /* mask */
+            ARG_AST(1) = 0;          /* dim is 'null' */
+            break;
+          }
+        }
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+
+      if (rank_of_ast(ARG_AST(0)) != 1) {
+        shaper = reduc_shape((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp),
+                             (int)STD_PREV(0));
+        if (shaper)
+          dtyper = dtype1;
+      } else
+        check_dim_error((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp));
+    }
+    break;
+  case PD_parity:
+    if (flg.std != F2008) {
+      char buf[64];
+      sprintf(buf, "parity is supported only in f2008, use -std=f2008 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    if (count == 0 || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+    // Evaluate all the arguments, and create them
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    argt_count = 2;
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    if (!DT_ISLOG_ARR(dtype1)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+    dtyper = DTY(dtype1 + 1);
+    if ((stkp = ARG_STK(1))) { /* dim */
+      dtype2 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype2)) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+      shaper = reduc_shape((int)A_SHAPEG(ARG_AST(0)), (int)SST_ASTG(stkp),
+                           (int)STD_PREV(0));
+      if (shaper)
+        dtyper = dtype1;
+    }
+    break;
+#if 0    
+  // Pre-Defined function norm2()
+  case PD_norm2:
+
+    if (flg.std != F2008) {
+      char buf[64];
+      sprintf(buf, "norm2 is supported only in f2008, use -std=f2008 to enable\n");
+      error(155, 3, gbl.lineno, SYMNAME(pdsym), buf);
+    }
+    // Allow only one argument for now
+    if (count != 1) {
+      E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+    // Evaluate all the arguments, and create them
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    shape1 = SST_SHAPEG(ARG_STK(0));
+    int rank = SHD_NDIM(shape1);
+    // First argument alwys should be array
+    if ( DTY(dtype1) != TY_ARRAY) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    // When dim is specified, return vlaue is an array
+    if (rank > 1 && count > 1) {
+      dtyper = SST_DTYPEG(ARG_STK(0));
+    }
+
+    // Set return type to match the element type of arg1
+    if (DTYG(dtype1) == TY_REAL)
+      dtyper = DT_REAL4;
+
+    if (DTYG(dtype1) == TY_DBLE)
+      dtyper = DT_REAL8;
+
+    argt_count = count;
+    break;
+#endif    
+  case PD_isnan:
+    if (count != 1 || get_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto bad_args;
+    dtype1 = SST_DTYPEG(ARG_STK(0));
+    if (DTYG(dtype1) != TY_REAL && DTYG(dtype1) != TY_DBLE)
+      goto bad_args;
+    (void)mkexpr(ARG_STK(0));
+    XFR_ARGAST(0);
+    dtyper = DT_LOG;
+    if (DTY(dtype1) == TY_ARRAY) {
+      shape1 = A_SHAPEG(ARG_AST(0));
+      count = SHD_NDIM(shape1);
+      dtyper = get_array_dtype(count, DT_LOG);
+    }
+    break;
+  // AOCC End
   case PD_dotproduct:
     if (!XBIT(49, 0x40)) /* if xbit set, CM fortran intrinsics allowed */
       goto bad_args;
@@ -6235,8 +6525,8 @@ ref_pd(SST *stktop, ITEM *list)
 
     if (sem.dinit_data) {
       int rank;
-      int ubound[7];
-      int lbound[7];
+      int ubound[MAXSUBS]; // AOCC
+      int lbound[MAXSUBS]; // AOCC
       SST bndarry;
       ACL *argacl;
       ACL **r;
@@ -7063,7 +7353,7 @@ ref_pd(SST *stktop, ITEM *list)
 
     stkp = ARG_STK(0); /* source */
     shape1 = SST_SHAPEG(stkp);
-    if (shape1 && SHD_NDIM(shape1) == 7) {
+    if (shape1 && SHD_NDIM(shape1) == get_legal_maxdim()) { // AOCC
       E74_ARG(pdsym, 0, NULL);
       goto call_e74_arg;
     }
@@ -7300,7 +7590,7 @@ ref_pd(SST *stktop, ITEM *list)
         rtlRtn = RTE_shape4;
         break;
       case DT_INT8:
-        rtlRtn = RTE_shape;
+        rtlRtn = RTE_shape8;
         break;
       default:
         error(155, 3, gbl.lineno, SYMNAME(gbl.currsub),
@@ -7343,7 +7633,7 @@ ref_pd(SST *stktop, ITEM *list)
     if (shape_acl && shape_acl->is_const) {
       shape_acl = SST_ACLG(stkp);
       count = get_int_cval(sym_of_ast(AD_NUMELM(AD_DPTR(dtype1))));
-      if (count < 0 || count > 7) {
+      if (count < 0 || count > MAXSUBS) { // AOCC
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
       }
@@ -7391,7 +7681,7 @@ ref_pd(SST *stktop, ITEM *list)
         goto call_e74_arg;
       }
       count = get_int_cval(A_SPTRG(tmp));
-      if (count < 0 || count > 7) {
+      if (count < 0 || count > MAXSUBS) { // AOCC
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
       }
@@ -7411,7 +7701,8 @@ ref_pd(SST *stktop, ITEM *list)
       XFR_ARGAST(3);
       dtype2 = SST_DTYPEG(stkp);
       if (!DT_ISINT(DTY(dtype2 + 1)) ||
-          count != get_int_cval(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2))))) {
+          ((STYPEG(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2)))) == ST_CONST) && // AOCC
+          count != get_int_cval(sym_of_ast(AD_NUMELM(AD_DPTR(dtype2)))))) {
         E74_ARG(pdsym, 3, NULL);
         goto call_e74_arg;
       }
@@ -7509,12 +7800,12 @@ ref_pd(SST *stktop, ITEM *list)
        *     indices; e.g.,   lwb : upb : stride.
        */
       int arr;
-      int subs[7];
+      int subs[MAXSUBS]; // AOCC
       int asd;
       int dim = 0;
       int nsubs = 1;
       int ix;
-      int shp[7];
+      int shp[MAXSUBS]; // AOCC
       int eldtype;
 
       eldtype = DDTG(A_DTYPEG(ast));
@@ -7997,21 +8288,22 @@ ref_pd(SST *stktop, ITEM *list)
 #ifdef PD_ieee_selected_real_kind
   case PD_ieee_selected_real_kind:
 #endif
-    if (count > 2 || count == 0) {
-      E74_CNT(pdsym, count, 0, 2);
+    if (count > 3) {
+      E74_CNT(pdsym, count, 0, 3);
       goto call_e74_cnt;
     }
-    if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
+    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
       goto exit_;
 
     if (sem.dinit_data) {
-      gen_init_intrin_call(stktop, pdsym, 2, stb.user.dt_int, FALSE);
+      gen_init_intrin_call(stktop, pdsym, 3, stb.user.dt_int, FALSE);
       return 0;
     }
 
     stkp = ARG_STK(0);
     is_constant = TRUE;
     conval = 4;
+    int r = 0, p = 0;
     if (!stkp) {
       ARG_AST(0) = astb.ptr0;
     } else {
@@ -8032,10 +8324,12 @@ ref_pd(SST *stktop, ITEM *list)
           conval = 4;
         else if (con1 <= 15)
           conval = 8;
-        else if (con1 <= 31 && !XBIT(57, 4))
-          conval = 16;
-        else
+        /*else if (con1 <= 31 && !XBIT(57, 4))
+          conval = 16; currently real 16 is not supported */
+        else {
           conval = -1;
+	  p = -1;
+	}
       }
     }
     stkp = ARG_STK(1);
@@ -8058,35 +8352,87 @@ ref_pd(SST *stktop, ITEM *list)
         if (XBIT(49, 0x40000)) {
           /* Cray C90 */
           if (con1 <= 37) {
-            if (conval > 0 && conval < 4)
+            if (conval > 0 && conval <= 4)
               conval = 4;
           } else if (con1 <= 2465) {
-            if (conval > 0 && conval < 8)
+            if (conval > 0 && conval <= 8)
               conval = 8;
           } else {
             if (conval > 0)
               conval = 0;
-            conval -= 2;
+            conval = -2;
+	    r = -2;
           }
         } else {
           /* ANSI */
           if (con1 <= 37) {
-            if (conval > 0 && conval < 4)
+            if (conval > 0 && conval <= 4)
               conval = 4;
           } else if (con1 <= 307) {
-            if (conval > 0 && conval < 8)
+            if (conval > 0 && conval <= 8)
               conval = 8;
-          } else if (con1 <= 4931 && !XBIT(57, 4)) {
-            if (conval > 0 && conval < 16)
+          } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+            if (conval > 0 && conval <= 16)
               conval = 16;
-          } else {
+          }*/ else {
             if (conval > 0)
               conval = 0;
-            conval -= 2;
+            conval = -2;
+	    r = -2;
           }
         }
       }
     }
+    // AOCC begin
+    stkp = ARG_STK(2);
+    if (!stkp) {
+      ARG_AST(2) = astb.ptr0;
+      if (p < 0 && r < 0)
+        conval = -3;
+    } else {
+      dtype1 = SST_DTYPEG(stkp);
+      if (!DT_ISINT(dtype1)) {
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+      }
+      XFR_ARGAST(2);
+      ast = SST_ASTG(stkp);
+      if (!A_ALIASG(ast)) {
+        is_constant = FALSE;
+      } else {
+        ast = A_ALIASG(ast);
+        con1 = A_SPTRG(ast);
+        con1 = CONVAL2G(con1);
+        if (XBIT(49, 0x40000)) {
+          /* Cray C90 */
+          if (con1 == 2) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    else if (p < 0 && r < 0)
+	      conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        } else {
+          /* ANSI */
+          if (con1 == 2) {
+            if (conval > 0 && conval <= 4)
+              conval = 4;
+	    else if (conval > 0 && conval <= 8)
+              conval = 8;
+	    /*else if (conval > 0 && conval <= 16)
+              conval = 16;*/
+	    else if (p < 0 && r < 0)
+	      conval = -3;
+          }
+	  else if (con1 != 2)
+            conval = -5;
+        }
+      }
+    }
+    // AOCC end
     if (is_constant) {
       goto const_default_int_val; /*return default integer*/
     }
@@ -8095,7 +8441,7 @@ ref_pd(SST *stktop, ITEM *list)
 
     hpf_sym = sym_mkfunc(mkRteRtnNm(RTE_sel_real_kind), stb.user.dt_int);
     dtyper = stb.user.dt_int;
-    argt_count = 2;
+    argt_count = 3;
     break;
 
   case PD_selected_char_kind:
@@ -8310,6 +8656,189 @@ ref_pd(SST *stktop, ITEM *list)
     }
 
     goto const_kind_int_val;
+  /* AOCC begin */
+  case PD_bge:
+  case PD_bgt:
+  case PD_ble:
+  case PD_blt:
+    if (flg.std != F2008) {
+      error(155, 3, gbl.lineno, SYMNAME(pdsym),
+          "bit sequence comparison is supported only in f2008, use -std=f2008 to enable\n");
+    }
+
+    if (count != 2) {
+      E74_CNT(pdsym, count, 2, 2);
+      goto call_e74_cnt;
+    }
+
+    /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg */
+    dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg */
+
+    /* Both arguments should be some kind of INTEGER where kind is at max = 8 */
+    switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+    }
+
+    switch (DTY(dtype2)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+    }
+
+    dtyper = DT_LOG;
+    argt_count = count;
+    break;
+
+  case PD_maskl:
+  case PD_maskr:
+    if (flg.std != F2008) {
+      error(155, 3, gbl.lineno, SYMNAME(pdsym),
+          "bit masking is supported only in f2008, use -std=f2008 to enable\n");
+    }
+
+    if (count > 2 || count <= 0) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+
+    /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    /* Both arguments should be some kind of INTEGER where kind is at max = 8 */
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg */
+    switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+    }
+
+    if (count == 2) {
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg */
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 1, NULL);
+          goto call_e74_arg;
+      }
+    }
+
+    dtyper = DT_INT8;
+    argt_count = count;
+    break;
+
+  case PD_merge_bits: {
+    if (flg.std != F2008) {
+      error(155, 3, gbl.lineno, SYMNAME(pdsym),
+          "merge_bits is supported only in f2008, use -std=f2008 to enable\n");
+    }
+
+    int dtype3;
+
+    if (count != 3) {
+      E74_CNT(pdsym, count, 3, 3);
+      goto call_e74_cnt;
+    }
+
+    /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    /* All arguments should be some INTGER kind or boz-literal constant. i and j
+     * can't be both boz-literal constant */
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (i) */
+    switch (DTY(dtype1)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+    }
+
+    dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (j) */
+    switch (DTY(dtype2)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+    }
+
+    dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (mask) */
+    switch (DTY(dtype3)) {
+      case TY_WORD:
+      case TY_DWORD:
+      case TY_BINT:
+      case TY_SINT:
+      case TY_INT:
+      case TY_INT8:
+        break;
+      default:
+        E74_ARG(pdsym, 2, NULL);
+        goto call_e74_arg;
+    }
+
+    /* If i and j are boz-literal constants, then throw error */
+    if ((DTY(dtype1) == TY_WORD || DTY(dtype1) == TY_DWORD) &&
+        (DTY(dtype2) == TY_WORD || DTY(dtype2) == TY_DWORD)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    /* If kinds mismatch, then throw error */
+    if (!(DTY(dtype1) == DTY(dtype2) && DTY(dtype2) == DTY(dtype3))) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    dtyper = (dtype1 > dtype2) ? dtype1 : dtype2;
+    argt_count = count;
+    break;
+  }
+  /* AOCC end */
 
   case PD_digits:
     if (count != 1) {
@@ -8467,6 +8996,17 @@ ref_pd(SST *stktop, ITEM *list)
   case PD_acosh:
   case PD_asinh:
   case PD_atanh:
+    if (count != 1) {
+      E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 1, KWDARGSTR(pdsym)))
+      goto exit_;
+    stkp = ARG_STK(0);
+    dtyper = SST_DTYPEG(stkp);
+    shaper = SST_SHAPEG(stkp);
+    dtype1 = DDTG(dtyper);
+    break;
   case PD_bessel_j0:
   case PD_bessel_j1:
   case PD_bessel_y0:
@@ -8803,6 +9343,15 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
+    // AOCC begin: avoiding generation of _mth_aint lib call instead
+    // handling it here
+    if (pdtype == PD_aint) {
+      ast = ARG_AST(0);
+      ast = mk_convert(ast, DT_INT);
+      ast = mk_convert(ast, dtyper);
+      goto expr_val;
+    // AOCC end
+    }
     goto gen_call;
 
   case PD_int:
@@ -10460,61 +11009,195 @@ ref_pd(SST *stktop, ITEM *list)
 
   case PD_shiftl:
   case PD_shiftr:
-    if (count != 2) {
-      E74_CNT(pdsym, count, 2, 2);
-      goto call_e74_cnt;
+  /* AOCC begin */
+    if (flg.std == F2008) {
+      if (count != 2) {
+        E74_CNT(pdsym, count, 2, 2);
+        goto call_e74_cnt;
+      }
+
+      /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+      if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+        goto exit_;
+
+      dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg */
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg */
+
+      switch (DTY(dtype1)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+      }
+
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 1, NULL);
+          goto call_e74_arg;
+      }
+
+      dtyper = DT_INT;
+      argt_count = count;
+      break;
+
+     /*
+      * The below semantic handling suggests that the shiftl/shiftr it's
+      * expecting is not the one from the F2008 standard. We default the handling
+      * to if the standard is not f2008 or above.
+      */
+
+    } else {
+    /* AOCC end */
+      if (count != 2) {
+        E74_CNT(pdsym, count, 2, 2);
+        goto call_e74_cnt;
+      }
+      if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
+        goto exit_;
+      stkp = ARG_STK(0); /* i */
+      shaper = SST_SHAPEG(stkp);
+      dtype1 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISINT(dtype1) && !DT_ISREAL(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+      stkp = ARG_STK(1); /* j */
+      dtype1 = DDTG(SST_DTYPEG(stkp));
+      if (!DT_ISINT(dtype1)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+      if (shaper)
+        dtyper = get_array_dtype(SHD_NDIM(shaper), DT_DWORD);
+      else
+        dtyper = DT_DWORD;
+      break;
     }
-    if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
-      goto exit_;
-    stkp = ARG_STK(0); /* i */
-    shaper = SST_SHAPEG(stkp);
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    if (!DT_ISINT(dtype1) && !DT_ISREAL(dtype1)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
-    }
-    stkp = ARG_STK(1); /* j */
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    if (!DT_ISINT(dtype1)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
-    }
-    if (shaper)
-      dtyper = get_array_dtype(SHD_NDIM(shaper), DT_DWORD);
-    else
-      dtyper = DT_DWORD;
-    break;
 
   case PD_dshiftl:
   case PD_dshiftr:
-    if (count != 3) {
-      E74_CNT(pdsym, count, 3, 3);
-      goto call_e74_cnt;
-    }
-    if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
-      goto exit_;
-    shaper = 0;
-    for (i = 0; i < 3; i++) {
-      stkp = ARG_STK(i); /* i, j, k */
-      dtype1 = DDTG(SST_DTYPEG(stkp));
-      if (!DT_ISINT(dtype1)) {
-        E74_ARG(pdsym, i, NULL);
+    /* AOCC begin */
+    if (flg.std == F2008) {
+      int dtype3;
+
+      if (count != 3) {
+        E74_CNT(pdsym, count, 3, 3);
+        goto call_e74_cnt;
+      }
+
+      /* evaluates and makes each args. Sets the ARG_AST(:) as well */
+      if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+        goto exit_;
+
+      /* All arguments should be some INTGER kind or boz-literal constant. i and j
+       * can't be both boz-literal constant */
+      dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (i) */
+      switch (DTY(dtype1)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 0, NULL);
+          goto call_e74_arg;
+      }
+
+      dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (j) */
+      switch (DTY(dtype2)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 1, NULL);
+          goto call_e74_arg;
+      }
+
+      dtype3 = SST_DTYPEG(ARG_STK(2)); /* third arg (shift) */
+      switch (DTY(dtype3)) {
+        case TY_WORD:
+        case TY_DWORD:
+        case TY_BINT:
+        case TY_SINT:
+        case TY_INT:
+        case TY_INT8:
+          break;
+        default:
+          E74_ARG(pdsym, 2, NULL);
+          goto call_e74_arg;
+      }
+
+      /* If i and j are boz-literal constants, then throw error */
+      if ((DTY(dtype1) == TY_WORD || DTY(dtype1) == TY_DWORD) &&
+          (DTY(dtype2) == TY_WORD || DTY(dtype2) == TY_DWORD)) {
+        E74_ARG(pdsym, 0, NULL);
         goto call_e74_arg;
       }
-      if (shaper) {
-        if ((shape1 = SST_SHAPEG(stkp)) &&
-            SHD_NDIM(shaper) != SHD_NDIM(shape1)) {
+
+      /* If kinds mismatch, then throw error */
+      if (DTY(dtype1) != DTY(dtype2)) {
+        E74_ARG(pdsym, 0, NULL);
+        goto call_e74_arg;
+      }
+
+      dtyper = (dtype1 > dtype2) ? dtype1 : dtype2;
+      argt_count = count;
+      break;
+      /*
+       * The below semantic handling suggests that the dshiftl/dshiftr it's
+       * expecting is not the one from the F2008 standard. We default the handling
+       * to if the standard is not f2008 or above.
+       */
+    } else {
+      /* AOCC end */
+      if (count != 3) {
+        E74_CNT(pdsym, count, 3, 3);
+        goto call_e74_cnt;
+      }
+      if (evl_kwd_args(list, 3, KWDARGSTR(pdsym)))
+        goto exit_;
+      shaper = 0;
+      for (i = 0; i < 3; i++) {
+        stkp = ARG_STK(i); /* i, j, k */
+        dtype1 = DDTG(SST_DTYPEG(stkp));
+        if (!DT_ISINT(dtype1)) {
           E74_ARG(pdsym, i, NULL);
           goto call_e74_arg;
         }
-      } else
-        shaper = SST_SHAPEG(stkp);
+        if (shaper) {
+          if ((shape1 = SST_SHAPEG(stkp)) &&
+              SHD_NDIM(shaper) != SHD_NDIM(shape1)) {
+            E74_ARG(pdsym, i, NULL);
+            goto call_e74_arg;
+          }
+        } else
+          shaper = SST_SHAPEG(stkp);
+      }
+      if (shaper)
+        dtyper = get_array_dtype(SHD_NDIM(shaper), DT_INT);
+      else
+        dtyper = DT_INT;
+      break;
     }
-    if (shaper)
-      dtyper = get_array_dtype(SHD_NDIM(shaper), DT_INT);
-    else
-      dtyper = DT_INT;
-    break;
 
   case PD_mask:
   /* Mask is a cray intrinsic */
@@ -10597,7 +11280,9 @@ ref_pd(SST *stktop, ITEM *list)
         sptr = A_SPTRG(ast);
       }
       if (sptr) {
-        if (POINTERG(sptr) || ALLOCG(sptr) || CLASSG(sptr) || ASSUMSHPG(sptr) ||
+        // AOCC Begin - Removed pointer restriction
+        if (ALLOCG(sptr) || CLASSG(sptr) || ASSUMSHPG(sptr) ||
+        // AOCC end
             ASUMSZG(sptr) ||
             (DTY(DTYPEG(sptr)) == TY_DERIVED &&
              !(CFUNCG(DTY(DTYPEG(sptr) + 3)) || is_iso_cptr(DTYPEG(sptr)) ||
@@ -11022,6 +11707,7 @@ call_e74_cnt:
   goto exit_;
 call_e74_arg:
   e74_arg(_e74_sym, _e74_pos, _e74_kwd);
+
 exit_:
   dont_issue_assumedsize_error = 0;
   EXPSTP(pdsym, 1); /* freeze predeclared */

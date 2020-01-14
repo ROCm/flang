@@ -5,6 +5,31 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *
+ * Month of Modification: July 2019
+ */
+
 #ifndef FORTRAN_RTLRTNS_H_
 #define FORTRAN_RTLRTNS_H_
 
@@ -57,6 +82,10 @@ typedef enum {
   RTE_auto_dealloc,
   RTE_auto_deallocm,
   RTE_auto_deallocp,
+  /* AOCC begin */
+  RTE_bitcmp,
+  RTE_bitmask,
+  /* AOCC end */
   RTE_c_f_procptr,
   RTE_c_f_ptr,
   RTE_calloc03a,
@@ -258,6 +287,13 @@ typedef enum {
   RTE_nearestx,
   RTE_nlena,
   RTE_nlentrim,
+  // AOCC Begin
+  // Order should match the order in ftnRtlRtns[]
+  RTE_norm2_real4,
+  RTE_norm2_real4_dim,
+  RTE_norm2_real8,
+  RTE_norm2_real8_dim,
+  // AOCC End
   RTE_nrepeat,
   RTE_nscan,
   RTE_nstr_copy,
@@ -468,8 +504,15 @@ typedef enum {
   RTE_global_product,
   RTE_global_sum,
   RTE_globalize,
+  RTE_iparity,
+  RTE_iparity_scatterx,
+  RTE_iparitys,
+  RTE_iall,
   RTE_iall_scatterx,
+  RTE_ialls,
+  RTE_iany,
   RTE_iany_scatterx,
+  RTE_ianys,
   RTE_idate,
   RTE_ilen,
   RTE_indexDsc,
@@ -478,7 +521,6 @@ typedef enum {
   RTE_indexx_cr_nma,
   RTE_init,
   RTE_instance,
-  RTE_iparity_scatterx,
   RTE_islocal_idx,
   RTE_jdate,
   RTE_lastval,

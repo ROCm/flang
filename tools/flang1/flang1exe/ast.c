@@ -82,7 +82,7 @@ ast_init(void)
     assert(astb.asd.stg_base, "ast_init: no room for ASD", astb.asd.stg_size, 4);
 #endif
   }
-  BZERO(astb.asd.hash, int, 7);
+  BZERO(astb.asd.hash, int, MAXSUBS); /* AOCC */
   astb.asd.stg_base[0] = 0;
   astb.asd.stg_avail = 1;
 
@@ -93,7 +93,7 @@ ast_init(void)
     assert(astb.shd.stg_base, "ast_init: no room for SHD", astb.shd.stg_size, 4);
 #endif
   } else
-    BZERO(astb.shd.hash, int, 7);
+    BZERO(astb.shd.hash, int, MAXSUBS); /* AOCC */
   astb.shd.stg_base[0].lwb = 0;
   astb.shd.stg_base[0].upb = 0;
   astb.shd.stg_base[0].stride = 0;
@@ -717,6 +717,7 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
   case OP_LNEQV:
   case OP_LOR:
   case OP_LAND:
+  case OP_LXOR:         // AOCC
     commutable = TRUE;
   /***** fall through *****/
   default:
@@ -739,7 +740,11 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
         rop = tmp;
         c2 = c1;
         c1 = 0;
-      } else if (ncons == 0 && lop > rop) {
+      } else if (ncons == 0 && optype != OP_LAND && lop > rop) {
+        // AOCC logic seem to be flawed above
+        // added LAND condition above to fix the issue
+        // faliling case present(c) .and. c/d. reordering this is wrong
+        // for LAND we need to follw the lexical order of evaluation
         tmp = lop;
         lop = rop;
         rop = tmp;
@@ -939,6 +944,20 @@ mk_binop(int optype, int lop, int rop, DTYPE dtype)
           return rop; /* something .or. .true. is .true */
         return lop;   /* something .or. .false. is something */
         break;
+      // AOCC begin
+      case OP_LXOR:
+        v1 = CONVAL2G(A_SPTRG(lop));
+        v2 = CONVAL2G(A_SPTRG(rop));
+        if (v1 != v2) {
+          if (v1 == 0)
+            return rop;
+          return lop;
+        }
+        if (v1 == 0)
+          return lop;
+        return rop;
+        break;
+      // AOCC end
       default:
         break;
       }
@@ -1826,8 +1845,8 @@ mk_asd(int *subs, int numdim)
 {
   int i;
   int asd;
-  assert(numdim > 0 && numdim <= MAXSUBS, "mk_subscr: bad numdim", numdim,
-         ERR_Fatal);
+  assert(is_legal_numdim(numdim), "mk_subscr: bad numdim", numdim,
+         ERR_Fatal); /* AOCC */
   /* search the existing ASDs with the same number of dimensions */
   for (asd = astb.asd.hash[numdim - 1]; asd != 0; asd = ASD_NEXT(asd)) {
     for (i = 0; i < numdim; i++) {
@@ -2034,7 +2053,7 @@ mkshape(DTYPE dtype)
   if (DTY(dtype) != TY_ARRAY)
     return 0;
   numdim = ADD_NUMDIM(dtype);
-  if (numdim > 7 || numdim < 1) {
+  if (!is_legal_numdim(numdim)) { /* AOCC */
     interr("mkshape: bad numdim", numdim, 3);
     numdim = 1;
     add_shape_rank(numdim);
@@ -2072,7 +2091,7 @@ mk_mem_ptr_shape(int parent, int mem, DTYPE dtype)
   if (DTY(dtype) != TY_ARRAY)
     return 0;
   numdim = ADD_NUMDIM(dtype);
-  if (numdim > 7 || numdim < 1) {
+  if (!is_legal_numdim(numdim)) { /* AOCC */
     interr("mkshape: bad numdim", numdim, 3);
     numdim = 1;
     add_shape_rank(numdim);
@@ -3234,7 +3253,7 @@ contiguous_array_section(int subscr_ast)
         state = TRIPLE_SNGL_ELEM_SEEN;
       break;
     case TRIPLE_SNGL_ELEM_SEEN:
-      if (tkn != DIM_ELMNT)
+      if (tkn != DIM_ELMNT && tkn != DONT_CARE)
         return FALSE;
       break;
     }
@@ -4345,7 +4364,7 @@ ast_rewrite(int ast)
       changes = TRUE;
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "ast_rewrite: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "ast_rewrite: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i) {
       sub = ast_rewrite((int)ASD_SUBS(asd, i));
       if (sub != ASD_SUBS(asd, i))
@@ -5249,7 +5268,7 @@ ast_clear_repl(int ast)
     ast_clear_repl((int)A_LOPG(ast));
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "ast_clear_repl: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "ast_clear_repl: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i)
       ast_clear_repl((int)ASD_SUBS(asd, i));
     break;
@@ -6533,6 +6552,25 @@ dump_one_ast(int i)
 {
   _dump_one_ast(i, gbl.dbgfil);
 }
+
+// AOCC Begin
+/* routine must be externally visible */
+void
+get_subtree(int ast, int* par, int* sib)
+{
+  int i;
+  int astp, asts;
+
+  for (i = 1; i < astb.stg_avail; i++) {
+    if (i == ast)
+      break;
+
+    astp = i;
+  }
+  *par = astp;
+  *sib = i + 1;
+}
+// AOCC End
 
 /* routine must be externally visible */
 void

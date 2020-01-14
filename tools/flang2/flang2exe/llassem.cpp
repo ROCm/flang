@@ -5,12 +5,23 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
- *
- */
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: November 2018
+  *
+  * Support for x86-64 OpenMP offloading
+  * Last modified: Oct 2019
+  *
+  * Changes to support AMDGPU OpenMP offloading.
+  * Date of modification 16th September 2019
+  * Date of modification 20th September 2019
+  * Date of modification 01st October 2019
+  * Date of modification 05th November 2019
+  */
+
+
 /**
    \file
    LLVM backend routines. This backend is Fortran-specific.
@@ -80,7 +91,7 @@ public:
     case NVIDIA_OLDFATBIN_SEC:
       return {".nv_fatbin", DoubleAlign};
     case OMP_OFFLOAD_SEC:
-      return {".omp_offloading.entries", OneAlign};  
+      return {"omp_offloading_entries", OneAlign}; // AOCC
     default:
       return {NULL, 0};
     }
@@ -795,7 +806,7 @@ get_struct_from_dsrt2(SPTR sptr, DSRT *dsrtp, ISZ_T size, int *align8,
             }
             if (!first_data)
               strcat(buf, ", ");
-            strcat(buf, "i8* ");
+            strcat(buf, "i64 ");
             ptrcnt++;
           } else if (size_of_item) {
             if (ptrcnt || !i8cnt) {
@@ -1054,10 +1065,27 @@ ompaccel_write_sharedvars(void)
   for (gblsym = ag_other; gblsym; gblsym = AG_SYMLK(gblsym)) {
     name = AG_NAME(gblsym);
     typed = AG_TYPENAME(gblsym);
+    // AOCC begin
+#ifdef OMP_OFFLOAD_AMD
+    fprintf(gbl.ompaccfile,
+            "@%s = weak addrspace(3) externally_initialized global %s ", name,
+            typed);
+    fprintf(gbl.ompaccfile, " undef\n");
+#else
+    // AOCC End
     fprintf(gbl.ompaccfile, "@%s = common addrspace(3) global %s ", name,
             typed);
     fprintf(gbl.ompaccfile, " zeroinitializer\n");
+
+    // AOCC Begin
+#endif
+    // AOCC end
   }
+
+  // AOCC Begin
+  // Reset after global are dumped to file
+  ag_other = 0;
+  // AOCC End
 }
 
 static void
@@ -1108,13 +1136,21 @@ write_libomtparget(void)
         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.amdgcn-amd-amdhsa = external constant i8 \n\
   @.omp_offloading.img_start.amdgcn-amd-amdhsa = external constant i8 \n\
-  @.omp_offloading.entries_end = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.entries_begin = external constant %%struct.__tgt_offload_entry_ \n\
-  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.amdgcn-amd-amdhsa, i8* @.omp_offloading.img_end.amdgcn-amd-amdhsa, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }], align 8\n\
-  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @.omp_offloading.entries_begin, %%struct.__tgt_offload_entry_* @.omp_offloading.entries_end }, align 8\n\n");
+  @__stop_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @__start_omp_offloading_entries = external constant %%struct.__tgt_offload_entry_ \n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.amdgcn-amd-amdhsa, i8* @.omp_offloading.img_end.amdgcn-amd-amdhsa, %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }, align 8\n\n");
       }
 
-      else{
+      else if (flg.x86_64_omptarget) {
+         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+  @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
+  @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
+  @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
+  @__start_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
+  @.omp_offloading.device_images = internal unnamed_addr constant [1 x %%struct.__tgt_device_image] [%%struct.__tgt_device_image { i8* @.omp_offloading.img_start.x86_64-pc-linux-gnu, i8* @.omp_offloading.img_end.x86_64-pc-linux-gnu, %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries, %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }], align 8\n\
+  @.omp_offloading.descriptor_ = internal constant %%struct.__tgt_bin_desc { i64 1, %%struct.__tgt_device_image* getelementptr inbounds ([1 x %%struct.__tgt_device_image], [1 x %%struct.__tgt_device_image]* @.omp_offloading.device_images, i32 0, i32 0), %%struct.__tgt_offload_entry_* @__start_omp_offloading_entries , %%struct.__tgt_offload_entry_* @__stop_omp_offloading_entries }, align 8\n\n");
+      } else {
 #endif
       // AOCC End
         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
@@ -1136,6 +1172,18 @@ write_libomtparget(void)
 
 #endif
 
+#ifdef OMP_OFFLOAD_LLVM
+
+// AOCC Begin
+
+/* AMDGPU offload support
+ * Removed multiple definition ompaccel_write_sharedvars
+ *
+ * Removed multiple definition of write_libomtparget
+ */
+
+// AOCC end
+#endif
 
 /**
    \brief Complete assem for the source file
@@ -1249,6 +1297,21 @@ assemble_end(void)
 static void
 write_consts(void)
 {
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  FILE *llvmfile;
+  FILE *asmfile;
+
+  if ((flg.amdgcn_target || flg.x86_64_omptarget) && gbl.ompaccel_isdevice) {
+    //printf("Setting GPU file\n");
+    llvmfile = get_llasm_output_file();
+    asmfile = ASMFIL;
+    use_gpu_output_file();
+    ASMFIL = gbl.ompaccfile;
+  }
+#endif
+  // AOCC End
+
   if (gbl.consts > NOSYM) {
     SPTR sptr;
     for (sptr = gbl.consts; sptr > NOSYM; sptr = SYMLKG(sptr)) {
@@ -1260,7 +1323,7 @@ write_consts(void)
         put_kstr(sptr, XBIT(124, 0x8000));
         fputc('\n', ASMFIL);
       } else if (DTY(dtype) != TY_PTR) {
-        const char *tyName = char_type(dtype, sptr);        
+        const char *tyName = char_type(dtype, sptr);
         if (OMPACCRTG(sptr)) {
           fprintf(ASMFIL, "@%s = external constant %s ", getsname(sptr),
                   tyName);
@@ -1288,6 +1351,15 @@ write_consts(void)
         SYMLKP(tsptr, SPTR_NULL);
     }
   }
+
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  if ((flg.amdgcn_target || flg.x86_64_omptarget) && gbl.ompaccel_isdevice) {
+    ASMFIL = asmfile;
+    set_llasm_output_file(llvmfile);
+  }
+#endif
+  // AOCC End
   gbl.consts = NOSYM;
 }
 
@@ -1407,8 +1479,15 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
     i8cnt = skip_size;
   }
   free(cptrCopy);
-  if (i8cnt)
+  // AOCC Begin
+  // i8cnt can be negattive
+  if (flg.amdgcn_target || flg.x86_64_omptarget) {
+    if (i8cnt > 0)
+      fprintf(ASMFIL, "] ");
+  } else if (i8cnt)
+  // AOCC End
     fprintf(ASMFIL, "] ");
+
 
   return dsrtp;
 }
@@ -1507,6 +1586,7 @@ write_extern_inits(void)
     free(typed);
   }
 }
+static bool bss_written_through_ctor = false;
 
 static void
 write_bss(void)
@@ -1523,7 +1603,15 @@ write_bss(void)
   int gblsym;
   char *type_str = "internal global";
   char *bss_nm = bss_name;
-
+  // AOCC Begin
+  // For offload target, write_bss function is called for first function
+  // through ompaccel_create_globalctor function. dont process for first
+  // function if it is processed already
+  if (flg.omptarget && gbl.bss_addr && (gbl.multi_func_count == 0)) {
+      if (bss_written_through_ctor) return;
+      bss_written_through_ctor = true;
+  }
+  // AOCC end
   if (gbl.bss_addr) {
     fprintf(ASMFIL, "%%struct%s = type <{[%" ISZ_PF "d x i8]}>\n", bss_nm,
             gbl.bss_addr);
@@ -5081,6 +5169,11 @@ get_llvm_name(SPTR sptr)
     }
     if (stype != ST_ENTRY || gbl.rutype != RU_PROG) {
       q = SYMNAME(sptr);
+    // AOCC Begin
+    } else if (CONSTRUCTORG(sptr) &&
+        (flg.amdgcn_target || flg.x86_64_omptarget)) {
+      q = SYMNAME(sptr);
+    // AOCC End
     } else if ((flg.smp || XBIT(34, 0x200) || gbl.usekmpc) && OUTLINEDG(sptr)) {
       q = SYMNAME(sptr);
     } else {
@@ -5089,15 +5182,7 @@ get_llvm_name(SPTR sptr)
       strcpy(name, "_MAIN_");
       return name;
 #else
-      /* if this is the ctor for ompaccel.register, name must be unique, since
-         we generate this once per source file */
-      if (!strcmp(SYMNAME(sptr), "ompaccel.register")) {
-	strcpy(name, "MAIN.");
-	strcat (name, gbl.module);
-	return name;
-      } else {
-        q = "MAIN";
-      }
+      q = "MAIN";
 #endif
     }
     while ((ch = *q++)) {

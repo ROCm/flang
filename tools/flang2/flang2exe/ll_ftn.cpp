@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 26th Nov 2019
+ */
 
 /**
    \file
@@ -44,6 +50,7 @@ static SPTR create_display_temp_arg(DTYPE ref_dtype);
 #define MAXARGLEN 256
 #define LLVM_SHORTTERM_AREA 14
 
+bool is_nvvm_sreg_function(SPTR funcsptr); //AOCC
 typedef struct char_len {
   SPTR sptr;
   struct char_len *next;
@@ -324,10 +331,11 @@ ll_process_routine_parameters(SPTR func_sptr)
   ref_dummy = make_generic_dummy_lltype();
 
   /* If an internal function */
-  /* openmp global ctor (ompaccel.register) is NOT internal, but is part of 
-     first routine compiled in each source file, FIX ME!!!! */
   if ((gbl.internal > 1 && STYPEG(func_sptr) == ST_ENTRY) &&
-      !OUTLINEDG(func_sptr) && strcmp(SYMNAME(func_sptr),"ompaccel.register")) {
+#ifdef OMP_OFFLOAD_LLVM
+      !is_nvvm_sreg_function(func_sptr) &&  // AOCC
+#endif
+      !OUTLINEDG(func_sptr)) {
     /* get the display variable. This will be the last argument. */
     display_temp = aux.curr_entry->display;
     if (aux.curr_entry->display) {

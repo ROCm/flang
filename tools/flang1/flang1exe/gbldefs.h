@@ -41,6 +41,7 @@
 #define GBL_SIZE_T_FORMAT "zu"
 
 #define XBIT(n, m) (flg.x[n] & m)
+#define ZBIT(n, m) (flg.z[n] & m)
 #define F77OUTPUT XBIT(49, 0x80)
 /* This x-bit controls the insertion of scope labels. On by default. */
 #define XBIT_USE_SCOPE_LABELS !XBIT(198, 0x40000)
@@ -65,7 +66,7 @@
 #define MAX_FILENAME_LEN 256
 
 /* maximum number of array subscripts */
-#define MAXSUBS 7
+#define MAXSUBS 15 /* AOCC */
 
 typedef int8_t INT8;
 typedef int16_t INT16;

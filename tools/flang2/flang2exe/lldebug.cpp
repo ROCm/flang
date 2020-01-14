@@ -1321,7 +1321,7 @@ lldbg_create_local_variable_mdnode(LL_DebugInfo *db, int dw_tag,
                                    LL_MDRef context, char *name,
                                    LL_MDRef fileref, int line, int argnum,
                                    LL_MDRef type_mdnode, int flags,
-                                   LL_MDRef fwd)
+                                   LL_MDRef fwd, int sptr = 0) // AOCC
 {
   LLMD_Builder mdb = llmd_init(db->module);
 
@@ -1343,6 +1343,25 @@ lldbg_create_local_variable_mdnode(LL_DebugInfo *db, int dw_tag,
   llmd_add_md(mdb, type_mdnode);
   llmd_add_i32(mdb, flags);
   llmd_add_i32(mdb, 0);
+
+  // AOCC begin
+  if (sptr) {
+
+    if (DTY(DTYPEG(sptr)) == TY_STRUCT) {
+      /*
+       * Flang currently emits separate local variables in the case of
+       * separate asssignment of elements in an array of derived-type in a
+       * straight-line fashion. ie. (struct(i) = ...; struct(i+1) = ...; ...),
+       * although flang doesn't attempt to do so if you were to, say, do the
+       * assignment iteratively in a loop. We force DILocalVariable to be
+       * distinct here so that SROA (if it kicks in) on emitting
+       * DW_OP_LLVM_fragment won't choke the asm-printer of LLVM.
+       * */
+      llmd_set_distinct(mdb);
+    }
+  }
+  // AOCC end
+
   if (fwd)
     return ll_finish_variable(mdb, fwd);
   return llmd_finish(mdb);
@@ -2710,7 +2729,7 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
         align[1] = (alignment(dtype) + 1) * 8;
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim >= 1 && numdim <= 7) {
+        if (is_legal_numdim(numdim)) { /* AOCC */
           for (i = 0; i < numdim; ++i) {
             SPTR lower_bnd = AD_LWBD(ad, i);
             SPTR upper_bnd = AD_UPBD(ad, i);
@@ -3109,9 +3128,10 @@ lldbg_emit_local_variable(LL_DebugInfo *db, SPTR sptr, int findex,
       strcpy(symname, SYMNAME(array_sptr));
       flags = 0;
     }
+
     var_mdnode = lldbg_create_local_variable_mdnode(
         db, DW_TAG_auto_variable, blk_info->mdnode, symname, file_mdnode, 0, 0,
-        type_mdnode, flags, fwd);
+        type_mdnode, flags, fwd, sptr); // AOCC
   }
   return var_mdnode;
 }

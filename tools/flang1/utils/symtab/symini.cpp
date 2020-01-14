@@ -5,6 +5,40 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Masking intrinsics.
+ *
+ * Month of Modification: May 2019
+ *
+ *
+ * Support for Bit Shifting intrinsics.
+ *
+ * Month of Modification: June 2019
+ *
+ *
+ * Support for MERGE_BITS intrinsic.
+ *
+ * Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ */
+
 /**
  *  \file
  *  \brief Symbol initialization for Fortran
@@ -1531,6 +1565,21 @@ const char *SyminiFE90::init_names0[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
+    "maskl",
+    "maskr",
+    "merge_bits",
+    "norm2",
+    "isnan",
+    "parity"
+    "iparity"
+    "iall",
+    "iany",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -2049,6 +2098,21 @@ const char *SyminiFE90::init_names1[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
+    "maskl",
+    "maskr",
+    "merge_bits",
+    "norm2",
+    "isnan",
+    "parity",
+    "iparity"
+    "iall",
+    "iany",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -2568,6 +2632,21 @@ const char *SyminiFE90::init_names2[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
+    "maskl",
+    "maskr",
+    "merge_bits",
+    "norm2",
+    "isnan",
+    "parity",
+    "iparity"
+    "iall",
+    "iany",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",
@@ -3140,6 +3219,21 @@ const char *SyminiFE90::init_names3[] = {
     "any",
     "compl",
     "count",
+    // AOCC Begin
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
+    "maskl",
+    "maskr",
+    "merge_bits",
+    "norm2",
+    "isnan",
+    "parity",
+    "iparity"
+    "iall",
+    "iany",
+    // AOCC End
     "dot_product",
     "eqv",
     "matmul",

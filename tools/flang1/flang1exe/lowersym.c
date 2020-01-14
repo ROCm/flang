@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: December 2018
+  *
+  */
 
 /**
     \file
@@ -96,8 +104,8 @@ enum LEN {ASSCHAR = -1, ADJCHAR = -2, DEFERCHAR = -3};
 static bool
 has_opt_args(SPTR sptr)
 {
- int i, psptr, nargs, dpdsc;
-
+ int i, psptr, nargs, dpdsc; 
+ 
   if (STYPEG(sptr) != ST_ENTRY && STYPEG(sptr) != ST_PROC) {
     return false;
   }

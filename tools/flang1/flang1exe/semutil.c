@@ -4,6 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: December 2018
+  *
+  * Changes to support AMD GPU Offloading
+  * Added code to avoid allocations for implied do inside target region
+  * Date of Modification: 24th October 2019
+  * Date of Modification: 5th November 2019
+  *
+  * Changes to emit proper error message when pointer is associated with 
+  * a constant
+  * Date of Modification: 17th December 2019
+  */
+
 
 /** \file
     \brief Utility routines used by Semantic Analyzer.
@@ -59,6 +76,9 @@ static int find_pointer_variable_assign(int, int);
 
 static int inline_contig_check(int src, SPTR src_sptr, SPTR sdsc, int std);
 static bool is_selector(SPTR sptr);
+//AOCC Begin
+static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
+//AOCC End
 
 
 /*---------------------------------------------------------------------*/
@@ -1257,6 +1277,13 @@ mkexpr2(SST *stkptr)
   int sptr;
 
   switch (SST_IDG(stkptr)) {
+  //AOCC Begin
+  //Pointers cannot be associated with constants
+  case S_SCONST:
+  case S_ACONST:
+  case S_CONST:
+    return 1;
+  //AOCC End
   case S_IDENT:
     sptr = SST_SYMG(stkptr);
     switch (STYPEG(sptr)) {
@@ -2007,6 +2034,7 @@ mkvarref(SST *stktop, ITEM *list)
       goto add_base;
 
     case ST_PROC:
+    case ST_MODPROC:
       if (FVALG(sptr) == 0 && DTYPEG(sptr) == 0) {
         error(84, 3, gbl.lineno, SYMNAME(sptr),
               "- attempt to use a SUBROUTINE as a FUNCTION");
@@ -3338,6 +3366,29 @@ assign(SST *newtop, SST *stktop)
     }
   }
 
+  //AOCC Begin
+  // if rhs is an acl, we may have to replace the temporary used with
+  // lhs
+  sem.acl_ido.body_stds = NULL;
+  sem.acl_ido.replace_temp = false;
+  ACL * aclp;
+  // check if it is an 1D-array assignment statement and rhs is an array constructor
+  if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
+    if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
+       if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
+	  SPTR lhs_sptr;
+	  lhs_sptr = SST_SYMG(newtop);
+	  if(!ALLOCATTRG(lhs_sptr)) {
+            aclp = SST_ACLG(stktop);
+            // if the temporary created is considered to have deferred shape
+            if(AD_DEFER(AD_DPTR( aclp->dtype)) )
+              sem.acl_ido.replace_temp = true;
+	  }
+       }
+    }
+  }
+  //AOCC End
+
   mkexpr1(stktop);
   cngshape(stktop, newtop);
 
@@ -3346,6 +3397,12 @@ assign(SST *newtop, SST *stktop)
 
   check_derived_type_array_section(SST_ASTG(newtop));
 
+  //AOCC Begin
+  if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
+    replace_acl_temp_with_lhs(stktop, newtop);
+    return 0;
+  }
+  //AOCC End
   {
     int lhs;
     int rhs;
@@ -3376,6 +3433,19 @@ assign(SST *newtop, SST *stktop)
         ITEM *p, *t;
 
         p = NULL;
+	// AOCC Begin
+	for (t = sem.etmp_list; t != NULL; t = t->next) {
+          if (t->ast == rhs) {
+            ast_to_comment(STD_AST(sem.arrfn.alloc_std));
+            if (p == NULL)
+              sem.etmp_list = t->next;
+            else
+              p->next = t->next;
+            break;
+          }
+          p = t;
+        }
+	// AOCC End
         for (t = sem.p_dealloc; t != NULL; t = t->next) {
           if (t->ast == rhs) {
             ast_to_comment(STD_AST(sem.arrfn.alloc_std));
@@ -3407,6 +3477,126 @@ assign(SST *newtop, SST *stktop)
 
   return ast;
 }
+
+//AOCC Begin
+/*
+ * If LHS is an one dimensional array and RHS is an implied-do,
+ * if a temporary was allocated for storing the result of implied-do,
+ * replace the use of temporary array with LHS.
+ * Here, newtop points to LHS and stktop points to RHS
+ */
+ static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs){
+   SPTR acl_lhs;
+   int rhs_ast;
+   int temp_array_ast;
+   int lhs_ast;
+   int lhs_array_ast;
+   SPTR arr_tmp;
+   int ast;
+   int dtype_lhs;
+   int dtype_rhs;
+   int lb_lhs;
+   int  lb_tmp;
+   ADSC * ad_lhs;
+   ADSC * ad_tmp;
+
+   // assign lowerbound of lhs to subscript used for temporary
+   // array in the body of the implied do. Before replacement,
+   // subscript points to lower bound of temporary array.
+   dtype_lhs = SST_DTYPEG(sst_lhs);
+   dtype_rhs = SST_DTYPEG(sst_rhstemp);
+   ad_lhs = AD_DPTR(dtype_lhs);
+   ad_tmp = AD_DPTR(dtype_rhs);
+   lb_lhs = AD_LWAST(ad_lhs, 0);
+   lb_tmp = AD_LWAST(ad_tmp, 0);
+   ast = STD_AST(sem.acl_ido.subsc_assign_std);
+   ast_visit(1, 1);
+   ast_replace(lb_tmp,lb_lhs);
+   ast = ast_rewrite(ast);
+   STD_AST(sem.acl_ido.subsc_assign_std) = ast;
+   ast_unvisit();
+
+   acl_lhs = SST_SYMG(sst_lhs);
+   rhs_ast = SST_ASTG(sst_rhstemp);
+   lhs_ast = SST_ASTG(sst_lhs);
+   arr_tmp = A_SPTRG(rhs_ast);
+
+   temp_array_ast = rhs_ast;
+   lhs_array_ast = lhs_ast;
+   //the assignment can be to an array or an array section
+   //If to an array section, it has the type SUBSCRIPT
+   if(A_TYPEG(lhs_ast) == A_SUBSCR) {
+     lhs_array_ast = A_LOPG(lhs_ast);
+   }
+
+   //stds which contain the assignment to temporary is
+   //read and all references to temporary are replaced with LHS
+   ido_body_std *temp;
+   temp = sem.acl_ido.body_stds;
+   int idostd;
+   while (temp != NULL) {
+     int std_to_replace = temp->std;
+     ast = STD_AST(std_to_replace);
+     ast_visit(1, 1);
+     ast_replace(temp_array_ast,lhs_array_ast);
+     ast = ast_rewrite(ast);
+     ast_unvisit();
+     ast_visit(1, 1);
+     ast_replace(lb_tmp,lb_lhs);
+     ast = ast_rewrite(ast);
+     STD_AST(std_to_replace) = ast;
+     ast_unvisit();
+     idostd = std_to_replace;
+     temp = temp ->next;
+   }
+
+   int findast = temp_array_ast;
+   int allocstd = 0;
+   int std;
+
+   //the allocation statements for temporary are removed
+   for (std = STD_PREV(idostd); std; std = STD_PREV(std)) {
+     ast = STD_AST(std);
+     if (A_TYPEG(ast) == A_ALLOC && A_TKNG(ast) == TK_ALLOCATE) {
+       if (contains_ast(ast, findast)) {
+         allocstd = std;
+         break;
+       }
+     }
+   }
+   if(allocstd)
+     delete_stmt(allocstd);
+
+   //deallocation entries are removed
+   ITEM *p, *t;
+   p = NULL;
+   for (t = sem.p_dealloc; t != NULL; t = t->next) {
+     if (t->ast == temp_array_ast) {
+        if (p == NULL)
+          sem.p_dealloc = t->next;
+        else
+          p->next = t->next;
+        break;
+     }
+     p = t;
+   }
+   for (t = sem.p_dealloc_delete; t != NULL; t = t->next) {
+     if (t->ast == temp_array_ast) {
+       delete_stmt(t->t.ilm);
+     }
+   }
+   //reset replace temporar
+   sem.acl_ido.replace_temp = false;
+   ido_body_std *temp_next;
+   temp = sem.acl_ido.body_stds;
+   while (temp != NULL) {
+     temp_next = temp ->next;
+     free(temp);
+     temp = temp_next;
+   }
+   sem.acl_ido.body_stds = NULL;
+ }
+//AOCC End
 
 /*
  * Can the result temp by substituted with the LHS?

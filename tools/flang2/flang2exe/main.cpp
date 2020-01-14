@@ -4,13 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
+ * Date of modification 9th July 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Oct 2019
  */
+
 
 /**
    \file
@@ -249,8 +253,18 @@ process_input(char *argv0, bool *need_cuda_constructor)
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget) {
         init_test();
-        ompaccel_initsyms();
-        ompaccel_create_reduction_wrappers();
+        if (!flg.x86_64_omptarget) { // AOCC
+          ompaccel_initsyms();
+          // AOCC Begin
+          // ompaccel_create_reduction_wrappers() emits reduction wrappers
+          // for current tinfo. But current tinfo doesn't always point to
+          // current subroutines tinfo.
+          if (flg.amdgcn_target)
+            ompaccel_create_amd_reduction_wrappers();
+          else
+          // AOCC End
+            ompaccel_create_reduction_wrappers();
+        }
       }
 #endif
       if (gbl.cuda_constructor) {
@@ -324,6 +338,15 @@ process_input(char *argv0, bool *need_cuda_constructor)
 #if defined(OMP_OFFLOAD_LLVM)
         if (flg.omptarget && ompaccel_tinfo_has(gbl.currsub))
           gbl.ompaccel_isdevice = true;
+        // AOCC begin
+        // We do a late type modification. Doing this during
+        // ompaccel_create_device_symbol() can end up lowering incorrect code.
+        // And, in some scenarios there are assertion failures as well.
+        // So doing it right before the final schedule.
+        if (flg.x86_64_omptarget) {
+          ompaccel_x86_fix_arg_types(gbl.currsub);
+        }
+        // AOCC end
 #endif
 
         TR("F90 SCHEDULER begins\n");
@@ -338,6 +361,18 @@ process_input(char *argv0, bool *need_cuda_constructor)
     xtimes[6] += get_rutime();
     upper_save_syminfo();
   }
+
+  // AOCC begin
+#if defined(OMP_OFFLOAD_LLVM)
+  if (flg.x86_64_omptarget) {
+    bool orig = gbl.ompaccel_isdevice;
+    gbl.ompaccel_isdevice = true;
+    ompaccel_x86_gen_fork_wrapper(gbl.currsub);
+    gbl.ompaccel_isdevice = orig;
+  }
+#endif
+  // AOCC end
+
   if (DBGBIT(5, 4))
     symdmp(gbl.dbgfil, DBGBIT(5, 8));
   if (DBGBIT(5, 16))
@@ -655,15 +690,25 @@ init(int argc, char *argv[])
   register_string_arg(arg_parser, "fopenmp-targets", &omptp, NULL);
   register_string_arg(arg_parser, "fopenmp-targets-asm", &ompfile, NULL);
   register_boolean_arg(arg_parser, "reentrant", &arg_reentrant, false);
-  register_integer_arg(arg_parser, "terse", &flg.terse, 1);
-  register_boolean_arg(arg_parser, "quad", &flg.quad, false);
-  register_boolean_arg(arg_parser, "save", &flg.save, false);
+
+  register_integer_arg(arg_parser, "terse", &(flg.terse), 1);
+  register_boolean_arg(arg_parser, "quad", (bool *)&(flg.quad), false);
+  register_boolean_arg(arg_parser, "save", (bool *)&(flg.save), false);
+  register_boolean_arg(arg_parser, "func_args_alias", (bool *)&(flg.func_args_alias), false); // AOCC
   register_string_arg(arg_parser, "tp", &tp, NULL);
-  register_integer_arg(arg_parser, "astype", &flg.astype, 0);
-  register_boolean_arg(arg_parser, "recursive", &flg.recursive, false);
-  register_integer_arg(arg_parser, "vect", &vect_val, 0);
-  register_string_arg(arg_parser, "cmdline", &cmdline, NULL);
-  register_boolean_arg(arg_parser, "debug", &flg.debug, false);
+  register_integer_arg(arg_parser, "astype", &(flg.astype), 0);
+  register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
+                       false);
+  register_integer_arg(arg_parser, "vect", &(vect_val), 0);
+  register_string_arg(arg_parser, "cmdline", &(cmdline), NULL);
+  register_boolean_arg(arg_parser, "debug", (bool *)&(flg.debug), false);
+  // AOCC Begin
+  register_boolean_arg(arg_parser, "use_llvm_math_intrin",
+      (bool *)&(flg.use_llvm_math_intrin), true);
+  register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
+  register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
+                       (bool *)&(flg.disable_loop_vectorize_pragmas), false);
+  // AOCC End
 
   /* Run argument parser */
   parse_arguments(arg_parser, argc, argv);
@@ -709,6 +754,16 @@ init(int argc, char *argv[])
       flg.recursive = false;
     }
   }
+  // AOCC begin
+  /* setting the fortran standard */
+  if (strcmp(flg.std_string, "f2008") == 0) {
+    flg.std = F2008;
+  } else if (strcmp(flg.std_string, "unknown") == 0) {
+    flg.std = STD_UNKNOWN;
+  } else {
+    interr("Erroneous -std option", 0, ERR_Fatal);
+  }
+  // AOCC end
 
   /* Free memory */
   destroy_arg_parser(&arg_parser);
@@ -726,7 +781,10 @@ init(int argc, char *argv[])
   }
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   flg.omptarget = false;
+  // AOCC begin
   flg.amdgcn_target = false;
+  flg.x86_64_omptarget = false;
+  // AOCC end
   gbl.ompaccfilename = NULL;
 #endif
 #ifdef OMP_OFFLOAD_LLVM
@@ -739,6 +797,8 @@ init(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_AMD
   if (omptp && !strcmp(omptp, "amdgcn-amd-amdhsa"))
     flg.amdgcn_target = true;
+  else if (omptp && strcmp(omptp, "x86_64-pc-linux-gnu") == 0)
+    flg.x86_64_omptarget = true;
 #endif
   // AOCC End
 
@@ -974,6 +1034,14 @@ finish()
   if (flg.smp) {
     ll_unlink_parfiles();
   }
+  // AOCC Begin
+  #ifdef OMP_OFFLOAD_LLVM
+  if (gbl.ompaccfile != NULL && gbl.ompaccfile != stdout) {
+    fclose(gbl.ompaccfile);
+    gbl.ompaccfile = NULL;
+  }
+  #endif
+  // AOCC End
 
   if (ccff_filename)
     ccff_close();
@@ -1066,12 +1134,20 @@ static void
 ompaccel_create_globalctor()
 {
   if (!XBIT(232, 0x10) && !ompaccel_is_tgt_registered()) {
+    // AOCC Begin
+    // This is a constructor and will not contain any subprograms
+    int temp_internal = gbl.internal;
+    gbl.internal = 0;
+    // AOCC End
     SPTR cur_func_sptr = gbl.currsub;
     ompaccel_emit_tgt_register();
     schedule();
     assemble();
     ompaccel_register_tgt();
     gbl.currsub = cur_func_sptr;
+    // AOCC Begin
+    gbl.internal = temp_internal;
+    // AOCC End
   }
 }
 
@@ -1084,25 +1160,62 @@ ompaccel_create_reduction_wrappers()
 {
   if (gbl.ompaccel_intarget && gbl.currsub != NULL) {
     int nreds = ompaccel_tinfo_current_get()->n_reduction_symbols;
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    /*
+     * Adding suffix to reduction function  names. This is to avoid duplicate
+     * function names in the case of multi kernel applications
+     *
+     */
+    char suffix[300];
+    sprintf(suffix, "%s", SYMNAME(gbl.currsub));
+#endif
+    // AOCC End
     if (nreds != 0) {
       SPTR cur_func_sptr = gbl.currsub;
       OMPACCEL_RED_SYM *redlist =
           ompaccel_tinfo_current_get()->reduction_symbols;
       gbl.outlined = false;
       gbl.ompaccel_isdevice = true;
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds, suffix);
+#else
+      // AOCC End
       SPTR sptr_reduce = ompaccel_nvvm_emit_reduce(redlist, nreds);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       gbl.func_count++;
       gbl.multi_func_count = gbl.func_count;
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
+          ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce, suffix);
+#else
+      // AOCC End
       ompaccel_tinfo_current_get()->reduction_funcs.shuffleFn =
           ompaccel_nvvm_emit_shuffle_reduce(redlist, nreds, sptr_reduce);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       gbl.func_count++;
       gbl.multi_func_count = gbl.func_count;
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
+          ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds, suffix);
+#else
+      // AOCC End
       ompaccel_tinfo_current_get()->reduction_funcs.interWarpCopy =
           ompaccel_nvvm_emit_inter_warp_copy(redlist, nreds);
+      // AOCC Begin
+#endif
+      // AOCC End
       schedule();
       assemble();
       ompaccel_write_sharedvars();

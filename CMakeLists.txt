@@ -175,7 +175,7 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       set(LLVM_UTILS_PROVIDED ON)
     endif()
 
-  if (NOT LLVM_INSTALL_RUNTIME)
+   if (NOT LLVM_INSTALL_RUNTIME)
 
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
@@ -186,6 +186,8 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
         set(LLVM_UTILS_PROVIDED ON)
         set(FLANG_TEST_DEPS FileCheck count not)
       endif()
+    endif()
+
       #set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
       #if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h
       #    AND NOT EXISTS ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -197,8 +199,6 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
         DOC "Path to lit.py")
     endif()
-
-  endif()
 
     if(LLVM_LIT)
       # Define the default arguments to use with 'lit', and an option for the user
@@ -382,9 +382,8 @@ else()
    add_subdirectory(lib)
    add_subdirectory(utils)
    add_subdirectory(tools)
+   #add_subdirectory(test)
 endif()
-
-#add_subdirectory(test)
 
 #option(FLANG_BUILD_EXAMPLES "Build FLANG example programs by default." OFF)
 #if (FLANG_BUILD_EXAMPLES)
@@ -403,6 +402,10 @@ endif()
 option(FLANG_OPENMP_GPU_AMD "Enable OpenMP AMD Accelerator Offload." OFF)
 if (FLANG_OPENMP_GPU_AMD)
   add_definitions("-DOMP_OFFLOAD_AMD")
+endif()
+
+if (FLANG_OPENMP_GPU_NVIDIA OR FLANG_OPENMP_GPU_AMD)
+  set(OMP_OFFLOADING_BUILD 1)
 endif()
 # AOCC End
 

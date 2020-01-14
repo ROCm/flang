@@ -2896,7 +2896,7 @@ _putdtype(DTYPE dtype, int structdepth)
     ad = AD_DPTR(dtype);
     numdim = AD_NUMDIM(ad);
     appendstring1("(");
-    if (numdim >= 1 && numdim <= 7) {
+    if (is_legal_numdim(numdim)) { // AOCC
       int i;
       for (i = 0; i < numdim; ++i) {
         if (i)
@@ -3010,7 +3010,7 @@ putdtypex(DTYPE dtype, int len)
     ad = AD_DPTR(dtype);
     numdim = AD_NUMDIM(ad);
     r += appendstring1("(");
-    if (numdim >= 1 && numdim <= 7) {
+    if (is_legal_numdim(numdim)) { // AOCC
       int i;
       for (i = 0; i < numdim && r < len; ++i) {
         if (i)
@@ -3113,7 +3113,7 @@ dumpdtype(DTYPE dtype)
     putnsym("zbase", (SPTR) AD_ZBASE(ad)); // ???
     putnsym("numelm", AD_NUMELM(ad));
     putnsym("sdsc", AD_SDSC(ad));
-    if (numdim >= 1 && numdim <= 7) {
+    if (is_legal_numdim(numdim)) { // AOCC
       int i;
       for (i = 0; i < numdim; ++i) {
         putline();

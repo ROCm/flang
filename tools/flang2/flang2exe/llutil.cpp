@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes for AMD GPU OpenMP offloading and bug fixes.
+ * Date of Modification: 05th Septemeber 2019
+ *
+ * Date of Modification: November 2018
+ *
+ */
 
 /**
    \file llutil.c
@@ -263,7 +272,10 @@ LL_InstrListFlags
 ldst_instr_flags_from_dtype_nme(DTYPE dtype, int nme)
 {
   unsigned flags = ldst_instr_flags_from_dtype(dtype);
-  if (nme == NME_VOL)
+  // AOCC Begin
+  // Adding NME_VOLATILE condition
+  if (nme == NME_VOL || NME_VOLATILE(nme))
+  // AOCC End
     flags |= VOLATILE_FLAG;
   return (LL_InstrListFlags)flags;
 }
@@ -619,7 +631,7 @@ ll_convert_array_dtype(LL_Module *module, DTYPE dtype, int addrspace)
 
     type = ll_convert_dtype(module, ddtype);
 
-    if (numdim >= 1 && numdim <= 7) {
+    if (is_legal_numdim(numdim)) { // AOCC
       /* Create nested LLVM arrays. */
       int i;
       for (i = 0; i < numdim; i++)
@@ -1740,11 +1752,27 @@ make_operand(void)
   return op;
 }
 
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+void
+#else
+// AOCC End
 static void
+// AOCC Begin
+#endif
+// AOCC End
 set_llasm_output_file(FILE *fd)
 {
   LLVMFIL = fd;
 }
+
+// AOCC Begin
+#ifdef OMP_OFFLOAD_LLVM
+FILE *get_llasm_output_file() {
+  return LLVMFIL;
+}
+#endif // OMP_OFFLOAD_LLVM
+// AOCC End
 
 void
 init_output_file(void)
@@ -2224,7 +2252,12 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
     if (p->flags & OPF_NULL_TYPE) {
       if (!(flags & FLG_OMIT_OP_TYPE))
         write_type(p->ll_type);
-      print_token(" null");
+      // AOCC: when pointer is initialized with a value, it is made as i64 type
+      // initialize it with 0
+      if (!(strcmp(p->ll_type->str,"i64")))
+         print_token(" 0");
+      else
+         print_token(" null");
     } else {
       assert(p->ll_type, "write_operand(): no type when expected", 0, ERR_Fatal);
       if (!(flags & FLG_OMIT_OP_TYPE)) {
@@ -4174,7 +4207,7 @@ get_ftn_cbind_lltype(SPTR sptr)
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
         d = AD_NUMELM(ad);
-        if (numdim >= 1 && numdim <= 7) {
+        if (is_legal_numdim(numdim)) { // AOCC
           if (d == 0 || STYPEG(d) != ST_CONST) {
             if (XBIT(68, 0x1))
               d = AD_NUMELM(ad) = stb.k1;

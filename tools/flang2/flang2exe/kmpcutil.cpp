@@ -9,7 +9,10 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 11th July 2019
+ * Date of modification 05th September 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
  */
 
 /** \file
@@ -198,6 +201,14 @@ public:
     case KMPC_API_SHUFFLE_I64:
       return {"__kmpc_shuffle_int64", IL_NONE, DT_INT8, 0};
       break;
+    // AOCC Begin
+    // Currently emitting intrinsic call as there is no OpenMP API exposed for
+    // float shuffle. Once OpenMP has float shuffle APIs  we can change the
+    // name to API name.
+    case KMPC_API_SHUFFLE_F32:
+      return {"nvvm.shfl.down.f32", IL_NONE, DT_FLOAT, 0};
+      break;
+    // AOCC End
     case KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD:
       return {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", IL_NONE,
               DT_INT, 0};
@@ -302,6 +313,9 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
                                      DT_VOID_NONE, 0},
     [KMPC_API_SHUFFLE_I32] = {"__kmpc_shuffle_int32", 0, DT_INT, 0},
     [KMPC_API_SHUFFLE_I64] = {"__kmpc_shuffle_int64", 0, DT_INT8, 0},
+    // AOCC Begin
+    [KMPC_API_SHUFFLE_F32] = {"nvvm.shfl.down.f32", 0, DT_FLOAT, 0},
+    // AOCC End
     [KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD] =
         {"__kmpc_nvptx_parallel_reduce_nowait_simple_spmd", 0, DT_INT, 0},
     [KMPC_API_NVPTX_END_REDUCE_NOWAIT] = {"__kmpc_nvptx_end_reduce_nowait", 0,
@@ -355,6 +369,7 @@ dump_loop_args(const loop_args_t *args)
   fprintf(fp, "dtype:       %d (%s) \n", args->dtype,
           stb.tynames[DTY(args->dtype)]);
   fprintf(fp, "**********\n\n");
+dsym(args->chunk);
 }
 
 /* Return ili (icon/kcon, or a loaded value) for use with mk_kmpc_api_call
@@ -482,6 +497,15 @@ ll_make_kmpc_proto(const char *nm, int kmpc_api, int argc, DTYPE *args)
   if (kmpc_api == KMPC_API_FORK_CALL) {
     LL_ABI_Info *abi = ll_proto_get_abi(nm);
     abi->is_varargs = true;
+
+    // AOCC begin
+    // We want the variadic version of __kmpc_fork_call to have the 4th arg as
+    // variadic, this won't effect the upstream fork_call for non-target
+    // parallel region
+    if (flg.x86_64_omptarget) {
+      abi->nargs = 3;
+    }
+    // AOCC end
   }
   /* Update ABI (special case) */
   if (kmpc_api == KMPC_API_FORK_TEAMS) {
@@ -643,7 +667,9 @@ ll_make_kmpc_generic_ptr_int(int kmpc_api)
   DTYPE arg_types[2] = {DT_CPTR, DT_INT};
   args[1] = gen_null_arg();
 #ifdef OMP_OFFLOAD_LLVM
-  if (gbl.ompaccel_intarget)
+  // AOCC begin
+  if (gbl.ompaccel_intarget && !flg.x86_64_omptarget)
+  // AOCC end
     args[0] = ompaccel_nvvm_get_gbl_tid();
   else
 #endif
@@ -683,7 +709,9 @@ ll_make_kmpc_generic_ptr_2int(int kmpc_api, int argili)
   DTYPE arg_types[3] = {DT_CPTR, DT_INT, DT_INT};
   args[2] = gen_null_arg();
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget)
+  // AOCC begin
+  if (flg.omptarget && !flg.x86_64_omptarget)
+  // AOCC end
     args[1] = ompaccel_nvvm_get_gbl_tid();
   else
 #endif
@@ -736,6 +764,31 @@ ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt,
   args[0] = *arglist;
     return mk_kmpc_api_call(KMPC_API_FORK_CALL, 4, arg_types, args);
 }
+
+// AOCC begin
+int
+ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist)
+{
+  int argili, args[argc + 3];
+  DTYPE arg_types[argc + 3];
+
+  args[argc + 2] = gen_null_arg(); /* ident */
+  arg_types[0] = DT_CPTR;
+
+  args[argc + 1] = ad_icon(argc);
+  arg_types[1] = DT_INT;
+
+  args[argc + 0] = ad_acon(sptr, 0);
+  arg_types[2] = DT_CPTR;
+
+  for (int i = 0; i < argc; i++) {
+    arg_types[2 + i + 1] = DT_CPTR;
+    args[argc - i - 1] = ad_acon(sptrlist[i], 0);
+  }
+
+  return mk_kmpc_api_call(KMPC_API_FORK_CALL, argc + 3, arg_types, args);
+}
+// AOCC end
 
 /* arglist is 1 containing the uplevel pointer */
 int
@@ -1550,6 +1603,19 @@ ll_make_kmpc_shuffle(int ili_val, int ili_delta, int ili_size, bool isint64)
     return mk_kmpc_api_call(KMPC_API_SHUFFLE_I64, 3, arg_types, args);
   return mk_kmpc_api_call(KMPC_API_SHUFFLE_I32, 3, arg_types, args);
 }
+
+// AOCC Begin
+int
+ll_make_kmpc_shuffle_f32(int ili_val, int ili_delta, int ili_size)
+{
+  int args[3];
+  DTYPE arg_types[3] = {DT_FLOAT, DT_INT, DT_INT};
+  args[2] = ili_val;   /* value               */
+  args[1] = ili_delta; /* delta               */
+  args[0] = ili_size;  /* size                */
+  return mk_kmpc_api_call(KMPC_API_SHUFFLE_F32, 3, arg_types, args);
+}
+// AOCC End
 
 int
 ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)

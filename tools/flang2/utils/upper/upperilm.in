@@ -3,6 +3,11 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+#Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+#
+#Complex data types support for acosh, asinh and atanh
+#Date of Modification:08 January 2020
+#
 ABS	ilm
 ACON	sym
 ACOS	ilm
@@ -106,8 +111,11 @@ CCON	sym
 CCOS	ilm
 CDABS	ilm
 CDACOS	ilm
+CACOSH ilm
 CDASIN	ilm
+CASINH ilm
 CDATAN	ilm
+CATANH ilm
 CDCOSH   ilm
 CDSINH   ilm
 CDTANH   ilm
@@ -220,6 +228,9 @@ DVFUNCA	num	num	sym	ilm	sym	ilms
 DIM	ilm	ilm
 DIMAG	ilm
 DINT	ilm
+# AOCC BEGIN
+DISNAN ilm
+# AOCC END
 DLD	ilm
 DLOG	ilm
 DLOG10	ilm
@@ -241,6 +252,7 @@ DPSCON	num
 DPVAL	ilm
 DREAL	ilm
 DSIGN	ilm	ilm
+DSIGNNZ	ilm	ilm
 DSIN	ilm
 DSIND	ilm
 DSINH	ilm
@@ -516,6 +528,9 @@ RET
 RFLOOR	ilm
 RFUNC	num	sym	ilms
 RFUNCA	num	num	ilm	ilms
+# AOCC BEGIN
+RISNAN ilm
+# AOCC END
 PRFUNCA	num	num	sym	ilm	ilms
 RVFUNCA	num	num	sym	ilm	sym	ilms
 RLD	ilm
@@ -547,6 +562,7 @@ SHD	ilm	ilm	ilm
 SHIFT	ilm	ilm
 SHIFT64	ilm	ilm
 SIGN	ilm	ilm
+SIGNNZ	ilm	ilm
 SILD	ilm
 SIN	ilm
 SIND	ilm

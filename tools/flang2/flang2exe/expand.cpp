@@ -5,12 +5,17 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
- *
- */
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: September 2018
+  *
+  * Changes to support AMDGPU OpenMP offloading
+  * Date of modification 05th November 2019
+  *
+  */
+
 
 /** \file
  * \brief Common expander routines
@@ -475,12 +480,29 @@ eval_ilm(int ilmx)
   {
 #ifdef OMP_OFFLOAD_LLVM
     if (flg.omptarget && gbl.ompaccel_intarget) {
-      if (opcx == IM_MP_BREDUCTION) {
-        ompaccel_notify_reduction(true);
-        exp_ompaccel_reduction(ilmpx, ilmx);
-      } else if (opcx == IM_MP_EREDUCTION) {
-        ompaccel_notify_reduction(false);
-        return;
+      if (!flg.x86_64_omptarget) { // AOCC
+        if (opcx == IM_MP_BREDUCTION) {
+          ompaccel_notify_reduction(true);
+          if (!flg.amdgcn_target) {
+            exp_ompaccel_reduction(ilmpx, ilmx);
+          } else {
+            // AOCC Begin
+            // When reduction and non-reduction kernels are next to each other
+            // curr_tinfo for reduction kernel is not set properly. Set it
+            // properly by identifying tinfo from function name.
+            OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(gbl.currsub);
+            OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
+            if (ompaccel_tinfo_current_get()->n_reduction_symbols == 0
+                                                                && tinfo)
+              ompaccel_tinfo_current_set(tinfo);
+            exp_ompaccel_reduction(ilmpx, ilmx);
+            ompaccel_tinfo_current_set(temp_tinfo);
+            // AOCC End
+          }
+        } else if (opcx == IM_MP_EREDUCTION) {
+          ompaccel_notify_reduction(false);
+          return;
+        }
       }
 
       if (ompaccel_is_reduction_region())
@@ -1999,6 +2021,12 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
     ilmtpl = (ILMMAC *)&ilmtp[pattern];
 
     newili.opc = (ILI_OP)ilmtpl->opc; /* get ili opcode */ // ???
+    // initialize newili
+    newili.opnd[0] = 0;
+    newili.opnd[1] = 0; /* cause some FREE ili have two opnds (target dep)*/
+    newili.opnd[2] = 0;
+    newili.opnd[3] = 0;
+    newili.opnd[4] = 0;
 
     /* Loop for each operand in this ili template */
     for (i = 0, noprs = ilis[newili.opc].oprs; noprs > 0; ++i, --noprs) {
@@ -2549,7 +2577,7 @@ create_ref(SPTR sym, int *pnmex, int basenm, int baseilix, int *pclen,
           ilix = ad3ili(IL_AADD, ili1, ili2, 0);
         }
 #endif /* TARGET_WIN */
-        else if (flg.smp && SCG(sym) == SC_CMBLK && IS_THREAD_TP(sym)) {
+        else if (SCG(sym) == SC_CMBLK && IS_THREAD_TP(sym)) {
           /*
            * BASE is of a member which is in a threadprivate common.
            * generate an indirection using the threadprivate common's

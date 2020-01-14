@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Month of Modification: November 2019
+ *
+ */
+
 /**
    \file
    \brief Fortran data partitioning module, output.
@@ -932,7 +939,8 @@ make_secd_for_members(int dtype)
 LOGICAL
 want_descriptor_anyway(int sptr)
 {
-  if (gbl.internal == 1) {
+  // AOCC added check for function results
+  if (gbl.internal == 1 || RESULTG(sptr)) {
     int dtype;
     dtype = DTYPEG(sptr);
     if (DTY(dtype) != TY_ARRAY)
@@ -945,7 +953,7 @@ want_descriptor_anyway(int sptr)
     if (ALLOCG(sptr))
       return TRUE;
   }
-  if (flg.debug && !XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr)) {
+  if (flg.debug && (!XBIT(123, 0x400) && !HCCSYMG(sptr) && !CCSYMG(sptr))) {
     /* only need non-fixed bounds */
     int dtype;
     dtype = DTYPEG(sptr);
@@ -1270,6 +1278,12 @@ wrap_symbol(int sptr, int memberast, int basesptr)
   case TY_ARRAY:
     /* if an unused symbol from the containing routine, skip it */
     if (gbl.internal > 1 && !INTERNALG(sptr)) {
+      // AOCC BEGIN
+      // Do not assume that the array descriptor is initialized
+      // for the derived type members.
+      if (STYPEG(sptr) == ST_MEMBER)
+        SDSCINITP(DESCRG(sptr),0);
+      // AOCC END
       if (DESCRG(sptr) && SDSCINITG(DESCRG(sptr)) &&
           (arrd = SECDSCG(DESCRG(sptr))) && SCOPEG(arrd) == SCOPEG(sptr) &&
           STYPEG(SCOPEG(sptr)) != ST_MODULE) {
@@ -1283,7 +1297,11 @@ wrap_symbol(int sptr, int memberast, int basesptr)
           SCOPEG(arrd) == SCOPEG(gbl.currsub) &&
           STYPEG(SCOPEG(sptr)) == ST_MODULE) {
         change_mk_id(DESCRG(sptr), arrd);
-        return;
+        // AOCC BEGIN
+        // Derived type members still need to be initialized.
+        if (STYPEG(sptr) != ST_MEMBER)
+        // AOCC END
+          return;
       }
     }
     /* if a variable or array, this was handled by allocate_one_auto */
@@ -1297,7 +1315,7 @@ wrap_symbol(int sptr, int memberast, int basesptr)
       if (!POINTERG(sptr) && !ALLOCG(sptr) && alloc &&
           (ADJARRG(sptr) || RUNTIMEG(sptr) || ADJLENG(sptr))) {
         if (!ALIGNG(sptr) && !POINTERG(sptr)) {
-          int ast, i, ndim, subscr[7];
+          int ast, i, ndim, subscr[MAXSUBS]; // AOCC
           /* make the subscripts */
           ndim = ADD_NUMDIM(dtype);
           for (i = 0; i < ndim; ++i) {
@@ -3645,7 +3663,7 @@ make_sec_from_ast_chk(int ast, int std, int stdafter, int sec_ast, int sectflag,
   int triple;
   int sptr, fsptr;
   int shape;
-  int subs[7];
+  int subs[MAXSUBS]; // AOCC
   LOGICAL rhs_is_dist;
   int bogus;
   int strd1_cnt;
@@ -4348,7 +4366,7 @@ allocate_one_auto(int sptr)
     if (!ALIGNG(sptr)
     ) {
       ADSC *ad;
-      int r, i, ast, subscr[7];
+      int r, i, ast, subscr[MAXSUBS]; // AOCC
       ad = AD_DPTR(DTYPEG(sptr));
       /* make the subscripts */
       r = AD_NUMDIM(ad);
@@ -4446,7 +4464,7 @@ get_allobnds(int sptr, int ast)
 {
   int i;
   int ndim;
-  int subs[7];
+  int subs[MAXSUBS]; // AOCC
   int lb, ub;
   int arrdsc;
   int sdsc;

@@ -2728,7 +2728,8 @@ cmp_interfaces_strict(SPTR sym1, SPTR sym2, cmp_interface_flags flag)
   }
   paramct2 -= j;
 
-  if (PUREG(sym1) != PUREG(sym2) || IMPUREG(sym1) != IMPUREG(sym2)) {
+  if (flg.std != F2008 &&  // AOCC. For f2008, pure attrbute is not considered
+      PUREG(sym1) != PUREG(sym2) || IMPUREG(sym1) != IMPUREG(sym2)) {
     if (flag & CMP_SUBMOD_IFACE)
       error(1060, ERR_Severe, gbl.lineno, "PURE function prefix",SYMNAME(sym1));    
  

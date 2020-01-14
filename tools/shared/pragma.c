@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for vector and novector directives
+ * Date of Modification: 19th July 2019
+ *
+ */
 
 /** \file
  *  \brief PGC & PGFTN directive scan & semantic module
@@ -412,6 +419,9 @@ p_pragma(char *pg, int pline)
 #define SW_SAVE_USED 69
 #define SW_LIBM 70
 #define SW_SIMD 71
+// AOCC BEGIN
+#define SW_NOVECTOR 72
+// AOCC END
 
 struct c {
   char *cmd;
@@ -463,6 +473,9 @@ static struct c table[] = {
     {"loopcount", SW_LOOPCOUNT, false, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"lstval", SW_LSTVAL, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"noinline", SW_NOINLINE, false, S_ROUTINE, S_ROUTINE | S_GLOBAL},
+// AOCC BEGIN
+    {"novector", SW_NOVECTOR, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
+// AOCC END
     {"opt", SW_OPT, false, S_ROUTINE, S_ROUTINE | S_GLOBAL},
 #ifdef FE90
     {"parallel_and_serial", SW_PARANDSER, false, S_ROUTINE, S_ROUTINE},
@@ -582,6 +595,15 @@ do_sw(void)
     break;
   case SW_IVDEP:
     no_specified = true;
+    // AOCC Begin
+    // Do not pass DEPCHK flag to flang2 if user has disabled processing
+    // loop vectorizing pragmas
+    if (flg.disable_loop_vectorize_pragmas) {
+      break;
+    } else {
+      bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+    }
+    // AOCC End
   /*  fall thru  */
   case SW_DEPCHK:
     if (no_specified)
@@ -646,12 +668,32 @@ do_sw(void)
     else
       bclr(DIR_OFFSET(currdir, x[19]), 0x40);
     break;
-  case SW_VECTOR:
+// AOCC BEGIN
+  // x:183 0x4000000 is used to pass this pragma to flang2
+  case SW_NOVECTOR:
+    // Do not pass novector pragma to ilm file
+    // loop vectorizing pragmas are disabled
+    if (flg.disable_loop_vectorize_pragmas)
+      break;
+
     if (no_specified)
-      bset(DIR_OFFSET(currdir, x[19]), 0x18); /* notransform | norecog */
+      bclr(DIR_OFFSET(currdir, x[183]), 0x4000000);
     else
-      bclr(DIR_OFFSET(currdir, x[19]), 0x18);
+      bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
     break;
+  // x:183 0x80000000 is used to pass this pragma to flang2
+  case SW_VECTOR:
+    // Do not pass vector pragma to ilm file
+    // loop vectorizing pragmas are disabled
+    if (flg.disable_loop_vectorize_pragmas)
+      break;
+
+    if (no_specified)
+      bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
+    else
+      bset(DIR_OFFSET(currdir, x[183]), 0x80000000);
+    break;
+// AOCC END
   case SW_VINTR:
     if (no_specified)
       bset(DIR_OFFSET(currdir, x[34]), 0x8);
@@ -1559,9 +1601,12 @@ retry:
 return_it:
   if (fnd >= 0) {
     if (scope == S_NONE) {
-      if (craydir && table[fnd].caselabel == SW_VECTOR)
-        scope = S_ROUTINE;
-      else
+// AOCC BEGIN
+//      // Commented the below code as the vector pragma is applied on a loop not on the routine.
+//      if (craydir && table[fnd].caselabel == SW_VECTOR)
+//        scope = S_ROUTINE;
+//      else
+// AOCC END
         scope = table[fnd].def_scope;
     }
     switch (scope) {

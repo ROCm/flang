@@ -510,6 +510,11 @@ module check_mod
             cycle
         end if
 
+        if (ieee_is_nan(expct(i)) .and. ieee_is_nan(reslt(i))) then
+            tests_passed = tests_passed + 1
+            cycle
+        end if
+
         abserror = abs(expct(i) - reslt(i))
         if (present(atoler)) then
           if (abserror .gt. abs(atoler)) goto 100
@@ -582,6 +587,11 @@ module check_mod
         end if
 
         if (expct(i) .eq. reslt(i)) then
+            tests_passed = tests_passed + 1
+            cycle
+        end if
+
+        if (ieee_is_nan(expct(i)) .and. ieee_is_nan(reslt(i))) then
             tests_passed = tests_passed + 1
             cycle
         end if

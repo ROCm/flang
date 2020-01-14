@@ -3,6 +3,14 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+#
+# Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+# Changes to support AMDGPU OpenMP Offloading
+# Changed motion cluase variable list type from <var ref list> to
+# <accel data list>.
+# More details in case MOTION_CLAUSE1 and MOTION_CLAUSE2 of semsmp()
+# Date of modification 23rd September 2019
+#
 
 <stmt> ::= <stbeg> <statement> <stend>
 
@@ -384,7 +392,8 @@
 <ideqc list> ::= <ideqc list> , <ident> <init beg> <expression> |
                 <ident> <init beg> <expression>
 
-<init beg> ::= =
+<init beg> ::= = |
+               '=>'
 
 <vxeqc list> ::= <vxeqc list> , <ident> = <expression> |
                 <ident> = <expression>
@@ -1932,8 +1941,8 @@
 <depend attr> ::=  <id name> |
  		   <id name> : <depend data list>
 
-<motion clause> ::= TO ( <var ref list> ) |
-                    FROM ( <var ref list> )
+<motion clause> ::= TO ( <accel data list> ) |
+                    FROM ( <accel data list> )
 
 <depend data list> ::= <var ref list> |
                        <depend data>

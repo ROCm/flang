@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+ /*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Complex type support for acosh , asinh , atanh
+ * Date of Modification: 08 January 2020
+ *
+ */
+ 
 
 /**
  * \file
@@ -538,6 +546,11 @@ CMPLXDECL_C(__mth_i_csinh);
 CMPLXDECL_C(__mth_i_csqrt);
 CMPLXDECL_C(__mth_i_ctan);
 CMPLXDECL_C(__mth_i_ctanh);
+//AOCC Begin
+CMPLXDECL_C(__mth_i_cacosh);
+CMPLXDECL_C(__mth_i_casinh);
+CMPLXDECL_C(__mth_i_catanh);
+//AOCC End
 
 DBLDECL_C(__mth_i_cdabs);
 ZMPLXDECL_Z(__mth_i_cdacos);
@@ -579,6 +592,15 @@ extern float_complex_t ctanhf(float_complex_t);
 extern double_complex_t ctanh(double_complex_t);
 extern float_complex_t ctanf(float_complex_t);
 extern double_complex_t ctan(double_complex_t);
+//AOCC begin
+extern float_complex_t cacoshf(float_complex_t);
+extern double_complex_t cacosh(double_complex_t);
+extern float_complex_t casinhf(float_complex_t);
+extern double_complex_t casinh(double_complex_t);
+extern float_complex_t catanhf(float_complex_t);
+extern double_complex_t catanh(double_complex_t);
+//AOCC end
+
 #endif		/* #if	! defined(_C_COMPLEX_T) */
 #endif		/* #if	defined(TARGET_WIN) */
 

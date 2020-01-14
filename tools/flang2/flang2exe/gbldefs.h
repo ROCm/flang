@@ -62,6 +62,11 @@
 #define MAX_FUNCTION_NAME_LEN	(1024)
 #define MAX_VARIABLE_NAME_LEN	(1024)
 
+// AOCC begin
+/* maximum number of array subscripts */
+#define MAXSUBS 15
+// AOCC end
+
 typedef int8_t INT8;
 typedef int16_t INT16;
 typedef uint16_t UINT16;

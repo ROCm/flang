@@ -1607,5 +1607,19 @@ void use_cpu_output_file(void);
    \brief Assign the gpu file to LLVMFIL
  */
 void use_gpu_output_file(void);
-#endif
+
+// AOCC Begin
+/**
+  \brief Return the current output file
+ */
+FILE *get_llasm_output_file();
+
+#ifdef OMP_OFFLOAD_AMD
+/**
+  \brief Set the output file to \p file
+  */
+void set_llasm_output_file(FILE *file);
+#endif // OMP_OFFLOAD_AMD
+// AOCC End
+#endif // OMP_OFFLOAD_LLVM
 #endif

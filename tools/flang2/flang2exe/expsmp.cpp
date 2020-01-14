@@ -4,6 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 16th September 2019
+ * Date of modification 23rd September 2019
+ * Date of modification 10th December  2019
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Dec 2019
+ */
 
 /** \file
  * \brief SMP expander routines
@@ -921,6 +932,19 @@ void
 exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 {
 #ifdef IM_BPAR
+  // AOCC begin
+#if defined(OMP_OFFLOAD_LLVM)
+  if (flg.x86_64_omptarget &&
+      (opc == IM_BPARA || opc == IM_MPLOOP || opc == IM_PDO) &&
+      gbl.ompaccel_intarget) {
+    if (!gbl.outlined && gbl.ompoutlinedfunc)
+      ompaccel_x86_add_parallel_func(gbl.ompoutlinedfunc);
+    if (gbl.outlined)
+      ompaccel_x86_add_parallel_func(gbl.currsub);
+  }
+#endif
+  // AOCC end
+
   int argili = 0;
   int ili, tili, ili_arg;
   int lastilt;
@@ -1188,6 +1212,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_BTEAMSN:
 #ifdef OMP_OFFLOAD_LLVM
       if(flg.omptarget && gbl.ompaccel_intarget) {
+        // AOCC begin
+        if (flg.x86_64_omptarget && opc == IM_BTEAMSN) {
+          int iliarg, nteams, n_limit;
+          nteams = ILI_OF(ILM_OPND(ilmp, 1));
+          n_limit = ILI_OF(ILM_OPND(ilmp, 2));
+          ili = ll_make_kmpc_push_num_teams(nteams, n_limit);
+          iltb.callfg = 1;
+          chk_block(ili);
+        }
+        // AOCC end
         exp_ompaccel_bteams(ilmp, curilm, outlinedCnt, uplevel_sptr, scopeSptr, incrOutlinedCnt);
         break;
       }
@@ -1378,9 +1412,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_QJSR(expb.curbih) = true;
     BIH_NOMERGE(expb.curbih) = true;
     bihb.csfg = BIH_CS(expb.curbih) = true;
-    ili = addMpBcsNest();
-    iltb.callfg = 1;
-    chk_block(ili);
+    // AOCC Begin
+    // ili = addMpBcsNest();
+    if (!flg.amdgcn_target) {
+    // AOCC End
+      ili = addMpBcsNest();
+       iltb.callfg = 1;
+      chk_block(ili);
+    }
     ccff_info(MSGOPENMP, "OMP003", gbl.findex, gbl.lineno,
               "Begin critical section", NULL);
     break;
@@ -1392,9 +1431,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_QJSR(expb.curbih) = true;
     BIH_NOMERGE(expb.curbih) = true;
     BIH_CS(expb.curbih) = true;
-    ili = addMpEcsNest();
-    iltb.callfg = 1;
-    chk_block(ili);
+    // AOCC Begin
+    // ili = addMpEcsNest();
+    if (!flg.amdgcn_target) {
+      ili = addMpEcsNest();
+      iltb.callfg = 1;
+      chk_block(ili);
+    }
+    // AOCC End
     wr_block();
     cr_block();
     if (critCnt <= 0)
@@ -1516,10 +1560,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     if (outlinedCnt >= 1)
       break;
 #ifdef OMP_OFFLOAD_LLVM
-      if (flg.omptarget && gbl.ompaccel_intarget) {
-        exp_ompaccel_mploop(ilmp, curilm);
-        break;
-      }
+    // AOCC begin
+    if (flg.x86_64_omptarget && ompaccel_x86_is_parallel_func(gbl.currsub)) {
+      ompaccel_x86_add_tid_params(gbl.currsub);
+    }
+    // AOCC end
+
+    if (flg.omptarget && gbl.ompaccel_intarget) {
+      exp_ompaccel_mploop(ilmp, curilm);
+      break;
+    }
 #endif
     loop_args.sched = (kmpc_sched_e)ILM_OPND(ilmp, 7);
     sched = mp_sched_to_kmpc_sched(loop_args.sched);
@@ -2663,7 +2713,29 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 
     resetMppBih(RESTORE_MPPBIH, IS_PREVMPPG);
     break;
+
+  case IM_TARGETUPDATE:
+  // AOCC Begin
   case IM_BTARGETUPDATE:
+  // AOCC End
+#ifdef OMP_OFFLOAD_AMD
+    dotarget = ILI_OF(ILM_OPND(ilmp, 1));
+    beg_label = getlab();
+    end_label = getlab();
+
+    dotarget = ad3ili(IL_ICJMPZ, dotarget, CC_EQ, end_label);
+    RFCNTI(end_label);
+    chk_block(dotarget);
+
+    wr_block();
+    cr_block();
+    exp_label(beg_label);
+    if (flg.amdgcn_target || flg.x86_64_omptarget)
+      exp_ompaccel_target_update(ilmp, curilm, opc);
+    exp_label(end_label);
+#endif
+    // AOCC End
+    break;
   case IM_BTARGETDATA:
   case IM_TARGETENTERDATA:
   case IM_TARGETEXITDATA:
@@ -2682,7 +2754,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     cr_block();
     exp_label(beg_label);
 
-    if(!IS_OMP_DEVICE_CG)
+    if(flg.amdgcn_target || !IS_OMP_DEVICE_CG)
       exp_ompaccel_targetdata(ilmp, curilm, opc);
 
     exp_label(end_label);
@@ -2746,8 +2818,22 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     exp_mp_atomic_write(ilmp);
     break;
   case IM_MP_ATOMICUPDATE:
-    if (ll_ilm_is_rewriting())
+    if (ll_ilm_is_rewriting()) {
+      // AOCC Begin
+      // For non teams reduction flang1 will generate only atomic updates. Here
+      // we capture such symbols and marks the tofrom. This will not have side
+      // effects as even teams reduction variable should be tofrom.
+#ifdef OMP_OFFLOAD_LLVM
+      ILM *ilm = (ILM *)(ilmb.ilm_base+ILM_OPND(ilmp, 1));
+      if (flg.omptarget && ILM_OPC(ilm) == IM_BASE) {
+        SPTR sym = ILM_SymOPND(ilm, 1);
+        ompaccel_update_devsym_maptype(sym, OMP_TGT_MAPTYPE_TO |
+                                            OMP_TGT_MAPTYPE_FROM);
+      }
+#endif
+      // AOCC End
       break;
+    }
     exp_mp_atomic_update(ilmp);
     break;
   case IM_MP_ATOMICCAPTURE:
@@ -2804,16 +2890,20 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_looptripcount(ilmp, curilm);
       break;
     case IM_MP_MAP:
-      // AOCC Modification : Removed condition gbl.ompaccel_intarget
+      // AOCC : Modification
+      // Removed gbl.ompaccel_intarget from condition or else it will disable
+      // replacer, leading to usage of host symbols in device
       if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_map(ilmp, curilm, outlinedCnt);
       break;
     case IM_MP_EMAP:
-      // AOCC Modification : Removed condition gbl.ompaccel_intarget
+      // AOCC : Modification
+      // Removed gbl.ompaccel_intarget from condition or else it will disable
+      // replacer, leading to usage of host symbols in device
       if(flg.omptarget && !(IS_OMP_DEVICE_CG)) {
         exp_ompaccel_emap(ilmp, curilm);
       }
-    break;
+      break;
     case IM_MP_TARGETMODE:
       if(flg.omptarget) {
         ompaccel_tinfo_set_mode_next_target((OMP_TARGET_MODE)ILM_OPND(ilmp, 1));

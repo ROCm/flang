@@ -1,14 +1,17 @@
 /*
+ *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
+ * Use llvm math intrinsic instead of flang runtime;
+ * assume function arguments are aliasing.
+ * Date of Modification: February 2018
  *
  */
 
@@ -29,6 +32,13 @@ typedef enum SPTR {
   SPTR_NULL = 0,
   SPTR_MAX = 67108864 /* Maximum allowed value */
 } SPTR;
+
+// AOCC begin
+typedef enum {
+  STD_UNKNOWN, /* default */
+  F2008
+} FORTRAN_STD;
+// AOCC end
 
 #ifdef __cplusplus
 // Enable symbol table traversals to work.
@@ -214,13 +224,22 @@ typedef struct {
   int tpcount;
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
   // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-  bool amdgcn_target; // AOCC
-#endif
+  LOGICAL use_llvm_math_intrin; /* AOCC: use llvm math intrinsic instead of flang runtime */
+  LOGICAL func_args_alias;      /* assume function arguments are aliasing */
+  char *std_string; /* input string arg of -std= */
+  FORTRAN_STD std;
+  bool amdgcn_target; /*chech if we are offloading to amd gcn */
+  bool x86_64_omptarget; /*chech if we are offloading to x86-64 */
+  bool disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
   // AOCC End
 } FLG;
 
 extern FLG flg;
+
+// AOCC begin
+extern unsigned get_legal_maxdim();
+extern bool is_legal_numdim(int numdim);
+// AOCC end
 
 #define IEEE_CMP (flg.ieee || !XBIT(15, 0x8000000))
 

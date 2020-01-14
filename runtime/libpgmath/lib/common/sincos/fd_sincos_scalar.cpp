@@ -5,6 +5,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  * Bug fixes.
+  *
+  * Date of Modification: October 2018
+  *
+  */
 
 
 #include <assert.h>
@@ -28,7 +36,7 @@
 #define S(...) __VA_ARGS__
 #define C(...) __VA_ARGS__
 #define FNAME   sincos
-#include <complex.h>
+#include <complex>
 #undef  SINCOS_COMMA
 #define SINCOS_COMMA    ,
 #else

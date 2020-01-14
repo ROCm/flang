@@ -5,6 +5,43 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Implemented the minloc/maxloc inlining support
+ * Date of Modification: August 2018
+ *
+ * Support for DNORM intrinsic
+ * Date of Modification: 21st February 2019
+ *
+ * Support for array expression in norm2
+ * Date of Modification: 28th October 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ * Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ * Month of Modification: May 2019
+ *
+ * Support for Bit Shifting intrinsics.
+ * Month of Modification: June 2019
+ *
+ * Support for MERGE_BITS intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ * Month of Modification: July 2019
+ *
+ * Support for Combined Bit Shifting intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ */
+
 /**
    \file
    \brief rewrite function args, etc
@@ -55,6 +92,9 @@ static int rewrite_sub_ast(int, int);
 static int mk_result_sptr(int, int, int *, int, int, int *);
 static LOGICAL take_out_user_def_func(int);
 static int matmul(int, int, int);
+// AOCC Begin
+static int emit_norm2(int, int, int);
+// AOOC End
 static int mmul(int, int, int); /* fast matmul */
 static int reshape(int, int, int);
 static int _reshape(int, DTYPE, int);
@@ -64,6 +104,8 @@ static int inline_reduction_craft(int, int, int);
 
 static void nop_dealloc(int, int);
 static void handle_shift(int s);
+static LOGICAL contains_any_call(int astx);
+
 
 /*------ Argument & Expression Rewriting ----------*/
 int
@@ -1864,6 +1906,161 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
        * is just a function call
        */
       goto ret_norm;
+
+    /* AOCC begin */
+    case I_BGE:
+    case I_BGT:
+    case I_BLE:
+    case I_BLT: {
+      FtnRtlEnum bitcmp_rtlRtn = RTE_bitcmp;
+
+      char *bitcmp_name = mkRteRtnNm(bitcmp_rtlRtn);
+      int bitcmp_sptr = sym_mkfunc(bitcmp_name, DT_INT);
+
+      int bitcmp_argt = mk_argt(4);
+
+      ARGT_ARG(bitcmp_argt, 0) = ARGT_ARG(func_args, 0);
+      ARGT_ARG(bitcmp_argt, 1) = ARGT_ARG(func_args, 1);
+
+      int bits_in_arg0 = bits_in(A_DTYPEG(ARGT_ARG(bitcmp_argt, 0)));
+      int bits_in_arg1 = bits_in(A_DTYPEG(ARGT_ARG(bitcmp_argt, 1)));
+      ARGT_ARG(bitcmp_argt, 2) = mk_cval1(bits_in_arg0, DT_INT);
+      ARGT_ARG(bitcmp_argt, 3) = mk_cval1(bits_in_arg1, DT_INT);
+
+      int bitcmp_func = mk_func_node(A_FUNC, mk_id(bitcmp_sptr), 4, bitcmp_argt);
+      A_OPTYPEP(bitcmp_func, A_OPTYPEG(func_ast));
+
+      int bitcmp_temp_result = mk_id(sym_get_scalar("bitcmp_tmp", "i", DT_INT));
+      int bitcmp_assign = mk_assn_stmt(bitcmp_temp_result, bitcmp_func, DT_INT);
+      add_stmt_before(bitcmp_assign, arg_gbl.std);
+
+      int ret_ast;
+      switch (optype) {
+        case I_BGE:
+          return mk_binop(OP_GE,  bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BGT:
+          return mk_binop(OP_GT, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BLE:
+          return mk_binop(OP_LE, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+        case I_BLT:
+          return mk_binop(OP_LT, bitcmp_temp_result, mk_cnst(stb.i0), DT_INT);
+      }
+    }
+
+    case I_MASKL:
+    case I_MASKR: {
+      FtnRtlEnum bitmask_rtlRtn = RTE_bitmask;
+
+      nargs = 2;
+      if (ARGT_ARG(func_args, 1) == 0) {
+        nargs = 1;
+      }
+
+      char *bitmask_name = mkRteRtnNm(bitmask_rtlRtn);
+      int bitmask_sptr = sym_mkfunc(bitmask_name, DT_INT8);
+
+      /* set n */
+      int bitmask_argt = mk_argt(3);
+      ARGT_ARG(bitmask_argt, 0) = ARGT_ARG(func_args, 0);
+
+      /* if KIND argument */
+      if (nargs == 2) {
+        ARGT_ARG(bitmask_argt, 1) = ARGT_ARG(func_args, 1);
+      } else {
+        ARGT_ARG(bitmask_argt, 1) = mk_cval1(4, DT_INT);
+      }
+
+      /* set is_left */
+      switch (optype) {
+        case I_MASKL: /* then set is_left as 1 */
+          ARGT_ARG(bitmask_argt, 2) = mk_cval1(1, DT_INT);
+          break;
+
+        case I_MASKR: /* else set is_left as 0 */
+          ARGT_ARG(bitmask_argt, 2) = mk_cval1(0, DT_INT);
+      }
+
+      int bitmask_func = mk_func_node(A_FUNC, mk_id(bitmask_sptr), 3, bitmask_argt);
+      A_OPTYPEP(bitmask_func, A_OPTYPEG(func_ast));
+
+      int bitmask_temp_result = mk_id(sym_get_scalar("bitmask_tmp", "i", DT_INT8));
+      int bitmask_assign = mk_assn_stmt(bitmask_temp_result, bitmask_func, DT_INT8);
+      add_stmt_before(bitmask_assign, arg_gbl.std);
+      return bitmask_temp_result;
+    }
+
+    case I_SHIFTL:
+      if (flg.std == F2008) {
+        int val = ARGT_ARG(func_args, 0);
+        int shift = ARGT_ARG(func_args, 1);
+
+        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
+        return shift_func;
+      }
+
+    case I_SHIFTR:
+      if (flg.std == F2008) {
+        int val = ARGT_ARG(func_args, 0);
+        int shift = ARGT_ARG(func_args, 1);
+        int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+
+        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
+        return shift_func;
+      }
+
+    case I_MERGE_BITS: {
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      int mask = ARGT_ARG(func_args, 2);
+
+      int not_mask = ast_intr(I_NOT, A_DTYPEG(mask), 1, mask);
+      int iand_i = ast_intr(I_IAND, A_DTYPEG(i), 2, i, mask);
+      int iand_j = ast_intr(I_IAND, A_DTYPEG(j), 2, j, not_mask);
+
+      return ast_intr(I_IOR, A_DTYPEG(i), 2, iand_i, iand_j);
+    }
+
+    case I_DSHIFTL:
+    case I_DSHIFTR: {
+      if (flg.std != F2008) {
+        break; // Default to flang's "dshift(l/r)" lowering (not the F2008 one)
+      }
+
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      int shift = ARGT_ARG(func_args, 2);
+
+      int bit_size_i = mk_cval(bits_in(A_DTYPEG(i)), A_DTYPEG(i));
+      int bit_size_j = mk_cval(bits_in(A_DTYPEG(j)), A_DTYPEG(j));
+
+      if (optype == I_DSHIFTL) {
+        /* Rewriting the ast as IOR(SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT)). */
+
+        /* computing ast for IOR's lhs */
+        int shiftl_i = ast_intr(I_ISHFT, A_DTYPEG(i), 2, i, shift);
+
+        /* computing ast for IOR's rhs */
+        int negated_shiftval = mk_binop(OP_SUB, mk_cnst(stb.i0),
+            mk_binop(OP_SUB, bit_size_j, shift, A_DTYPEG(shift)) , A_DTYPEG(shift));
+        int shiftr_bs_j = ast_intr(I_ISHFT, A_DTYPEG(j), 2, j, negated_shiftval);
+
+        return ast_intr(I_IOR, A_DTYPEG(i), 2, shiftl_i, shiftr_bs_j);
+
+      } else {
+        /* Rewriting the ast as IOR(SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT)) */
+
+        /* computing ast for IOR's lhs */
+        int shiftl_bs_i = ast_intr(I_ISHFT, A_DTYPEG(i), 2, i,
+            mk_binop(OP_SUB, bit_size_i, shift, A_DTYPEG(shift)));
+
+        /* computing ast for IOR's rhs */
+        int negated_shiftval = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+        int shiftr_j = ast_intr(I_ISHFT, A_DTYPEG(j), 2, j, negated_shiftval);
+
+        return ast_intr(I_IOR, A_DTYPEG(i), 2, shiftl_bs_i, shiftr_j);
+      }
+    }
+    /* AOCC end */
     default:
       if (INKINDG(A_SPTRG(A_LOPG(func_ast))) == IK_ELEMENTAL)
         goto ret_norm;
@@ -1876,6 +2073,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     A_DTYPEP(retval, DT_INT);
     A_SHAPEP(retval, 0);
     return retval;
+  case I_PARITY:/* parity(mask, [dim]) AOCC */
   case I_ALL:   /* all(mask, [dim]) */
   case I_ANY:   /* any(mask, [dim]) */
   case I_COUNT: /* count(mask, [dim]) */
@@ -1911,6 +2109,37 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       ARGT_ARG(newargt, 2) = dim;
     }
     goto ret_new;
+  // AOCC begin
+  case I_IPARITY: /* iparity(array, [dim, mask]) */
+  case I_IALL: /* iany(array, [dim, mask]) */
+  case I_IANY: /* iany(array, [dim, mask]) */
+    mask = ARGT_ARG(func_args, 2);
+    srcarray = ARGT_ARG(func_args, 0);
+    dim = ARGT_ARG(func_args, 1);
+
+    if (mask == 0) {
+      mask = mk_cval(1, DT_LOG);
+    }
+    mask = misalignment(srcarray, mask, arg_gbl.std);
+    rtlRtn = RTE_iany;
+
+    if (dim == 0) {
+      rtlRtn =
+          optype == I_IALL ? RTE_ialls : optype == I_ANY ? RTE_ianys : RTE_iparitys;
+      nargs = 3;
+    } else {
+      rtlRtn =
+          optype == I_IALL ? RTE_iall : optype == I_IANY ? RTE_iany : RTE_iparity;
+      nargs = 4;
+    }
+    newargt = mk_argt(nargs);
+    ARGT_ARG(newargt, 1) = srcarray;
+    ARGT_ARG(newargt, 2) = mask;
+    if (nargs == 4) {
+      ARGT_ARG(newargt, 3) = dim;
+    }
+    goto ret_new;
+  // AOCC end
   case I_PRODUCT: /* product(array, [dim, mask]) */
   case I_SUM:     /* sum(array, [dim, mask]) */
     mask = ARGT_ARG(func_args, 2);
@@ -2089,6 +2318,13 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     ARGT_ARG(newargt, 1) = srcarray;
     ARGT_ARG(newargt, 2) = ARGT_ARG(func_args, 1);
     goto ret_new;
+#if 0
+  // AOCC Begin
+  case I_NORM2:  /* norm2(array[, dim]) */
+    return emit_norm2(func_ast, func_args, lhs);
+  // AOCC End
+#endif    
+
   case I_EOSHIFT: /* eoshift(array, shift, [boundary, dim]); */
     if (A_SHAPEG(ARGT_ARG(func_args, 1)))
       goto eoshiftcall; /* shift not a scalar */
@@ -2849,6 +3085,7 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
     ARGT_ARG(newargt, 5) = mk_cval(size_of(stb.user.dt_int), DT_INT4);
     is_icall = FALSE;
     goto ret_call;
+
   default:
     goto ret_norm;
   }
@@ -3235,6 +3472,7 @@ leave_arg(int ast, int i, int *parg, int lc)
     case I_ALL:
     case I_ANY:
     case I_COUNT:
+    case I_PARITY:      // AOCC
       if (i != 0)
         return 0;
       args = A_ARGSG(ast);
@@ -3244,6 +3482,19 @@ leave_arg(int ast, int i, int *parg, int lc)
     case I_NORM2:
       if (i != 0)
         return 0;
+
+      // AOCC Begin
+      // Argument with expression has to be rewritten
+      switch(A_TYPEG(arg)) {
+        default:
+          break;
+        case A_BINOP:
+        case A_UNOP:
+        case A_PAREN:
+          return 0;
+      }
+      // AOCC End
+
       args = A_ARGSG(ast);
       astdim = ARGT_ARG(args, 1);
       break;
@@ -3292,6 +3543,7 @@ leave_elemental_argument(int func_ast, int argnum)
 {
   if (A_TYPEG(func_ast) == A_INTR) {
     if (A_OPTYPEG(func_ast) == I_TRANSPOSE ||
+        (A_OPTYPEG(func_ast) == I_MINLOC && argnum == 2) ||
         (A_OPTYPEG(func_ast) == I_SPREAD && argnum == 0)) {
       return TRUE;
     }
@@ -3341,6 +3593,71 @@ copy_scalar_intent_in(int arg, int dummy_sptr, int std)
   return mk_id(newsptr);
 } /* copy_scalar_intent_in */
 
+// AOCC Begin
+static bool 
+can_inline_minloc(int dest, int args) {
+
+  int dim = 0;
+  int srcarray = ARGT_ARG(args, 0);
+  int astdim = ARGT_ARG(args, 1);
+  int mask = ARGT_ARG(args, 2);
+
+  if (!dest) return false;
+  if (!srcarray) return false;
+  int shape = A_SHAPEG(dest);
+  if (!shape) return false;
+  if (A_TYPEG(dest) == A_SUBSCR) {
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return false;
+   } else if (A_TYPEG(dest) != A_ID) {
+       return false;
+   }
+
+  if (arg_gbl.inforall)
+      if (contiguous_section_array(srcarray))
+        return false;
+
+  if (astdim) {
+   if (A_TYPEG(astdim) != A_CNST) {
+     return false;
+   }
+    dim = get_int_cval(A_SPTRG(astdim));
+  }
+
+  int astback = ARGT_ARG(args, 3);
+  if (astback) {
+    if (A_TYPEG(astback) != A_CNST) {
+      return false;
+    }
+    int back = get_int_cval(A_SPTRG(astback));
+    if (back != 0) return false;
+  }
+
+  if (dim >= 1) {
+     if (A_TYPEG(dest) == A_SUBSCR) {
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return false;
+    } else if (A_TYPEG(dest) == A_ID) {
+      int sptr = A_SPTRG(dest);
+      if (is_array_type(sptr)) {
+        if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+          return false;
+      }
+    } else return false;
+  }
+
+  if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
+    return false;
+  }
+
+  if (mask && contains_any_call(mask)) return false;
+
+  if (contains_any_call(srcarray))
+    return false;
+   
+  return true;
+}
+// AOCC End
 /*
  * rewrite arguments of a function or subroutine call
  */
@@ -3506,7 +3823,17 @@ rewrite_sub_args(int arg_ast, int lc)
        * leave the elemental expressions in place, don't assign
        * to a temp.  They will be expanded when the transpose or spread
        * are inlined */
-      if (leave_elemental_argument(arg_ast, i)) {
+      // AOCC Begin
+      bool inline_minloc=false;
+      if  (A_OPTYPEG(arg_ast) == I_MINLOC) {
+        bool inline_minloc = can_inline_minloc(arg_gbl.lhs, argt);
+        if (inline_minloc && leave_elemental_argument(arg_ast, i)) {
+          ARGT_ARG(newargt, i) = arg;
+          continue;
+        }
+      }
+      // AOCC End
+      else if (leave_elemental_argument(arg_ast, i)) {
         ARGT_ARG(newargt, i) = arg;
         continue;
       }
@@ -3676,7 +4003,7 @@ rewrite_sub_ast(int ast, int lc)
     dtype = A_DTYPEG(ast);
     asd = A_ASDG(ast);
     numdim = ASD_NDIM(asd);
-    assert(numdim > 0 && numdim <= 7, "rewrite_sub_ast: bad numdim", ast, 4);
+    assert(is_legal_numdim(numdim), "rewrite_sub_ast: bad numdim", ast, 4); /* AOCC */
     for (i = 0; i < numdim; ++i) {
       l = rewrite_sub_ast(ASD_SUBS(asd, i), lc);
       subs[i] = l;
@@ -3695,8 +4022,12 @@ rewrite_sub_ast(int ast, int lc)
       return ast;
     args = rewrite_sub_args(ast, lc);
 
+   
     /* try again to inline it */
-    ast = inline_reduction_f90(ast, 0, lc, NULL);
+    if (A_OPTYPEG(ast) == I_MINLOC)
+      ast = inline_reduction_f90(ast, arg_gbl.lhs, lc, NULL);
+    else
+      ast = inline_reduction_f90(ast, 0, lc, NULL);
     l = rewrite_func_ast(ast, args, 0);
     return l;
   case A_ICALL:
@@ -4315,8 +4646,12 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
   case I_MINLOC:
   case I_MAXLOC:
   case I_FINDLOC:
+  case I_PARITY:             // AOCC
   case I_ALL:
   case I_ANY:
+  case I_IALL:               // AOCC
+  case I_IANY:               // AOCC
+  case I_IPARITY:            // AOCC
   case I_COUNT:
   case I_MAXVAL:
   case I_MINVAL:
@@ -4439,6 +4774,10 @@ mk_result_sptr(int func_ast, int func_args, int *subscr, int elem_dty, int lhs,
     temp_sptr = mk_shape_sptr(shape, subscr, elem_dty);
     *retval = mk_id(temp_sptr);
     break;
+  // AOCC BEGIN
+  case I_ISNAN:
+     break;
+  // AOCC END
   default:
     interr("mk_result_sptr: can't handle intrinsic", func_ast, 4);
     break;
@@ -4516,6 +4855,13 @@ search_conform_array(int ast, int flag)
       case I_MAXVAL:
       case I_MINVAL:
       case I_DOT_PRODUCT:
+      // AOCC Begin
+      case I_NORM2:
+      case I_IALL:
+      case I_IANY:
+      case I_IPARITY:
+      case I_PARITY:
+      // AOCC End
       case I_ALL:
       case I_ANY:
       case I_COUNT:
@@ -5732,6 +6078,10 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   switch (A_OPTYPEG(ast)) {
   case I_ALL:
   case I_ANY:
+  case I_IALL:         // AOCC
+  case I_IANY:         // AOCC
+  case I_IPARITY:      // AOCC
+  case I_PARITY:       // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
   case I_MAXVAL:
@@ -5742,17 +6092,13 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       *doremove = TRUE;
     break;
   case I_MAXLOC:
-  case I_MINLOC:
       return ast;
+  case I_MINLOC:
     /* simple cases only */
-    if (dest) {
-      if (A_TYPEG(dest) == A_SUBSCR) {
-        shape = A_SHAPEG(dest);
-        if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
-          return ast;
-      } else if (A_TYPEG(dest) != A_ID)
-        return ast;
-    }
+    // AOCC Begin
+    if (!can_inline_minloc(dest, A_ARGSG(ast)))
+    // AOCC End
+      return ast;
     if (doremove)
       *doremove = TRUE;
     break;
@@ -5784,6 +6130,8 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_MAXLOC:
   case I_MINLOC:
     dtypeval = DDTG(A_DTYPEG(ARGT_ARG(args, 0)));
+    if (DTYG(dtypeval) == TY_CHAR || DTYG(dtypeval) == TY_NCHAR)
+      return ast;
   /* fall through */
   case I_MAXVAL:
   case I_MINVAL:
@@ -5830,6 +6178,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     }
     srcarray = mk_binop(operator, src1, src2, dtype);
     break;
+  case I_PARITY:     // AOCC
   case I_ALL:
   case I_ANY:
   case I_COUNT:
@@ -5839,7 +6188,21 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       if (contiguous_section_array(srcarray))
         return ast;
     break;
+  // AOCC begin
+  case I_IPARITY:
+  case I_IALL:
+  case I_IANY:
+    astdim = ARGT_ARG(args, 1);
+    mask = ARGT_ARG(args, 2);
+    srcarray = ARGT_ARG(args, 0);
+    if (DTYG(dtype) == TY_CHAR || DTYG(dtype) == TY_NCHAR)
+      return ast;
+    if (arg_gbl.inforall)
+      if (contiguous_section_array(srcarray))
+        return ast;
+    break;
   }
+  // AOCC end
 
   if (astdim) {
     if (A_TYPEG(astdim) != A_CNST) {
@@ -5850,8 +6213,22 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     dim = 0;
   }
 
-  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim > 1)
-    return ast;
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dim >= 1) {
+    if (A_TYPEG(dest) == A_SUBSCR) {
+       int shape = A_SHAPEG(dest);
+       if (!shape) return ast;
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+       return ast;
+    } else if (A_TYPEG(dest) == A_ID) {
+      int sptr = A_SPTRG(dest);
+      if (is_array_type(sptr)) {
+       int shape = A_SHAPEG(dest);
+       if (!shape) return ast;
+       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
+	 return ast;
+      }
+    } else return ast;
+  }
 
   if (!XBIT(70, 0x1000000) && dim == 1 && arg_gbl.inforall) {
     return ast;
@@ -5905,6 +6282,23 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       }
     }
   }
+
+  stdnext = arg_gbl.std;
+  if ((A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) && dest) {
+    // incase of zero sized arrays and when mask is all false return 0
+    dtsclr = DDTG(dtyperes);
+    newast = mk_cval(0, dtyperes);
+    asn = mk_assn_stmt(dest, newast, dtsclr);
+    std = add_stmt_before(asn, stdnext);
+
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+  }
+
   ast2 = convert_subscript_in_expr(srcarray);
   home = convert_subscript(home);
   if (mask) {
@@ -5928,7 +6322,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   ndim = ASD_NDIM(asd); /* MORE ndim and nbrloops are NOT the same!!! */
   nbrloops = SHD_NDIM(shape);
 
-  stdnext = arg_gbl.std;
   lineno = STD_LINENO(stdnext);
 
   if (A_OPTYPEG(ast) == I_MAXLOC || A_OPTYPEG(ast) == I_MINLOC) {
@@ -6146,6 +6539,24 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     ReducType = I_REDUCE_ANY;
     astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
     break;
+    // AOCC begin
+  case I_PARITY:
+    ReducType = I_REDUCE_PARITY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
+  case I_IALL:
+    ReducType = I_REDUCE_IALL;
+    astInit = mk_cval(SCFTN_TRUE, DDTG(dtypetmp));
+    break;
+  case I_IANY:
+    ReducType = I_REDUCE_IANY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
+  case I_IPARITY:
+    ReducType = I_REDUCE_IPARITY;
+    astInit = mk_cval(SCFTN_FALSE, DDTG(dtypetmp));
+    break;
+    // AOCC end
   default:
     assert(0, "inline_reduction_f90: unknown type", ast, 4);
   }
@@ -6375,7 +6786,35 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
 
           subscr = mk_cval(j + 1, astb.bnd.dtype);
           ast2 = mk_subscr(astsubscrtmp, &subscr, 1, dtyperes);
-          asn = mk_assn_stmt(ast2, A_DOVARG(DOs[j]), dtyperes);
+          // AOCC Begin
+          int lb = A_M1G(DOs[j]);
+          int ub = A_M2G(DOs[j]);
+          int st = A_M3G(DOs[j]);
+
+          int lbval = 0;
+          int ubval = 0;
+          int stval = 0;
+
+          if (lb != 0 && A_TYPEG(lb) == A_CNST)
+             lbval = get_int_cval(A_SPTRG(A_ALIASG(lb)));
+          if (ub != 0 && A_TYPEG(ub) == A_CNST)
+             ubval = get_int_cval(A_SPTRG(A_ALIASG(ub)));
+          if (st != 0 && A_TYPEG(st) == A_CNST)
+             stval = get_int_cval(A_SPTRG(A_ALIASG(st)));
+
+          if ( stval < 0 ) {
+             int constone     = mk_cval(1 , astb.bnd.dtype);
+             int lbplusoneexp = mk_binop(OP_ADD, constone, lb, astb.bnd.dtype);
+             int normalizeexp = mk_binop(OP_SUB, lbplusoneexp, A_DOVARG(DOs[j]), astb.bnd.dtype);
+             asn = mk_assn_stmt(ast2, normalizeexp, dtyperes);
+           } else {
+             int constone = mk_cval(1 , astb.bnd.dtype);
+             int indexexp = mk_binop(OP_ADD, constone, A_DOVARG(DOs[j]), astb.bnd.dtype);
+             int normalizeexp = mk_binop(OP_SUB, indexexp,lb, astb.bnd.dtype);
+             asn = mk_assn_stmt(ast2, normalizeexp, dtyperes);
+          }
+          // AOCC End
+
           std = add_stmt_before(asn, stdnext);
           STD_LINENO(std) = lineno;
           STD_LOCAL(std) = 1;
@@ -6443,6 +6882,71 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
     break;
+  // AOCC begin
+  case I_PARITY:
+    newast = ast2;
+    operand = mk_binop(OP_LXOR, astsubscrtmp, ast2, DT_LOG);
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
+
+    ifast = mk_stmt(A_IFTHEN, 0);
+    A_IFEXPRP(ifast, ast2);
+    std = add_stmt_before(ifast, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    endif = mk_stmt(A_ENDIF, 0);
+    std = add_stmt_before(endif, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+    break;
+  case I_IALL:
+  case I_IANY:
+    if (A_OPTYPEG(ast) == I_IALL)
+      operand = mk_binop(OP_LAND, ast2, astsubscrtmp, DT_LOG);
+    else
+      operand = mk_binop(OP_LOR, ast2, astsubscrtmp, DT_LOG);
+
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    break;
+  case I_IPARITY:
+    operand = mk_binop(OP_LXOR, ast2, astsubscrtmp, DT_LOG);
+    asn = mk_assn_stmt(astsubscrtmp, operand, dtsclr);
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    break;
+  // AOCC end
   default:
     assert(0, "inline_reduction_f90: unknown type", ast, 4);
   }
@@ -6632,6 +7136,88 @@ subscript_lhs(int arr, int *subs, int dim, DTYPE dtype, int origlhs,
   return ast;
 }
 
+// AOCC Begin
+/*
+ * Emit AST for PD_NORM2
+ *
+ * func_ast: A_FUNC
+ * func_args: rewritten args
+ */
+
+static int
+emit_norm2(int func_ast, int func_args, int lhs) {
+
+  int nargs;
+  int srcarray;
+  int newargt;
+  int temp_sclr;
+  int retval;
+  int newsym;
+  char *name;
+  int ast;
+  int arg1, arg2;
+  int shape;
+  int rank;
+  int temp_arr;
+  int subscr[MAXSUBS];
+  int lhs_ast;
+
+  nargs = 3;
+
+  arg1 = ARGT_ARG(func_args, 0);
+  check_arg_isalloc(arg1);
+  if (ARGT_ARG(func_args, 1) == 0)
+    nargs--;
+  DTYPE dtype = A_DTYPEG(func_ast);
+  FtnRtlEnum rtlRtn;
+
+  // Define the return type, based on which fucnton name is formed.
+  switch (DTY(A_DTYPEG(func_ast))) {
+    case TY_REAL:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real4_dim;
+      else
+        rtlRtn = RTE_norm2_real4;
+      break;
+
+    case TY_DBLE:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real8_dim;
+      else
+        rtlRtn = RTE_norm2_real8;
+      break;
+    default:
+      error(456, 3, gbl.lineno, CNULL, CNULL);
+  }
+
+  newargt = mk_argt(nargs);
+  srcarray = ARGT_ARG(func_args, 0);
+  ARGT_ARG(newargt, 1) = srcarray;
+  if (nargs == 3) {
+    // Not suported yet.
+    // Should not reach here
+    // Create lhs array to hold the result
+    assert(0, "norm2 for two arguments not supported : should not reach here",
+           2, func_ast);
+  }
+  else {
+    // Create a scalar variable to store the result.
+    temp_sclr = sym_get_scalar("tmp", "r", dtype);
+    retval = mk_id(temp_sclr);
+    ARGT_ARG(newargt, 0) = retval;
+  }
+
+  name = mkRteRtnNm(rtlRtn);
+  newsym = sym_mkfunc(name, DT_NONE);
+
+  ast = mk_func_node(A_ICALL, mk_id(newsym), nargs, newargt);
+  A_OPTYPEP(ast, A_OPTYPEG(func_ast));
+  add_stmt_before(ast, arg_gbl.std);
+  return retval;
+}
+// AOCC End
+
+
 /*
  * func_ast: A_FUNC or A_INTR
  * func_args: rewritten args
@@ -6672,9 +7258,11 @@ matmul(int func_ast, int func_args, int lhs)
   LOGICAL tmp_lhs_array;
   LOGICAL matmul_transpose;
 
-  retval = mmul(func_ast, func_args, lhs);
-  if (retval >= 0)
-    return retval;
+  if (flg.opt >= 2) {   // AOCC
+    retval = mmul(func_ast, func_args, lhs);
+    if (retval >= 0)
+      return retval;
+  }
 
   tmp_lhs_array = FALSE;
   /* it only handles calls */

@@ -5,6 +5,23 @@
  *
  */
 
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ * Support for parity intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ * Month of Modification: July 2019
+ *
+ * Complex datatype support for acosh , asinh , atanh
+ * Modified on 07 January 2020
+ */
+
 /**
   \file
   \brief Routines used by lower.c for lowering to ILMs
@@ -1581,6 +1598,7 @@ add_lnop(int ilm, int ast, int dtype)
     case OP_LNEQV:
     case OP_LEQV:
     case OP_LOR:
+    case OP_LXOR:
     case OP_LAND:
     case OP_SCAND:
       return ilm;
@@ -2831,6 +2849,14 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_LLT:
     return -1;
 
+  /* AOCC begin */
+  case I_BGE:
+  case I_BGT:
+  case I_BLE:
+  case I_BLT:
+    return -1;
+  /* AOCC end */
+
   case I_LOC:
   case I_C_FUNLOC:
   case I_C_LOC:
@@ -2878,6 +2904,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_SET_EXPONENT:
   case I_VERIFY:
   case I_RAN:
+  // AOCC BEGIN
+  case I_ISNAN:
+  // AOCC END
     return -1;
 
   case I_ZEXT:
@@ -2915,6 +2944,15 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_ALL:
   case I_ANY:
   case I_COUNT:
+#if 0    
+  // AOCC Begin
+  case I_IALL:
+  case I_IANY:
+  case I_IPARITY:
+  case I_PARITY:
+  case I_NORM2:
+  // AOCC End
+#endif    
   case I_DOT_PRODUCT:
   case I_NORM2:
   case I_MATMUL:
@@ -3191,15 +3229,17 @@ lower_intrinsic(int ast)
   case I_HYPOT:
     ilm = intrin_name("HYPOT", ast, in_r_D);
     break;
+  //AOCC Begin  
   case I_ACOSH:
-    ilm = intrin_name("ACOSH", ast, in_r_D);
+    ilm = intrin_name("ACOSH", ast, in_r_D_C_CD);
     break;
   case I_ASINH:
-    ilm = intrin_name("ASINH", ast, in_r_D);
+    ilm = intrin_name("ASINH", ast, in_r_D_C_CD);
     break;
   case I_ATANH:
-    ilm = intrin_name("ATANH", ast, in_r_D);
+    ilm = intrin_name("ATANH", ast, in_r_D_C_CD);
     break;
+  //AOCC End
   case I_BESSEL_J0:
     ilm = intrin_name("BESSEL_J0", ast, in_r_D);
     break;
@@ -3703,9 +3743,16 @@ lower_intrinsic(int ast)
   case I_JISIGN:
   case I_KISIGN:
   case I_ISIGN:
+  /* AOCC begin */
+    ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+    break;
   case I_DSIGN:
   case I_SIGN:
-    ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+    if (XBIT(64, 0x10))
+      ilm = intrin_name("SIGNNZ", ast, in_I_K_r_D);
+    else
+      ilm = intrin_name("SIGN", ast, in_I_K_r_D);
+  /* AOCC end */
     break;
 
   /* xor family */
@@ -3913,15 +3960,18 @@ lower_intrinsic(int ast)
     case TY_SLOG:
     case TY_LOG:
     case TY_LOG8:
-      for (i = 0; i < 2; i++) {
-        arg = ARGT_ARG(args, i);
-        lower_expression(arg);
-        intrinsic_args[i] = lower_ilm(arg);
+      if (!((A_TYPEG(ARGT_ARG(args,2)) == A_INTR 
+	    && (A_OPTYPEG(ARGT_ARG(args,2)) == I_PRESENT)))) {
+       for (i = 0; i < 2; i++) {
+         arg = ARGT_ARG(args, i);
+         lower_expression(arg);
+         intrinsic_args[i] = lower_ilm(arg);
+       }
+       intrinsic_args[2] = lower_conv(ARGT_ARG(args, 2), DT_LOG4);
+       ilm = intrin_name("MERGE", ast, in_Il_K_R_D_C_CD);
+       nargs = 3;
+       break;
       }
-      intrinsic_args[2] = lower_conv(ARGT_ARG(args, 2), DT_LOG4);
-      ilm = intrin_name("MERGE", ast, in_Il_K_R_D_C_CD);
-      nargs = 3;
-      break;
     default:
       /* just treat like a function call */
 
@@ -3956,6 +4006,16 @@ lower_intrinsic(int ast)
     ilm = lower_function(ast);
     A_ILMP(ast, ilm);
     return ilm;
+
+  // AOCC BEGIN
+  case I_ISNAN:
+    arg = ARGT_ARG(args,0);
+    lower_expression(arg);
+    ilm = plower("oi", styped("ISNAN", A_DTYPEG(arg)),
+                 lower_ilm(arg));
+    A_ILMP(ast, ilm);
+    return ilm;
+  // AOCC END
 
   case I_NLEN:
     ilm = intrin_name("NLEN", ast, in_i);
@@ -4337,6 +4397,13 @@ lower_intrinsic(int ast)
   case I_TIME:
   case I_MVBITS:
 
+  /* AOCC begin */
+  case I_BGE:
+  case I_BGT:
+  case I_BLE:
+  case I_BLT:
+  /* AOCC end */
+
   case I_SECNDS:
   case I_DATE_AND_TIME:
   case I_RANDOM_NUMBER:
@@ -4358,6 +4425,13 @@ lower_intrinsic(int ast)
   case I_ALL:
   case I_ANY:
   case I_COUNT:
+  // AOCC Begin
+  case I_IALL:
+  case I_IANY:
+  case I_IPARITY:
+  case I_PARITY:
+  case I_NORM2:
+  // AOCC End
   case I_DOT_PRODUCT:
   case I_MATMUL:
   case I_MATMUL_TRANSPOSE:
@@ -4495,7 +4569,7 @@ lower_ast(int ast, int *unused)
 {
   int dtype, rdtype, lop, rop, lilm, rilm, ilm = 0, base = 0;
   int ss, ndim, i, sptr, checksubscr, pointersubscr;
-  int subscriptilm[10], subscriptilmx[10], lowerboundilm[10], upperboundilm[10];
+  int subscriptilm[MAXSUBS], subscriptilmx[MAXSUBS], lowerboundilm[MAXSUBS], upperboundilm[MAXSUBS]; /* AOCC */
   LOGICAL norm;
 
   dtype = A_DTYPEG(ast);
@@ -4536,6 +4610,11 @@ lower_ast(int ast, int *unused)
     case OP_LOR:
       ilm = lower_bin_logical(ast, "LOR");
       break;
+    // AOCC begin
+    case OP_LXOR:
+      ilm = lower_bin_logical(ast, "XOR");
+      break;
+    // AOCC end
     case OP_MUL:
       ilm = lower_bin_arith(ast, "MUL", dtype, dtype);
       break;
@@ -5612,6 +5691,29 @@ lower_logical(int ast, iflabeltype *iflabp)
         lower_logical(A_ROPG(ast), iflabp);
       }
       break;
+    // AOCC begin
+    case OP_LXOR:
+      if (iflabp->thenlabel == 0) {
+        /* The incoming fall-through case is 'then'.
+         *  brtrue(left) newlabel
+         *  brfalse(right) elselabel
+         *  newlabel: */
+        nlab.thenlabel = lower_lab();
+        nlab.elselabel = 0;
+        lower_logical(A_LOPG(ast), &nlab);
+        /* second operand can fall through if true, branch around if false */
+        lower_logical(A_ROPG(ast), iflabp);
+        plower("oL", "LABEL", nlab.thenlabel);
+        lower_reinit();
+      } else {
+        /* The incoming fall-through case is 'else'.
+         *  brtrue(left) thenlabel
+         *  brtrue(right) thenlabel */
+        lower_logical(A_LOPG(ast), iflabp);
+        lower_logical(A_ROPG(ast), iflabp);
+      }
+      break;
+    // AOCC end
     case OP_LEQV:
       lower_expression(A_LOPG(ast));
       lower_expression(A_ROPG(ast));

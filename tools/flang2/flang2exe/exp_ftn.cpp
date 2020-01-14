@@ -3,12 +3,20 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ */
+
+/* Modified on 23rd December 2019
+ *
+ *Complex datatype support for acosh , asinh , atanh
+ * Modified on 07 January 2020
  */
 
 /** \file
  * \brief Fortran-specific expander routines
  */
 
+#include "gbldefs.h" /* AOCC */
 #include "exp_ftn.h"
 #include "exputil.h"
 #include "exp_rte.h"
@@ -164,6 +172,21 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   default:
     interr("exp_ac:ilm not cased", opc, ERR_Severe);
     return;
+
+  // AOCC BEGIN
+  /* Create isnan() isnanf() libm calls based on the argument types.
+  */
+  case IM_RISNAN:
+  case IM_DISNAN:
+    op1 = ILI_OF(ILM_OPND(ilmp, 1));
+    tmp = ad1ili(IL_NULL, 0);
+    tmp = ad2ili((opc == IM_RISNAN) ? IL_ARGSP : IL_ARGDP , op1, tmp);
+    op2 = mk_prototype((opc == IM_RISNAN) ? "isnanf" : "isnan", "pure",
+          DT_LOG, 1, (opc == IM_RISNAN) ? DT_REAL : DT_DBLE);
+    tmp = ad2ili(IL_QJSR, op2, tmp);
+    ILM_RESULT(curilm) = ad2ili(IL_DFRKR, tmp, KR_RETVAL);
+    return;
+  // AOCC END
   case IM_LNOT:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     if (XBIT(125, 0x8))
@@ -624,6 +647,17 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDTAN:
     exp_qjsr("__mth_i_cdtan", DT_DCMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CACOSH:
+    exp_qjsr("__mth_i_cacosh", DT_CMPLX, ilmp, curilm);
+    return;
+  case IM_CASINH:
+    exp_qjsr("__mth_i_casinh", DT_CMPLX, ilmp, curilm);
+    return;
+  case IM_CATANH:
+    exp_qjsr("__mth_i_catanh", DT_CMPLX, ilmp, curilm);
+    return;
+  //AOCC end 
   case IM_CDIV:
     {
       if (XBIT(70, 0x40000000)) {
@@ -853,6 +887,13 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     op2 = ILI_OF(ILM_OPND(ilmp, 2));
     ILM_RESULT(curilm) = ad2ili(IL_KXOR, op1, op2);
     return;
+  // AOCC begin
+  case IM_XOR:
+    op1 = ILI_OF(ILM_OPND(ilmp, 1));
+    op2 = ILI_OF(ILM_OPND(ilmp, 2));
+    ILM_RESULT(curilm) = ad2ili(IL_XOR, op1, op2);
+    return;
+  // AOCC end
   case IM_KNOT:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     ILM_RESULT(curilm) = ad1ili(IL_KNOT, op1);
@@ -1417,8 +1458,8 @@ static struct {
   int elmsz;    /* ili of actual element size (type ir) */
   DTYPE eldt;     /* data type of element */
   int nsubs;    /* number of subscripts */
-  int sub[7];   /* ili for each (actual) subscript */
-  int osub[7];  /* ili for original subscript (before expanding to 64-bit) */
+  int sub[MAXSUBS];   /* AOCC: ili for each (actual) subscript */
+  int osub[MAXSUBS];  /* ili for original subscript (before expanding to 64-bit) */
   int finalnme; /* final NME */
 } subscr;
 
@@ -1438,7 +1479,7 @@ compute_subscr(ILM *ilmp, bool bigobj)
   int ili2;
   ISZ_T coffset;
   int sub_1;
-  int subs[7];
+  int subs[MAXSUBS]; /* AOCC */
 
   subscr.nsubs = ILM_OPND(ilmp, 1);
 #if DEBUG
@@ -2943,7 +2984,7 @@ exp_array(ILM_OP opc, ILM *ilmp, int curilm)
 #endif
 
   if (XBIT(125, 0x10000)) {
-    int subs[7], i;
+    int subs[MAXSUBS], i; /* AOCC */
     int arrilm;
     DTYPE dtype;
     SPTR sym;
@@ -3440,9 +3481,10 @@ exp_bran(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_AGOTO: /* assigned goto */
     exp_agoto(ilmp, curilm);
     break;
-
+  //AOCC Begin
   case IM_KAIF: /* integer*8 arithmetic IF */
-    type = 4;
+    type = 3;
+  //AOCC End
     goto comaif;
   case IM_IAIF: /* integer arithmetic IF */
     type = 0;

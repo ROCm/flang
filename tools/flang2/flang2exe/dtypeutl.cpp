@@ -9,6 +9,7 @@
  * \brief data type utility functions.
  */
 
+#include "gbldefs.h" /* AOCC */
 #include "dtypeutl.h"
 #include "machar.h"
 #include "machardf.h"
@@ -794,7 +795,7 @@ getdtype(DTYPE dtype, char *ptr)
       if (DTyArrayDesc(dtype) != 0) {
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim < 1 || numdim > 7) {
+        if (!is_legal_numdim(numdim)) { /* AOCC */
           interr("getdtype:bad numdim", 0, ERR_Informational);
           numdim = 0;
         }
@@ -861,7 +862,7 @@ extent_of(DTYPE dtype)
       if (DTyArrayDesc(dtype) != 0) {
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim < 1 || numdim > 7) {
+        if (!is_legal_numdim(numdim)) { /* AOCC */
           interr("extent_of: bad numdim", 0, ERR_Informational);
           numdim = 0;
         }
@@ -995,7 +996,7 @@ _dmp_dent(DTYPE dtypeind, FILE *outfile)
     }
     ad = AD_DPTR(dtypeind);
     numdim = AD_NUMDIM(ad);
-    if (numdim < 1 || numdim > 7) {
+    if (!is_legal_numdim(numdim)) { /* AOCC */
       interr("dmp_dent:bad numdim", 0, ERR_Informational);
       numdim = 0;
     }

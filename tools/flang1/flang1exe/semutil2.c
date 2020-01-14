@@ -5,6 +5,20 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for transpose intrinsic during initialization
+ *
+ * Date of Modification: 1st March 2019
+ *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ * Date of Modification: 24th October 2019
+ * Date of Modification: 5th November 2019
+ *
+ */
+
 /** \file
     \brief Utility routines used by Fortran Semantic Analyzer.
 */
@@ -796,6 +810,7 @@ add_etmp(int sptr)
   x->next = sem.etmp_list;
   sem.etmp_list = x;
   x->t.sptr = sptr;
+  if (sptr) x->ast = mk_id(sptr);
 }
 
 void
@@ -1399,7 +1414,7 @@ size_of_array(DTYPE dtype)
       if (DTY(dtype + 2) != 0) {
         ad = AD_DPTR(dtype);
         numdim = AD_NUMDIM(ad);
-        if (numdim < 1 || numdim > 7) {
+        if (!is_legal_numdim(numdim)) { /* AOCC */
           interr("extent_of: bad numdim", 0, 1);
           numdim = 0;
         }
@@ -2205,7 +2220,7 @@ init_constructf90()
 {
   int i;
 
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < MAXDIMS; i++) { // AOCC
     acs.element_cnt[i] = 0;     /* # of individual constructor items  */
     acs.indx[i] = astb.bnd.one; /* subscript of first element */
     acs.indx_tmpid[i] = 0;      /* no subscripting temporary yet */
@@ -2282,7 +2297,9 @@ get_subscripting_tmp(int indexast)
     tmpids[sub_i] = mk_id(get_temp(astb.bnd.dtype));
   if (indexast != tmpids[sub_i]) {
     ast = mk_assn_stmt(tmpids[sub_i], indexast, astb.bnd.dtype);
-    add_stmt(ast);
+    //AOCC Begin
+    sem.acl_ido.subsc_assign_std = add_stmt(ast);
+    //AOCC End
   }
   return (tmpids[sub_i]);
 }
@@ -3014,7 +3031,29 @@ _constructf90(int base_id, int in_indexast, bool in_array, ACL *aclp)
           ast = mk_assn_stmt(dest, src, dtype);
         }
         ast = ast_rewrite_indices(ast);
-        (void)add_stmt(ast);
+        //AOCC Begin
+        int ast_std = add_stmt(ast);
+        if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds == NULL)) {
+	  ido_body_std * newstd;
+	  newstd = (ido_body_std *)malloc(sizeof(ido_body_std));
+	  newstd->std = ast_std;
+	  newstd->next = NULL;
+	  sem.acl_ido.body_stds = newstd;
+        } else {
+          if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
+            //if it is a nested ido, insert std to the tail
+            ido_body_std *temp = sem.acl_ido.body_stds;
+            while(temp->next != NULL) {
+              temp = temp->next;
+            }
+            ido_body_std * newstd;
+            newstd = (ido_body_std *)malloc(sizeof(ido_body_std));
+            newstd->std = ast_std;
+            newstd->next = NULL;
+            temp->next = newstd;
+          }
+	}
+        //AOCC End
         if (in_array) {
           indexast = mk_binop(OP_ADD, indexast, astb.bnd.one, astb.bnd.dtype);
           incr_element_cnt();
@@ -3278,6 +3317,27 @@ mk_ulbound_intrin(AC_INTRINSIC intrin, int ast)
 
   return expracl;
 }
+
+// AOCC begin
+static ACL *
+mk_transpose_intrin(int ast)
+{
+  ACL *expracl = mk_init_intrinsic(AC_I_transpose);
+  expracl->dtype = A_DTYPEG(ast);
+
+  AEXPR *aexpr;
+  aexpr = expracl->u1.expr;
+
+  int argt = A_ARGSG(ast);
+  int srcast = ARGT_ARG(argt, 0);
+  aexpr->rop = construct_acl_from_ast(srcast, A_DTYPEG(srcast), 0);
+  if (!aexpr->rop) {
+    return 0;
+  }
+
+  return expracl;
+}
+// AOCC end
 
 static ACL *
 mk_reshape_intrin(int ast)
@@ -3845,6 +3905,20 @@ map_PD_to_AC(int pdnum)
     return AC_I_ceiling;
   case PD_transfer:
     return AC_I_transfer;
+  // AOCC begin
+  case PD_transpose:
+    return AC_I_transpose;
+  case PD_merge_bits:
+    return AC_I_merge_bits;
+  case PD_shiftl:
+    return AC_I_lshift;
+  case PD_shiftr:
+    return AC_I_rshift;
+  case PD_dshiftl:
+    return AC_I_dshiftl;
+  case PD_dshiftr:
+    return AC_I_dshiftr;
+  // AOCC end
   case PD_scale:
     return AC_I_scale;
   case PD_maxloc:
@@ -3900,6 +3974,11 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_ieor:
   case AC_I_merge:
   case AC_I_scale:
+  /* AOCC begin */
+  case AC_I_merge_bits:
+  case AC_I_dshiftl:
+  case AC_I_dshiftr:
+  /* AOCC end */
     return mk_elem_init_intrinsic(intrin, ast, dtype, parent_acltype);
   case AC_I_maxloc:
   case AC_I_maxval:
@@ -3931,6 +4010,10 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
     return mk_nonelem_init_intrinsic(intrin, ast, A_DTYPEG(ast));
   case AC_I_size:
     return mk_size_intrin(ast);
+  // AOCC begin
+  case AC_I_transpose:
+    return mk_transpose_intrin(ast);
+  // AOCC end
   case AC_I_reshape:
     return mk_reshape_intrin(ast);
   case AC_I_shape:
@@ -3979,6 +4062,11 @@ get_ast_op(int op)
   case AC_LOR:
     ast_op = OP_LOR;
     break;
+  // AOCC begin
+  case AC_LXOR:
+    ast_op = OP_LXOR;
+    break;
+  // AOCC end
   case AC_LAND:
     ast_op = OP_LAND;
     break;
@@ -4047,6 +4135,11 @@ get_ac_op(int ast)
   case OP_LOR:
     ac_op = AC_LOR;
     break;
+  // AOCC begin
+  case OP_LXOR:
+    ac_op = AC_LXOR;
+    break;
+  // AOCC end
   case OP_LAND:
     ac_op = AC_LAND;
     break;
@@ -6767,7 +6860,7 @@ build_array_list(ASTLIST *list, int ast, DTYPE dtype, int sptr)
       break;
     asd = A_ASDG(ast);
     ndim = ASD_NDIM(asd);
-    assert(ndim <= 7, "build_array_list, >7 dimensions", ndim, 3);
+    assert(ndim <= get_legal_maxdim(), "build_array_list, > allowed dimensions", ndim, 3); /* AOCC */
     assert(A_SHAPEG(A_LOPG(ast)), "build_array_list, shapeless array", 0, 3);
     for (i = 0; i < ndim; ++i) {
       int ss;
@@ -8268,6 +8361,99 @@ INTINTRIN2("iand", eval_iand, &)
 INTINTRIN2("ior", eval_ior, |)
 INTINTRIN2("ieor", eval_ieor, ^)
 
+/* AOCC begin */
+static ACL *
+eval_merge_bits(ACL *arg, DTYPE dtype) {
+  ACL *arg_i = eval_init_expr_item(arg);
+  ACL *arg_j = eval_init_expr_item(arg->next);
+  ACL *arg_mask = eval_init_expr_item(arg->next->next);
+
+  ACL *arg_notmask = clone_init_const(arg_mask, true);
+
+  /* 32-bit values get stored in the conval field, while larger values need to
+   * be looked up in the symbol table.
+   */
+  if (size_of(arg_mask->dtype) > 4) {
+    INT ival[2];
+    ISZ_T mask_val, notmask_val;
+
+    ival[0] = CONVAL1G(arg_mask->conval);
+    ival[1] = CONVAL2G(arg_mask->conval);
+
+    INT64_2_ISZ(ival, mask_val);
+    notmask_val = ~mask_val;
+    ISZ_2_INT64(notmask_val, ival); /* Now ival will represent notmask_val */
+
+    arg_notmask->conval = getcon(ival, arg_mask->dtype);
+  } else {
+    arg_notmask->conval = ~(arg_mask->conval);
+  }
+
+  ACL *arg_i_and_mask = clone_init_const(arg_i, true);
+  arg_i_and_mask->next = arg_mask;
+
+  ACL *arg_j_and_notmask = clone_init_const(arg_j, true);
+  arg_j_and_notmask->next = arg_notmask;
+
+  ACL *iand_i = eval_iand(arg_i_and_mask, dtype);
+  ACL *iand_j = eval_iand(arg_j_and_notmask, dtype);
+
+  iand_i->next = iand_j;
+
+  return eval_ior(iand_i, dtype);
+}
+
+static ACL *
+eval_dshift(ACL *arg, DTYPE dtype, bool is_left)
+{
+  ACL *arg_i = eval_init_expr_item(arg);
+  ACL *arg_j = eval_init_expr_item(arg->next);
+  ACL *arg_shift = eval_init_expr_item(arg->next->next);
+
+  short bit_size_i = bits_in(arg_i->dtype);
+  short bit_size_j = bits_in(arg_j->dtype);
+
+  if (is_left) {
+    /* Evaluating IOR(SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT)). */
+
+    /* evaluating lhs of IOR */
+    ACL *arg_i_and_shift = clone_init_const(arg_i, true);
+    arg_i_and_shift->next = arg_shift;
+    ACL * arg_shiftl_i = eval_ishft(arg_i_and_shift, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    ACL *arg_j_and_bs_j = clone_init_const(arg_j, true);
+    arg_j_and_bs_j->next = clone_init_const(arg_shift, true);
+    /* The negation below is to force ishft to do a right shift */
+    arg_j_and_bs_j->next->conval = -(bit_size_j - arg_shift->conval);
+    ACL *arg_shiftr_bs_j = eval_ishft(arg_j_and_bs_j, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_i->next = arg_shiftr_bs_j;
+    return eval_ior(arg_shiftl_i, arg_i->dtype);
+
+  } else {
+    /* Evaluating IOR(SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT)) */
+
+    /* evaluating lhs of IOR */
+    ACL *arg_i_and_bs_i = clone_init_const(arg_i, true);
+    arg_i_and_bs_i->next = clone_init_const(arg_shift, true);
+    arg_i_and_bs_i->next->conval = bit_size_i - arg_shift->conval;
+    ACL *arg_shiftl_bs_i = eval_ishft(arg_i_and_bs_i, arg_i->dtype);
+
+    /* evaluating rhs of IOR */
+    ACL *arg_j_and_shift = clone_init_const(arg_j, true);
+    arg_j_and_shift->next = clone_init_const(arg_shift, true);
+    arg_j_and_shift->next->conval = -(arg_j_and_shift->next->conval);
+    ACL * arg_shiftr_j = eval_ishft(arg_j_and_shift, arg_j->dtype);
+
+    /* Setting up args for the final ior */
+    arg_shiftl_bs_i->next = arg_shiftr_j;
+    return eval_ior(arg_shiftl_bs_i, arg_i->dtype);
+  }
+}
+/* AOCC end */
+
 static ACL *
 eval_ichar(ACL *arg, DTYPE dtype)
 {
@@ -9378,10 +9564,13 @@ eval_selected_real_kind(ACL *arg)
 {
   ACL *rslt;
   ACL *wrkarg;
-  int r;
+  int r, pre, range;
   INT con;
 
   r = 4;
+  // AOCC
+  pre = 0;
+  range = 0;
 
   wrkarg = arg = eval_init_expr(arg);
   con = get_int_from_init_conval(wrkarg);
@@ -9389,24 +9578,51 @@ eval_selected_real_kind(ACL *arg)
     r = 4;
   else if (con <= 15)
     r = 8;
-  else
+  /*else if (con <= 33 && !XBIT(57, 4))
+    r = 16; Currently real 16 is not supported*/
+  else {
     r = -1;
+    pre = -1;
+  }
 
   if (arg->next) {
     wrkarg = arg->next;
     con = get_int_from_init_conval(wrkarg);
     if (con <= 37) {
-      if (r > 0 && r < 4)
+      if (r > 0 && r <= 4)
         r = 4;
     } else if (con <= 307) {
-      if (r > 0 && r < 8)
+      if (r > 0 && r <= 8)
         r = 8;
-    } else {
+    } /*else if (con <= 4931 && !XBIT(57, 4)) {
+      if (r > 0 && r <= 16)
+        r = 16;
+    }*/ else {
       if (r > 0)
         r = 0;
-      r -= 2;
+      range = -2;
+      r = -2;
     }
   }
+
+  // AOCC begin
+  if (arg->next->next) {
+    wrkarg = arg->next->next;
+    con = get_int_from_init_conval(wrkarg);
+    if (con == 2 || con == 0) {
+      if (r > 0 && r <= 4)
+        r = 4;
+      else if (r > 0 && r <= 8)
+        r = 8;
+      /*else if (r > 0 && r <= 16)
+        r = 16;*/
+      else if (pre < 0 && range < 0)
+        r = -3;
+    }
+      else if (con != 2)
+        r = -5;
+  }
+  // AOCC end
 
   rslt = GET_ACL(15);
   rslt->id = AC_CONVAL;
@@ -9860,7 +10076,7 @@ copy_initconst_to_array(ACL **arr, ACL *c, int count)
 }
 
 static ACL *
-eval_reshape(ACL *arg, DTYPE dtype)
+eval_reshape(ACL *arg, DTYPE dtype, LOGICAL transpose) // AOCC
 {
   ACL *srclist;
   ACL *tacl;
@@ -9883,7 +10099,7 @@ eval_reshape(ACL *arg, DTYPE dtype)
 
   arg = eval_init_expr(arg);
   srclist = clone_init_const(arg, TRUE);
-  if (arg->next->next) {
+  if (arg->next && arg->next->next) { // AOCC
     pad = arg->next->next;
     if (pad->id == AC_ACONST) {
       pad = eval_init_expr_item(pad);
@@ -9905,11 +10121,18 @@ eval_reshape(ACL *arg, DTYPE dtype)
   }
 
   if (orderarg == NULL) {
-    if (src_sz == dest_sz) {
-      return srclist;
-    }
-    for (i = 0; i < rank; i++) {
-      order[i] = i;
+    // AOCC begin
+    if (transpose) {
+        order[0] = 1;
+        order[1] = 0;
+    } else {
+      if (src_sz == dest_sz) {
+        return srclist;
+      }
+      for (i = 0; i < rank; i++) {
+        order[i] = i;
+      }
+    // AOCC end
     }
   } else {
     LOGICAL out_of_order;
@@ -10540,7 +10763,7 @@ eval_const_array_triple_section(ACL *curr_e)
 
     sb.sub[ndims].stride = get_ival(v->dtype, v->conval);
 
-    if (++ndims >= 7) {
+    if (++ndims >= get_legal_maxdim()) { /* AOCC */
       interr("initialization expression: too many dimensions\n", 0, 3);
       return 0;
     }
@@ -10596,6 +10819,11 @@ mk_cmp(ACL *c, int op, INT l_conval, INT r_conval, int rdtype, int dt)
   case OP_LOR:
     c->conval = l_conval | r_conval;
     break;
+  // AOCC begin
+  case OP_LXOR:
+    c->conval = l_conval ^ r_conval;
+    break;
+  // AOCC end
   case OP_LAND:
     c->conval = l_conval & r_conval;
     break;
@@ -10772,8 +11000,22 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case AC_I_transfer:
       root = eval_transfer(rop, dtype);
       break;
+    // AOCC begin
+    case AC_I_transpose:
+      root = eval_reshape(rop, dtype, /*transpose*/ TRUE);
+      break;
+    case AC_I_merge_bits:
+      root = eval_merge_bits(rop, dtype);
+      break;
+    case AC_I_dshiftl:
+      root = eval_dshift(rop, dtype, /*is_left*/ TRUE);
+      break;
+    case AC_I_dshiftr:
+      root = eval_dshift(rop, dtype, /*is_left*/ FALSE);
+      break;
+    // AOCC end
     case AC_I_reshape:
-      root = eval_reshape(rop, dtype);
+      root = eval_reshape(rop, dtype, /*transpose*/ FALSE); // AOCC
       break;
     case AC_I_selected_int_kind:
       root = eval_selected_int_kind(rop);
@@ -11038,6 +11280,11 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case OP_LOR:
       root->conval = lop->conval | rop->conval;
       break;
+    // AOCC begin
+    case OP_LXOR:
+      root->conval = lop->conval ^ rop->conval;
+      break;
+    // AOCC end
     case OP_LAND:
       root->conval = lop->conval & rop->conval;
       break;

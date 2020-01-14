@@ -1523,3 +1523,4 @@ Starting from 1100, Reserved for OpenMP GPU
 .MS S 1217 "Left hand side of polymorphic assignment must be allocatable - $"
 .MS S 1218 "$ statement may not appear in a BLOCK construct."
 .MS S 1219 "Unimplemented feature: $."
+.MS W 1220 "$ is uninitialized at $"

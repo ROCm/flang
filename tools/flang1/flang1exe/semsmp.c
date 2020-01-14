@@ -4,11 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 9th July 2019
+ * Date of modification 5th September 2019
+ * Date of modification 16th September 2019
+ * Date of modification 20th September 2019
+ * Date of modification 23rd September 2019
+ * Date of modification 07th October 2019
+ * Date of modification 14th October 2019
+ * Date of modification 15th November 2019
+ * Date of modification 30th November 2019
+ * Date of modification 02nd December 2019
+ * Date of modification 05th December 2019
+ *
+ * Added support for !$omp target and !$omp teams blocks
+ * Date of modification 16th October 2019
  *
  */
 
@@ -111,24 +125,31 @@ static LOGICAL is_valid_atomic_update(int, int);
 static int mk_atomic_update_binop(int, int);
 static int mk_atomic_update_intr(int, int);
 static void do_map();
+// AOCC Begin
+static void do_tofrom();
+// AOCC End
 static LOGICAL use_atomic_for_reduction(int);
+
+static LOGICAL is_in_omptarget(int d);
 
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 static char *map_type;
 bool isalways = false;
-static OMP_TARGET_MODE get_omp_combined_mode(BIGINT64 type);
+static int get_omp_combined_mode(BIGINT64 type);
 static void mp_handle_map_clause(SST *, int, char *, int, int, bool);
+// AOCC Begin
+static void mp_handle_motion_clause(SST *, int, int);
+// AOCC End
 static void mp_check_maptype(const char *maptype);
-static LOGICAL is_in_omptarget(int d);
 static LOGICAL is_in_omptarget_data(int d);
 #endif
 #ifdef OMP_OFFLOAD_LLVM
 static void gen_reduction_ompaccel(REDUC *reducp, REDUC_SYM *reduc_symp,
                                    LOGICAL rmme, LOGICAL in_parallel);
-static OMP_TARGET_MODE get_omp_combined_mode(BIGINT64 type);
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-static int target_ast = 0;
+int target_ast = 0;
+int reduction_kernel = 0;
 #endif
 // AOCC End
 #endif
@@ -1658,6 +1679,10 @@ semsmp(int rednum, SST *top)
     (void)leave_dir(DI_TARGETUPDATE, TRUE, 0);
   }
     SST_ASTP(LHS, 0);
+    // AOCC Begin
+    if (flg.amdgcn_target || flg.x86_64_omptarget)
+      do_tofrom();
+    // AOCC End
     break;
   /*
    *	<mp stmt> ::= <target begin> <opt par list> |
@@ -1675,7 +1700,7 @@ semsmp(int rednum, SST *top)
 #ifdef OMP_OFFLOAD_AMD
     target_ast = DI_BTARGET(sem.doif_depth);
 #endif
-  // AOCC End
+    // AOCC End
 #endif
     par_push_scope(TRUE);
     begin_parallel_clause(sem.doif_depth);
@@ -1689,6 +1714,12 @@ semsmp(int rednum, SST *top)
     (void)leave_dir(DI_TARGET, TRUE, 0);
     sem.target--;
     par_pop_scope();
+    // AOCC Begin
+    // Clear target ast
+#ifdef OMP_OFFLOAD_AMD
+    target_ast = 0;
+#endif
+    // AOCC End
     ast = emit_etarget();
     mp_create_escope();
     if (doif) {
@@ -1767,6 +1798,24 @@ semsmp(int rednum, SST *top)
     ast = 0;
     clause_errchk((BT_DISTRIBUTE | BT_PARDO), "OMP DISTRIBUTE PARALLE DO");
     begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO));
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    //
+    //
+    // TODO: This code and all other code involving variable target_ast
+    //       is kind of safe hack to enable tgt_target_teams and improve
+    //       execution time. All source around target_ast has to be rewritten
+    //       using correct data structures, mostly a stack would do. Since
+    //       FLANG1 has little to do with target_mode, this can also be safely
+    //       moved to FLANG2
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO));
+    }
+#endif
+    // AOCC End
     SST_ASTP(LHS, ast);
     break;
   /*
@@ -1785,6 +1834,17 @@ semsmp(int rednum, SST *top)
                   "OMP DISTRIBUTE PARALLE DO SIMD");
     begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
     DI_ISSIMD(sem.doif_depth) = TRUE;
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    }
+#endif
+    // AOCC End
+
     SST_ASTP(LHS, ast);
     break;
   /*
@@ -1943,8 +2003,11 @@ semsmp(int rednum, SST *top)
       sem.collapse = CL_VAL(CL_COLLAPSE);
     }
     sem.expect_simd_do = TRUE;
+    // AOCC Commenting repeated code
+#ifndef OMP_OFFLOAD_AMD
     par_push_scope(TRUE);
     begin_parallel_clause(sem.doif_depth);
+#endif
     apply_nodepchk(gbl.lineno, 1);
     SST_ASTP(LHS, 0);
 
@@ -2059,6 +2122,17 @@ semsmp(int rednum, SST *top)
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO),
                   "OMP TEAMS DISTRIBUTE PARALLEL Do");
     begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO));
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    // If we have seen a target pragma already, change the mode to
+    // mode_target_teams_distribute_parallel_for
+    if (target_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+                                  BT_TARGET | BT_TEAMS |
+                                  BT_DISTRIBUTE | BT_PARDO));
+    }
+#endif
+    // AOCC End
     break;
   /*
    *	<mp stmt> ::= <mp endteamsdistpardo> |
@@ -2096,7 +2170,7 @@ semsmp(int rednum, SST *top)
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
-    // mode_target_teams_distribute_parallel_for
+    // mode_target_teams_distribute_parallel_for_simd
     if (target_ast) {
       A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
                                   BT_TARGET | BT_TEAMS |
@@ -2950,6 +3024,13 @@ semsmp(int rednum, SST *top)
     }
     /* skip past the fake REDUC_SYM item */
     reducp->list = reducp->list->next;
+    //AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (target_ast) {
+      reduction_kernel = 1;
+    }
+#endif
+    // AOCC End
     break;
 
   /* ------------------------------------------------------------------ */
@@ -3213,12 +3294,32 @@ semsmp(int rednum, SST *top)
   /*
    *	<motion clause> ::= TO ( <var ref list> ) |
    */
-  case MOTION_CLAUSE1:
+  // AOCC Begin
+  /*
+   * CHANGED MOTION_CLAUSE1 and MOTION_CLAUSE2
+   * In the grammer we have changed list type from  <var ref list> to
+   * <accel data list>. This is because <var ref list> doesn't populate
+   * ast properly. Changing that behaviour may break something else as
+   * it is used in many  places.
+   *
+   */
+   // AOCC End
+   case MOTION_CLAUSE1:
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    mp_handle_motion_clause(top, CL_TO, 3);
+#endif
+    // AOCC End
     break;
   /*
    *	<motion clause> ::= FROM ( <var ref list> )
    */
   case MOTION_CLAUSE2:
+    // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    mp_handle_motion_clause(top, CL_FROM, 3);
+#endif
+    // AOCC End
     break;
 
   /* ------------------------------------------------------------------ */
@@ -4848,7 +4949,7 @@ semsmp(int rednum, SST *top)
    */
   case ACCEL_DATA1:
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
-    if(is_in_omptarget(sem.doif_depth) || is_in_omptarget_data(sem.doif_depth)) {
+    if(is_in_omptarget(sem.doif_depth) || flg.amdgcn_target || flg.x86_64_omptarget) {
       //todo support array section in the map clause for openmp
       if (SST_IDG(RHS(1)) == S_IDENT || SST_IDG(RHS(1)) == S_DERIVED) {
         sptr = SST_SYMG(RHS(1));
@@ -6629,7 +6730,13 @@ mk_firstprivate(int sptr1, int taskdupstd)
 
     std = 0;
     if (!POINTERG(sptr)) {
-      if (!XBIT(54, 0x1) && ALLOCATTRG(sptr)) {
+        // AOCC
+        // If the construct is target based, copy the
+        // original value of the firstprivate variable
+        // before the BMSCOPE AST node or else the code
+        // will end up in kernel.
+      if ((!XBIT(54, 0x1) && ALLOCATTRG(sptr)) ||
+          (is_in_omptarget(sem.doif_depth))) { // AOCC
         std = sem.scope_stack[sem.scope_level].end_prologue;
         if (std == 0) {
           std = STD_PREV(0);
@@ -7628,6 +7735,37 @@ do_copyprivate()
   }
 }
 
+// AOCC Begin
+static void
+do_tofrom()
+{
+  if (!flg.omptarget)
+    return;
+
+  ITEM *item;
+  int ast;
+  if (CL_PRESENT(CL_TO)) {
+    for (item = (ITEM *)CL_FIRST(CL_TO); item != ITEM_END; item = item->next) {
+      ast = mk_stmt(A_MP_MAP, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+  if (CL_PRESENT(CL_FROM)) {
+    for (item = (ITEM *)CL_FIRST(CL_FROM); item != ITEM_END;
+                        item = item->next) {
+      ast = mk_stmt(A_MP_MAP, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+  ast = mk_stmt(A_MP_EMAP, 0);
+  (void)add_stmt(ast);
+}
+// AOCC End
+
 static void
 do_map()
 {
@@ -8172,6 +8310,9 @@ end_reduction(REDUC *red, int doif)
   int ast_crit, ast_endcrit, ast_red;
   int save_par, save_target, save_teams;
   LOGICAL done = FALSE;
+  // AOCC Begin
+  LOGICAL bredcution_created = FALSE;
+  // AOCC End
   LOGICAL in_parallel = FALSE;
 
   if (red == NULL)
@@ -8215,6 +8356,9 @@ end_reduction(REDUC *red, int doif)
       if (!use_atomic_for_reduction(sem.doif_depth) && !done) {
 #ifdef OMP_OFFLOAD_LLVM
         ast_red = mk_stmt(A_MP_BREDUCTION, 0);
+        // AOCC Begin
+        bredcution_created = TRUE;
+        // AOCC End
         (void) add_stmt(ast_red);
 #endif
         ast_crit = emit_bcs_ecs(A_MP_CRITICAL);
@@ -8241,10 +8385,15 @@ end_reduction(REDUC *red, int doif)
 #ifdef OMP_OFFLOAD_LLVM
     A_ISOMPREDUCTIONP(ast_endcrit, 1);
 #endif
+    // AOCC Begin
+    // Emitting ereduction ilm only bredution is emitted
 #ifdef OMP_OFFLOAD_LLVM
-    ast_red = mk_stmt(A_MP_EREDUCTION, 0);
-    (void)add_stmt(ast_red);
+    if (bredcution_created) {
+      ast_red = mk_stmt(A_MP_EREDUCTION, 0);
+      (void)add_stmt(ast_red);
+    }
 #endif
+    // AOCC End
   }
 }
 
@@ -8630,7 +8779,13 @@ begin_combine_constructs(BIGINT64 construct)
     if (!CL_PRESENT(CL_SCHEDULE)) {
       if (combinedMode == mode_target_teams_distribute_parallel_for_simd ||
           combinedMode == mode_target_teams_distribute_parallel_for)
+        // AOCC
+        // Modification: Commenting this, as it will generate wrong schedule
+        //               type for inner mp loop, causing overlapping iteration
+        //               space.
+#ifndef OMP_OFFLOAD_AMD
         add_clause(CL_SCHEDULE, TRUE);
+#endif
       CL_VAL(CL_SCHEDULE) = DI_SCH_STATIC;
       chunk = 3;
     }
@@ -8654,13 +8809,29 @@ begin_combine_constructs(BIGINT64 construct)
         errwarn(1203);
         combinedMode = mode_target_parallel_for;
       } else if (combinedMode == mode_target_teams_distribute) {
+        // AOCC Begin
+        // Commenting this as generated code is correct
+#ifndef OMP_OFFLOAD_AMD
         error(1202, ERR_Severe, gbl.lineno, "target teams distribute",
               "parallel do");
+#endif
+        // AOCC End
       } else if (combinedMode == mode_target_teams) {
+        // AOCC Begin
+        // Commenting this as generated code is correct
+#ifndef OMP_OFFLOAD_AMD
         error(1202, ERR_Severe, gbl.lineno, "target teams",
              "distribute parallel do");
+#endif
+        // AOCC End
       }
       A_COMBINEDTYPEP(ast, combinedMode);
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      // Store the target ast for future use
+      target_ast = DI_BTARGET(sem.doif_depth);
+#endif
+      // AOCC End
     }
 #endif
     do_enter = TRUE;
@@ -8766,6 +8937,12 @@ end_target()
     A_LOPP(DI_BTARGET(doif), ast);
     A_LOPP(ast, DI_BTARGET(doif));
   }
+  // AOCC Begin
+  // Clear target ast
+#ifdef OMP_OFFLOAD_AMD
+  target_ast = 0;
+#endif
+  // AOCC End
 }
 
 void
@@ -9717,7 +9894,16 @@ findUplevelForSharedVar(int sptr, int stblk)
     }
     return NULL;
   } else {
-    up = llmp_outermost_uplevel(stblk);
+    // AOCC BEGIN
+    // Return the current target related uplevel structure instead of
+    // the outermost one (parallel)  in the nested constructs.
+    if ((SCG(sptr) != SC_PRIVATE) && is_in_omptarget(sem.doif_depth) &&
+         DI_IN_NEST(sem.doif_depth-1,DI_PAR)) {
+      up = llmp_get_uplevel(stblk);
+    } else {
+    // AOCC END
+      up = llmp_outermost_uplevel(stblk);
+    }
     return up;
   }
 }
@@ -9800,9 +9986,9 @@ set_parref_flag(int sptr, int psptr, int stblk)
     return;
   if (STYPEG(sptr) == ST_MEMBER)
     return;
+  if (!flg.omptarget && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
   /* For OpenMP target offload, we put every symbols into the uplevel struct.
    * Because every symbols must be sent to the target device, and are loaded from the uplevel struct.*/
-  if (!flg.omptarget && (SCG(sptr) == SC_CMBLK || SCG(sptr) == SC_STATIC))
     return;
   if (SCG(sptr) == SC_EXTERN && ST_ISVAR(sptr)) /* No global vars in uplevel */
     return;
@@ -9810,8 +9996,10 @@ set_parref_flag(int sptr, int psptr, int stblk)
     if (SCG(sptr) != SC_LOCAL) {
       if (SCG(sptr) == SC_BASED) {
         int sym = MIDNUMG(sptr);
-        if (SCG(sym) != SC_LOCAL)
+        // AOCC Modification : Allowing global variables to be mapped.
+        if (!(flg.omptarget && SCG(sym) == SC_CMBLK) && SCG(sym) != SC_LOCAL) {
           return;
+        }
       }
     }
   }
@@ -10161,6 +10349,42 @@ gen_reduction_ompaccel(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
 #endif /* OMP_OFFLOAD_LLVM */
 
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+// AOCC Bgin
+static void
+mp_handle_motion_clause(SST *top, int clause, int op)
+{
+  ITEM *itemp, *itembeg, *itemend;
+  int type = 0;
+  type |= OMP_TGT_MAPTYPE_TARGET_PARAM;
+
+  if (clause == CL_TO) {
+    type |= OMP_TGT_MAPTYPE_TO;
+  } else if (clause == CL_FROM) {
+    type |= OMP_TGT_MAPTYPE_FROM;
+  } else {
+    assert(0, "Illegal motion cluase", clause, 3);
+  }
+
+  itembeg = SST_BEGG(RHS(op));
+  itemend = SST_ENDG(RHS(op));
+  if (itembeg == ITEM_END)
+    return;
+
+  int it = 0;;
+  for (itemp = itembeg; itemp != ITEM_END; itemp = itemp->next) {
+    it++;
+    itemp->t.cltype = type;
+  }
+
+  add_clause(clause, FALSE);
+  if (CL_FIRST(clause) == NULL)
+    CL_FIRST(clause) = itembeg;
+  else
+    ((ITEM *)CL_LAST(clause))->next = itembeg;
+  CL_LAST(clause) = itemend;
+}
+// AOCC End
+
 static void
 mp_check_maptype(const char *maptype)
 {
@@ -10220,7 +10444,7 @@ mp_handle_map_clause(SST *top, int clause, char *maptype, int op, int construct,
   CL_LAST(clause) = itemend;
 }
 
-static OMP_TARGET_MODE
+static int
 get_omp_combined_mode(BIGINT64 type)
 {
   BIGINT64 combined_type;
@@ -10230,6 +10454,13 @@ get_omp_combined_mode(BIGINT64 type)
   combined_type = BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_PARDO;
   if ((type & combined_type) == combined_type)
     return mode_target_teams_distribute_parallel_for;
+  // AOCC Begin
+  // TODO : Do we need an explicit mode_type for this case?
+  // This is reduction kernel case. We need to emit __tgt_target_teams
+  combined_type = BT_TARGET | BT_DISTRIBUTE | BT_PARDO;
+  if ((type & combined_type) == combined_type)
+    return mode_target_teams_distribute_parallel_for;
+  // AOCC End
   combined_type = BT_TARGET | BT_TEAMS | BT_DISTRIBUTE;
   if ((type & combined_type) == combined_type)
     return mode_target_teams_distribute;
@@ -10264,6 +10495,12 @@ static void
 check_valid_data_sharing(int sptr)
 {
   int count = 0;
+  
+  //AOCC Begin
+  /* Is sptr a constant? */
+  if (PARAMG(sptr))
+    error(155, ERR_Severe, gbl.lineno, SYMNAME(sptr),"is not a variable");
+  //AOCC End
 
   /* In shared list? */
   if (is_in_list(CL_SHARED, sptr))
@@ -10333,6 +10570,7 @@ static LOGICAL is_in_omptarget_data(int d)
 }
 static LOGICAL is_in_omptarget(int d)
 {
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   if(flg.omptarget && (DI_IN_NEST(d, DI_TARGET) ||
       DI_IN_NEST(d, DI_TARGTEAMSDISTPARDO) ||
       DI_IN_NEST(d, DI_TARGPARDO) ||
@@ -10340,6 +10578,7 @@ static LOGICAL is_in_omptarget(int d)
       DI_IN_NEST(d, DI_TARGTEAMSDIST) ||
       DI_IN_NEST(d, DI_TARGETENTERDATA)))
     return TRUE;
+#endif
   return FALSE;
 }
 /**

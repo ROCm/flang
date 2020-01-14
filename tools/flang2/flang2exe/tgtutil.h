@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 23rd September 2019
+ *
+ */
 
 /** \file
  * \brief Various definitions for the libomptarget runtime
@@ -22,6 +29,7 @@ enum {
   TGT_API_BAD,
   TGT_API_REGISTER_LIB,
   TGT_API_UNREGISTER_LIB,
+  TGT_API_REGISTER_REQUIRES, // AOCC
   TGT_API_TARGET,
   TGT_API_TARGET_NOWAIT,
   TGT_API_TARGET_TEAMS,
@@ -58,6 +66,8 @@ struct tgt_api_entry_t {
  */
 int ll_make_tgt_register_lib(void);
 
+int ll_make_tgt_register_requires(void); // AOCC
+
 /**
    \brief Register the file and load cubin file
  */
@@ -81,6 +91,13 @@ int ll_make_tgt_target_teams(SPTR, int64_t, SPTR, int32_t, int32_t);
    \brief Start offload for target teams region
  */
 int ll_make_tgt_target_teams_parallel(SPTR, int64_t, SPTR, int32_t, int32_t, int32_t, int32_t);
+
+// AOCC Begin
+/**
+  \brief Start target update
+  */
+int ll_make_tgt_target_update(int, OMPACCEL_TINFO *);
+// AOCC End
 
 /**
    \brief Start target data begin.

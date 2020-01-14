@@ -5,11 +5,30 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Date of Modification: May 2018
+ *
+ * Support for ivdep directive
+ * Date of Modification: 11th march 2019
+ *
+ * Support for vector and novector directives
+ * Date of Modification: 19th July 2019
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
+ *
+ * Support for volatile in NME
+ * Date of modification 05th September 2019
+ *
+ * Added some SPTR allocation code changes
+ * Date of modification 19th September 2019
  *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 19th July 2019
+ * Date of modification 1st October 2019
  *
+ * Compile time improvement changes
+ * Date of modification 14th November 2019
  */
 
 /**
@@ -47,6 +66,9 @@
 #include "ccffinfo.h"
 #include "main.h"
 #include "symfun.h"
+// AOCC Begin
+#include "direct.h"
+// AOCC End
 
 #ifdef OMP_OFFLOAD_LLVM
 #include "ompaccel.h"
@@ -238,6 +260,10 @@ static int *idxstack = NULL;
 static hashmap_t sincos_map;
 static hashmap_t sincos_imap;
 static LL_MDRef cached_loop_metadata;
+// AOCC Begin
+static LL_MDRef cached_loop_vec_metadata;
+static LL_MDRef access_group_metadata;
+// AOCC End
 
 static bool CG_cpu_compile = false;
 
@@ -962,8 +988,14 @@ cons_novectorize_metadata(void)
   if (cpu_llvm_module->loop_md)
     return cpu_llvm_module->loop_md;
   rv = ll_create_flexible_md_node(cpu_llvm_module);
-  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.enable");
-  lvcomp[1] = ll_get_md_i1(0);
+  // AOCC Begin
+  // replaced
+  //	llvm.loop.vectorize.enable
+  // with
+  // 	llvm.loop.vectorize.width
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.width");
+  lvcomp[1] = ll_get_md_i1(1);
+  // AOCC End
   loopVect = ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
   ll_extend_md_node(cpu_llvm_module, rv, rv);
   ll_extend_md_node(cpu_llvm_module, rv, loopVect);
@@ -1261,14 +1293,54 @@ finish_routine(void)
   }
 }
 
+// AOCC Begin
+/*
+ * when ivdep pragma is specified, "llvm.loop.parallel_accesses" metadata has
+ * to be generated along with "llvm.access.group" for each load/store instructions.
+ */
+INLINE static LL_MDRef
+cons_loop_parallel_accesse_metadata(void)
+{
+  LL_MDRef lvcomp[2];
+
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.parallel_accesses");
+  lvcomp[1] = access_group_metadata;
+  return ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
+} // cons_loop_parallel_accesse_metadata
+
+/*
+ * When vector pragma is specified, only "llvm.loop.vectorize.enable" metadata
+ * has to be generated.
+ */
+static LL_MDRef
+cons_loops_vectorize_metadata(void)
+{
+  if (LL_MDREF_IS_NULL(cached_loop_vec_metadata)) {
+    LL_MDRef vectorize = cons_vectorize_metadata();
+    LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    ll_extend_md_node(cpu_llvm_module, md, md);
+    ll_extend_md_node(cpu_llvm_module, md, vectorize);
+    cached_loop_vec_metadata = md;
+  } // if
+  return cached_loop_vec_metadata;
+} // cons_loops_vectorize_metadata
+// AOCC End
+
 static LL_MDRef
 cons_no_depchk_metadata(void)
 {
   if (LL_MDREF_IS_NULL(cached_loop_metadata)) {
     LL_MDRef vectorize = cons_vectorize_metadata();
     LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    // AOCC Begin
+    // for ivdep pragma, "llvm.loop.parallel_accesses" metadata is generated
+    LL_MDRef lpam = cons_loop_parallel_accesse_metadata();
+    // AOCC End
     ll_extend_md_node(cpu_llvm_module, md, md);
     ll_extend_md_node(cpu_llvm_module, md, vectorize);
+    // AOCC Begin
+    ll_extend_md_node(cpu_llvm_module, md, lpam);
+    // AOCC End
     cached_loop_metadata = md;
   }
   return cached_loop_metadata;
@@ -1312,8 +1384,110 @@ static int get_alloca_addrspace(LL_Module *module) {
     return -1;
   dl++;
   return (*dl) - '0';
-}
+} // get_alloca_addrspace
 #endif
+
+/*
+ * Check if the break instruction is having vector/novector pragma effect.
+ *  "!llvm.loop" metadata will be generated for the break instruction if
+ *  VECTOR/NOVECTOR pragma is specified for a loop.
+ */
+static bool check_for_vector_novector_directive(int break_line_number, int xflag) {
+  int iter;
+  LPPRG *lpprg;
+
+  // Check if any loop pragmas are specified
+  if (direct.lpg.avail > 1) {
+    // Loop thru all the loop pragmas
+    for (iter = 1; iter < direct.lpg.avail; iter++) {
+      lpprg = direct.lpg.stgb + iter;
+      // check if vector/novector pragma is specified
+      // x[183] = 0x4000000   => !dir$ NOVECTOR
+      // x[183] = 0x80000000  => !dir$ VECTOR
+      if ((lpprg->dirset.x[183] & xflag)
+          &&
+          (break_line_number == lpprg->end_line)) {
+        return  true;
+      } // if
+
+      if (break_line_number < lpprg->beg_line) {
+        // break instruction is not having any pragma specified.
+        break;
+      } // if
+    } // for
+  } // if
+
+  return false;
+} // check_for_vector_novector_directive
+
+/*
+ * Fix ivdep loop directive for nested loops
+ *   If a loop with an IVDEP directive is enclosed within another loop with an IVDEP directive,
+ *   the IVDEP directive on the outer loop is ignored.
+ *
+ * Loop thru the loop directives and disable ivdep directive for the outer loop.
+ */
+static void fix_ivdep_directives () {
+  static bool processed = false;
+  int iter;
+  LPPRG *lpprg, *prev_lpprg = NULL;
+
+  if (!processed && (direct.lpg.avail > 1)) {
+    for (iter = 1; iter < direct.lpg.avail; iter++) {
+      lpprg = direct.lpg.stgb + iter;
+      if (!lpprg->dirset.depchk && (lpprg->dirset.x[69] & 0x200000)) {
+        if (prev_lpprg && (lpprg->beg_line <= prev_lpprg->end_line)) {
+          // Both outer loop and inner loop has ivdep directive.
+          // Disable ivdep directive for the outer loop.
+          prev_lpprg->dirset.depchk = 1;
+        } // if
+        prev_lpprg  = lpprg;
+      } // if
+    } // for
+    processed = true;
+  } // if
+} // fix_ivdep_directives
+
+/*
+ *  ivdep directive applies only to the first loop that follows the directive
+ *
+ *  Check if the code block belongs to the outer loop or the nested inner loops
+ *
+ *  Eg:
+ *      !dir$ ivdep
+ *      do ...
+ *        <outer loop code block>  <=  B1
+ *        do ...
+ *          <inner loop code block> <= B2
+ *        end do
+ *        <outer loop code block> <= B3
+ *      end do
+ *
+ * In the above example, ivdep applies only to B1 and B3.
+ * The below function checks for B3.
+ */
+static bool block_belong_to_outer_loop (int iter, int curr_line,
+                                        int outer_loop_end_line) {
+  bool is_outer_loop_block = true;
+  LPPRG *lpprg;
+
+  while (iter < direct.lpg.avail) {
+    lpprg = direct.lpg.stgb + iter;
+    if (curr_line >= lpprg->beg_line &&
+        curr_line < lpprg->end_line) {
+      is_outer_loop_block = false;
+    } // if
+
+    if (outer_loop_end_line < lpprg->beg_line) {
+      // No more pragmas for current code block
+      break;
+    }
+
+    iter++;
+  } // while
+
+  return is_outer_loop_block;
+} // block_belong_to_outer_loop
 // AOCC End
 
 /**
@@ -1334,6 +1508,9 @@ schedule(void)
   bool processHostConcur = true;
   SPTR func_sptr = GBL_CURRFUNC;
   bool first = true;
+  // AOCC Begin
+  bool is_ivdep_directive = false;
+  // AOCC End
   CG_cpu_compile = true;
 
   funcId++;
@@ -1487,6 +1664,17 @@ restartConcur:
   bih = BIH_NEXT(0);
   if ((XBIT(34, 0x200) || gbl.usekmpc) && !processHostConcur)
     bih = gbl.entbih;
+
+  // AOCC Begin
+  // If a loop with an IVDEP directive is enclosed within another loop with an
+  // IVDEP directive, the IVDEP directive on the outer loop is ignored.
+  fix_ivdep_directives();
+
+  // Create a distinct md_node
+  if (!access_group_metadata)
+    access_group_metadata = ll_create_distinct_md_node(cpu_llvm_module, LL_PlainMDNode, NULL, 0);
+  // AOCC End
+
   for (; bih; bih = BIH_NEXT(bih)) {
 
 #if DEBUG
@@ -1538,6 +1726,11 @@ restartConcur:
       merge_next_block = false;
     }
 
+    // AOCC Begin
+    // clear the global flag set from last iteration
+    clear_rw_nodepchk();
+    // AOCC End
+
     if (XBIT(183, 0x10000000)) {
       if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
           (!ignore_simd_block(bih))) {
@@ -1547,6 +1740,74 @@ restartConcur:
         clear_rw_nodepchk();
       }
     }
+
+    // AOCC Begin
+    /** \brief Flang codegen support for !dir$ ivdep
+     *
+     * Following piece of code is added for handling ivdep directive. This
+     * pragma instructs the compiler to ignore assumed vector dependencies.
+     * Flang handles this pragma with a flag depchk in directives structure.
+     * By default this flag is set, indicating that always do dependency checks
+     * for the loop. Whenever Flang1 encounters !dir$ ivdep, it resets the
+     * depchk flag from 1 to 0. This is change is reflected in directive
+     * section of ilm file. Flang2 captures the change/addition in directive
+     * section and reset's the corresponding depchk flag. With the following
+     * code we capture the reset of depcheck flag and add nodepchke metadata
+     * to all load/store instructions in the scope of the pragma. This metadata
+     * will be captured by llvm::Loop::isAnnotatedParallel().
+     *
+     * The approach
+     * STEP 1 : Check if there are any loop pragmas.
+     * STEP 2 : Iterate through avaibale pragmas.
+     * STEP 3 : Check if depchk flag for current pragma is reset.
+     *          By default this flag is set for all pragmas.
+     * STEP 4 : If the current pragma scope is within current range, the line number
+     *          will match (ivdep directive line number and code block beg line number).
+     * STEP 5 : If line number matches, enable global flag to add nodepcheck metadata
+     *          and break the loop.
+     * STEP 6 : If line number didn't match and the code block is in the current range,
+     *          then the code block belongs to inner loop or after the inner loop.
+     * STEP 7 : Check if the code belongs to outer loop with ivdep directive.
+     * STEP 8 : enable global flag to add nodepcheck metadata and break the loop.
+     *
+     * 0x200000   => xflag[69]  value for IVDEP
+     */
+     if (direct.lpg.avail > 1) {
+      int iter;
+      int curr_line = BIH_LINENO(bih);
+      LPPRG *lpprg;
+      is_ivdep_directive = false;
+
+      for (iter = 1; iter < direct.lpg.avail; iter++) {
+        lpprg = direct.lpg.stgb + iter;
+
+        // Check for ivdep directive and mark nodepchk
+        if (!lpprg->dirset.depchk && (lpprg->dirset.x[69] & 0x200000)) {
+          if (curr_line == lpprg->beg_line) {
+            is_ivdep_directive = true;
+            mark_rw_nodepchk(bih);
+            // Once we found right pragma, stop
+            break;
+          } else if ((curr_line > lpprg->beg_line) &&
+                     (curr_line <= lpprg->end_line)) {
+            // Nested loop. check for next loop pragma
+            // check if the code block belongs to nested loops.
+            // if no, then the code block belongs to outer loop, mark nodepchk
+            if (block_belong_to_outer_loop(++iter, curr_line, lpprg->end_line)) {
+              is_ivdep_directive = true;
+              mark_rw_nodepchk(bih);
+            } // if
+
+            // Pragma for code block is processed. stop
+            break;
+          } else if (curr_line < lpprg->beg_line) {
+            // no pragmas for current code block. stop
+            break;
+          } // if
+        } // if
+      } // for
+    } // if
+    // AOCC End
 
     for (ilt = BIH_ILTFIRST(bih); ilt; ilt = ILT_NEXT(ilt)) {
       if (BIH_EN(bih) && ilt == BIH_ILTFIRST(bih)) {
@@ -1591,21 +1852,43 @@ restartConcur:
             next_bih_label = t_next_bih_label;
         }
         make_stmt(STMT_BR, ilix, false, next_bih_label, ilt);
-        if (XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
-            BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)) &&
-            (!ignore_simd_block(bih))) {
-          LL_MDRef loop_md = cons_no_depchk_metadata();
+
+        // AOCC Begin
+        // Added support for vector, novector and ivdep pragma to generate the
+        // required metadata
+        //   0x4000000  => xflag[183] value for NOVECTOR
+        //   0x80000000 => xflag[183] value for VECTOR
+        if (ignore_simd_block(bih)
+            ||
+            (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x4000000))) {
+          LL_MDRef loop_md = cons_novectorize_metadata();
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= SIMD_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+
+        } else if ((XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
+                    BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
+                   ||
+                   (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
+                   ||
+                   (is_ivdep_directive)) {
+          LL_MDRef loop_md;
+          // for ivdep pragma, rw_nodepcheck will be enabled.
+          // Need to generate "llvm.loop.parallel_accesses" metadata as well.
+          if (rw_nodepcheck) {
+            loop_md = cons_no_depchk_metadata();
+          } else {
+            loop_md = cons_loops_vectorize_metadata();
+          }
           INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
           if (i) {
             i->flags |= SIMD_BACKEDGE_FLAG;
             i->misc_metadata = loop_md;
           }
         }
-        if (ignore_simd_block(bih)) {
-          LL_MDRef loop_md = cons_novectorize_metadata();
-          llvm_info.last_instr->flags |= SIMD_BACKEDGE_FLAG;
-          llvm_info.last_instr->misc_metadata = loop_md;
-        }
+        // AOCC End
       } else if ((ILT_ST(ilt) || ILT_DELETE(ilt)) &&
                  (IL_TYPE(opc) == ILTY_STORE)) {
         /* store */
@@ -1849,7 +2132,6 @@ restartConcur:
   }
   gcTempMap();
   CG_cpu_compile = false;
-
 } /* schedule */
 
 INLINE static bool
@@ -2685,8 +2967,12 @@ write_no_depcheck_metadata(LL_Module *module, INSTR_LIST *insn)
     char buf[64];
     int n;
     DEBUG_ASSERT(insn->misc_metadata, "missing metadata");
-    n = snprintf(buf, 64, ", !llvm.mem.parallel_loop_access !%u",
-                 LL_MDREF_value(insn->misc_metadata));
+    // AOCC Begin
+    // Replaced "llvm.mem.parallel_loop_access" with "llvm.access.group"
+    // Refer https://reviews.llvm.org/D52116 for more details.
+    n = snprintf(buf, 64, ", !llvm.access.group !%u",
+                 LL_MDREF_value(access_group_metadata));
+    // AOCC End
     DEBUG_ASSERT(n < 64, "buffer overrun");
     print_token(buf);
   }
@@ -4042,7 +4328,10 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
         op1 = convert_int_size(ilix, op1, store_op->ll_type->sub_types[0]);
       }
 
-      if (nme == NME_VOL)
+      // AOCC Begin
+      // Added NME_VOLATILE condition
+      if (nme == NME_VOL || NME_VOLATILE(nme))
+      // AOCC End
         store_flags |= VOLATILE_FLAG;
       if (IL_HAS_FENCE(ILI_OPC(ilix)))
         store_flags |= ll_instr_flags_for_memory_order_and_scope(ilix);
@@ -4636,7 +4925,13 @@ gen_const_expr(int ilix, LL_Type *expected_type)
              expected_type->data_type, ERR_Fatal);
       operand->ll_type = expected_type;
     } else {
-      operand->ll_type = make_lltype_from_dtype(DT_INT);
+      // AOCC Begin
+      // operand->ll_type = make_lltype_from_dtype(DT_INT);
+      if (expected_type && ll_type_int_bits(expected_type))
+        operand->ll_type = make_lltype_from_dtype(DT_INT);
+      else
+        operand->ll_type = make_lltype_from_dtype(DT_INT8);
+      // AOCC End
       operand->val.sptr = sptr;
     }
     break;
@@ -6090,6 +6385,14 @@ make_bitcast(OPERAND *cast_op, LL_Type *rslt_type)
     instr = llvm_info.last_instr;
     while (instr) {
       switch (instr->i_name) {
+      // AOCC begin
+      // Restrict bitcast propagation till the CALL instruction
+      case I_SW:
+      case I_INVOKE:
+      case I_CALL:
+        instr = NULL;
+        break;
+      // AOCC end
       case I_BR:
       case I_INDBR:
       case I_NONE:
@@ -6392,6 +6695,7 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
   if (ld_nme == NME_VOL) /* don't optimize a VOLATILE load */
     return NULL;
 
+
   /* If there is a deletable store to 'ld_nme', 'del_store_li', set
    * its 'deletable' flag to false.  We do this because 'ld_ili'
    * loads from that address, so we mustn't delete the preceding
@@ -6418,6 +6722,17 @@ find_load_cse(int ilix, OPERAND *load_op, LL_Type *llt)
       last_instr = (instr->i_name != I_NONE) ? instr : instr->prev;
       break;
     }
+    //AOCC Begin
+    //check the exit condition similar to the loop below
+    //this is expected to reduce compilation time
+    if ((instr->i_name == I_INVOKE) || (instr->i_name == I_CALL)) {
+      if (!(instr->flags & FAST_CALL)) break;
+    }
+    if ((instr->i_name == I_NONE) || (instr->i_name == I_BR) ||
+        (instr->i_name == I_INDBR)) {
+      if (!ENABLE_ENHANCED_CSE_OPT) break;
+    }
+    //AOCC End
   }
 
   for (instr = llvm_info.last_instr; instr != last_instr; instr = instr->prev) {
@@ -11746,11 +12061,6 @@ gen_sptr(SPTR sptr)
 #ifdef OMP_OFFLOAD_LLVM
 #endif
   DBGTRACEOUT1(" returns operand %p", sptr_operand)
-  // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-  set_llvm_sptr_name(sptr_operand);
-#endif
-  // AOCC End
   return sptr_operand;
 } /* gen_sptr */
 
@@ -12933,6 +13243,16 @@ process_formal_arguments(LL_ABI_Info *abi)
 static void
 print_arg_attributes(LL_ABI_ArgInfo *arg)
 {
+
+  // AOCC:Functions arguments are by default assumed to be not aliased
+  // with each other. As per the fortran 2003 standard specification
+  // document (NOTE 12.29 and NOTE 12.30 version: J3/04-007 May 10, 2004 11:07),
+  // the values in the overlapping region of arguments is unpredictable.
+  // Use option -func-args_alias to disable the same.
+  if (!flg.func_args_alias && arg->type->data_type == LL_PTR) {
+    print_token(" noalias");
+  }
+
   switch (arg->kind) {
   case LL_ARG_DIRECT:
   case LL_ARG_COERCE:
@@ -13095,6 +13415,82 @@ INLINE void static add_property_struct(char *func_name, int nreductions,
 }
 #endif
 
+// AOCC begin
+#ifdef OMP_OFFLOAD_LLVM
+/**
+ * \brief emits the tgt-offload-entry structure globals in the device IR for x86
+ * offloading for the function \p func_sptr.
+ *
+ * These global structs will go to the .omp_offloading.entries data section
+ * which will be fetched by x86's RTL in libomptarget. These are not meant to be
+ * referenced in anywhere else in the IR, hence we're hard-coding them here.
+ *
+ */
+static void
+emit_x86_device_offload_entry(SPTR func_sptr)
+{
+  bool debug_me = false;
+
+  assert(get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget,
+      "This function should only be called for x86 offloading and only "
+      "during it's device IR emission", func_sptr, ERR_Fatal);
+
+  static bool mp_defined = false;
+  // Even though we emit calls to _mp_*cs_nest_red APIs for reduction regions in
+  // the device IR, flang, misses out declaring them. We hard code this here
+  // regardless whether we use these APIs or not.
+  if (!mp_defined) {
+    fprintf(get_llasm_output_file(), "declare signext i32 @_mp_ecs_nest_red(...)\ndeclare signext i32 @_mp_bcs_nest_red(...)\n");
+    mp_defined = true;
+  }
+
+  if (!ompaccel_x86_is_entry_func(func_sptr))
+    return;
+
+  char *omp_entry_var_name, *omp_entry_sym_name;
+  size_t name_sz = 100 + strlen(SYMNAME(func_sptr));
+  FILE *ll_file = get_llasm_output_file();
+  static bool offload_structty_defined = false;
+
+  NEW(omp_entry_var_name, char, name_sz);
+  NEW(omp_entry_sym_name, char, name_sz);
+
+  strcpy(omp_entry_sym_name, SYMNAME(func_sptr));
+
+  if (debug_me) {
+    printf("[ompaccel-x86]: generating entry for %s\n", omp_entry_sym_name);
+  }
+  strcpy(omp_entry_var_name, ".openmp.offload.entry.");
+  strcat(omp_entry_var_name, omp_entry_sym_name);
+
+  LL_Type *kernel_ty = make_lltype_from_sptr(func_sptr);
+
+  if (!offload_structty_defined) {
+    fprintf(ll_file, "%%struct.__tgt_offload_entry = type { i8*, i8*, i64, i32, i32 }\n");
+    offload_structty_defined = true;
+  }
+
+  fprintf(ll_file, "@.omp_offloading.entry_name_%s =  internal unnamed_addr constant [%d x i8] c\"%s\\00\"\n",
+      omp_entry_sym_name,
+      strlen(omp_entry_sym_name) + 1,
+      omp_entry_sym_name);
+
+  fprintf(ll_file, "@%s = ", omp_entry_var_name);
+  fprintf(ll_file, "weak constant %%struct.__tgt_offload_entry { ");
+  if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
+    fprintf(ll_file, "i8* bitcast (%s @%s to i8*), ", kernel_ty->str, omp_entry_sym_name);
+  else
+    fprintf(ll_file, "i8* bitcast (%s @%s_ to i8*), ", kernel_ty->str, omp_entry_sym_name);
+  fprintf(ll_file, "i8* getelementptr inbounds ([%d x i8], [%d x i8]* @.omp_offloading.entry_name_%s, i32 0, i32 0), ",
+      strlen(omp_entry_sym_name) + 1,
+      strlen(omp_entry_sym_name) + 1,
+      omp_entry_sym_name);
+  fprintf(ll_file, "i64 0, i32 0, i32 0 }, ");
+  fprintf(ll_file, "section \"omp_offloading_entries\", align 1\n");
+}
+#endif
+// AOCC end
+
 /**
    \brief write out the header of the function definition
 
@@ -13107,6 +13503,11 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   const char *linkage = NULL;
   int reductionsize = 0;
 #ifdef OMP_OFFLOAD_LLVM
+  // AOCC begin
+  if (get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget) {
+    emit_x86_device_offload_entry(func_sptr);
+  }
+  // AOCC end
   if (OMPACCFUNCKERNELG(func_sptr)) {
     OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(func_sptr);
     if (tinfo->n_reduction_symbols == 0) {
@@ -13134,11 +13535,20 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
 #ifdef OMP_OFFLOAD_AMD
     if (flg.amdgcn_target)
       linkage = " amdgpu_kernel";
+    else if (flg.x86_64_omptarget)
+      linkage = " ";
     else
 #endif
     // AOCC End
       linkage = " ptx_kernel";
   }
+
+  // AOCC Begin
+  if (!linkage && CONSTRUCTORG(func_sptr) &&
+      (flg.amdgcn_target || flg.x86_64_omptarget)) {
+    linkage = " linkonce";
+  }
+  // AOCC End
 #endif
   if (linkage)
     print_token(linkage);
@@ -13246,6 +13656,16 @@ static void
 update_llvm_sym_arrays(void)
 {
   const int new_size = stb.stg_avail + MEM_EXTRA;
+  // AOCC Begin
+  // Adding back the removed code.
+  // This was removed in
+  //    commit fdcf2bc30393c4b9ff55fa78516088fc836bb3bd
+  //    Merge of PR #790 from PGI
+  int old_last_sym_avail = llvm_info.last_sym_avail; // NEEDB assigns
+  NEEDB(stb.stg_avail, sptrinfo.array.stg_base, char *, llvm_info.last_sym_avail, new_size);
+  NEEDB(stb.stg_avail, sptrinfo.type_array.stg_base, LL_Type *, old_last_sym_avail,
+        new_size);
+  // AOCC End
   if ((flg.debug || XBIT(120, 0x1000)) && cpu_llvm_module) {
     lldbg_update_arrays(cpu_llvm_module->debug_info, llvm_info.last_dtype_avail,
                         stb.dt.stg_avail + MEM_EXTRA);
@@ -13293,6 +13713,19 @@ cg_llvm_init(void)
   /* last_sym_avail is used for all the arrays below */
   llvm_info.last_sym_avail = stb.stg_avail + MEM_EXTRA;
 
+  // AOCC Begin
+  NEW(sptrinfo.array.stg_base, char *, stb.stg_avail + MEM_EXTRA);
+  BZERO(sptrinfo.array.stg_base, char *, stb.stg_avail + MEM_EXTRA);
+  /* set up the type array shadowing the symbol table */
+  NEW(sptrinfo.type_array.stg_base, LL_Type *, stb.stg_avail + MEM_EXTRA);
+  BZERO(sptrinfo.type_array.stg_base, LL_Type *, stb.stg_avail + MEM_EXTRA);
+
+  // Using above allocation method instead of below allocation method.
+  // As below allocation seems to fail with GPU codegen.
+  // This was added after
+  //    commit fdcf2bc30393c4b9ff55fa78516088fc836bb3bd
+  //    Merge of PR #790 from PGI
+#if 0
   if (sptrinfo.array.stg_base) {
     STG_CLEAR_ALL(sptrinfo.array);
     STG_CLEAR_ALL(sptrinfo.type_array);
@@ -13301,6 +13734,8 @@ cg_llvm_init(void)
     /* set up the type array shadowing the symbol table */
     STG_ALLOC_SIDECAR(stb, sptrinfo.type_array);
   }
+#endif
+  // AOCC End
 
   Globals = NULL;
   recorded_Globals = NULL;
@@ -13608,20 +14043,9 @@ llvm_write_ctor_dtor_list(init_list_t *list, const char *global_name)
 {
   struct init_node *node;
   char int_str_buffer[20];
-  char * i8type;
-  char * i8typewithnull;
 
   if (list->size == 0)
     return;
-
-/* starting with llvm 9, need 3 arg for some type stuff, i8* null is sufficient */
-  if (get_llvm_version() >= LL_Version_9_0) {
-    i8type = ", i8*";
-    i8typewithnull = ", i8* null";
-  } else {
-    i8type = "";
-    i8typewithnull = "";
-  }
 
   print_token("@");
   print_token(global_name);
