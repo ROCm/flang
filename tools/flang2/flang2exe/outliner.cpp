@@ -1128,7 +1128,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
           } else if (opc == IM_BCS) {
             ompaccel_symreplacer(false);
           // AOCC Begin
-          } else if (opc == IM_ECS) {
+          } else if (opc == IM_ECS || opc == IM_MP_NUMTEAMS) {
             ompaccel_symreplacer(true);
           // AOCC End
           } else if (ILM_OPC(ilmpx) == IM_ELEMENT && gbl.ompaccel_intarget ) {
