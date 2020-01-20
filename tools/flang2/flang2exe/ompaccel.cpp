@@ -2392,6 +2392,11 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   case KMP_DISTRIBUTE_STATIC_CHUNKED:
   case KMP_DISTRIBUTE_STATIC:
     // AOCC begin
+    // Force static scheduling if this is a target teams-distribute without a
+    // parallel do.
+    if (ompaccel_tinfo_current_target_mode() == mode_target_teams_distribute) {
+      loop_args.sched = (kmpc_sched_e)MP_SCH_STATIC;
+    }
     if (flg.x86_64_omptarget) {
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end
