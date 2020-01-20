@@ -2652,7 +2652,7 @@ addarth(ILI *ilip)
         return ad1altili(opc, op1, ilix);
       }
 #endif
-      (void)mk_prototype("llvm.fabs.f64", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      (void)mk_prototype("llvm.fabs.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.fabs.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
     //fmin and fminf
