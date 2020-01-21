@@ -20,6 +20,11 @@
  *
  * Lowring llvm.exp.f64 to llvm.exp.f32 for AMDGPU
  * Date of modification 15th November 2019
+ *
+ * Lowring llvm.log.f64 to llvm.log.f32 for AMDGPU
+ * Lowring llvm.log10.f64 to llvm.log10.f32 for AMDGPU
+ * Lowring llvm.pow.f64 to llvm.pow.f32 for AMDGPU
+ * Date of modification 21st January 2020
  */
 
 /**
@@ -2557,14 +2562,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.floor.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DFLOOR:
-#ifdef OMP_OFFLOAD_LLVM
-      // AMDGPUIselLowering only handles floor.f32
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.floor.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.floor.f32", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("llvm.floor.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.floor.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2574,14 +2571,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSQRT:
-#ifdef OMP_OFFLOAD_LLVM
-      // AMDGPUIselLowering only handles sqrt.f32
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.sqrt.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("llvm.sqrt.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sqrt.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2644,14 +2633,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.fabs.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DABS:
-#ifdef OMP_OFFLOAD_LLVM
-      // AMDGPUIselLowering only handles fabs.f32
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.fabs.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.fabs.f32", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("llvm.fabs.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.fabs.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2661,14 +2642,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.minnum.f32", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
     case IL_DMIN:
-#ifdef OMP_OFFLOAD_LLVM
-      // AMDGPUIselLowering only handles minnum.f32
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-         (void)mk_prototype("llvm.minnum.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-         ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.minnum.f32", 2, op1, op2);
-         return ad2altili(opc, op1, op2, ilix);
-      }
-#endif
       (void)mk_prototype("llvm.minnum.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.minnum.f64", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
@@ -2679,14 +2652,6 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.maxnum.f32", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
     case IL_DMAX:
-#ifdef OMP_OFFLOAD_LLVM
-      // AMDGPUIselLowering only handles maxnum.f32
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.maxnum.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-        ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.maxnum.f32", 2, op1, op2);
-        return ad2altili(opc, op1, op2, ilix);
-      }
-#endif
       (void)mk_prototype("llvm.maxnum.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.maxnum.f64", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
