@@ -82,6 +82,7 @@ struct _OMPACCEL_TARGET{
   OMPACCEL_RED_SYM *reduction_symbols;    /*  Reduction symbols along with the reduction operator */
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
   char *func_name;                        /*  Function name */  // AOCC
+  SPTR num_teams;                         /*  Number of teams */ // AOCC
 };
 
 static bool isOmpaccelRegistered = false;
@@ -528,5 +529,9 @@ void ompaccel_create_amd_reduction_wrappers();
   \brief Update maptype for given symbol
   */
 void ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type);
+/**
+  \brief Update set number of teams sptr to current tinfo
+  */
+void ompaccel_set_numteams_sptr(SPTR sptr);
 // AOCC End
 #endif

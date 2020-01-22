@@ -3650,6 +3650,12 @@ stc Combined costruct mode
 lnk link to num_teams clause if exists
 lnk link to thread_limit clause if exists
 lnk link to num_threads clause if exists
+.\" AOCC Begin
+.AT spec trm
+.IL MP_NUMTEAMS SMP sym
+Number of teams symbol.
+sym Number of teams
+.\" AOCC End
 .AT spec trm
 .IL MP_TARGETLOOPTRIPCOUNT SMP sym
 loop trip count for target region

@@ -22,6 +22,7 @@
  * Date of modification 26th November  2019
  * Date of modification 28th November  2019
  * Date of modification 10th December  2019
+ * Date of modification 20th January   2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -830,6 +831,7 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->n_quiet_symbols = 0;
   NEW(info->reduction_symbols, OMPACCEL_RED_SYM, tinfo_size_reductions);
   info->n_reduction_symbols = 0;
+  info->num_teams = SPTR_NULL; // AOCC
 
   /* add ot to array */
   NEED(num_tinfos + 1, tinfos, OMPACCEL_TINFO *, tinfo_size,
@@ -3156,6 +3158,11 @@ is_nvvm_sreg_function(SPTR func_sptr)
   for (int i=0; i<sizeof(NVVM_SREG); i++)
      if (!strcmp(NVVM_SREG[i], fname)) return true;
   return false;
+}
+
+void
+ompaccel_set_numteams_sptr(SPTR num_teams) {
+  current_tinfo->num_teams = num_teams;
 }
 // AOCC End
 #endif
