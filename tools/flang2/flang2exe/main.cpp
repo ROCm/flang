@@ -800,6 +800,10 @@ init(int argc, char *argv[])
   else if (omptp && strcmp(omptp, "x86_64-pc-linux-gnu") == 0)
     flg.x86_64_omptarget = true;
 #endif
+  // Force -Mx,232,0x40 for amdgcn offloading
+  if (flg.amdgcn_target) {
+    flg.x[232] = 0x40;
+  }
   // AOCC End
 
 #endif
