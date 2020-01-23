@@ -14,7 +14,10 @@
  * Changes to support AMD GPU Offloading
  * Added code to avoid allocations for implied do inside target region
  * Date of Modification: 24th October 2019
- * Date of Modification: 5h November 2019
+ * Date of Modification: 5th November 2019
+ *
+ * Added code to support reshape with implied dos inside target region
+ * Date of Modification: 23rd January 2020
  *
  */
 
@@ -1448,6 +1451,15 @@ typedef struct {
                                 * the body of the implied do
                                 */
    } acl_ido;
+
+  struct {
+    bool is_source_ido;         /* true if source is an implied do */
+    bool is_shape_ido_const;    /* true if shape is an implied do with
+                                 * a list of constants */
+    int num_dims;               /* stores the number of dimensions for
+                                 *  reshaped array*/
+    int const_shape_asts[3];    /* stores the asts of shape constants*/
+  } reshape;
   //AOCC End
 } SEM;
 

@@ -47,6 +47,10 @@
  *
  * Complex datatype support for acosh , asinh , atanh
  * Modified on 08 January 2020
+ *
+ * Added code to support reshape with implied dos inside target region
+ * Date of Modification: 23rd January 2020
+ *
  */
 
 /** \file
@@ -7611,6 +7615,11 @@ ref_pd(SST *stktop, ITEM *list)
     goto expr_val;
 
   case PD_reshape:
+    //AOCC Begin
+    //reset the vaiables used for expanding reshape
+    sem.reshape.is_shape_ido_const = false;
+    sem.reshape.is_source_ido = false;
+    //AOCC End
     if (count < 2 || count > 4) {
       E74_CNT(pdsym, count, 2, 4);
       goto call_e74_cnt;
@@ -7637,6 +7646,23 @@ ref_pd(SST *stktop, ITEM *list)
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
       }
+      //AOCC Begin
+      //if reshape specifies reshaping to a 2D or a 3D array,
+      //save the required information for expanding reshape.
+      if(count == 2 || count == 3) {
+        sem.reshape.is_shape_ido_const = true;
+        sem.reshape.num_dims = count;
+        int i = 0;
+        ACL *cur_aclp = shape_acl->subc;
+        SST *stkp;
+        int ast;
+        for(; cur_aclp != NULL; cur_aclp = cur_aclp->next) {
+          stkp = cur_aclp->u1.stkp;
+          ast = SST_ASTG(stkp);
+          sem.reshape.const_shape_asts[i++] = ast;
+        }
+      }
+      //AOCC End
     } else
       shape_acl = NULL;
 
@@ -7653,6 +7679,14 @@ ref_pd(SST *stktop, ITEM *list)
         ALLOCDESCP(allo_sptr, TRUE);
       }
     }
+    //AOCC Begin
+    //mark if source is an implied do.
+    if (SST_IDG(stkp) == S_ACONST && SST_ACLG(stkp) != 0) {
+      ACL *aclp;
+      aclp = SST_ACLG(stkp);
+      sem.reshape.is_source_ido = true;
+    }
+    //AOCC End
     argt_count = 4;
 
     stkp = ARG_STK(1); /* shape */
