@@ -8,10 +8,8 @@
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
- * Changes to support,
- * [CPUPC-2279]:F2008: Raise error for non integer 
- * and non character stop codes
  * Last modified: Nov 12, 2019
+ * Raise error for non integer nd non character stop codes
  *
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 14th October 2019
@@ -1606,10 +1604,8 @@ semant3(int rednum, SST *top)
     ast2 = SST_ASTG(RHS(2));
 
     // AOCC Begin
-    /* 
-     * [CPUPC-2279]:F2008:Error not thrown for other 
-     * than integer/character type STOP CODE 
-    */
+    // throw error for types other than integer/character type STOP CODE
+    //
     if (DTY(A_DTYPEG(ast1)) == TY_INT ||
             DTY(A_DTYPEG(ast1)) == TY_SINT ||
             DTY(A_DTYPEG(ast1)) == TY_INT8 ||

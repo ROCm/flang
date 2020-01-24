@@ -3,7 +3,6 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
- * [CPUPC-2386]
  * Last modified: Nov 12, 2019
  *
  */
