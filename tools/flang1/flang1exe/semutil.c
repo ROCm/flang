@@ -19,6 +19,10 @@
   * Changes to emit proper error message when pointer is associated with 
   * a constant
   * Date of Modification: 17th December 2019
+  *
+  * Added code to support reshape with implied dos inside target region
+  * Date of Modification: 23rd January 2020
+  *
   */
 
 
@@ -78,6 +82,7 @@ static int inline_contig_check(int src, SPTR src_sptr, SPTR sdsc, int std);
 static bool is_selector(SPTR sptr);
 //AOCC Begin
 static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
+static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
 //AOCC End
 
 
@@ -3398,6 +3403,14 @@ assign(SST *newtop, SST *stktop)
   check_derived_type_array_section(SST_ASTG(newtop));
 
   //AOCC Begin
+  //if it is a direct assignment of an instrinsic call: reshape,
+  //try expanding reshape.
+  if(A_TYPEG(SST_ASTG(stktop)) == A_INTR) {
+    if(A_OPTYPEG(SST_ASTG(stktop)) == I_RESHAPE) {
+        if(expand_reshape(stktop, newtop))
+	 return 0;
+    }
+  }
   if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
     replace_acl_temp_with_lhs(stktop, newtop);
     return 0;
@@ -3479,11 +3492,180 @@ assign(SST *newtop, SST *stktop)
 }
 
 //AOCC Begin
+/*expands reshape based on the following conditions:
+ * - if reshape has only two arguments : source and shape
+ * - if source is an implied do
+ * - if shape is an implied do and specifies a 2D/3D array
+ *and returns
+ * - 1, if expanded
+ * - 0, if not expanded.
+ * example
+ *  arr(:,:,:) = reshape(source,/(4,3,2/))
+ *  will be expanded to
+ *  do i=1,4
+ *    do j=1,3
+ *      do k=1,2
+ *        arr(i,j,k) = source(i+(j-1)*4+(k-1)*(3*4))
+ *      end do
+ *    end do
+ *  end do
+ */
+static bool expand_reshape(SST *sst_rhs, SST *sst_lhs) {
+
+  int args;
+  int dims;
+  int source_ast;
+  int shape_ast;
+  int index1, index2, index3;
+  int expr1, expr2, expr3, expr4, expr5, expr6;
+  int source_index;
+  ADSC * ad_source;
+  int dtype_source;
+  int ast;
+  int lhs_ast;
+  int  lb_source;
+  DOINFO *doinfo1;
+  DOINFO *doinfo2;
+  DOINFO *doinfo3;
+  int cnt;
+  ACL *aclp;
+  int dest1, dest2, dest3;
+  int src, dest;
+  int doif1, doif2, doif3;
+  int expr;
+
+  args = A_ARGSG(SST_ASTG(sst_rhs));
+
+  //check whether reshape has only two arguments
+  //pad and order must not be present.
+  if(ARGT_ARG(args, 2) || ARGT_ARG(args, 3))
+    return false;
+
+  //check whether source and shape are implied dos
+  if(!sem.reshape.is_source_ido || !sem.reshape.is_shape_ido_const)
+    return false;
+
+  //check whether shape specifies a 2D or 3Darray
+  cnt = sem.reshape.num_dims;
+  if(cnt != 2 && cnt != 3)
+    return false;
+
+  dims = sem.reshape.num_dims;
+  source_ast = ARGT_ARG(args,0);
+  shape_ast = ARGT_ARG(args,1);
+
+  //emit code to expand 2d-reshape.
+  //create variables for indices of do loops
+  index1 = get_temp(DT_INT);
+  index2 = get_temp(DT_INT);
+  index3 = get_temp(DT_INT);
+  //create variables for expressions for indexing
+  expr1 = get_temp(DT_INT);
+  expr2 = get_temp(DT_INT);
+  expr3 = get_temp(DT_INT);
+  expr4 = get_temp(DT_INT);
+  expr5 = get_temp(DT_INT);
+  expr6 = get_temp(DT_INT);
+  //create variable for indexing the source array
+  source_index = get_temp(DT_INT);
+
+  //create new asts
+  mk_id(index1);
+  mk_id(index2);
+  mk_id(index3);
+
+  //create the first do loop header
+  doinfo1 = get_doinfo(1);
+  doinfo1->init_expr = astb.i1;
+  dest1 = sem.reshape.const_shape_asts[0];
+  doinfo1->limit_expr = dest1;
+  doinfo1->step_expr = astb.i1;
+  doinfo1->index_var = index1;
+  doif1 = 1;
+  NEED_DOIF(doif1, DI_DO);
+  ast = do_begin(doinfo1);
+  (void)add_stmt(ast);
+
+  //create the second do loop header
+  doinfo2 = get_doinfo(1);
+  doinfo2->init_expr = astb.i1;
+  dest2 = sem.reshape.const_shape_asts[1];
+  doif2 = 2;
+  doinfo2->limit_expr = dest2;
+  doinfo2->step_expr = astb.i1;
+  doinfo2->index_var = index2;
+  ast = do_begin(doinfo2);
+  (void)add_stmt(ast);
+  NEED_DOIF(doif2, DI_DO);
+
+  if(cnt == 3) {
+   //create the third do loop header
+   doinfo3 = get_doinfo(1);
+   doinfo3->init_expr = astb.i1;
+   dest3 = sem.reshape.const_shape_asts[2];
+   doif3 = 3;
+   doinfo3->limit_expr = dest3;
+   doinfo3->step_expr = astb.i1;
+   doinfo3->index_var = index3;
+   ast = do_begin(doinfo3);
+   (void)add_stmt(ast);
+   NEED_DOIF(doif3, DI_DO);
+  }
+
+  //create the do loop body
+  //source_index = (index2-1)*shape(1)+index1
+  //lhs(index1, index2) = source(index)
+  expr = mk_binop(OP_SUB, mk_id(index2), astb.i1, DT_INT);
+  ast = mk_assn_stmt(mk_id(expr1), expr,DT_INT);
+  (void)add_stmt(ast);
+  expr = mk_binop(OP_MUL, mk_id(expr1), dest1, DT_INT);
+  ast = mk_assn_stmt(mk_id(expr2), expr,DT_INT);
+  (void)add_stmt(ast);
+  expr = mk_binop(OP_ADD, mk_id(expr2), mk_id(index1), DT_INT);
+  //if it is a reshape to 3D array, add additional expressions
+  if(cnt == 3) {
+    ast = mk_assn_stmt(mk_id(expr3), expr,DT_INT);
+    (void)add_stmt(ast);
+    expr = mk_binop(OP_SUB, mk_id(index3), astb.i1, DT_INT);
+    ast = mk_assn_stmt(mk_id(expr4), expr,DT_INT);
+    (void)add_stmt(ast);
+    expr = mk_binop(OP_MUL, mk_id(expr4), dest2, DT_INT);
+    ast = mk_assn_stmt(mk_id(expr5), expr,DT_INT);
+    (void)add_stmt(ast);
+    expr = mk_binop(OP_MUL, mk_id(expr5), dest1, DT_INT);
+    ast = mk_assn_stmt(mk_id(expr6), expr,DT_INT);
+    (void)add_stmt(ast);
+    expr = mk_binop(OP_ADD, mk_id(expr6), mk_id(expr3), DT_INT);
+  }
+  ast = mk_assn_stmt(mk_id(source_index), expr,DT_INT);
+  (void)add_stmt(ast);
+  dest = add_subscript(source_ast, mk_id(source_index), DT_INT);
+  lhs_ast = SST_ASTG(sst_lhs);
+  if(A_TYPEG(lhs_ast) == A_SUBSCR) {
+	  lhs_ast = A_LOPG(lhs_ast);
+  }
+  if(cnt == 2) {
+    src = add_subscript_2d(lhs_ast, mk_id(index1), mk_id(index2), DT_INT);
+  } else {
+    src = add_subscript_3d(lhs_ast, mk_id(index1), mk_id(index2), mk_id(index3), DT_INT);
+  }
+
+  ast = mk_assn_stmt(src, dest, array_element_dtype(A_DTYPEG(source_ast)));
+  (void)add_stmt(ast);
+
+  if(cnt == 3) {
+    do_end(doinfo3);
+  }
+  do_end(doinfo2);
+  do_end(doinfo1);
+
+  return true;
+}
+
 /*
  * If LHS is an one dimensional array and RHS is an implied-do,
  * if a temporary was allocated for storing the result of implied-do,
  * replace the use of temporary array with LHS.
- * Here, newtop points to LHS and stktop points to RHS
  */
  static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs){
    SPTR acl_lhs;
