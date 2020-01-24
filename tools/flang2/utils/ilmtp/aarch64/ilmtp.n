@@ -3693,6 +3693,10 @@ lnk link to num_threads clause if exists
 .IL MP_NUMTEAMS SMP sym
 Number of teams symbol.
 sym Number of teams
+.AT spec trm
+.IL MP_NUMTHREADS SMP sym
+Number of Threads symbol.
+sym Number of threads
 .\" AOCC End
 .AT spec trm
 .IL MP_TARGETLOOPTRIPCOUNT SMP sym

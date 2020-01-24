@@ -19,6 +19,7 @@
  * Date of modification 05th December 2019
  * Date of modification 06th January 2020
  * Date of modification 20th January 2020
+ * Date of modification 24th January 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -666,7 +667,18 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   // AOCC End
     locargs[1] = ad_icon(num_teams);
   }
-  locargs[0] = ad_icon(thread_limit);
+
+  // AOCC Begin
+  if (targetinfo->num_threads != SPTR_NULL) {
+    int nme = addnme(NT_VAR, targetinfo->num_threads, 0, 0);
+    int address = mk_address(targetinfo->num_threads);
+    locargs[0] =  ad3ili(IL_LD, address, nme,
+                            mem_size(DTY(DTYPEG(targetinfo->num_threads))));
+  } else {
+
+    locargs[0] = ad_icon(thread_limit);
+  }
+  // AOCC End
 #ifdef OMP_OFFLOAD_LLVM
   change_target_func_smbols(outlined_func_sptr, stblk_sptr);
 #endif

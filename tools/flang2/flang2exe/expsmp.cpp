@@ -12,6 +12,7 @@
  * Date of modification 23rd September 2019
  * Date of modification 10th December  2019
  * Date of modification 20th January   2020
+ * Date of modification 24th January   2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -1239,6 +1240,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 #ifdef OMP_OFFLOAD_LLVM
       if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
         ompaccel_set_numteams_sptr(ILM_SymOPND(ilmp, 1));
+      }
+#endif
+    break;
+  }
+  case IM_MP_NUMTHREADS: {
+#ifdef OMP_OFFLOAD_LLVM
+      if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
+        ompaccel_set_numthreads_sptr(ILM_SymOPND(ilmp, 1));
       }
 #endif
     break;

@@ -9,6 +9,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 20th January 2020
+ * Date of modification 24th January 2020
  */
 
 /**
@@ -4815,6 +4816,10 @@ lower_stmt(int std, int ast, int lineno, int label)
       } else {
         lower_expression(A_THRLIMITG(ast));
         lilm = lower_conv(A_THRLIMITG(ast), DT_INT);
+        // AOCC Begin
+        if (A_TYPEG(A_THRLIMITG(ast)) == A_ID)
+          plower("oS", "MP_NUMTHREADS", A_SPTRG(A_THRLIMITG(ast)));
+        // AOCC End
       }
       ilm = plower("oii", "BTEAMSN", ilm, lilm);
     } else {

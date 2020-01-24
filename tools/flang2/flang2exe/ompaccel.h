@@ -11,6 +11,7 @@
  * Date of modification 23rd September 2019
  * Date of modification 05th November 2019
  * Date of modification 10th December 2019
+ * Date of modification 24th January 2020
  *
  */
 
@@ -83,6 +84,7 @@ struct _OMPACCEL_TARGET{
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
   char *func_name;                        /*  Function name */  // AOCC
   SPTR num_teams;                         /*  Number of teams */ // AOCC
+  SPTR num_threads;                       /*  Number of threads */ // AOCC
 };
 
 static bool isOmpaccelRegistered = false;
@@ -533,5 +535,9 @@ void ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type);
   \brief Update set number of teams sptr to current tinfo
   */
 void ompaccel_set_numteams_sptr(SPTR sptr);
+/**
+  \brief Update set number of teams sptr to current tinfo
+  */
+void ompaccel_set_numthreads_sptr(SPTR sptr);
 // AOCC End
 #endif
