@@ -802,7 +802,7 @@ init(int argc, char *argv[])
 #endif
   // Force -Mx,232,0x40 for amdgcn offloading
   if (flg.amdgcn_target) {
-    flg.x[232] = 0x40;
+    flg.x[232] |= 0x40;
   }
   // AOCC End
 
