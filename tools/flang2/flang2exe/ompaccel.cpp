@@ -3162,7 +3162,7 @@ is_nvvm_sreg_function(SPTR func_sptr)
 #else
   if (strncmp(fname,"llvm.nvvm.read.ptx.sreg",23)) return false;
 #endif
-  for (int i=0; i<sizeof(NVVM_SREG); i++)
+  for (int i=0; i<(sizeof(NVVM_SREG)/sizeof(char *)); i++)
      if (!strcmp(NVVM_SREG[i], fname)) return true;
   return false;
 }
