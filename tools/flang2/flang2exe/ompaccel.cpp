@@ -1508,7 +1508,7 @@ ompaccel_emit_tgt_register()
   PRIORITYP(sptrFn, 65535 /* LLVM_DEFAULT_PRIORITY */);
   cr_block();
   // AOCC Begin
-  if (flg.amdgcn_target) {
+  if (flg.omptarget) {
      ilix = ll_make_tgt_register_lib();
      iltb.callfg = 1;
      chk_block(ilix);

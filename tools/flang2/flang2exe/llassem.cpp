@@ -1143,7 +1143,7 @@ write_libomtparget(void)
       }
 
       else if (flg.x86_64_omptarget) {
- //        fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
@@ -6058,6 +6058,7 @@ get_sptr_uplevel_address(int sptr)
 {
   int i, gblsym;
   gblsym = find_ag(get_ag_searchnm(gbl.currsub));
+  if (!gblsym) return 0; // AOCC
   for (i = 0; i < AG_UPLEVEL_AVL(gblsym); i++) {
     if (sptr == AG_UPLEVEL_NEW(gblsym, i)) {
       return AG_UPLEVEL_MEM(gblsym, i);
