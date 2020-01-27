@@ -15,8 +15,9 @@ FC=flang
 TARGET_FLAGS="-target x86_64-pc-linux-gnu"
 DEVICE_FLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa"
 MARCH="-march=gfx900"
-XFLAGS="-Mx,232,0x40"
-FFLAGS="$TARGET_FLAGS $DEVICE_FLAGS $MARCH $XFLAGS"
+#XFLAGS="-Mx,232,0x40"
+XFLAGS=""
+FFLAGS="$TARGET_FLAGS $DEVICE_FLAGS $MARCH $XFLAGS -fuse-ld=ld"
 total=0
 passed=0
 failed=0
