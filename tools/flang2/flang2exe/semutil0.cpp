@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -116,6 +121,7 @@ getrval(int ilmptr)
   case IM_HFFUNC:
   case IM_RFUNC:
   case IM_DFUNC:
+  case IM_QFUNC:         // AOCC
   case IM_CFUNC:
   case IM_CDFUNC:
   case IM_CALL:
@@ -493,8 +499,14 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         xdfix(num, &result);
         return result;
       case TY_QUAD:
-        uf("QUAD");
-        return 0;
+        // AOCC begin
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+        // AOCC end
       case TY_CHAR:
         if (flg.standard)
           ERR170("conversion of CHARACTER constant to numeric");
@@ -549,8 +561,14 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         xdfix64(num1, num);
         return getcon(num, newtyp);
       case TY_QUAD:
-        uf("QUAD");
-        return 0;
+        // AOCC begin
+        num1[0] = CONVAL1G(oldval);
+        num1[1] = CONVAL2G(oldval);
+        num1[2] = CONVAL3G(oldval);
+        num1[3] = CONVAL4G(oldval);
+        xqfix64(num1, num);
+        return getcon(num, newtyp);
+        // AOCC end
       case TY_CHAR:
         if (flg.standard)
           ERR170("conversion of CHARACTER constant to numeric");
@@ -600,8 +618,14 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         xsngl(num, &result);
         return result;
       case TY_QUAD:
-        uf("QUAD");
-        return oldval;
+        // AOCC begin
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+        // AOCC end
       case TY_CHAR:
         if (flg.standard)
           ERR170("conversion of CHARACTER constant to numeric");
@@ -652,13 +676,70 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       }
       return getcon(&num[2], DT_DBLE);
     } else if (from == TY_QUAD) {
-      uf("QUAD");
-      return oldval;
+      // AOCC begin
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+      // AOCC end
     } else {
       errsev((error_code_t)91);
       return (stb.dbl0);
     }
     return getcon(num, DT_DBLE);
+
+  // AOCC begin
+  case TY_QUAD:
+    if (from == TY_WORD) {
+      num[0] = 0;
+      num[1] = oldval;
+    } else if (from == TY_DWORD) {
+      num[0] = CONVAL1G(oldval);
+      num[1] = CONVAL2G(oldval);
+    } else if (from == TY_INT8 || from == TY_LOG8) {
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      xqflt64(num1, num);
+    } else if (TY_ISINT(from))
+      xqfloat(oldval, num);
+    else if (from == TY_DCMPLX)
+      return CONVAL1G(oldval);
+    else if (from == TY_CMPLX) {
+      oldval = CONVAL1G(oldval);
+      xquad(&oldval, num);
+    } else if (from == TY_REAL) {
+      xquad(&oldval, num);
+    }
+    else if (from == TY_HOLL || from == TY_CHAR) {
+      if (flg.standard && from == TY_CHAR)
+        ERR170("conversion of CHARACTER constant to numeric");
+      cp = stb.n_base + CONVAL1G(oldval);
+      holtonum(cp, num, 8);
+      if (flg.endian == 0) {
+        /* for little endian, need to swap words in each double word
+         * quantity.  Order of bytes in a word is okay, but not the
+         * order of words.
+         */
+        swap = num[2];
+        num[2] = num[3];
+        num[3] = swap;
+      }
+      return getcon(&num[2], DT_QUAD);
+    } else if (from == TY_QUAD) {
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+    } else {
+      errsev((error_code_t)91);
+      return (stb.quad0);
+    }
+    return getcon(num, DT_QUAD);
+  // AOCC end
 
   case TY_CMPLX:
     /*  num[0] = real part
@@ -759,8 +840,14 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num[0] = getcon(&num1[0], DT_DBLE);
       num[1] = getcon(&num1[2], DT_DBLE);
     } else if (from == TY_QUAD) {
-      uf("QUAD");
-      return oldval;
+      // AOCC begin
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+      // AOCC end
     } else {
       num[0] = 0;
       num[1] = 0;

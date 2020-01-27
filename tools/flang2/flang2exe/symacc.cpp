@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /********************************************************
@@ -353,16 +358,36 @@ add_fp_constants(void)
   atoxd("0.5", &tmp[0], 3);
   stb.dblhalf = getcon(tmp, DT_DBLE);
 
+// AOCC begin
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad0 = getcon(tmp, DT_QUAD);
+  atoxq("1.0", &tmp[0], 4);
+  stb.quad1 = getcon(tmp, DT_QUAD);
+  atoxq("2.0", &tmp[0], 4);
+  stb.quad2 = getcon(tmp, DT_QUAD);
+  atoxq("0.5", &tmp[0], 4);
+  stb.quadhalf = getcon(tmp, DT_QUAD);
+// AOCC end
+
   tmp[0] = 0;
   res[0] = 0;
   tmp[1] = CONVAL2G(stb.flt0);
   xfneg(tmp[1], &res[1]);
   stb.fltm0 = getcon(res, DT_REAL);
+
   tmp[0] = CONVAL1G(stb.dbl0);
   tmp[1] = CONVAL2G(stb.dbl0);
   xdneg(tmp, res);
   stb.dblm0 = getcon(res, DT_DBLE);
 
+// AOCC begin
+  tmp[0] = CONVAL1G(stb.quad0);
+  tmp[1] = CONVAL2G(stb.quad0);
+  tmp[2] = CONVAL3G(stb.quad0);
+  tmp[3] = CONVAL4G(stb.quad0);
+  xqneg(tmp, res);
+  stb.quadm0 = getcon(tmp, DT_QUAD);
+// AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   atoxq("0.0", &tmp[0], 4);
   stb.float128_0 = getcon(tmp, DT_FLOAT128);

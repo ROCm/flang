@@ -3,6 +3,11 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -46,6 +51,10 @@ integer register number (for x86-64, one of the general purpose registers).
 floating-point register number.
 .OP dp
 double-precision register.
+.\" AOCC begin
+.OP qp
+quad-precision register.
+.\" AOCC end
 .OP kr
 64 bit integer register.
 .OP cs
@@ -121,6 +130,10 @@ result goes into an integer register.
 result goes into a floating-point register.
 .RT dp
 double-precision floating-point.
+.\" AOCC begin
+.RT qp
+quad-precision floating-point.
+.\" AOCC end
 .RT ar
 address register result.
 .RT trm
@@ -324,6 +337,16 @@ Double-precision floating-point constant.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+.\" AOCC begin
+.IL QCON sym
+Quad-precision floating-point constant.
+.AT cons null qp cse
+.CG "movsq" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+.\" AOCC end
+
 .IL SCMPLXCON sym
 Single-precision complex constant.
 .AT cons null cs cse
@@ -367,6 +390,16 @@ Load single-precision floating value.  'stc' is not used.
 .SI ld double lat(3)
 .SI st direct lat(2)
 .SI direct lat(2)
+
+.\" AOCC begin
+.IL LDQP arlnk nme stc
+Load quad precision value.  'stc' is not used.
+.AT load null qp
+.CG "movsq" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+.\" AOCC end
 
 .IL LDDP arlnk nme stc
 Load double precision value.  'stc' is not used.
@@ -485,6 +518,14 @@ cgoptim1.c:lili_peephole_opts_2().
 .AT arth null dp cse
 .CG notAILI
 
+.\" AOCC begin
+.IL QNEG qplnk
+Real*16 negation.  This LILI is replaced by a QXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null qp cse
+.CG notAILI
+.\" AOCC end
+
 .IL SCMPLXNEG cslnk
 Complex*8 negation.  This LILI is replaced by an SCMPLXXOR LILI in
 cgoptim1.c:lili_peephole_opts_2().
@@ -515,6 +556,18 @@ sign bit with 1.  This ILI is specified as non-commutative
 .AT arth null dp cse
 .CG CGonly "xorpd" sse_avx
 .SI double fmul lat(5:3)
+
+.\" AOCC begin
+.IL QXOR qplnk qplnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+QNEG( op1 ) into a QXOR LILI in order to negate 'op1' by XORing its
+sign bit with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null qp cse
+.CG CGonly "xorpq" sse_avx
+.SI quad fmul lat(5:3)
+.\" AOCC end
 
 .IL SCMPLXXOR cslnk cslnk
 This only appears in the LILIs and AILIs, not in shared ILIs.  It is
@@ -573,6 +626,13 @@ FXOR is non-commutative.
 Double precision absolute value.
 .AT arth null dp cse
 .CG notAILI
+
+.\" AOCC begin
+.IL QABS qplnk
+quad precision absolute value.
+.AT arth null qp cse
+.CG notAILI
+.\" AOCC end
 
 .IL DAND dplnk dplnk
 This only appears in the LILIs and AILIs, not in shared ILIs.  It is
@@ -716,6 +776,13 @@ Single-precision floating-point natural logarithm.
 Double-precision natural logarithm.
 .AT arth null dp cse
 .CG notCG
+
+.\" AOCC begin
+.IL QLOG qplnk
+Quad-precision natural logarithm.
+.AT arth null qp cse
+.CG notCG
+.\" AOCC end
 
 .IL FLOG10 splnk
 Single-precision floating-point common logarithm.
@@ -879,6 +946,13 @@ Double FLOOR.
 .AT arth null dp cse
 .CG "roundsd" sse_avx
 
+.\" AOCC begin
+.IL QFLOOR qplnk
+Quad FLOOR.
+.AT arth null qp cse
+.CG "roundsd" sse_avx
+.\" AOCC end
+
 .IL FCEIL splnk
 Real CEILING.
 .AT arth null sp cse
@@ -889,6 +963,13 @@ Double CEILING.
 .AT arth null dp cse
 .CG "roundsd" sse_avx
 
+.\" AOCC begin
+.IL QCEIL qplnk
+QUAD CEILING.
+.AT arth null qp cse
+.CG "roundsq" sse_avx
+.\" AOCC end
+
 .IL AINT splnk
 Single precision trunction. 
 .AT arth null sp cse
@@ -897,6 +978,11 @@ Single precision trunction.
 .IL DINT dplnk
 Double precision trunction. 
 .AT arth null dp cse
+.CG notAILI
+
+.IL QINT qplnk
+Quad precision trunction. 
+.AT arth null qp cse
 .CG notAILI
 
 .IL SCMPLXEXP cslnk
@@ -1458,6 +1544,29 @@ half of 'xmm2'.
 .CG terminal "cvtpd2ps" avx_special
 .SI vector lat(8)
 
+.\" AOCC begin
+.IL QUAD qplnk
+Real*8 to real*16 type conversion.
+.AT arth null qp cse
+.CG "cvtss2sd" avx_special
+
+.IL PQUAD arlnk xmm nme
+Convert 'N' packed real*8 values from 'arlnk' into 'N' packed real*16
+values in 'xmm', where 'N' is 2, 4, 8, 16 if 'xmm' is an xmm (>= SSE2),
+ymm (>= AVX) or zmm (AVX-512F) register respectively.
+.AT other null trm ssenme
+.CG terminal "cvtps2pq" ssedp sse_avx
+.SI quad lat(5)
+
+.IL PQUADX xmm xmm
+Convert 'N' packed real*8 values from 'xmm1' (an xmm or ymm register)
+into 'N' packed real*16 values in 'xmm2' (an xmm, ymm or zmm register),
+where 'N' is 2, 4 , 8 or 16 if 'xmm' is an xmm (>= SSE2), ymm (>= AVX) or
+zmm (AVX-512F) register respectively.
+.AT other null trm
+.CG terminal "cvtps2pd" ssedp avx_special
+.SI quad lat(3)
+.\" AOCC end
 
 .IL DBLE splnk
 Real*4 to real*8 type conversion.
@@ -1519,6 +1628,14 @@ Not used.
 .AT arth null kr
 .CG notCG
 
+.\" AOCC begin
+.IL QP2KR qplnk
+Copy a real*16 value from an 'xmm' register to a 'gp' register without
+type conversion.
+.AT arth null kr
+.CG 'q' sse_avx asm_special
+.\" AOCC end
+
 .IL DP2KR dplnk
 Copy a real*8 value from an 'xmm' register to a 'gp' register without
 type conversion.
@@ -1573,6 +1690,14 @@ Single-precision floating-point addition.
 .AT arth comm sp cse
 .CG "addss" sse_avx
 .SI fadd double lat(6:4)
+
+.\" AOCC begin
+.IL QADD qplnk qplnk
+Quad-precision floating-point addition.
+.AT arth comm qp cse
+.CG "addsq" sse_avx
+.SI fadd direct lat(6:4)
+.\" AOCC end
 
 .IL DADD dplnk dplnk
 Double-precision floating-point addition.
@@ -1632,6 +1757,14 @@ Single-precision floating-point subtraction - operands reversed
 (used by llvect.c as a convenience).
 .AT arth null sp cse
 .CG notCG
+
+.\" AOCC begin
+.IL QSUB qplnk qplnk
+Quad-precision floating-point subtraction.
+.AT arth null qp cse
+.CG "subsd" sse_avx
+.SI direct fadd lat(6:4)
+.\" AOCC end
 
 .IL DSUB dplnk dplnk
 Double-precision floating-point subtraction.
@@ -1708,6 +1841,14 @@ Double-precision multiply.
 .AT arth comm dp cse
 .CG "mulsd" sse_avx
 .SI direct fmul lat(6:4)
+
+.\" AOCC begin
+.IL QMUL qplnk qplnk
+Quad-precision multiply.
+.AT arth comm qp cse
+.CG "mulsq" sse_avx
+.SI direct fmul lat(6:4)
+.\" AOCC end
 
 .IL SCMPLXMUL cslnk cslnk
 Single-complex multiply.
@@ -1818,6 +1959,14 @@ Double divide.
 .AT arth null dp cse
 .CG "divsd" sse_avx
 .SI direct fmul lat(22:20)
+
+.\" AOCC begin
+.IL QDIV qplnk qplnk
+Quad divide.
+.AT arth null qp cse
+.CG "divsq" sse_avx
+.SI direct fmul lat(22:20)
+.\" AOCC end
 
 .IL SCMPLXDIV cslnk cslnk
 Single precision complex divide.
@@ -1963,6 +2112,22 @@ Double precison minimum.
 .CG "minsd" sse_avx
 .SI direct fadd lat(4:2)
 
+.\" AOCC begin
+.IL QMAX qplnk qplnk
+Quad precision maximum.
+.AT arth comm qp cse
+.CG "maxsq" sse_avx
+.SI direct fadd lat(4:2)
+.\" AOCC end
+
+.\" AOCC begin
+.IL QMIN qplnk qplnk
+QUAD precison minimum.
+.AT arth comm qp cse
+.CG "minsq" sse_avx
+.SI direct fadd lat(4:2)
+.\" AOCC end
+
 .IL JN  irlnk splnk
 float bessel_jn
 .AT arth null sp cse
@@ -2095,6 +2260,14 @@ Double precision compare with result of true or false.
 .CG asm_special "ucomisd" ccmod sse_avx
 .SI vector fadd lat(5:4)
 
+.\" AOCC begin
+.IL QCMP qplnk qplnk stc
+Quad precision compare with result of true or false.
+.AT arth null ir cse
+.CG asm_special "ucomisq" ccmod sse_avx
+.SI vector fadd lat(5:4)
+.\" AOCC end
+
 .IL SCMPLXCMP dplnk dplnk stc
 Single precision complex compare with result of true or false.
 .AT arth comm ir cse
@@ -2150,6 +2323,13 @@ Single float compare with zero which distinguishes negative zero; result is TRUE
 Double precision compare with zero.
 .AT arth null ir cse
 .CG notCG
+
+.\" AOCC begin
+.IL QCMPZ qplnk stc
+Quad precision compare with zero.
+.AT arth null ir cse
+.CG notCG
+.\" AOCC end
 
 .IL DCMPZNZ dplnk stc
 Double precision compare with zero which distinguishes negative zero.
@@ -2494,6 +2674,14 @@ if the condition, denoted by stc, is true.
 .AT branch null trm dom
 .CG terminal conditional_branch notAILI
 
+.\" AOCC begin
+.IL QCJMP qplnk qplnk stc sym
+Quad precision compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.AT branch null trm dom
+.CG terminal conditional_branch notAILI
+.\" AOCC end
+
 .IL ICJMPZ irlnk stc sym
 Integer compare with zero and branch to label 'sym' -
 the allowed values (and meanings) for stc are the same as
@@ -2546,6 +2734,13 @@ Double compare with zero and branch to label 'sym'.
 .AT branch null trm dom
 .CG notCG conditional_branch
 
+.\" AOCC begin
+.IL QCJMPZ qplnk stc sym
+Quad compare with zero and branch to label 'sym'.
+.AT branch null trm dom
+.CG notCG conditional_branch
+.\" AOCC end
+
 .IL JCC
 Conditional jump based on immediately preceding compare operation.
 Used only in the AILI.
@@ -2572,6 +2767,13 @@ Single precision register cse.
 Double precision register cse.
 .AT arth null dp
 .CG notCG
+
+.\" AOCC begin
+.IL CSEQP qplnk
+Quad precision register cse.
+.AT arth null qp
+.CG notCG
+.\" AOCC end
 
 .IL CSECS cslnk
 Single precision complex register cse.
@@ -2732,6 +2934,16 @@ Store double precision quantity.  'stc' must be MSZ_F8.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+./" AOCC begin
+.IL STQP qplnk arlnk nme stc
+Store quad precision quantity.  'stc' must be MSZ_F16.
+.AT store null trm
+.CG terminal "movsq" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC end
+
 .IL STSCMPLX cslnk arlnk nme stc
 Store single precision complex quantity.  'stc' is not used.
 .AT store null trm
@@ -2836,7 +3048,7 @@ stc2 dtype
 .IL QJSR sym lnk
 Quick (intrinsic) call.
 \'sym' is the external procedure being called.
-\'lnk' locates the list of arguments (define arg ILI - DAAR, DADR, DADP).
+\'lnk' locates the list of arguments (define arg ILI - DAAR, DADR, DADP, DAQP).
 .AT proc null lnk dom
 .CG terminal "call" asm_special ccmod
 
@@ -2917,6 +3129,18 @@ Defines a double precision memory argument.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+./" AOCC  begin
+.IL ARGQP qplnk lnk
+Defines a quad precision memory argument.
+\'qplnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "movsq" avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC end
+
 .IL ARGAR arlnk lnk stc
 A memory argument of type pointer or struct/union.
 .sp
@@ -2993,6 +3217,16 @@ Define a double precision argument for a JSR or QJSR.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+./" AOCC begin
+.IL DAQP qplnk dp lnk
+Define a quad precision argument for a JSR or QJSR.
+.AT define null lnk
+.CG "movsq" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC end
+
 .IL DA128 dplnk dp lnk
 Define an __m128 argument for a JSR or QJSR.
 .AT define null lnk
@@ -3057,6 +3291,13 @@ Define double precision function result in an xmm register.
 .AT define null dp cse
 .CG terminal asm_nop
 
+.\" AOCC begin
+.IL DFRQP lnk dp
+Define quad precision function result in an xmm register.
+.AT define null qp cse
+.CG terminal asm_nop
+.\" AOCC end
+
 .IL DFRCS lnk cs
 Define single precision complex function result in an xmm register.
 .AT define null cs cse
@@ -3112,6 +3353,13 @@ Define single precision register (xmm register).
 Define double precision register (xmm register).
 .AT define null dp cse
 .CG terminal asm_nop
+
+.\" AOCC begin
+.IL QPDF dp
+Define quad precision register (xmm register).
+.AT define null qp cse
+.CG terminal asm_nop
+.\" AOCC end
 
 .IL ARDF ar
 Define address register. (ar is actual register number).
@@ -3195,6 +3443,17 @@ For X86_64, the value is moved into the specified xmm register.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+./" AOCC begin
+.IL MVQP qplnk dp
+This ili represents a quad precision function return value.
+For X86_64, the value is moved into the specified xmm register.
+.AT move null trm
+.CG terminal "movsd" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC end
+
 .IL MVQ dplnk dp
 This ili represents an __m128 function return value.
 For X86_64, the value is moved into the specified xmm register.
@@ -3228,6 +3487,16 @@ Move a double-precision xmm register value.
 .SI ld double fadd fmul fst lat(3)
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
+
+./" AOCC begin
+.IL MOVQ
+Move a quad-precision xmm register value.
+.AT move null qp
+.CG CGonly "movsq" move avx_special
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC end
 
 .IL MOVCS
 Move a single-precision complex xmm register value.
@@ -3284,6 +3553,12 @@ The FREExx ili are eliminated by the linearizer phase of the code generator.
 .IL FREEDP dplnk
 .AT other null trm
 .CG terminal notAILI
+
+.\" AOCC begin
+.IL FREEQP qplnk
+.AT other null trm
+.CG terminal notAILI
+.\" AOCC end
 
 .IL FREECS cslnk
 .AT other null trm
@@ -5950,17 +6225,6 @@ Used in accelerator code, to end an explicit 'vector' loop.
 The argument is the label of the top of the loop.
 .AT branch null trm
 .CG notCG notAILI accel
-
-
-.IL ARGQP dplnk lnk
-Defines a quad precision memory argument.
-\'dplnk' points to the register value of the argument.
-\'lnk' points to the next ARG ILI.
-.AT define null lnk
-.CG memarg "movupd" sse_avx
-.SI ld double fadd fmul fst lat(3)
-.SI st direct fst lat(2)
-.SI direct fadd fmul lat(2)
 
 .IL ARG256 dplnk lnk
 Defines a 256-bit memory argument.

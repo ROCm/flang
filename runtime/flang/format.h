@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -57,8 +62,13 @@ char *__fortio_fmt_g(__BIGREAL_T, int, int, int, int, int, bool, bool, bool,
 /** \brief Generate a string for an 'F' format characer */
 char *__fortio_fmt_f(__BIGREAL_T, int, int, int, bool, bool, int);
 
+#ifdef LONG_DOUBLE_FLOAT128
 /** \brief Generate a string for an 'E' format characer */
-char *__fortio_fmt_e(__BIGREAL_T, int, int, int, int, int, bool, bool, bool,
+char *__fortio_fmt_e(__BIGREAL16_T, int, int, int, int, int, bool, bool, bool,
+                     int, int);
+#endif
+// AOCC
+char *__fortio_fmt_e(__BIGREAL16Q_T, int, int, int, int, int, bool, bool, bool,
                      int, int);
 
 /** \brief Convert REAL*4 to REAL4*8 */

@@ -12,6 +12,10 @@
  *
  * Date of Modification: 17th July 2019
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ *
  */
 
 /* clang-format off */
@@ -1143,6 +1147,13 @@ ENTF90IO(SC_D_LDW, sc_d_ldw)(double item, int type)
   return __f90io_ldw(type, 1, 0, (char *)&item, 0);
 }
 
+// AOCC begin
+__INT_T
+ENTF90IO(SC_Q_LDW, sc_q_ldw)(__float128 item, int type)
+{
+  return __f90io_ldw(type, 1, 0, (char*)&item, 0);
+}
+// AOCC end
 __INT_T
 ENTF90IO(SC_CF_LDW, sc_cf_ldw)(float real, float imag, int type)
 {

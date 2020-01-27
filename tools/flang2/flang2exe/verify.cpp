@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #include "gbldefs.h"
@@ -263,6 +268,11 @@ verify_ili_ad_hoc(int ilix)
   case IL_STDP:
     VERIFY(ILI_OPND(ilix, 4) == MSZ_F8, "4th operand to STDP must be MSZ_F8");
     break;
+    // AOCC begin
+  case IL_STQP:
+    VERIFY(ILI_OPND(ilix, 4) == MSZ_F16, "4th operand to STDP must be MSZ_F16");
+    break;
+   // AOCC end
 #ifdef IL_STSPSP
   case IL_STSPSP: {
     ILI_OP opc1 = ILI_OPC(ILI_OPND(ilix, 1));

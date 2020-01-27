@@ -20,6 +20,9 @@
  * Added code to support reshape with implied dos inside target region
  * Date of Modification: 23rd January 2020
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -938,14 +941,10 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
     break;
   case TY_REAL:
   case TY_DBLE:
+  case TY_QUAD:
     switch (kind_val) {
     case 16:
-      if (!XBIT(57, 0x4))
-        out_dtype = DT_QUAD;
-      if (XBIT(57, 0x10)) {
-        error(437, 2, gbl.lineno, "REAL(16)", "REAL(8)");
-        out_dtype = DT_REAL8;
-      }
+      out_dtype = DT_QUAD;  // AOCC
       break;
     case 8:
       out_dtype = DT_REAL8;

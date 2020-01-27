@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -644,6 +649,12 @@ check_ilm(int ilmx, int ilix)
           case IL_FREEDP:
             ilix = ad4ili(IL_STDP, cse, base, nme, MSZ_F8);
             break;
+            // AOCC begin
+          case IL_STQP:
+          case IL_FREEQP:
+            ilix = ad4ili(IL_STQP, cse, base, nme, MSZ_F16);
+            break;
+            // AOCC end
           case IL_STSCMPLX:
           case IL_FREECS:
             ilix = ad4ili(IL_STSCMPLX, cse, base, nme, MSZ_F8);
@@ -1269,6 +1280,11 @@ add_reg_arg_ili(int arglist, int argili, int nmex, DTYPE dtype)
     if (DTY(dtype) == TY_DBLE) {
       opc = IL_DADP;
       avail_freg++;
+    // AOCC begin
+    } else if (DTY(dtype) == TY_QUAD) {
+      opc = IL_DAQP;
+      avail_freg++;
+    // AOCC end
     } else {
       opc = IL_DASP;
     }

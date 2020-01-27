@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -48,7 +53,7 @@ typedef struct {
 
 typedef struct {
   SPTR dec_sptr;
-  SPTR def_sptr; 
+  SPTR def_sptr;
 } DEC_DEF_MAP;
 
 static DTIMPL dtimplicit;
@@ -72,7 +77,7 @@ void
 sym_init(void)
 {
   int i;
-  INT tmp[2], res[2];
+  INT tmp[2], res[2], res1[4], tmp1[4];
   int dtype;
   static char *npname = "hpf_np$";
   int sptr;
@@ -184,6 +189,7 @@ sym_init(void)
 
   /* int 0, 1 */
   tmp[0] = tmp[1] = (INT)0;
+  tmp1[0] = tmp1[1] = tmp1[2] = tmp1[3] = (INT)0; // AOCC
   stb.i0 = getcon(tmp, DT_INT);
   if (DT_INT == DT_INT8)
     stb.k0 = stb.i0;
@@ -282,6 +288,14 @@ sym_init(void)
   tmp[1] = CONVAL2G(stb.dbl0);
   xdneg(tmp, res);
   stb.dblm0 = getcon(res, DT_DBLE);
+// AOCC begin
+  tmp1[0] = CONVAL1G(stb.quad0);
+  tmp1[1] = CONVAL2G(stb.quad0);
+  tmp1[2] = CONVAL3G(stb.quad0);
+  tmp1[3] = CONVAL4G(stb.quad0);
+  xqneg(tmp1, res1);
+  stb.quadm0 = getcon(res1, DT_QUAD);
+// AOCC end
 #define NXTRA 2
 
   aux.curr_entry = &onlyentry;
@@ -1018,12 +1032,13 @@ getprint(int sptr)
     num[1] = CONVAL2G(sptr);
     cprintf(b, "%24.17le", num);
     break;
+
   case TY_QUAD:
     num[0] = CONVAL1G(sptr);
     num[1] = CONVAL2G(sptr);
     num[2] = CONVAL3G(sptr);
     num[3] = CONVAL4G(sptr);
-    cprintf(b, "%44.37qd", num);
+    cprintf(b, "%44.37Lf", num);
     break;
 
   case TY_CMPLX:

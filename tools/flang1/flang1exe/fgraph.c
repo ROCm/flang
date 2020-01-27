@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -353,6 +358,7 @@ flowgraph(void)
               break;
             case TY_REAL:
             case TY_DBLE:
+            case TY_QUAD:  // AOCC
             /* don't check non-integer do loops */
             default:
               break;

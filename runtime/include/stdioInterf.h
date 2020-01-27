@@ -2,6 +2,12 @@
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #if !defined(__PGSTDINIT_H__)
@@ -60,6 +66,7 @@ typedef long seekoffx_t;
 #define __io_strtod(p, ep) __fortio_strtod(p, ep)
 #define __io_ecvt(v, n, d, s, r) __fortio_ecvt(v, n, d, s, r)
 #define __io_fcvt(v, n, sf, d, s, r) __fortio_fcvt(v, n, sf, d, s, r)
+#define __io_qcvt(v, n, q, s, r) __fortio_qcvt(v, n, q, s, r)    // AOCC
 
 /* and defines for other routines */
 #define __fort_getfd(fp) __io_getfd(fp)

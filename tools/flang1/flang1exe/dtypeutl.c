@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -2920,6 +2925,7 @@ scale_of(DTYPE dtype, INT *size)
   case TY_BINT:
   case TY_BLOG:
   case TY_DBLE:
+  case TY_QUAD:    // AOCC
   case TY_CMPLX:
   case TY_DCMPLX:
   case TY_QCMPLX:
@@ -3418,7 +3424,7 @@ typedef enum {
   __REAL2 = 45,   /*   F real*2, half */
   __REAL4 = 27,   /*   F real*4, real */
   __REAL8 = 28,   /*   F real*8, double precision */
-  __REAL16 = 29,  /*   F real*16 */
+  __REAL16 = 29,  /*   F real*16 quad precision */
   __CPLX32 = 30,  /*   F complex*32 (2x real*16) */
   __WORD16 = 31,  /*   F quad typeless */
   __INT1 = 32,    /*   F byte (integer*1) */

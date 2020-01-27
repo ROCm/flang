@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /* symbol initialization for Fortran */
@@ -67,6 +72,7 @@ public:
     argtype["I"] = DT_INT;
     argtype["R"] = DT_REAL;
     argtype["D"] = DT_DBLE;
+    argtype["Q"] = DT_QUAD;   // AOCC
     argtype["C"] = DT_CMPLX;
     argtype["CD"] = DT_DCMPLX;
     argtype["SI"] = DT_SINT;

@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -59,7 +64,7 @@ int il_rtype_df[RATA_RTYPES_TOTAL] = {
     IL_IRDF, IL_SPDF, /* RATA_IR   , RATA_SP */
     IL_DPDF, IL_ARDF, /* RATA_DP   , RATA_AR */
     IL_KRDF, 0,       /* RATA_KR   , RATA_VECT */
-    0,       0,       /* RATA_QP   , RATA_CSP */
+    IL_QPDF, 0,       /* RATA_QP   , RATA_CSP */
     0,       0,       /* RATA_CDP  , RATA_CQP */
     0,       0,       /* RATA_X87  , RATA_CX87*/
 };
@@ -67,7 +72,7 @@ int il_mv_rtype[RATA_RTYPES_TOTAL] = {
     IL_MVIR, IL_MVSP, /* RATA_IR   , RATA_SP */
     IL_MVDP, IL_MVAR, /* RATA_DP   , RATA_AR */
     IL_MVKR, 0,       /* RATA_KR   , RATA_VECT */
-    0,       0,       /* RATA_QP   , RATA_CSP */
+    IL_MVQP,  0,     /* RATA_QP   , RATA_CSP */
     0,       0,       /* RATA_CDP  , RATA_CQP */
     0,       0,       /* RATA_X87  , RATA_CX87*/
 };
@@ -150,6 +155,13 @@ addrcand(int ilix)
   case IL_LDDP: /* load double precision */
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto ac_load;
+
+  // AOCC begin
+  case IL_LDQP: /* load quad precision */
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
 
   ac_load: /* common entry for the loads */
 
@@ -261,6 +273,12 @@ addrcand(int ilix)
   case IL_DSTS_SCALAR:
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto ac_store;
+  // AOCC begin
+  case IL_STQP: /* store quad precision */
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
   ac_store: /* common entry for the stores	 */
     if ((rcand = NME_RAT(nme = ILI_OPND(ilix, 3))) != 0)
       if (RCAND_MSIZE(rcand) != msize) {
@@ -312,6 +330,12 @@ addrcand(int ilix)
   case IL_DCON:
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto add_constant;
+  // AOCC begin
+  case IL_QCON:
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
   add_constant:
     rcand = ILI_RAT(ilix);
     if (rcand) {
@@ -803,6 +827,11 @@ storedums(int exitbih, int first_rat)
     case RATA_DP:
       (void)addilt(0, ad4ili(IL_STDP, i, addr, nme, MSZ_F8));
       break;
+    // AOCC begin
+    case RATA_QP:
+      (void)addilt(0, ad4ili(IL_STQP, i, addr, nme, MSZ_F16));
+      break;
+    // AOCC end
     case RATA_CSP:
       (void)addilt(0, ad4ili(IL_STSCMPLX, i, addr, nme, MSZ_F8));
       break;
@@ -1122,6 +1151,11 @@ _assn_rtemp(int ili, int temp)
   case IL_STDP:
     opc = IL_LDDP;
     break;
+  // AOCC begin
+  case IL_STQP:
+    opc = IL_LDQP;
+    break;
+  // AOCC end
   case IL_VST:
     opc = IL_VLD;
     break;
@@ -1153,6 +1187,12 @@ _assn_rtemp(int ili, int temp)
     rtype = RCAND_RTYPE(rcand) = RATA_DP;
     RCAND_MSIZE(rcand) = MSZ_F8;
     break;
+  // AOCC begin
+  case ILIA_QP:
+    rtype = RCAND_RTYPE(rcand) = RATA_QP;
+    RCAND_MSIZE(rcand) = MSZ_F16;
+    break;
+  // AOCC end
   case ILIA_KR:
     rtype = RCAND_RTYPE(rcand) = RATA_KR;
     RCAND_MSIZE(rcand) = MSZ_I8;
@@ -1288,6 +1328,11 @@ select_rtemp(int ili)
     type = 6;
     break;
 #endif
+  // AOCC begin
+  case ILIA_QP:
+    type = 7;
+    break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case ILIA_FLOAT128:
     type = 9;

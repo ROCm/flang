@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #include "global.h"
@@ -23,6 +28,7 @@
 #define PP_REAL4(i) (*(__REAL4_T *)(i))
 #define PP_REAL8(i) (*(__REAL8_T *)(i))
 #define PP_REAL16(i) (*(__REAL16_T *)(i))
+#define PP_REAL16Q(i) (*(__REAL16Q_T *)(i))   // AOCC
 
 static __BIGINT_T to_bigint(AVAL *);
 static __BIGREAL_T to_bigreal(AVAL *);

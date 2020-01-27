@@ -3,6 +3,9 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ *  Added support for quad precision
+ *  Date of modification Feb 2020
+ *
  */
 
 /** \file
@@ -345,6 +348,7 @@ extern int __fortio_assign(char *, int, __CLEN_T, AVAL *);
 /*****  fpcvt.c  *****/
 extern char *__fortio_ecvt(double, int, int *, int *, int);
 extern char *__fortio_fcvt(__BIGREAL_T, int, int, int *, int *, int);
+extern char *__fortio_qcvt(__float128, int, int *, int *, int);   // AOCC
 WIN_MSVCRT_IMP double WIN_CDECL strtod(const char *, char **);
 #define __fortio_strtod(x, y) strtod(x, y)
 

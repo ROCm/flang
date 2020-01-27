@@ -2,7 +2,12 @@
 .\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-.\" * 
+.\" *
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 11 "Symbol Table"
 .de OC		\"overloading class
@@ -1633,6 +1638,10 @@ Second constant value:
 32-bit floating point value.
 .ip \f(CWTY_DBLE\fP
 Second 32-bit word of double precision constant.
+.\" AOCC begin
+.ip \f(CWTY_QUAD\fP
+Second 32-bit word of quad precision constant.
+.\" AOCC end
 .ip \f(CWTY_CMPLX\fP
 32-bit floating point value of imaginary part.
 .ip \f(CWTY_DCMPLX\fP
@@ -1765,6 +1774,7 @@ means the arguments can be either
 .cw DT_INT ,
 .cw DT_REAL ,
 .cw DT_DBLE ,
+.cw DT_QUAD ,
 .cw DT_CMPLX ,
 or
 .cw DT_DCMPLX .
@@ -2230,10 +2240,14 @@ Assumed size kanji string dummy argument.
 Assumed size character.
 .PD DT_128F "__m128" TY_128
 .PD DT_128D "__m128d" TY_128
+.\" AOCC: 128Q
+.PD DT_128Q "__m128q" TY_128
 .PD DT_128I "__m128i" TY_128
 .PD DT_256 "256-bit" TY_256
 .PD DT_256F "__m256" TY_256
 .PD DT_256D "__m256d" TY_256
+.\" AOCC: 256Q
+.PD DT_256Q "__m256q" TY_256
 .PD DT_256I "__m256i" TY_256
 .PD DT_512 "512-bit" TY_512
 .PD DT_512F "__m512" TY_512

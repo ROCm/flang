@@ -2,7 +2,12 @@
 .\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-.\" * 
+.\" *
+.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -127,6 +132,9 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN =KIABS 1 I8 I8 KABS ftn_kabs
 .IN .ABS 1 R R ABS ftn_abs
 .IN DABS 1 D D DABS ftn_dabs
+.\" AOCC begin
+.IN QABS 1 Q Q QABS ftn_qabs
+.\" AOCC end
 .IN CABS 1 C R CABS ftn_cabs
 .IN CDABS 1 CD D CDABS ftn_cdabs
 .IN .INT 1 R I tc
@@ -191,6 +199,10 @@ Convert any numeric data type to double precision.
 Convert any numeric data type to complex.
 .IN .2CD 11 N CD tc
 Convert any numeric data type to double complex.
+.\" AOCC begin
+.IN QREAL 1 CD D tc
+Converts complex*16 to quad.
+.\" AOCC end
 .IN .AIMAG 1 C R IMAG ftn_aimag
 .IN DIMAG 1 CD D DIMAG ftn_dimag
 .IN .CONJG 1 C C CONJG ftn_conjg
@@ -331,6 +343,8 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN =INT8 .2KI .2KI .INT8 .IDINT8 .2KI .2KI .2KI 
 .GN REAL FLOATI .REAL .2R SNGL .2R .2R .FLOATK 
 .GN DBLE DFLOTI DFLOAT .2D .2D .2D DREAL .DFLOTK 
+.\" AOCC: QUAD
+.GN QUAD QFLOTI QFLOAT .2D .2D .2D QREAL .QFLOTK 
 .GN CMPLX .2C .2C .2C .2C .2C .2C .2C 
 .GN DCMPLX .2CD .2CD .2CD .2CD .2CD .2CD .2CD 
 .GN AIMAG - - - - .AIMAG DIMAG - 

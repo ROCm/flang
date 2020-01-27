@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /********************************************************
@@ -376,6 +381,17 @@ add_fp_constants(void)
   stb.dbl2 = getcon(tmp, DT_REAL8);
   atoxd("0.5", &tmp[0], 3);
   stb.dblhalf = getcon(tmp, DT_REAL8);
+
+  // AOCC begin
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad0 = getcon(tmp, DT_QUAD);
+  atoxq("1.0", &tmp[0], 4);
+  stb.quad1 = getcon(tmp, DT_QUAD);
+  atoxq("2.0", &tmp[0], 4);
+  stb.quad2 = getcon(tmp, DT_QUAD);
+  atoxq("0.5", &tmp[0], 4);
+  stb.quadhalf = getcon(tmp, DT_QUAD);
+  // AOCC end
 
 #ifdef LONG_DOUBLE_FLOAT128
   atoxq("0.0", &tmp[0], 4);

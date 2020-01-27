@@ -12,6 +12,9 @@
  * Date of Modification: November 2018
  * Date of Modification: 05th November 2019
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -85,6 +88,7 @@ static void put_int(INT);
 static void put_int8(INT);
 static void put_float(INT);
 static void put_double(int);
+static void put_quad(int);   // AOCC
 static void put_cmplx_n(int, int);
 static void put_float_cmplx(int, int);
 static void put_double_cmplx(int, int);
@@ -451,6 +455,12 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         if (tconval == stb.dbl0)
           goto do_zeroes;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        if (tconval == stb.quad0)
+          goto do_zeroes;
+        break;
+      // AOCC end
       case TY_CMPLX:
         if (CONVAL1G(tconval) == 0 && CONVAL2G(tconval) == 0)
           goto do_zeroes;
@@ -570,6 +580,17 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         }
         put_r8((int)tconval, putval);
         break;
+
+      // AOCC begin
+      case TY_QUAD:
+        if (DBGBIT(5, 32)) {
+          fprintf(gbl.dbgfil,
+                  "emit_init:put_r16 first_data:%d i8cnt:%ld ptrcnt:%d\n",
+                  first_data, *i8cnt, *ptrcnt);
+        }
+        put_quad((int)tconval);
+        break;
+      // AOCC end
 
       case TY_CMPLX:
         if (DBGBIT(5, 32)) {
@@ -926,6 +947,25 @@ put_double(int sptr)
     fprintf(ASMFIL, "0x%.8X%.8X", num[0], num[1]);
   }
 }
+
+// AOCC begin
+static void
+put_quad(int sptr)
+{
+  INT num[4];
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+  fprintf(ASMFIL, "fp128 ");
+
+  if ((num[0] & 0x7ff00000) == 0x7ff00000) /* exponent == 2047 */
+    fprintf(ASMFIL, "0x%08x00000000", num[0]);
+  else {
+    fprintf(ASMFIL, "0x%.8X%.8X%.8X%.8X", num[0], num[1], num[2], num[3]);
+  }
+}
+// AOCC end
 
 static void
 put_r8(int sptr, int putval)

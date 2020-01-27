@@ -37,6 +37,10 @@
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
  * Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -1579,6 +1583,7 @@ const char *SyminiFE90::init_names0[] = {
     "iparity"
     "iall",
     "iany",
+    "quad",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2103,6 +2108,7 @@ const char *SyminiFE90::init_names1[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",
@@ -2637,6 +2643,7 @@ const char *SyminiFE90::init_names2[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",
@@ -3224,6 +3231,7 @@ const char *SyminiFE90::init_names3[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",

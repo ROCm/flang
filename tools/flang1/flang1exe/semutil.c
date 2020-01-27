@@ -23,6 +23,9 @@
   * Added code to support reshape with implied dos inside target region
   * Date of Modification: 23rd January 2020
   *
+  * Added support for quad precision
+  * last modified: feb 2020
+  *
   */
 
 
@@ -511,6 +514,8 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
     /* fall thru ... */
     case TY_DBLE:
       break;
+    case TY_QUAD:    // AOCC
+      break;
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -615,6 +620,40 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       goto type_error;
     }
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    switch (from) {
+    case TY_BLOG:
+    case TY_BINT:
+    case TY_SLOG:
+    case TY_SINT:
+      cngtyp(old, DT_INT);
+      SST_DTYPEP(old, DT_INT);
+    /* fall thru ... */
+    case TY_DBLE:
+    case TY_LOG:
+    case TY_INT:
+    case TY_LOG8:
+    case TY_INT8:
+      cngtyp(old, DT_REAL);
+    case TY_DCMPLX:
+      break;
+    case TY_CMPLX:
+      mkexpr1(old);
+    /* fall thru to */
+    case TY_REAL:
+      break;
+    case TY_CHAR:
+    case TY_NCHAR:
+    case TY_STRUCT:
+    case TY_DERIVED:
+    /* fall thru ... */
+    default:
+      goto type_error;
+    }
+    break;
+  // AOCC end
 
   case TY_CMPLX:
     switch (from) {
@@ -771,13 +810,14 @@ done:
     if ((to == TY_BLOG || to == TY_SLOG || to == TY_LOG || to == TY_LOG8) &&
         (from == TY_BINT || from == TY_SINT || from == TY_INT ||
          from == TY_INT8 || from == TY_REAL || from == TY_DCMPLX ||
-         from == TY_DBLE || from == TY_CMPLX
+         from == TY_DBLE || from == TY_CMPLX || from == TY_QUAD
          ))
       goto type_error;
     if ((from == TY_BLOG || from == TY_SLOG || from == TY_LOG ||
          from == TY_LOG8) &&
         (to == TY_BINT || to == TY_SINT || to == TY_INT || to == TY_INT8 ||
-         to == TY_REAL || to == TY_DCMPLX || to == TY_DBLE || to == TY_CMPLX
+         to == TY_REAL || to == TY_DCMPLX || to == TY_DBLE || to == TY_CMPLX ||
+         to == TY_QUAD
          ))
       goto type_error;
   }
@@ -1047,6 +1087,8 @@ again:
     case TY_REAL:
       break;
     case TY_DBLE:
+      break;
+    case TY_QUAD:     // AOCC
       break;
     case TY_CMPLX:
       break;
@@ -3203,6 +3245,9 @@ fix_term(SST *stktop, int sptr)
   case TY_REAL:
     break;
   case TY_DBLE:
+    break;
+  // AOCC
+  case TY_QUAD:
     break;
   case TY_INT8:
     break;
@@ -5853,6 +5898,10 @@ mod_type(int dtype, int ty, int kind, int len, int propagated, int sptr)
         return DT_REAL8;
       if (len == 4)
         return (DT_REAL4);
+      // AOCC begin
+      if (len == 16)
+        return (DT_QUAD);
+      // AOCC end
     }
     error(31, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) :
                                      (ty == TY_HALF ? "real2" : "real"), CNULL);
@@ -7067,6 +7116,22 @@ _xtok(INT conval1, BIGINT64 count, int dtype)
       xdmul(num1, dresult, dresult);
     conval = getcon(dresult, DT_REAL8);
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    num1[0] = CONVAL1G(conval1);
+    num1[1] = CONVAL2G(conval1);
+    num1[2] = CONVAL3G(conval1);
+    num1[3] = CONVAL4G(conval1);
+    qresult[0] = CONVAL1G(stb.quad1);
+    qresult[1] = CONVAL2G(stb.quad1);
+    qresult[2] = CONVAL3G(stb.quad1);
+    qresult[3] = CONVAL4G(stb.quad1);
+    while (count--)
+      xqmul(num1, qresult, qresult);
+    conval = getcon(qresult, DT_QUAD);
+    break;
+  // AOCC end
 
   case TY_CMPLX:
     real1 = CONVAL1G(conval1);

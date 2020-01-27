@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /* clang-format off */
@@ -1757,6 +1762,7 @@ fw_writenum(int code, char *item, int type)
 {
   __BIGINT_T ival;
   __BIGREAL_T dval;
+  __BIGREAL16Q_T qval;    // AOCC
 #undef IS_INT
   DBLINT64 i8val;
 #define IS_INT(t) (t == __BIGINT || t == __INT8)
@@ -1853,9 +1859,11 @@ fw_writenum(int code, char *item, int type)
       e = REAL8_E;
     }
     break;
-
   case __REAL16:
-    dval = *(__REAL16_T *)item;
+#ifdef LONG_DOUBLE_FLOAT128
+    qval = *(__REAL16_T *)item;
+#endif
+    qval = *(__REAL16Q_T *)item;   // AOCC
     ty = __REAL16;
     w = REAL16_W;
     d = REAL16_D;
@@ -2836,6 +2844,14 @@ ENTF90IO(SC_D_FMT_WRITE, sc_d_fmt_write)(double item, int type)
 {
   return __f90io_fmt_write(type, 1, 0, (char *)&item, 0);
 }
+
+// AOCC begin
+__INT_T
+ENTF90IO(SC_Q_FMT_WRITE, sc_q_fmt_write)(__float128 item, int type)
+{
+  return __f90io_fmt_write(type, 1, 0, (char *)&item, 0);
+}
+// AOCC end
 
 __INT_T
 ENTF90IO(SC_CF_FMT_WRITE, sc_cf_fmt_write)(float real, float imag, int type)

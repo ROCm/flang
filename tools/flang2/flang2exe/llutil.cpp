@@ -12,6 +12,9 @@
  *
  * Date of Modification: November 2018
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -299,11 +302,12 @@ ll_convert_basic_dtype_with_addrspace(LL_Module *module, DTYPE dtype, int addrsp
     break;
   case TY_DBLE:
   case TY_DCMPLX:
-  case TY_QUAD:
-    /* TY_QUAD represents a long double on systems that map long
-     * double to IEEE64. */
     basetype = LL_DOUBLE;
     break;
+  // AOCC
+  case TY_QUAD:
+    /* TY_QUAD represents a float128  on systems that map long
+     * double to IEEE128. */
   case TY_FLOAT128:
   case TY_CMPLX128:
     /* TY_FLOAT128 represents a long double (or __float128) on
@@ -363,6 +367,13 @@ ll_convert_simd_dtype(LL_Module *module, DTYPE dtype)
   case DT_256D:
     base = LL_DOUBLE;
     break;
+  // AOCC begin
+  case DT_QUAD:
+  case DT_128Q:
+  case DT_256Q:
+    base = LL_FP128;
+    break;
+  // AOCC end
   default:
     interr("ll_convert_simd_dtype: unhandled dtype", dtype, ERR_Fatal);
     return NULL;
@@ -999,6 +1010,11 @@ get_dtype_from_arg_opc(ILI_OP opc)
   case IL_ARGDP:
   case IL_DADP:
     return DT_DBLE;
+  // AOCC begin
+  case IL_ARGQP:
+  case IL_DAQP:
+    return DT_QUAD;
+  // AOCC end
   case IL_ARGAR:
   case IL_DAAR:
     return DT_CPTR;
@@ -1138,6 +1154,10 @@ get_dtype_for_vect_type_nme(int nme) {
         case DT_DBLE:
           dtype = DT_128D;
           break;
+        // AOCC
+        case DT_QUAD:
+          dtype = DT_128Q;
+          break;
         default:
           dtype = DT_128;
         }
@@ -1149,6 +1169,10 @@ get_dtype_for_vect_type_nme(int nme) {
           break;
         case DT_DBLE:
           dtype = DT_256D;
+          break;
+        // AOCC
+        case DT_QUAD:
+          dtype = DT_128Q;
           break;
         default:
           dtype = DT_256;
@@ -1974,7 +1998,7 @@ write_vconstant_value(int sptr, LL_Type *type, unsigned long long undef_bitmask)
 
     switch (vtype->data_type) {
     case LL_DOUBLE:
-      write_constant_value(VCON_CONVAL(edtype + i), 0, 0, 0, false);
+      write_constant_value(VCON_CONVAL(edtype + i), 0, 0, 0,0,0, false);
       break;
     case LL_I40:
     case LL_I48:
@@ -1982,12 +2006,12 @@ write_vconstant_value(int sptr, LL_Type *type, unsigned long long undef_bitmask)
     case LL_I64:
     case LL_I128:
     case LL_I256: {
-      write_constant_value(VCON_CONVAL(edtype + i), 0, 0, 0, false);
+      write_constant_value(VCON_CONVAL(edtype + i), 0, 0, 0,0,0, false);
       break;
     }
     /* Fall through. */
     default:
-      write_constant_value(0, vtype, VCON_CONVAL(edtype + i), 0, false);
+      write_constant_value(0, vtype, VCON_CONVAL(edtype + i), 0,0,0, false);
     }
   }
   fputc('>', LLVMFIL);
@@ -1996,12 +2020,13 @@ write_vconstant_value(int sptr, LL_Type *type, unsigned long long undef_bitmask)
 /**
    \brief Write a constant value to the output llvm file
  */
+// AOCC parameter: conval3, conval4
 void
-write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1,
+write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conval2, INT conval3,
                      bool uns)
 {
   const char *ctype;
-  INT num[2] = {0, 0};
+  INT num[4] = {0, 0, 0, 0};  // AOCC
   union xx_u xx;
   union {
     double d;
@@ -2050,7 +2075,7 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1,
         if (sptr && DTY(DTYPEG(sptr)) == TY_NCHAR) {
           fprintf(LLVMFIL, "%s ", ctype);
         }
-        write_constant_value(0, type->sub_types[0], conval0, conval1, uns);
+        write_constant_value(0, type->sub_types[0], conval0, conval1, conval2, conval3, uns);
         elems--;
         if (elems > 0)
           fprintf(LLVMFIL, ", ");
@@ -2069,16 +2094,16 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1,
         LL_Type *float_type = make_lltype_from_dtype(DT_FLOAT);
         ctype = llvm_fc_type(DT_FLOAT);
         fprintf(LLVMFIL, "<{ %s ", ctype);
-        write_constant_value(0, float_type, CONVAL1G(sptr), 0, uns);
+        write_constant_value(0, float_type, CONVAL1G(sptr), 0,0,0, uns);
         fprintf(LLVMFIL, ", %s ", ctype);
-        write_constant_value(0, float_type, CONVAL2G(sptr), 0, uns);
+        write_constant_value(0, float_type, CONVAL2G(sptr), 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
       } else {
         ctype = llvm_fc_type(DTYPEG(CONVAL1G(sptr)));
         fprintf(LLVMFIL, "<{ %s ", ctype);
-        write_constant_value(CONVAL1G(sptr), 0, 0, 0, uns);
+        write_constant_value(CONVAL1G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, ", %s ", ctype);
-        write_constant_value(CONVAL2G(sptr), 0, 0, 0, uns);
+        write_constant_value(CONVAL2G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
       }
     } else {
@@ -2172,10 +2197,17 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1,
             (unsigned short)(CONVAL3G(sptr) >> 16));
     return;
 
+#ifdef LONG_DOUBLE_FLOAT128
   case LL_FP128:
     assert(sptr, "write_constant_value(): fp128 constant without sptr", 0, ERR_Fatal);
     fprintf(LLVMFIL, "0xL%08x%08x%08x%08x", CONVAL1G(sptr), CONVAL2G(sptr),
             CONVAL3G(sptr), CONVAL4G(sptr));
+    return;
+#endif
+  case LL_FP128:
+    assert(sptr, "write_constant_value(): fp128 constant without sptr", 0, ERR_Fatal);
+    fprintf(LLVMFIL, "0xL%08x%08x%08x%08x", CONVAL3G(sptr), CONVAL4G(sptr),
+            CONVAL1G(sptr), CONVAL2G(sptr));
     return;
 
   case LL_PPC_FP128:
@@ -2264,8 +2296,8 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
         write_type(p->ll_type);
         print_space(1);
       }
-      write_constant_value(0, p->ll_type, p->val.conval[0], p->val.conval[1],
-                           uns);
+      write_constant_value(0, p->ll_type, p->val.conval[0], p->val.conval[1], p->val.conval[2],
+                           p->val.conval[3], uns);
     }
     break;
   case OT_UNDEF:
@@ -2308,7 +2340,7 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
       if (p->flags & OPF_CONTAINS_UNDEF) {
         write_vconstant_value(sptr, sptrType, p->val.sptr_undef.undef_mask);
       } else {
-        write_constant_value(sptr, sptrType, 0, 0, uns);
+        write_constant_value(sptr, sptrType, 0, 0, 0, 0, uns);
       }
     }
     break;
@@ -2644,9 +2676,9 @@ llvm_fc_type(DTYPE dtype)
     retc = "float";
     break;
   case TY_DBLE:
-  case TY_QUAD:
     retc = "double";
     break;
+  case TY_QUAD:
   case TY_FLOAT128:
   case TY_128:
     retc = "fp128";
@@ -3389,6 +3421,15 @@ add_init_const_op(DTYPE dtype, OPERAND *cur_op, ISZ_T conval, ISZ_T *repeat_cnt,
         cur_op = cur_op->next;
         address += 8;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        cur_op->next = make_constval_opL(make_lltype_from_dtype(dtype),
+                                        CONVAL1G(conval), CONVAL2G(conval),
+                                        CONVAL3G(conval), CONVAL4G(conval));
+        cur_op = cur_op->next;
+        address += 16;
+        break;
+      // AOCC end
       case TY_CMPLX:
         cur_op->next = make_constval_op(make_lltype_from_dtype(DT_FLOAT),
                                         CONVAL1G(conval), 0);

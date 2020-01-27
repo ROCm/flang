@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -53,7 +58,7 @@ INT cast_types[NTYPE][2][2] = {
     /* DT_REAL2 */ {{1, 1}, {1, 1}},
     /* DT_REAL */ {{1, 1}, {1, 1}},
     /* DT_DBLE */ {{1, 1}, {1, 1}},
-    /* DT_QUAD */ {{-1, -1}, {-1, -1}},
+    /* DT_QUAD */ {{1, 1}, {1, 1}},            // AOCC
     /* DT_CMPLX4 */ {{-1, -1}, {1, -1}},
     /* DT_CMPLX */ {{-1, -1}, {1, -1}},
     /* DT_DCMPLX */ {{-1, -1}, {1, -1}},

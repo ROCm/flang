@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #ifndef MACHREG_H_
@@ -349,6 +354,7 @@ extern int mr_res_xr[MR_MAX_XREG_RES];
 #define IR(i) ARG_IR(i)
 #define SP(i) ARG_XR(i)
 #define DP(i) ARG_XR(i)
+#define QP(i) ARG_XR(i)  // AOCC: 128 bit
 #define ISP(i) (i + 100) /* not used? */
 #define IDP(i) (i + 100)
 

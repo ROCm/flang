@@ -18,6 +18,10 @@
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -592,6 +596,7 @@ jsrAddArg(int arglist, ILI_OP opc, int argili)
   case IL_ARGKR:
   case IL_ARGSP:
   case IL_ARGDP:
+  case IL_ARGQP:    // AOCC
     ili = ad2ili(opc, argili, arglist);
     return ili;
   default:

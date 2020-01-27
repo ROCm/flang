@@ -3,8 +3,13 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
-
+#include <quadmath.h>
 #include <string.h>
 #include <ctype.h>
 #if !defined(WIN64)
@@ -30,6 +35,19 @@ union ieee {
   } v;
   int i[2];
 };
+
+// AOCC begin
+union ieee128 {
+  __float128 q;
+  struct {
+    unsigned long lm : 64;
+    unsigned long hm : 48;
+    unsigned int e : 15;
+    unsigned int s : 1;
+  } v;
+  int i[4];
+};
+// AOCC end
 
 typedef long INT;
 typedef unsigned long UINT;
@@ -762,6 +780,41 @@ writefmt(char *fmt, int prec, char c)
   fmt[i++] = c;
   fmt[i++] = '\0';
 }
+
+// AOCC begin
+// write format for quad precision
+static void
+writeqfmt(char *fmt, int prec, char c[2])
+{
+  int i, hprec, mprec, lprec;
+  hprec = mprec = 0;
+  lprec = prec;
+
+  while (lprec >= 100) {
+    hprec++;
+    lprec -= 100;
+  }
+  while (lprec >= 10) {
+    mprec++;
+    lprec -= 10;
+  }
+
+  i = 0;
+  fmt[i++] = '%';
+  fmt[i++] = '-';
+  fmt[i++] = '.';
+  if (hprec) {
+    fmt[i++] = '0' + hprec;
+    fmt[i++] = '0' + mprec;
+  } else if (mprec) {
+    fmt[i++] = '0' + mprec;
+  }
+  fmt[i++] = '0' + lprec;
+  fmt[i++] = c[0];
+  fmt[i++] = c[1];
+  fmt[i++] = '\0';
+}
+// AOCC end
 
 char *
 __fortio_ecvt(double value, int ndigit, int *decpt, int *sign, int round)
@@ -1549,6 +1602,344 @@ __fortio_fcvt(__BIGREAL_T v, int prec, int sf, int *decpt, int *sign, int round)
   }
   return NULL;
 }
+
+// AOCC begin
+  char *
+__fortio_qcvt(__float128 value, int ndigit, int *decpt, int *sign, int round)
+{
+  char *s;
+  void ufptosci();
+  UFP u;
+  int i, j, carry, n;
+
+  union ieee128 ieee_v;
+
+  static char tmp[512];
+  static char fmt[16];
+  int idx, fexp, kdz, engfmt;
+  int i0, i1;
+
+  /* This block of stuff is under consideration */
+  engfmt = 0;
+  if (round >= 256) {
+    round -= 256;
+    engfmt = 1;
+  }
+
+  if (round == 0)
+    round = FIO_COMPATIBLE;
+  if (round == FIO_PROCESSOR_DEFINED) {
+    idx = __fenv_fegetround();
+    if (idx == FE_TONEAREST)
+      round = FIO_NEAREST;
+    else if (idx == FE_DOWNWARD)
+      round = FIO_DOWN;
+    else if (idx == FE_UPWARD)
+      round = FIO_UP;
+    else if (idx == FE_TOWARDZERO)
+      round = FIO_ZERO;
+    /* Is there anything else? */
+  }
+
+  ieee_v.q = value;
+  fexp = ieee_v.v.e - 1023;
+  if (fexp == 1024) {
+    if (ieee_v.v.hm == 0 && ieee_v.v.lm == 0) {
+      strcpy(tmp, "Inf");
+      *sign = ieee_v.v.s;
+      *decpt = 0;
+      return tmp;
+    } else {
+      strcpy(tmp, "NaN");
+      *sign = 0;
+      *decpt = 0;
+      return tmp;
+    }
+  }
+
+  *sign = ieee_v.v.s;
+  ieee_v.v.s = 0;
+  value = ieee_v.q;
+
+  /* For compatible mode, round '5' away from zero */
+  /* Compatible rounding, or compatible in number of good bits??? */
+
+  if (round == FIO_COMPATIBLE) {
+    writeqfmt(fmt, ndigit, "Qe");
+    j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+
+    if (ndigit) {
+      i0 = 1;
+      tmp[i0] = tmp[0];
+    } else {
+      i0 = 0;
+    }
+    i = i0 + ndigit + 3;
+    kdz = 0;
+    while ((tmp[i] >= '0') && (tmp[i] <= '9'))
+      kdz = kdz * 10 + tmp[i++] - '0';
+    if (tmp[i0 + ndigit + 2] == '-')
+      kdz = -kdz;
+    *decpt = kdz + 1;
+    if (ndigit) {
+      if (engfmt) {
+        /* if decpt is zero, or a multiple of 3, need to round a little
+           closer.  Actual number of bits could be ndigit-2, ndigit-1,
+           or ndigit
+         */
+        short ndigitadj;
+        ndigitadj = *decpt;
+        ndigitadj = (ndigitadj - 360) % 3;
+        ndigit += ndigitadj;
+      }
+      i1 = i0 + ndigit;
+
+      /* We know sprintf is rounded, so get more bits */
+      if (tmp[i1] == '5') {
+        writeqfmt(fmt, ndigit + 20, "Qe");
+        j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+        i0 = 1;
+        tmp[i0] = tmp[0];
+      }
+      if (tmp[i1] < '5') {
+        tmp[i1] = '\0';
+      } else {
+        tmp[i1] = '\0';
+        i1--;
+        while ((tmp[i1] == '9') && (i1 >= i0)) {
+          tmp[i1--] = '0';
+        }
+        if (i1 >= i0) {
+          tmp[i1] = tmp[i1] + 1;
+        } else {
+          i0--;
+          tmp[i0] = '1';
+          *decpt = kdz + 2;
+        }
+      }
+      return tmp + i0;
+    } else {
+      tmp[3] = '\0';
+      return tmp + i0;
+    }
+  }
+
+  if ((round == FIO_NEAREST) || (round == FIO_PROCESSOR_DEFINED)) {
+    /* Algorithm for round nearest:
+       Turns out that sprintf is nearest
+     */
+    if (ndigit) {
+      writeqfmt(fmt, ndigit - 1, "Qe");
+      j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+      if (ndigit > 1) {
+        i0 = 1;
+        tmp[i0] = tmp[0];
+      } else {
+        i0 = 0;
+      }
+      i = i0 + ndigit + 2;
+      kdz = 0;
+      while ((tmp[i] >= '0') && (tmp[i] <= '9'))
+        kdz = kdz * 10 + tmp[i++] - '0';
+      if (tmp[i0 + ndigit + 1] == '-')
+        kdz = -kdz;
+      *decpt = kdz + 1;
+      if (engfmt) {
+        /* if decpt is zero, or a multiple of 3, need to round a little
+           closer.  Actual number of bits could be ndigit-2, ndigit-1,
+           or ndigit
+         */
+        short ndigitadj;
+        ndigitadj = *decpt;
+        ndigitadj = (ndigitadj - 360) % 3;
+        ndigit += ndigitadj;
+        i1 = i0 + ndigit;
+        if (tmp[i1] == '5') {
+          /* Use sprintf to round again */
+          writeqfmt(fmt, ndigit - 1, 'E');
+          j = sprintf(tmp, fmt, value);
+          if (ndigit > 1) {
+            i0 = 1;
+            tmp[i0] = tmp[0];
+          } else {
+            i0 = 0;
+          }
+          i = i0 + ndigit + 2;
+          kdz = 0;
+          while ((tmp[i] >= '0') && (tmp[i] <= '9'))
+            kdz = kdz * 10 + tmp[i++] - '0';
+          if (tmp[i0 + ndigit + 1] == '-')
+            kdz = -kdz;
+          *decpt = kdz + 1;
+          i1 = i0 + ndigit;
+          tmp[i1] = '\0';
+          return tmp + i0;
+        } else if ((tmp[i1] < '5') || (tmp[i1] == 'E')) {
+          /* These are rounded correctly */
+          tmp[i1] = '\0';
+          return tmp + i0;
+        } else {
+          /* These need to round up */
+          tmp[i1] = '\0';
+          i1--;
+          while ((tmp[i1] == '9') && (i1 >= 0)) {
+            tmp[i1--] = '0';
+          }
+          if (i1 >= 0) {
+            tmp[i1] = tmp[i1] + 1;
+            return tmp + i0;
+          } else {
+            tmp[0] = '1';
+            *decpt = *decpt + 1;
+            return tmp;
+          }
+        }
+      } else {
+        tmp[i0 + ndigit] = '\0';
+        return tmp + i0;
+      }
+    } else {
+      tmp[0] = '0';
+      tmp[1] = '\0';
+      return tmp;
+    }
+  }
+
+  if (((round == FIO_DOWN) && (*sign == 0)) ||
+      ((round == FIO_UP) && (*sign == 1)) || ((round == FIO_ZERO))) {
+    /* Algorithm for round down, positive > 1.0:
+       Add 1 character to the format.
+       call sprintf.
+       Find the exponent sprintf gave, and adjust our approx if needed.
+       If the extra character(s) are 0, we need to do more work:
+       Get a whole bunch more characters.  For now, 20 more
+       Round Down:
+       Lop everything extra off.
+     */
+    writeqfmt(fmt, ndigit, "Qe");
+    j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+    i0 = 1;
+    tmp[i0] = tmp[0];
+    i = ndigit + 4;
+    kdz = 0;
+    while ((tmp[i] >= '0') && (tmp[i] <= '9'))
+      kdz = kdz * 10 + tmp[i++] - '0';
+    if (tmp[ndigit + 3] == '-')
+      kdz = -kdz;
+    *decpt = kdz + 1;
+    if (engfmt) {
+      /* if decpt is zero, or a multiple of 3, need to round a little
+         closer.  Actual number of bits could be ndigit-2, ndigit-1,
+         or ndigit
+       */
+      short ndigitadj;
+      ndigitadj = *decpt;
+      ndigitadj = (ndigitadj - 360) % 3;
+      ndigit += ndigitadj;
+    }
+    if (ndigit) {
+      i = ndigit + 1;
+      if (tmp[i] == '0') {
+        writeqfmt(fmt, ndigit + 20, 'E');
+        j = sprintf(tmp, fmt, value);
+        i0 = 1;
+        tmp[i0] = tmp[0];
+      }
+      tmp[ndigit + 1] = '\0';
+    } else {
+      tmp[2] = '\0';
+    }
+    return tmp + 1;
+  }
+
+  if (((round == FIO_UP) && (*sign == 0)) ||
+      ((round == FIO_DOWN) && (*sign == 1))) {
+    /* Algorithm for round up, positive >= 1.0:
+       Add 1 character to the format.
+       call sprintf.
+       Find the exponent sprintf gave, and adjust our approx if needed.
+       If the extra character(s) are 0, we need to do more work:
+       Get a whole bunch more characters.  For now, 20 more
+       Search through the extra characters to find something > 0.
+       If we found it, round up.  Else return
+       Round Up:
+       If we find 9, set it to zero and keep looking to the left.
+       If we find a character other than 9, add 1 and we're done
+       If we went all the way, make tmp[0] 1, and return that.
+     */
+    writeqfmt(fmt, ndigit, "Qe");
+    j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+    i0 = 1;
+    tmp[i0] = tmp[0];
+    i = ndigit + 4;
+    kdz = 0;
+    while ((tmp[i] >= '0') && (tmp[i] <= '9'))
+      kdz = kdz * 10 + tmp[i++] - '0';
+    if (tmp[ndigit + 3] == '-')
+      kdz = -kdz;
+    *decpt = kdz + 1;
+    if (engfmt) {
+      /* if decpt is zero, or a multiple of 3, need to round a little
+         closer.  Actual number of bits could be ndigit-2, ndigit-1,
+         or ndigit
+       */
+      short ndigitadj;
+      ndigitadj = *decpt;
+      ndigitadj = (ndigitadj - 360) % 3;
+      ndigit += ndigitadj;
+    }
+    i = ndigit + 1;
+    if (ndigit) {
+      if (tmp[i] == '0') {
+        writeqfmt(fmt, ndigit + 20, "Qe");
+        j = quadmath_snprintf(tmp, sizeof(tmp), fmt, value);
+        i0 = 1;
+        tmp[i0] = tmp[0];
+        tmp[ndigit + 21] = '\0';
+        for (i = ndigit + 1; tmp[i] != '\0'; i++) {
+          if (tmp[i] != '0')
+            break;
+        }
+        if (tmp[i] == '\0') {
+          tmp[ndigit + 1] = '\0';
+          return tmp + 1;
+        } else {
+          i = ndigit;
+          while ((tmp[i] == '9') && (i >= 1)) {
+            tmp[i--] = '0';
+          }
+          tmp[ndigit + 1] = '\0';
+          if (i == 0) {
+            tmp[0] = '1';
+            return tmp;
+          } else {
+            tmp[i] = tmp[i] + 1;
+            return tmp + 1;
+          }
+        }
+      } else { /* if (tmp[i] > '0') round up */
+        i--;
+        while ((tmp[i] == '9') && (i >= 1)) {
+          tmp[i--] = '0';
+        }
+        tmp[ndigit + 1] = '\0';
+        if (i == 0) {
+          tmp[0] = '1';
+          return tmp;
+        } else {
+          tmp[i] = tmp[i] + 1;
+          return tmp + 1;
+        }
+      }
+    } else {
+      tmp[2] = '\0';
+      return tmp + 1;
+    }
+  }
+  mtherr("internal convert", FP_UNDEFINED_ERROR);
+  return NULL;
+}
+// AOCC end
 
 /* Below is code that supports IEEE128 versions of ecvt and fcvt called
  * __fortio_lldecvt and __fortio_lldfcvt

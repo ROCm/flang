@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /*
@@ -429,6 +434,12 @@ ll_ad_outlined_func2(ILI_OP result_opc, ILI_OP call_opc, int sptr, int nargs,
       argl = ad3ili(IL_ARGDP, arg, argl, 0);
       rg += 2;
       break;
+    // AOCC begin
+    case ILIA_QP:
+      argl = ad3ili(IL_ARGQP, arg, argl, 0);
+      rg += 2;
+      break;
+    // AOCC end
     case ILIA_KR:
       argl = ad3ili(IL_ARGKR, arg, argl, 0);
       rg += 2;
@@ -1048,6 +1059,8 @@ is_no_symbol_ilm(ILM_T opc) {
   switch(opc) {
     case IM_DMUL:
     case IM_DSUB:
+    case IM_QMUL:
+    case IM_QSUB:
       return true;
     default:
       return false;

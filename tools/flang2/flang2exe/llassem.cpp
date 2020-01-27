@@ -19,6 +19,10 @@
   * Date of modification 20th September 2019
   * Date of modification 01st October 2019
   * Date of modification 05th November 2019
+  *
+  * Added support for quad precision
+  * Last modified: Feb 2020
+  *
   */
 
 
@@ -1335,7 +1339,9 @@ write_consts(void)
             fprintf(ASMFIL, "@%s = internal constant %s ", getsname(sptr),
                     tyName);
           }
-          write_constant_value(sptr, 0, CONVAL1G(sptr), CONVAL2G(sptr), false);
+          // AOCC Parameters :CONVAL3G(sptr), CONVAL4G(sptr)
+          write_constant_value(sptr, 0, CONVAL1G(sptr), CONVAL2G(sptr),
+                               CONVAL3G(sptr), CONVAL4G(sptr), false);
         }
         fputc('\n', ASMFIL);
       }

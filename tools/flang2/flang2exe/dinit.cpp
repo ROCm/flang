@@ -12,6 +12,9 @@
  *
  * Date of Modification: 1st March 2019
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -1358,6 +1361,7 @@ get_ast_op(int op)
 static INT
 init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
 {
+  IEEE128 qtemp, qresult, qnum1;     // AOCC
   DBLE dtemp, dresult, num1, num2;
   DBLE dreal1, dreal2, drealrs, dimag1, dimag2, dimagrs;
   DBLE dtemp1, dtemp2;
@@ -1512,6 +1516,36 @@ init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
       goto err_exit;
     }
     return getcon(dresult, DT_DBLE);
+
+  // AOCC begin
+  case TY_QUAD:
+    num1[0] = CONVAL1G(conval1);
+    num1[1] = CONVAL2G(conval1);
+    num2[0] = CONVAL1G(conval2);
+    num2[1] = CONVAL2G(conval2);
+    switch (opr) {
+    case OP_ADD:
+      xqadd(num1, num2, qresult);
+      break;
+    case OP_SUB:
+      xqsub(num1, num2, qresult);
+      break;
+    case OP_MUL:
+      xqmul(num1, num2, qresult);
+      break;
+    case OP_DIV:
+      xqdiv(num1, num2, qresult);
+      break;
+    case OP_CMP:
+      return xqcmp(num1, num2);
+    case OP_XTOX:
+      xqpow(num1, num2, qresult);
+      break;
+    default:
+      goto err_exit;
+    }
+    return getcon(qresult, DT_QUAD);
+  // AOCC end
 
   case TY_CMPLX:
     real1 = CONVAL1G(conval1);
@@ -2981,6 +3015,7 @@ mk_unop(int optype, int lop, DTYPE dtype)
       break;
 
     case TY_DBLE:
+    case TY_QUAD:     // AOCC
     case TY_CMPLX:
     case TY_DCMPLX:
     case TY_INT8:
@@ -3341,7 +3376,16 @@ eval_nint(CONST *arg, DTYPE dtype)
         res[0] = init_fold_const(OP_SUB, con1, stb.dblhalf, DT_DBLE);
       conval = cngcon(res[0], DT_DBLE, DT_INT);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      if (init_fold_const(OP_CMP, con1, stb.quad0, DT_QUAD) >= 0)
+        res[0] = init_fold_const(OP_ADD, con1, stb.quadhalf, DT_QUAD);
+      else
+        res[0] = init_fold_const(OP_SUB, con1, stb.quadhalf, DT_QUAD);
+      conval = cngcon(res[0], DT_QUAD, DT_INT);
+      break;
     }
+   // AOCC end
 
     wrkarg->id = AC_CONST;
     wrkarg->dtype = DT_INT;
@@ -3384,6 +3428,16 @@ eval_floor(CONST *arg, DTYPE dtype)
           adjust = 1;
       }
       break;
+    // AOCC begin
+    case TY_QUAD:
+      conval = cngcon(con1, DT_QUAD, dtype);
+      if (init_fold_const(OP_CMP, con1, stb.quad0, DT_QUAD) < 0) {
+        con1 = cngcon(conval, dtype, DT_QUAD);
+        if (init_fold_const(OP_CMP, con1, wrkarg->u1.conval, DT_QUAD) != 0)
+          adjust = 1;
+      }
+      break;
+    // AOCC end
     }
     if (adjust) {
       if (DT_ISWORD(dtype))
@@ -3436,6 +3490,16 @@ eval_ceiling(CONST *arg, DTYPE dtype)
           adjust = 1;
       }
       break;
+    // AOCC begin
+    case TY_QUAD:
+      conval = cngcon(con1, DT_QUAD, dtype);
+      if (init_fold_const(OP_CMP, con1, stb.quad0, DT_QUAD) > 0) {
+        con1 = cngcon(conval, dtype, DT_QUAD);
+        if (init_fold_const(OP_CMP, con1, wrkarg->u1.conval, DT_QUAD) != 0)
+          adjust = 1;
+      }
+      break;
+    // AOCC end
     }
     if (adjust) {
       if (DT_ISWORD(dtype))
@@ -4334,6 +4398,15 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[1] = CONVAL1G(conval);
     break;
 
+  // AOCC begin
+  case TY_QUAD:
+    dest[0] = CONVAL3G(conval);
+    dest[1] = CONVAL4G(conval);
+    dest[2] = CONVAL1G(conval);
+    dest[3] = CONVAL2G(conval);
+    break;
+  // AOCC end
+
   case TY_CMPLX:
     dest[0] = CONVAL1G(conval);
     dest[1] = CONVAL2G(conval);
@@ -4362,7 +4435,7 @@ static INT
 transfer_load(DTYPE dtype, char *source)
 {
   int *src = (int *)source;
-  INT num[2], real[2], imag[2];
+  INT num[4], real[2], imag[2];
 
   if (DT_ISWORD(dtype))
     return src[0];
@@ -4375,6 +4448,15 @@ transfer_load(DTYPE dtype, char *source)
     num[1] = src[0];
     num[0] = src[1];
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    num[0] = src[2];
+    num[1] = src[3];
+    num[2] = src[0];
+    num[3] = src[1];
+    break;
+  // AOCC end
 
   case TY_CMPLX:
     num[0] = src[0];
@@ -4528,6 +4610,16 @@ eval_sqrt(CONST *arg, DTYPE dtype)
       xdsqrt(num1, res);
       conval = getcon(res, DT_DBLE);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      num1[0] = CONVAL1G(con1);
+      num1[1] = CONVAL2G(con1);
+      num1[2] = CONVAL3G(con1);
+      num1[3] = CONVAL4G(con1);
+      xqsqrt(num1, res);
+      conval = getcon(res, DT_QUAD);
+      break;
+    // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
       /*

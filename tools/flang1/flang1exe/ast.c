@@ -1,9 +1,15 @@
-/*
+ /*
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
- * Last modified: Nov 12, 2019
+ *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Last modified: Jan 30, 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
  *
  */
 /*
@@ -641,6 +647,7 @@ mk_cval1(INT v, DTYPE dtype)
   case TY_INT8:
   case TY_LOG8:
   case TY_DBLE:
+  case TY_QUAD:
   case TY_DWORD:
   case TY_CMPLX:
   case TY_DCMPLX:
@@ -1294,6 +1301,7 @@ mk_unop(int optype, int lop, DTYPE dtype)
         break;
 
       case TY_DBLE:
+      case TY_QUAD:      // AOCC
       case TY_CMPLX:
       case TY_DCMPLX:
       case TY_INT8:
@@ -1514,6 +1522,16 @@ convert_cnst(int cnst, int newtyp)
       num[1] = CONVAL2G(sptr);
       xdfix(num, &result);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      num[0] = CONVAL1G(sptr);
+      num[1] = CONVAL2G(sptr);
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
+      xqfix(num, &result);
+      break;
+    // AOCC end
+
     default: /* TY_HOLL, TY_CHAR, TY_NCHAR */
       return cnst;
     }
@@ -1557,7 +1575,15 @@ convert_cnst(int cnst, int newtyp)
         num1[0] = CONVAL1G(sptr);
         num1[1] = CONVAL2G(sptr);
         xdfix64(num1, num);
+      // AOCC begin
+      case TY_QUAD:
+        num1[0] = CONVAL1G(sptr);
+        num1[1] = CONVAL2G(sptr);
+        num1[2] = CONVAL3G(sptr);
+        num1[3] = CONVAL4G(sptr);
+        xqfix64(num1, num);
         break;
+      // AOCC end
       default: /* TY_HOLL, TY_CHAR, TY_NCHAR */
         return cnst;
       }
@@ -1588,6 +1614,14 @@ convert_cnst(int cnst, int newtyp)
         num[1] = CONVAL2G(sptr);
         xsngl(num, &result);
         break;
+      // AOCC begin
+      case TY_QUAD:
+        num[0] = CONVAL1G(sptr);
+        num[1] = CONVAL2G(sptr);
+        num[2] = CONVAL3G(sptr);
+        num[3] = CONVAL4G(sptr);
+        xsngl(num, &result);
+      // AOCC end
       default: /* TY_HOLL, TY_CHAR, TY_NCHAR */
         return cnst;
       }
@@ -1635,6 +1669,44 @@ convert_cnst(int cnst, int newtyp)
     }
     result = getcon(num, DT_REAL8);
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    if (from == TY_WORD) {
+      return cnst;
+    } else if (from == TY_DWORD) {
+      return cnst;
+    } else if (from == TY_INT8 || from == TY_LOG8) {
+      num1[0] = CONVAL1G(sptr);
+      num1[1] = CONVAL2G(sptr);
+      num1[2] = CONVAL3G(sptr);
+      num1[3] = CONVAL4G(sptr);
+      xqflt64(num1, num);
+    } else if (TY_ISINT(from))
+      xdfloat(CONVAL2G(sptr), num);
+    else {
+      /* if a special 'named' constant, don't evaluate */
+      if ((XBIT(49, 0x400000) || XBIT(51, 0x40)) && NMPTRG(sptr))
+        return cnst;
+      switch (from) {
+      case TY_DCMPLX:
+        result = CONVAL1G(sptr);
+        goto call_mk_cval1;
+      case TY_CMPLX:
+        oldval = CONVAL1G(sptr);
+        xdble(oldval, num);
+        break;
+      case TY_REAL:
+        oldval = CONVAL2G(sptr);
+        xquad(oldval, num);   // AOCC
+        break;
+      default: /* TY_HOLL, TY_CHAR, TY_NCHAR */
+        return cnst;
+      }
+    }
+    result = getcon(num, DT_QUAD);
+    break;
+   // AOCC end
 
   case TY_CMPLX:
     /*  num[0] = real part
@@ -1724,6 +1796,14 @@ convert_cnst(int cnst, int newtyp)
         num[0] = sptr;
         num[1] = stb.dbl0;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        num[0] = sptr;
+        num[1] = stb.quad0;
+        num[2] = stb.quad1;
+        num[3] = stb.quad2;
+        break;
+      // AOCC end
       case TY_CMPLX:
         xdble(CONVAL1G(sptr), num1);
         num[0] = getcon(num1, DT_REAL8);
@@ -1736,7 +1816,6 @@ convert_cnst(int cnst, int newtyp)
     }
     result = getcon(num, DT_CMPLX16);
     break;
-
   }
 
 call_mk_cval1:
@@ -7116,6 +7195,11 @@ ast_intr(int i_intr, DTYPE dtype, int cnt, ...)
       case TY_DBLE:
         sptr = GDBLEG(sptr);
         break;
+      // AOCC begin
+      case TY_QUAD:
+        sptr = GQUADG(sptr);
+        break;
+      // AOCC end
       case TY_CMPLX:
         sptr = GCMPLXG(sptr);
         break;
@@ -7205,6 +7289,21 @@ _huge(DTYPE dtype)
       val[1] = 0xffffffff;
     }
     goto const_dble_val;
+// AOCC begin
+   case TY_QUAD:
+    sname = "huge(1.0_16)";
+    if (XBIT(49, 0x40000)) {               /* C90 */
+#define C90_HUGE "0.1363435169524269911828730305882e+2466L"
+                                                  /* 0577757777777777777777 */
+      atoxq(C90_HUGE, &val[0], strlen(C90_HUGE)); /* 7777777777777776 */
+    } else {
+      /* 1.189731495357231765085759326628007016E+4932 */
+      val[0] = 0x7ffeffffffffffff;
+      val[1] = 0xffffffffffffffff;
+    }
+    goto const_quad_val;
+// AOCC end
+
   default:
     return 0; /* caller must check */
   }
@@ -7234,7 +7333,16 @@ const_dble_val:
   if (NMPTRG(sptr) == 0 && (XBIT(49, 0x400000) || XBIT(51, 0x40)))
     NMPTRP(sptr, putsname(sname, strlen(sname)));
   return ast;
-
+// AOCC end
+const_quad_val:
+  tmp = getcon(val, DT_QUAD);
+  ast = mk_cnst(tmp);
+  sptr = A_SPTRG(ast);
+  /* just added? */
+  if (NMPTRG(sptr) == 0 && (XBIT(49, 0x400000) || XBIT(51, 0x40)))
+    NMPTRP(sptr, putsname(sname, strlen(sname)));
+  return ast;
+// AOCC end
 }
 
 /* utility function to ensure that an expression has type dt_needed.
@@ -7814,6 +7922,16 @@ negate_const(INT conval, DTYPE dtype)
     xdneg(num, dresult);
     return getcon(dresult, DT_REAL8);
 
+  // AOCC begin
+  case TY_QUAD:
+    num[0] = CONVAL1G(conval);
+    num[1] = CONVAL2G(conval);
+    num[2] = CONVAL3G(conval);
+    num[3] = CONVAL4G(conval);
+    xqneg(num, qresult);
+    return getcon(qresult, DT_QUAD);
+  // AOCC end
+
   case TY_CMPLX:
     xfneg(CONVAL1G(conval), &realrs);
     xfneg(CONVAL2G(conval), &imagrs);
@@ -8005,6 +8123,41 @@ const_fold(int opr, INT conval1, INT conval2, DTYPE dtype)
       goto err_exit;
     }
     return getcon(dresult, DT_REAL8);
+
+// AOCC begin
+  case TY_QUAD:
+    qnum1[0] = CONVAL1G(conval1);
+    qnum1[1] = CONVAL2G(conval1);
+    qnum1[2] = CONVAL3G(conval1);
+    qnum1[3] = CONVAL4G(conval1);
+    qnum2[0] = CONVAL1G(conval2);
+    qnum2[1] = CONVAL2G(conval2);
+    qnum2[2] = CONVAL3G(conval2);
+    qnum2[3] = CONVAL4G(conval2);
+    switch (opr) {
+    case OP_ADD:
+      xqadd(qnum1, qnum2, qresult);
+      break;
+    case OP_SUB:
+      xqsub(qnum1, qnum2, qresult);
+      break;
+    case OP_MUL:
+      xqmul(qnum1, qnum2, qresult);
+      break;
+    case OP_DIV:
+      xqdiv(qnum1, qnum2, qresult);
+      break;
+    case OP_CMP:
+      return xqcmp(qnum1, qnum2);
+    case OP_XTOI:
+    case OP_XTOX:
+      xqpow(qnum1, qnum2, qresult);
+      break;
+    default:
+      goto err_exit;
+    }
+    return getcon(qresult, DT_QUAD);
+// AOCC end
 
   case TY_CMPLX:
     real1 = CONVAL1G(conval1);
@@ -8478,6 +8631,15 @@ cngcon(INT oldval, int oldtyp, int newtyp)
       num[1] = CONVAL2G(oldval);
       xdfix(num, &result);
       return result;
+    // AOCC begin
+    case TY_QUAD:
+      num[0] = CONVAL1G(oldval);
+      num[1] = CONVAL2G(oldval);
+      num[2] = CONVAL3G(oldval);
+      num[3] = CONVAL4G(oldval);
+      xqfix(num, &result);
+      return result;
+    // AOCC end
     case TY_HOLL:
       cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
       goto char_to_int;
@@ -8533,6 +8695,15 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         num1[1] = CONVAL2G(oldval);
         xdfix64(num1, num);
         return getcon(num, newtyp);
+      // AOCC begin
+      case TY_QUAD:
+        num1[0] = CONVAL1G(oldval);
+        num1[1] = CONVAL2G(oldval);
+        num1[2] = CONVAL3G(oldval);
+        num1[3] = CONVAL4G(oldval);
+        xqfix64(num1, num);
+        return getcon(num, newtyp);
+      // AOCC end
       case TY_HOLL:
         cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
         goto char_to_int8;
@@ -8585,6 +8756,15 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         num[1] = CONVAL2G(oldval);
         xsngl(num, &result);
         return result;
+      // AOCC begin
+      case TY_QUAD:
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xsngl(num, &result);
+        return result;
+      // AOCC end
       case TY_HOLL:
         cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
         goto char_to_real;
@@ -8649,6 +8829,57 @@ cngcon(INT oldval, int oldtyp, int newtyp)
     }
     return getcon(num, DT_REAL8);
 
+// AOCC begin
+  case TY_QUAD:
+    if (from == TY_WORD) {
+      num[0] = 0;
+      num[1] = oldval;
+    } else if (from == TY_DWORD) {
+      num[0] = CONVAL1G(oldval);
+      num[1] = CONVAL2G(oldval);
+    } else if (from == TY_INT8 || from == TY_LOG8) {
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      xqflt64(num1, num);
+    } else if (TY_ISINT(from))
+      xqfloat(oldval, num);
+    else {
+      switch (from) {
+      case TY_DCMPLX:
+        return CONVAL1G(oldval);
+      case TY_CMPLX:
+        oldval = CONVAL1G(oldval);
+      case TY_REAL:
+        xquad(oldval, num);
+        break;
+      case TY_HOLL:
+        cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
+        goto char_to_quad;
+      case TY_CHAR:
+        if (flg.standard)
+          conversion_warning();
+        cp = stb.n_base + CONVAL1G(oldval);
+        return getcon(&num[2], DT_QUAD);
+      char_to_quad:
+        holtonum(cp, num, 16);
+        if (flg.endian == 0) {
+          /* for little endian, need to swap words in each double word
+           * quantity.  Order of bytes in a word is okay, but not the
+           * order of words.
+           */
+          swap = num[2];
+          num[2] = num[3];
+          num[3] = swap;
+        }
+        return getcon(&num[2], DT_QUAD);
+      default:
+        errsev(91);
+        return (stb.quad0);
+      }
+    }
+    return getcon(num, DT_QUAD);
+// AOCC end
+
   case TY_CMPLX:
     /*  num[0] = real part
      *  num[1] = imaginary part
@@ -8678,6 +8909,16 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         num1[1] = CONVAL2G(oldval);
         xsngl(num1, &num[0]);
         break;
+      // AOCC begin
+      case TY_QUAD:
+        num1[0] = CONVAL1G(oldval);
+        num1[1] = CONVAL2G(oldval);
+        num1[2] = CONVAL3G(oldval);
+        num1[3] = CONVAL4G(oldval);
+        xsngl(num1, &num[0]);
+        break;
+      // AOCC end
+
       case TY_DCMPLX:
         num1[0] = CONVAL1G(CONVAL1G(oldval));
         num1[1] = CONVAL2G(CONVAL1G(oldval));

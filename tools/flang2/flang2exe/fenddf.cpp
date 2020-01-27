@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -49,23 +54,23 @@ OP_CMP    OP_AIF    OP_LD     OP_ST     OP_FUNC   OP_CON
 /** ILM opcodes for basic types: */
 short ilm_opcode[NOPC][2][NTYPE + 1] = {
     {/* NEG */ {0, IM_INEG, 0, 0, IM_INEG, IM_INEG, IM_INEG, IM_KNEG, IM_RNEG, IM_RNEG,
-                IM_DNEG, 0, IM_CNEG, IM_CNEG, IM_CDNEG, IM_INEG, IM_INEG, IM_INEG,
+                IM_DNEG, IM_QNEG, IM_CNEG, IM_CNEG, IM_CDNEG, IM_INEG, IM_INEG, IM_INEG,
                 IM_KNEG, 0, 0},
      /* VNEG */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* ADD */ {0, IM_IADD, 0, 0, IM_IADD, IM_IADD, IM_IADD, IM_KADD, IM_RADD, IM_RADD,
-                IM_DADD, 0, IM_CADD, IM_CADD, IM_CDADD, IM_IADD, IM_IADD, IM_IADD,
+                IM_DADD, IM_QADD, IM_CADD, IM_CADD, IM_CDADD, IM_IADD, IM_IADD, IM_IADD,
                 IM_KADD, 0, 0},
      /* VADD */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* SUB */ {0, IM_ISUB, 0, 0, IM_ISUB, IM_ISUB, IM_ISUB, IM_KSUB, IM_RSUB, IM_RSUB,
-                IM_DSUB, 0, IM_CSUB, IM_CSUB, IM_CDSUB, IM_ISUB, IM_ISUB, IM_ISUB,
+                IM_DSUB, IM_QSUB, IM_CSUB, IM_CSUB, IM_CDSUB, IM_ISUB, IM_ISUB, IM_ISUB,
                 IM_KSUB, 0, 0},
      /* VSUB */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* MUL */ {0, IM_IMUL, 0, 0, IM_IMUL, IM_IMUL, IM_IMUL, IM_KMUL, IM_RMUL, IM_RMUL,
-                IM_DMUL, 0, IM_CMUL, IM_CMUL, IM_CDMUL, IM_IMUL, IM_IMUL, IM_IMUL,
+                IM_DMUL, IM_QMUL, IM_CMUL, IM_CMUL, IM_CDMUL, IM_IMUL, IM_IMUL, IM_IMUL,
                 IM_KMUL, 0, 0},
      /* VMUL */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* DIV */ {0, IM_IDIV, 0, 0, IM_IDIV, IM_IDIV, IM_IDIV, IM_KDIV, IM_RDIV, IM_RDIV,
-                IM_DDIV, 0, IM_CDIV, IM_CDIV, IM_CDDIV, IM_IDIV, IM_IDIV, IM_IDIV,
+                IM_DDIV, IM_QDIV, IM_CDIV, IM_CDIV, IM_CDDIV, IM_IDIV, IM_IDIV, IM_IDIV,
                 IM_KDIV, 0, 0},
      /* VDIV */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* xTOI */ {0, IM_ITOI, 0, 0, IM_ITOI, IM_ITOI, IM_ITOI, IM_KTOI, IM_RTOI, IM_RTOI,
@@ -87,11 +92,11 @@ short ilm_opcode[NOPC][2][NTYPE + 1] = {
     {/* AIF  */ {0, IM_IAIF, 0, 0, IM_IAIF, IM_IAIF, IM_IAIF, IM_KAIF, IM_RAIF, IM_RAIF,
                  IM_DAIF, 0, 0, 0, IM_IAIF, IM_IAIF, IM_IAIF, IM_KAIF, 0, 0},
      /* VAIF non-existent */ {0}},
-    {/* LD */ {0, 0, 0, 0, IM_CHLD, IM_SILD, IM_ILD, IM_KLD, IM_RLD, IM_RLD, IM_DLD, 0,
-               IM_CLD, IM_CLD, IM_CDLD, IM_CHLD, IM_SLLD, IM_LLD, IM_KLLD, 0, 0},
+    {/* LD */ {0, 0, 0, 0, IM_CHLD, IM_SILD, IM_ILD, IM_KLD, IM_RLD, IM_RLD, IM_DLD, IM_QPLD,
+               IM_CLD, IM_CLD, IM_CDLD, IM_CHLD, IM_SLLD, IM_LLD, IM_KLLD, 0},
      /* VLD */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* ST */ {0, IM_IST, IM_IST, 0, IM_CHST, IM_SIST, IM_IST, IM_KST, IM_RST, IM_RST,
-               IM_DST, 0, IM_CST, IM_CST, IM_CDST, IM_CHST, IM_SLST, IM_LST, IM_KLST, 0,
+               IM_DST, IM_QPST, IM_CST, IM_CST, IM_CDST, IM_CHST, IM_SLST, IM_LST, IM_KLST, 0,
                IM_SST, IM_NSST},
      /* VST */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* FUNC */ {0, IM_IFUNC, 0, 0, IM_IFUNC, IM_IFUNC, IM_IFUNC, IM_KFUNC,
@@ -99,7 +104,7 @@ short ilm_opcode[NOPC][2][NTYPE + 1] = {
                  IM_LFUNC, IM_KFUNC, 0, 0},
      /* VFUNC non-existent */ {0}},
     {/* CON */ {0, IM_UCON, IM_UDCON, 0, IM_ICON, IM_ICON, IM_ICON, IM_KCON,
-                IM_RCON, IM_RCON, IM_DCON, 0, IM_CCON, IM_CCON, IM_CDCON, IM_LCON, IM_LCON,
+                IM_RCON, IM_RCON, IM_DCON, IM_QCON, IM_CCON, IM_CCON, IM_CDCON, IM_LCON, IM_LCON,
                 IM_LCON, IM_KCON, 0, IM_BASE},
      /* VCON non-existent */ {0}}};
 

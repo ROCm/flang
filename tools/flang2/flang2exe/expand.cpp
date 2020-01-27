@@ -14,6 +14,9 @@
   * Changes to support AMDGPU OpenMP offloading
   * Date of modification 05th November 2019
   *
+  * Added support for quad precision
+  * Last modified: Feb 2020
+  *
   */
 
 
@@ -1048,6 +1051,13 @@ replace_by_zero(ILM_OP opc, ILM *ilmp, int curilm)
     newopc = IM_DCON;
     break;
 
+// AOCC begin
+  case IM_QPLD:
+    zero = stb.quad0;
+    newopc = IM_QCON;
+    break;
+// AoCC end
+
   case IM_PLD:
     zero = stb.i0;
     newopc = IM_ICON;
@@ -1251,6 +1261,15 @@ exp_load(ILM_OP opc, ILM *ilmp, int curilm)
     CHECK_NME(nme, dt_nme(nme) != DT_DBLE);
     load = ad3ili(IL_LDDP, addr, nme, MSZ_F8);
     goto cand_load;
+
+  // AOCC begin
+  // Load quad value
+  case IM_QPLD:
+    CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
+    load = ad3ili(IL_LDQP, addr, nme, MSZ_F16);
+    goto cand_load;
+  // AOCC end
+
   case IM_QLD: /*m128*/
     CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
     load = ad3ili(IL_LDQ, addr, nme, MSZ_F16);
@@ -1619,12 +1638,24 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
     CHECK_NME(nme, dt_nme(nme) != DT_DBLE);
     store = ad4ili(IL_STDP, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F8);
     goto cand_store;
+
+  // AOCC begin
+  // quad store
+  case IM_QPST:
+    if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
+      nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
+    CHECK_NME(nme, dt_nme(nme) != DT_QUAD);
+    store = ad4ili(IL_STQP, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F16);
+    goto cand_store;
+  // AOCC end
+
   case IM_QST: /*m128*/
     if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
       nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
     CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
     store = ad4ili(IL_STQ, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F16);
     goto cand_store;
+
   case IM_M256ST: /*m256*/
     if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
       nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
@@ -2069,6 +2100,11 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
       case ILMO_DP:
         newili.opnd[i] = DP(ilmopr->aux);
         break;
+      // AOCC begin
+      case ILMO_QP:
+        newili.opnd[i] = QP(ilmopr->aux);
+        break;
+      // AOCC end
       case ILMO_ISP:
         newili.opnd[i] = ISP(ilmopr->aux);
         break;

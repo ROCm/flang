@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -478,6 +483,9 @@ prettytoken(int tkntyp, INT tknval)
     break;
   case TK_DCON:
     sprintf(symbuf, "doubleprecision constant %s", getprint((int)tknval));
+    break;
+  case TK_QCON:   // AOCC
+    sprintf(symbuf, "quadprecision constant %s", getprint((int)tknval));
     break;
   case TK_CCON:
     sprintf(symbuf, "complex constant %s", getprint((int)tknval));

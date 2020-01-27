@@ -1168,7 +1168,7 @@ semantio(int rednum, SST *top)
                    (dtype == DT_INT8 || dtype == DT_INT4 || dtype == DT_SINT ||
                     dtype == DT_BINT || dtype == DT_LOG8 || dtype == DT_LOG ||
                     dtype == DT_SLOG || dtype == DT_BLOG || dtype == DT_REAL4 ||
-                    dtype == DT_REAL8 || dtype == DT_CMPLX8 ||
+                    dtype == DT_REAL8 || dtype == DT_QUAD || dtype == DT_CMPLX8 ||
                     dtype == DT_CMPLX16 ||
                     (DTY(dtype) == TY_CHAR && fmttyp == FT_LIST_DIRECTED))) {
 
@@ -6137,6 +6137,10 @@ getWriteByDtypeRtn(int dtype, FormatType fmttyp)
   case DT_REAL8:
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_d_ldw
                                           : RTE_f90io_sc_d_fmt_write;
+    break;
+  case DT_QUAD:
+    rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_q_ldw
+                                          : RTE_f90io_sc_q_fmt_write;
     break;
   case DT_INT8:
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_l_ldw

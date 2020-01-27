@@ -8,6 +8,9 @@
 #Complex data types support for acosh, asinh and atanh
 #Date of Modification:08 January 2020
 #
+# Added support for quad precision
+# Last modified: Feb 2020
+#
 ABS	ilm
 ACON	sym
 ACOS	ilm
@@ -516,6 +519,51 @@ PUFUNC/PFUNC	num	sym	args
 PUFUNCA/PFUNCA	num	num	ilm	args
 PPUFUNCA/PPFUNCA	num	num	sym	ilm	args
 PUVFUNCA/PVFUNCA	num	num	sym	ilm	sym	args
+#AOCC begin
+QABS	ilm
+QPLD	ilm
+QLOG	ilm
+#QLOG10	ilm
+QUAD	ilm
+QADD	ilm	ilm
+QCON	sym
+QCMP	ilm	ilm
+QDIV	ilm	ilm
+QMAX	ilm	ilm
+#QMERGE	ilm	ilm	ilm
+QMIN	ilm	ilm
+#QMOD	ilm	ilm
+QMUL	ilm	ilm
+QNEG	ilm
+#QNINT	ilm
+#QOBEG	ilm	sym	sym
+QFUNC	num	sym	ilms
+#QOBEGNZ	ilm	sym	sym	ilm
+#QOEND	sym	sym
+#QOENDNZ	sym	sym
+#QPNULL
+#QPREF	ilm
+#QPROD	ilm	ilm
+#QPSCON	num
+#QPVAL	ilm
+QREAL	ilm
+#QSIGN	ilm	ilm
+#QSIGNNZ	ilm	ilm
+#QSIN	ilm
+#QSIND	ilm
+#QSINH	ilm
+#QSQRT	ilm
+QPST	ilm	ilm
+QSUB	ilm	ilm
+#QTAN	ilm
+#QTAND	ilm
+#QTANH	ilm
+#QTOD	ilm	ilm
+#QTOI	ilm	ilm
+#QTOK	ilm	ilm
+QTOUDI	ilm
+#QTOUI	ilm
+#AOCC end
 R2K	ilm
 RADD	ilm	ilm
 RAIF	ilm	sym	sym	sym

@@ -9,6 +9,9 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 26th Nov 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
  */
 
 /**
@@ -110,6 +113,7 @@ is_fastcall(int ilix)
     switch (ILI_OPC(ILI_OPND(ilix, 2))) {
     /* mth_i_ ..  routines? */
     case IL_DADP: /* dplnk dp lnk */
+    case IL_DAQP: /* qplnk qp lnk */   // AOCC
     case IL_DASP: /* splnk sp lnk */
     case IL_DACS: /* cslnk cs lnk */
     case IL_DACD: /* cdlnk cd lnk */

@@ -29,6 +29,10 @@
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /**
  *  \file
@@ -136,6 +140,10 @@ _long_unsigned(int lilix, int *dt, bool *punsigned, DTYPE dtype)
     *dt = 2;
   } else if (dty == TY_DBLE) {
     *dt = 4;
+  // AOCC begin
+  } else if (dty == TY_QUAD) {
+    *dt = 7;
+  // AOCC end
   }
 
   // todo ompaccel I don't know how to handle others
@@ -227,6 +235,11 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
     case DT_DBLE:
       return ad3ili(IL_LDDP, ili, nme, MSZ_DBLE);
       break;
+    // AOCC begin
+    case DT_QUAD:
+      return ad3ili(IL_LDQP, ili, nme, MSZ_F16);
+      break;
+    // AOCC end
     case DT_CMPLX:
       return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
       break;
@@ -277,6 +290,11 @@ mk_ompaccel_store(int ili_value, DTYPE dtype, int nme, int ili_address)
     case DT_DBLE:
       return ad4ili(IL_STDP, ili_value, ili_address, nme, MSZ_DBLE);
       break;
+    // AOCC begin
+    case DT_QUAD:
+      return ad4ili(IL_STQP, ili_value, ili_address, nme, MSZ_F16);
+      break;
+    // AOCC end
     case DT_INT8:
       return ad4ili(IL_STKR, ili_value, ili_address, nme, MSZ_I8);
       break;
@@ -424,6 +442,10 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_FADD;
       else if (dt == 4)
         opc = IL_DADD;
+      // AOCC begin
+      else if (dt == 7)
+        opc = IL_QADD;
+      // AOCC end
       else if (dt == 5)
         opc = IL_SCMPLXADD;
       else if (dt == 6)
@@ -512,6 +534,10 @@ mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_SCMPLXMUL;
       else if (dt == 6)
         opc = IL_DCMPLXMUL;
+      // AOCC begin
+      else if (dt == 7)
+        opc = IL_QMUL;
+      // AOCC end
     } else {
       if (dt == 1)
         opc = IL_UIMUL;

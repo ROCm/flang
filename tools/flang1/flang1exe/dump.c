@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
@@ -1932,6 +1937,15 @@ printname(int sptr)
       break;
 
     case TY_QUAD:
+      // AOCC begin
+      num[0] = CONVAL1G(sptr);
+      num[1] = CONVAL2G(sptr);
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
+      cprintf(b, "%.37Lf", num);
+      break;
+      // AOCC end
+
     case TY_DBLE:
       num[0] = CONVAL1G(sptr);
       num[1] = CONVAL2G(sptr);

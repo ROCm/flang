@@ -32,6 +32,10 @@
  *
  * Allowing declaration of sqrt function in target module
  * Date of modification 31st November 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -1919,6 +1923,7 @@ restartConcur:
         case IL_DFRSP:
         case IL_DFRDP:
         case IL_DFRCS:
+        case IL_DFR128:    // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
         case IL_FLOAT128RESULT:
 #endif
@@ -2457,12 +2462,11 @@ msz_dtype(MSZ msz)
   case MSZ_PTR:
     return DT_CPTR;
   case MSZ_F16:
+    return DT_QUAD;  // AOCC
 #if defined(LONG_DOUBLE_FLOAT128)
     return DT_FLOAT128;
 #elif defined(TARGET_LLVM_X8664)
-    return DT_128;
-#else
-    return DT_QUAD;
+    return DT_QUAD;  // AOCC
 #endif
   case MSZ_F32:
     return DT_256;
@@ -4291,6 +4295,12 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
           LL_Type *ty = make_lltype_from_dtype(DT_DCMPLX);
           op1 = gen_llvm_expr(rhs_ili, ty);
           store_flags = ldst_instr_flags_from_dtype(DT_DCMPLX);
+        // AOCC begin
+        } else if (ILI_OPC(ilix) == IL_STQP) {
+          LL_Type *ty = make_lltype_from_dtype(DT_QUAD);
+          op1 = gen_llvm_expr(rhs_ili, ty);
+          store_flags = ldst_instr_flags_from_dtype(DT_QUAD);
+        // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
         } else if (ILI_OPC(ilix) == IL_FLOAT128ST) {
           LL_Type *ty = make_lltype_from_dtype(DT_FLOAT128);
@@ -4946,6 +4956,12 @@ gen_const_expr(int ilix, LL_Type *expected_type)
     operand->ll_type = make_lltype_from_dtype(DT_DBLE);
     operand->val.sptr = sptr;
     break;
+    // AOCC begin
+  case IL_QCON:
+    operand->ll_type = make_lltype_from_dtype(DT_QUAD);
+    operand->val.sptr = sptr;
+    break;
+    // AOCC end
   case IL_VCON:
     operand->ll_type = make_lltype_from_sptr(sptr);
     operand->val.sptr = sptr;
@@ -5012,6 +5028,11 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_DFLOATK:
     opc_type = make_lltype_from_dtype(DT_INT8);
     break;
+  // AOCC begin
+  case IL_QUAD:
+    opc_type = make_lltype_from_dtype(DT_QUAD);
+    break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128FROM:
     opc_type = make_lltype_from_dtype(DT_DBLE);
@@ -5097,6 +5118,17 @@ gen_abs_expr(int ilix)
     zero_op = gen_llvm_expr(ad1ili(IL_DCON, getcon(dtmp.tmp, DT_DBLE)),
                             operand->ll_type);
     break;
+  // AOCC begin
+  case IL_QABS:
+    cc_itype = I_FCMP;
+    cc_val = convert_to_llvm_fltcc(CC_LT);
+    op2 = gen_llvm_expr(ad1ili(IL_QNEG, lhs_ili), operand->ll_type);
+    d = 0.0;
+    xmdtod(d, dtmp.tmp);
+    zero_op = gen_llvm_expr(ad1ili(IL_QCON, getcon(dtmp.tmp, DT_QUAD)),
+                            operand->ll_type);
+    break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128ABS:
     cc_itype = IL_FLOAT128CMP;
@@ -5680,6 +5712,30 @@ gen_convert_vector(int ilix)
       break;
     }
     break;
+  // AOCC begin
+  case LL_FP128:
+    switch (ll_src->sub_types[0]->data_type) {
+    case LL_I1:
+    case LL_I8:
+    case LL_I16:
+    case LL_I24:
+    case LL_I32:
+    case LL_I40:
+    case LL_I48:
+    case LL_I56:
+    case LL_I64:
+    case LL_I128:
+    case LL_I256:
+      if (DT_ISUNSIGNED(dtype_src))
+        return convert_uint_to_float(operand, ll_dst);
+      return convert_sint_to_float(operand, ll_dst);
+    case LL_FLOAT:
+      return convert_float_size(operand, ll_dst);
+    default:
+      break;
+    }
+    break;
+  // AOCC end
   default:
     assert(0, "gen_convert_vector(): unhandled vector type for dst",
            ll_dst->sub_types[0]->data_type, ERR_Fatal);
@@ -5717,6 +5773,7 @@ gen_binary_vexpr(int ilix, int itype_int, int itype_uint, int itype_float)
   switch (DTY(DTySeqTyElement(vect_dtype))) {
   case TY_REAL:
   case TY_DBLE:
+  case TY_QUAD:   // AOCC
     return gen_binary_expr(ilix, itype_float);
   case TY_INT:
   case TY_SINT:
@@ -5818,6 +5875,10 @@ get_mac_name(int *swap, int *fneg, int ilix, int matches, int l, int r)
     return (*fneg) ? "x86.fma.vfnmadd.ss" : "x86.fma.vfmadd.ss";
   case IL_DADD:
     return (*fneg) ? "x86.fma.vfnmadd.sd" : "x86.fma.vfmadd.sd";
+  // AOCC begin
+  case IL_QADD:
+    return (*fneg) ? "x86.fma.vfnmadd.sq" : "x86.fma.vfmadd.sq";
+  // AOCC end
   case IL_FSUB:
     if (*swap) {
       return (*fneg) ? "x86.fma.vfmadd.ss" : "x86.fma.vfnmadd.ss";
@@ -5828,7 +5889,14 @@ get_mac_name(int *swap, int *fneg, int ilix, int matches, int l, int r)
       return (*fneg) ? "x86.fma.vfmadd.sd" : "x86.fma.vfnmadd.sd";
     }
     return (*fneg) ? "x86.fma.vfnmsub.sd" : "x86.fma.vfmsub.sd";
+  // AOCC begin
+  case IL_QSUB:
+    if (*swap) {
+      return (*fneg) ? "x86.fma.vfmadd.sq" : "x86.fma.vfnmadd.sq";
+    }
+    return (*fneg) ? "x86.fma.vfnmsub.sq" : "x86.fma.vfmsub.sq";
   }
+  // AOCC end
   assert(0, "does not match MAC", opc, ERR_Fatal);
   return "";
 }
@@ -6240,6 +6308,11 @@ gen_binary_expr(int ilix, int itype)
     case IL_DNEG:
       lhs_ili = ad1ili(IL_DCON, stb.dblm0);
       break;
+      // AOCC begin
+    case IL_QNEG:
+      lhs_ili = ad1ili(IL_QCON, stb.quadm0);
+      break;
+      // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
     case IL_FLOAT128CHS:
       lhs_ili = ad1ili(IL_FLOAT128CON, stb.float128_0);
@@ -7243,6 +7316,7 @@ get_next_arg(int arg_ili)
   switch (ILI_OPC(arg_ili)) {
   case IL_ARGAR:
   case IL_ARGDP:
+  case IL_ARGQP:  // AOCC
   case IL_ARGIR:
   case IL_ARGKR:
   case IL_ARGSP:
@@ -7255,6 +7329,7 @@ get_next_arg(int arg_ili)
 
   case IL_DAAR:
   case IL_DADP:
+  case IL_DAQP:   // AOCC
   case IL_DAIR:
   case IL_DAKR:
   case IL_DASP:
@@ -8181,10 +8256,13 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_VAINT:
   case IL_FFLOOR:
   case IL_DFLOOR:
+  case IL_QFLOOR:     // AOCC
   case IL_FCEIL:
   case IL_DCEIL:
+  case IL_QCEIL:      // AOCC
   case IL_AINT:
   case IL_DINT:
+  case IL_QINT:       // AOCC
     /* floor/ceil/aint use llvm intrinsics, not calls via alt-ili */
     break;
   case IL_VSIN:
@@ -8428,6 +8506,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_LD:
   case IL_LDSP:
   case IL_LDDP:
+  case IL_LDQP:  // AOCC
   case IL_LDKR:
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128LD:
@@ -8493,6 +8572,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_ICON:
   case IL_FCON:
   case IL_DCON:
+  case IL_QCON:     // AOCC
   case IL_SCMPLXCON:
   case IL_DCMPLXCON:
 #ifdef LONG_DOUBLE_FLOAT128
@@ -8532,6 +8612,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DBLE:
     operand = gen_unary_expr(ilix, I_FPEXT);
     break;
+  // AOCC begin
+  case IL_QUAD:
+    operand = gen_unary_expr(ilix, I_FPEXT);
+    break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128FROM:
     operand = gen_unary_expr(ilix, I_FPEXT);
@@ -8556,6 +8641,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FADD:
   case IL_DADD:
+  case IL_QADD:  // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128ADD:
 #endif
@@ -8578,6 +8664,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FSUB:
   case IL_DSUB:
+  case IL_QSUB:    // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128SUB:
 #endif
@@ -8604,6 +8691,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FMUL:
   case IL_DMUL:
+  case IL_QMUL:      // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128MUL:
 #endif
@@ -8628,6 +8716,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FDIV:
   case IL_DDIV:
+  case IL_QDIV:     // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128DIV:
 #endif
@@ -8753,6 +8842,26 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     operand->ll_type = make_type_from_opc(opc);
     goto process_cc;
     break;
+    // AOCC begin
+  case IL_QCJMPZ:
+    if (!zero_ili) {
+      d = 0.0;
+      xmdtod(d, dtmp.tmp);
+      zero_ili = ad1ili(IL_QCON, getcon(dtmp.tmp, DT_QUAD));
+      comp_exp_type = make_lltype_from_dtype(DT_QUAD);
+    }
+    operand->ot_type = OT_CC;
+    first_ili = ILI_OPND(ilix, 1);
+    second_ili = zero_ili;
+    ili_cc = ILI_ccOPND(ilix, 2);
+    if (IEEE_CMP)
+      float_jmp = true;
+    operand->val.cc = convert_to_llvm_fltcc(ili_cc);
+    float_jmp = false;
+    operand->ll_type = make_type_from_opc(opc);
+    goto process_cc;
+    break;
+    // AOCC end
   case IL_UKCJMPZ:
     zero_ili = ad_kconi(0);
     operand->ot_type = OT_CC;
@@ -8808,6 +8917,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   /* jumps with cc and expression */
   case IL_FCJMP:
   case IL_DCJMP:
+  case IL_QCJMP:    // AOCC
     operand->ot_type = OT_CC;
     first_ili = ILI_OPND(ilix, 1);
     second_ili = ILI_OPND(ilix, 2);
@@ -8849,6 +8959,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FCMP:
   case IL_DCMP:
+  case IL_QCMP:         // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CMP:
 #endif
@@ -9506,6 +9617,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QFLOOR:
+    operand = gen_call_llvm_intrinsic(
+        "floor.f128",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FCEIL:
     operand = gen_call_llvm_intrinsic(
         "ceil.f32",
@@ -10164,6 +10283,11 @@ vect_llvm_intrinsic_name(int ilix)
   case DT_DBLE:
     fsize = 64;
     break;
+  // AOCC begin
+  case DT_QUAD:
+    fsize = 128;
+    break;
+  // AOCC end
   default:
     assert(0, "vect_llvm_intrinsic_name(): unhandled type", type, ERR_Fatal);
   }
@@ -11912,6 +12036,25 @@ make_type_from_opc(ILI_OP opc)
   case IL_DABS:
     llt = make_lltype_from_dtype(DT_DBLE);
     break;
+  // AOCC begin
+  case IL_QCJMP:
+  case IL_QCJMPZ:
+  case IL_QCMP:
+  case IL_QUAD:
+  case IL_QADD:
+  case IL_QSUB:
+  case IL_QNEG:
+  case IL_QMAX:
+  case IL_QMIN:
+ //  case IL_QMOD:
+  case IL_QMUL:
+  case IL_QDIV:
+  case IL_QCON:
+ // case IL_QSELECT:
+  case IL_QABS:
+    llt = make_lltype_from_dtype(DT_QUAD);
+    break;
+  // AOCC end
   case IL_CSSELECT:
   case IL_SCMPLXADD:
     llt = make_lltype_from_dtype(DT_CMPLX);
@@ -12712,7 +12855,6 @@ gen_constant(SPTR sptr, DTYPE tdtype, INT conval0, INT conval1, int flags)
     break;
 
   case DT_DBLE:
-  case DT_QUAD:
 
     if (sptr) {
       num[0] = CONVAL1G(sptr);
@@ -12740,6 +12882,14 @@ gen_constant(SPTR sptr, DTYPE tdtype, INT conval0, INT conval1, int flags)
       DBGTRACE1("#set double exponent value to %s", d)
     }
     break;
+  // AOCC begin
+  case DT_QUAD:
+    size += 36;
+    constant = getitem(LLVM_LONGTERM_AREA, size);
+      snprintf(constant, size, "0xL%08x%08x%08x%08x", CONVAL1G(sptr),
+               CONVAL2G(sptr), CONVAL3G(sptr), CONVAL4G(sptr));
+      break;
+  // AOCC end
   case DT_REAL:
     /* our internal representation of floats is in 8 digit hex form;
      * internal LLVM representation of floats in hex form is 16 digits;

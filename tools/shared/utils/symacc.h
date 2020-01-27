@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #ifndef SYMACC_H_
@@ -317,6 +322,8 @@ typedef struct {
   DTYPE dt_cmplx;  /* default cmplx   - DT_CMPLX */
   DTYPE dt_log;    /* default logical - DT_LOG   */
   DTYPE dt_dble;   /* default double precision - DT_DBLE */
+  // AOCC
+  DTYPE dt_quad;   /* default quad precision - DT_QUAD */
   DTYPE dt_dcmplx; /* default double cmplx - DT_DCMPLX */
   DTYPE dt_ptr;    /* default pointer integer - DT_PTR */
   /* The following members are the default integer, real, complex, and
@@ -342,9 +349,21 @@ inline SPTR SymConval1(SPTR sptr) {
 inline SPTR SymConval2(SPTR sptr) {
   return static_cast<SPTR>(CONVAL2G(sptr));
 }
+// AOCC begin
+inline SPTR SymConval3(SPTR sptr) {
+  return static_cast<SPTR>(CONVAL3G(sptr));
+}
+inline SPTR SymConval4(SPTR sptr) {
+  return static_cast<SPTR>(CONVAL4G(sptr));
+}
+// AOCC end
 #else
 #define SymConval1 CONVAL1G
 #define SymConval2 CONVAL2G
+// AOCC begin
+#define SymConval3 CONVAL3G
+#define SymConval4 CONVAL4G
+// AOCC end
 #endif
 
 /** mode parameter for installsym_ex. */

@@ -11,6 +11,10 @@
  * Date of modification 11th July 2019
  *
  * Date of modification 26th Nov 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -1912,6 +1916,12 @@ ldst_size(DTYPE dtype, ILI_OP *ldo, ILI_OP *sto, int *siz)
     *sto = IL_STKR;
     break;
   case TY_QUAD:
+  // AOCC begin
+    *siz = MSZ_F16;
+    *ldo = IL_LDQP;
+    *sto = IL_STQP;
+    break;
+  // AOCC end
   case TY_DBLE:
   case TY_DCMPLX:
     *siz = MSZ_F8;
@@ -1958,6 +1968,12 @@ ldst_size(DTYPE dtype, ILI_OP *ldo, ILI_OP *sto, int *siz)
     *ldo = IL_LDDP;
     *sto = IL_STDP;
     break;
+  // AOCC begin
+  case MSZ_F16:
+    *ldo = IL_LDQP;
+    *sto = IL_STQP;
+    break;
+  // AOCC end
   }
 } /* ldst_size */
 
@@ -2412,6 +2428,20 @@ gen_bindC_retval(finfo_t *fp)
         ilix = ad2ili(IL_MVQ, ilix, RES_XR(0)); /*m128*/
       }
       break;
+    // AOCC begin
+    case ILIA_QP:
+      if (ILI_OPC(ilix) != IL_LDQP && ILI_OPC(ilix) != IL_QCON) {
+        const SPTR sfval = fp->fval;
+        ilix = ad4ili(IL_STQP, ilix, ad_acon(sfval, 0),
+                      addnme(NT_VAR, sfval, 0, 0), MSZ_F16);
+        chk_block(ilix);
+        ilix = ad3ili(IL_LDQP, ad_acon(sfval, 0),
+                      addnme(NT_VAR, sfval, 0, 0), MSZ_F16);
+      } else {
+        ilix = ad2ili(IL_MVQP, ilix, RES_XR(0)); /*m128*/
+      }
+      break;
+    // AOCC end
     case ILIA_KR:
       ilix = ad2ili(IL_MVKR, ilix, RES_IR(0));
       break;
@@ -2475,6 +2505,12 @@ gen_funcret(finfo_t *fp)
     ili1 = ad3ili(IL_LDDP, addr, nme, MSZ_F8);
     move = ad2ili(IL_MVDP, ili1, FR_RETVAL);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ili1 = ad3ili(IL_LDQP, addr, nme, MSZ_F16);
+    move = ad2ili(IL_MVQP, ili1, FR_RETVAL);
+    break;
+  // AOCC end
   case TY_BINT:
   case TY_BLOG:
     ili1 = ad3ili(IL_LD, addr, nme, MSZ_SBYTE);
@@ -2825,6 +2861,7 @@ static void arg_ar(int, ainfo_t *, int);
 static void arg_hp(int, ainfo_t *);
 static void arg_sp(int, ainfo_t *);
 static void arg_dp(int, ainfo_t *);
+static void arg_qp(int, ainfo_t *);    // AOCC
 static void arg_charlen(int, ainfo_t *);
 static void arg_length(STRDESC *, ainfo_t *);
 
@@ -2902,6 +2939,11 @@ add_arg_ili(int ilix, int nme, int dtype)
   case ILIA_DP:
     add_to_args(IL_ARGDP, ilix);
     break;
+  // AOCC begin
+  case ILIA_QP:
+    add_to_args(IL_ARGQP, ilix);
+    break;
+  // AOCC end
   case ILIA_AR:
     add_to_args(IL_ARGAR, ilix);
     break;
@@ -2937,6 +2979,11 @@ put_arg_ili(int i, ainfo_t *ainfo)
   case IL_ARGDP:
     arg_dp(arg_ili[i].ili_arg, ainfo);
     break;
+  // AOCC begin
+  case IL_ARGQP:
+    arg_qp(arg_ili[i].ili_arg, ainfo);
+    break;
+  // AOCC end
   default:
     interr("exp_call: ili arg type not cased", arg_ili[i].ili_arg, ERR_Severe);
     break;
@@ -3922,6 +3969,12 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         add_to_args(IL_ARGDP, argili);
         dtype = DT_DBLE;
         break;
+      // AOCC begin
+      case ILIA_QP:
+        add_to_args(IL_ARGQP, argili);
+        dtype = DT_QUAD;
+        break;
+      // AOCC end
       case ILIA_AR:
         add_to_args(IL_ARGAR, argili);
         dtype = DT_ADDR;
@@ -4075,6 +4128,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           case ILIA_DP:
             ilix = ad4ili(IL_STDP, ilix, argili, basenm, MSZ_F8);
             break;
+            // AOCC begin
+          case ILIA_QP:
+            ilix = ad4ili(IL_STQP, ilix, argili, basenm, MSZ_F16);
+            break;
+            // AOCC end
           case ILIA_CS:
             ilix = ad4ili(IL_STSCMPLX, ilix, argili, basenm, MSZ_F8);
             break;
@@ -4745,6 +4803,14 @@ arg_dp(int ilix, ainfo_t *ap)
 {
   ap->lnk = ad2ili(IL_ARGDP, ilix, ap->lnk);
 }
+
+// AOCC begin
+static void
+arg_qp(int ilix, ainfo_t *ap)
+{
+  ap->lnk = ad2ili(IL_ARGQP, ilix, ap->lnk);
+}
+// AOCC end
 
 static void
 arg_charlen(int ilix, ainfo_t *ap)

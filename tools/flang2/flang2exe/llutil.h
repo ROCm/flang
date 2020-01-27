@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #ifndef LLUTIL_H_
@@ -1548,7 +1553,7 @@ void set_metadata_string(TMPS *t, char *string);
 /**
    \brief ...
  */
-void write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1,
+void write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conval2, INT conval3,
                           bool uns);
 
 /**

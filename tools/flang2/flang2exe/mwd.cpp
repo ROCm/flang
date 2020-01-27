@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -3231,6 +3236,10 @@ smsz(int m)
   case MSZ_F8:
     msz = "db";
     break;
+  // AOCC
+  case MSZ_F16:
+    msz = "qd";
+    break;
 #ifdef MSZ_I8
   case MSZ_I8:
     msz = "i8";
@@ -3285,6 +3294,7 @@ optype(int opc)
   case IL_SCMPLXNEG:
   case IL_DCMPLXNEG:
   case IL_FNEG:
+  case IL_QNEG:    // AOCC
   case IL_DNEG:
     return OT_UNARY;
 
@@ -3296,6 +3306,7 @@ optype(int opc)
   case IL_ICON:
   case IL_KCON:
   case IL_DCON:
+  case IL_QCON:    // AOCC
   case IL_FCON:
   case IL_ACON:
     return OT_LEAF;
@@ -3469,6 +3480,7 @@ _printili(int i)
   case IL_UKADD:
   case IL_FADD:
   case IL_DADD:
+  case IL_QADD:   // AOCC
   case IL_UIADD:
   case IL_AADD:
     opval = "+";
@@ -3479,6 +3491,7 @@ _printili(int i)
   case IL_UKSUB:
   case IL_FSUB:
   case IL_DSUB:
+  case IL_QSUB:   // AOCC
   case IL_UISUB:
   case IL_ASUB:
     opval = "-";
@@ -3489,11 +3502,13 @@ _printili(int i)
   case IL_UKMUL:
   case IL_FMUL:
   case IL_DMUL:
+  case IL_QMUL:   // AOCC
   case IL_UIMUL:
     opval = "*";
     typ = BINOP;
     break;
   case IL_DDIV:
+  case IL_QDIV:   // AOCC
   case IL_KDIV:
   case IL_UKDIV:
   case IL_FDIV:
@@ -3598,6 +3613,13 @@ _printili(int i)
     opval = "min";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QUAD:
+    n = 1;
+    opval = "quad";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DBLE:
     n = 1;
     opval = "dble";
@@ -3755,6 +3777,7 @@ _printili(int i)
       case IL_DAKR:
       case IL_DAAR:
       case IL_DADP:
+      case IL_DAQP:   // AOCC
 #ifdef IL_DA128
       case IL_DA128:
 #endif
@@ -3770,6 +3793,7 @@ _printili(int i)
       case IL_ARGIR:
       case IL_ARGSP:
       case IL_ARGDP:
+      case IL_ARGQP:
       case IL_ARGAR:
         _printili(ILI_OPND(j, 1));
         j = ILI_OPND(j, 2);
@@ -3813,6 +3837,12 @@ _printili(int i)
     opval = "MVDP";
     typ = MVREG;
     break;
+  // AOCC begin
+  case IL_MVQP:
+    opval = "MVQP";
+    typ = MVREG;
+    break;
+  // AOCC end
   case IL_MVAR:
     opval = "MVAR";
     typ = MVREG;
@@ -3838,6 +3868,12 @@ _printili(int i)
     opval = "DPDF";
     typ = DFREG;
     break;
+  // AOCC begin
+  case IL_QPDF:
+    opval = "QPDF";
+    typ = DFREG;
+    break;
+  // AOCC end
   case IL_ARDF:
     opval = "ARDF";
     typ = DFREG;
@@ -3883,6 +3919,12 @@ _printili(int i)
     opval = "FREEKR";
     typ = PSCOMM;
     break;
+  // AOCC begin
+  case IL_FREEQP:
+    opval = "FREEQP";
+    typ = PSCOMM;
+    break;
+  // AOCC end
   case IL_FREEDP:
     opval = "FREEDP";
     typ = PSCOMM;
@@ -3918,6 +3960,7 @@ _printili(int i)
   case IL_ICON:
   case IL_FCON:
   case IL_DCON:
+  case IL_QCON:    // AOCC
     appendstring1(printname(ILI_OPND(i, 1)));
     break;
 
@@ -3949,6 +3992,7 @@ _printili(int i)
   case IL_LD:
   case IL_LDSP:
   case IL_LDDP:
+  case IL_LDQP:    // AOCC
   case IL_LDKR:
   case IL_LDA:
     _printnme(ILI_OPND(i, 2));
@@ -3962,6 +4006,7 @@ _printili(int i)
   case IL_STKR:
   case IL_ST:
   case IL_STDP:
+  case IL_STQP:   // AOCC
   case IL_STSP:
   case IL_SSTS_SCALAR:
   case IL_DSTS_SCALAR:
@@ -4608,6 +4653,11 @@ dili(int ilix)
       case ILIO_DP:
         putint("dp", opnd);
         break;
+      // AOCC begin
+      case ILIO_QP:
+        putint("qp", opnd);
+        break;
+      // AOCC end
       default:
         put2int("Unknown", IL_OPRFLAG(opc, j), opnd);
         break;
@@ -5444,9 +5494,15 @@ printname(int sptr)
       break;
 
     case TY_QUAD:
-      num[0] = CONVAL1G(sptr);
+    /*num[0] = CONVAL1G(sptr);
       num[1] = CONVAL2G(sptr);
-      cprintf(b, "%.17le", num);
+    // AOCC begin
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
+      cprintf(b, "%.37Lf", num);*/
+      sprintf(b, "%08x %08x %08x %08x", CONVAL1G(sptr), CONVAL2G(sptr),
+                          CONVAL3G(sptr), CONVAL4G(sptr));
+    // AOCC end
       break;
 
     case TY_PTR:

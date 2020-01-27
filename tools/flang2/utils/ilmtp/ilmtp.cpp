@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #include "utils.h"
@@ -168,11 +173,13 @@ public:
     ilmo.push_back(ILMO("arret", 5, ILMO_ARRET, 0));
     ilmo.push_back(ILMO("spret", 5, ILMO_SPRET, 0));
     ilmo.push_back(ILMO("dpret", 5, ILMO_DPRET, 0));
+    ilmo.push_back(ILMO("qpret", 5, ILMO_QPRET, 0));    // AOCC
     ilmo.push_back(ILMO("krret", 5, ILMO_KRRET, 0));
     ilmo.push_back(ILMO("drpos", 5, ILMO_DRPOS, 0));
     ilmo.push_back(ILMO("arpos", 5, ILMO_ARPOS, 0));
     ilmo.push_back(ILMO("sppos", 5, ILMO_SPPOS, 0));
     ilmo.push_back(ILMO("dppos", 5, ILMO_DPPOS, 0));
+    ilmo.push_back(ILMO("qppos", 5, ILMO_QPPOS, 0));   // AOCC
     ilmo.push_back(ILMO("null",  4, ILMO_NULL,  0));
     ilmo.push_back(ILMO("isp(",  4, ILMO_ISP,   0));
     ilmo.push_back(ILMO("idp(",  4, ILMO_IDP,   0));
@@ -189,6 +196,7 @@ public:
     ilmo.push_back(ILMO("ar(",   3, ILMO_AR,    0));
     ilmo.push_back(ILMO("sp(",   3, ILMO_SP,    0));
     ilmo.push_back(ILMO("dp(",   3, ILMO_DP,    0));
+    ilmo.push_back(ILMO("qp(",   3, ILMO_QP,    0));   // AOCC
     ilmo.push_back(ILMO("scz",   3, ILMO_SCZ,   0));
     ilmo.push_back(ILMO("scf",   3, ILMO_SCF,   0));
     ilmo.push_back(ILMO("sz",    2, ILMO_SZ,    0));
@@ -698,6 +706,7 @@ private:
       case ILMO_ARRET:
       case ILMO_SPRET:
       case ILMO_DPRET:
+      case ILMO_QPRET:    // AOCC
       case ILMO_KRRET:
         iliopr[1] = 0;
         ilmtp.push_back(find_op(iliopr));
@@ -751,6 +760,7 @@ private:
       case ILMO_AR:
       case ILMO_SP:
       case ILMO_DP:
+      case ILMO_QP:           // AOCC
       case ILMO_ISP:
       case ILMO_IDP:
       case ILMO_SCZ:
@@ -762,6 +772,7 @@ private:
       case ILMO_ARPOS:
       case ILMO_SPPOS:
       case ILMO_DPPOS:
+      case ILMO_QPPOS:      // AOCC
         {
           auto s = tok.substr(6);
           iliopr[1] = atoi(s.c_str());

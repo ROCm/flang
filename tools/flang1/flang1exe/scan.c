@@ -9,7 +9,11 @@
  *
  *Support type statement for intrinsic types
  *Date of Modification: 24 January 2020
-*/
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /**
     \file scan.c
@@ -6413,7 +6417,7 @@ get_number(int cplxno)
   char *cp;
   INT num[4];
   int sptr;
-  LOGICAL d_exp;
+  LOGICAL d_exp,q_exp;
   int kind_id_len;
   int errcode;
   int nmptr;
@@ -6423,6 +6427,7 @@ get_number(int cplxno)
   chk_octal = TRUE; /* Attempt to recognize Cray's octal extension */
   kind_id_len = 0;
   d_exp = FALSE;
+  q_exp = FALSE;    // AOCC
   nmptr = 0;
   c = *(cp = currc);
   if (c == '-' || c == '+')
@@ -6460,7 +6465,7 @@ state1: /* digits  */
       goto return_integer; /* digits . <lowercase letter> */
     goto state2;           /* could still be digits . E|D */
   }
-  if (c == 'e' || c == 'E' || c == 'd' || c == 'D')
+  if (c == 'e' || c == 'E' || c == 'd' || c == 'D'|| c == 'q' || c == 'Q')
     goto state3;
   goto return_integer;
 state2: /* digits . [ digits ]  */
@@ -6468,7 +6473,7 @@ state2: /* digits . [ digits ]  */
     c = *++cp;
   } while (isdig(c));
   assert(cp > currc + 1, "get_number:single dot", (int)c, 3);
-  if (c == 'e' || c == 'E' || c == 'd' || c == 'D')
+  if (c == 'e' || c == 'E' || c == 'd' || c == 'D' || c == 'q' || c == 'Q')
     goto state3;
   goto return_real;
 
@@ -6476,6 +6481,10 @@ state3: /* digits [ . [ digits ] ] { e | d }  */
   if (c == 'd') {
     d_exp = TRUE;
   }
+  // AOCC begin
+  if (c == 'q' || c == 'Q')
+    q_exp = TRUE;
+  // AOCC end
   c = *++cp;
   if (isdig(c))
     goto state5;
@@ -6550,10 +6559,10 @@ return_integer:
       p++;
       len--;
     }
-    if (len == 0) {
-      /* Have a cray octal number. Overwrite the 'b' with '"' thus
-       * terminating the octal constant for get_nondec().
-       */
+     if (len == 0) {
+       /* Have a cray octal number. Overwrite the 'b' with '"' thus
+        * terminating the octal constant for get_nondec().
+        */
       if (flg.standard)
         error(170, 2, gbl.lineno,
               "octal constant composed of octal digits followed by 'b'", CNULL);
@@ -6608,9 +6617,8 @@ return_real:
       error(437, 2, gbl.lineno, "Constant with kind type 16 ", "REAL");
       kind = DT_REAL8;
     }
-  } else {
+  } else if (d_exp) {
     /* constant was not explicitly kinded */
-    if (d_exp) {
       kind = DT_DBLE;
       if (!XBIT(49, 0x200))
         /* not -dp */
@@ -6619,17 +6627,49 @@ return_real:
         error(437, 2, gbl.lineno, "DOUBLE PRECISION constant", "REAL");
         kind = DT_REAL;
       }
-    } else {
+      // AOCC begin
+    } else if (q_exp) {
+      kind = DT_QUAD;
+      if (!XBIT(49, 0x200))
+        /* not -qp */
+        nmptr = putsname(currc, cp - currc);
+      if (XBIT(57, 0x10) && DTY(kind) == TY_QUAD) {
+        error(437, 2, gbl.lineno, "QUAD PRECISION constant", "REAL");
+        kind = DT_REAL;
+      }
+    }
+    // AOCC end
+      else {
       kind = stb.user.dt_real;
       nmptr = putsname(currc, cp - currc);
     }
-  }
   if (cplxno) {
     c = *(cp + kind_id_len);
     if ((cplxno == 1 && c != ',') || (cplxno == 2 && c != ')'))
       return;
   }
   switch (DTY(kind)) {
+  // AOCC begin
+  case TY_QUAD:
+    tkntyp = TK_QCON;
+    errcode = atoxq(currc, num, (int)(cp - currc));
+    switch (errcode) {
+    case 0:
+      break;
+    case -1:
+    default:
+      CERROR(28, 3, gbl.lineno, currc, cp, CNULL);
+      break;
+    case -2:
+      CERROR(112, 1, gbl.lineno, currc, cp, CNULL);
+      break;
+    case -3:
+      CERROR(111, 1, gbl.lineno, currc, cp, CNULL);
+      break;
+    }
+    sptr = tknval = getcon(num, DT_QUAD);
+    break;
+  // AOCC end
   case TY_DBLE:
     tkntyp = TK_DCON;
     errcode = atoxd(currc, num, (int)(cp - currc));
@@ -7083,6 +7123,11 @@ check_ccon(void)
       case TY_DBLE:
         tkntyp = TK_DCON;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        tkntyp = TK_QCON;
+        break;
+      // AOCC end
       default:
         tkntyp = TK_RCON;
         break;
@@ -7094,6 +7139,11 @@ check_ccon(void)
     case TK_DCON:
       num[0] = cngcon(val[0], DTYPEG(num[0]), DT_REAL8);
       break;
+    // AOCC begin
+    case TK_QCON:
+      num[0] = cngcon(val[0], DTYPEG(num[0]), DT_QUAD);
+      break;
+    // AOCC end
     default:
       interr("check_ccon: unexp.constant", tkntyp, 3);
       tkntyp = TK_RCON;

@@ -12,6 +12,10 @@
  * Date of modification 24th January 2020
  * Date of modification 04th February 2020
  * Date of modification 12th February  2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -3806,6 +3810,11 @@ lower_stmt(int std, int ast, int lineno, int label)
     case TY_DBLE:
       plower("oii", "DST", lilm, rilm);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      plower("oii", "QPST", lilm, rilm);
+      break;
+    // AOCC end
     case TY_CMPLX:
       plower("oii", "CST", lilm, rilm);
       break;
@@ -5895,6 +5904,11 @@ lower_typeload(int dtype, int base)
   case TY_DBLE:
     ilm = plower("oi", "DLD", base);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ilm = plower("oi", "QPLD", base);
+    break;
+  // AOCC end
   case TY_CMPLX:
     ilm = plower("oi", "CLD", base);
     break;
@@ -5959,6 +5973,11 @@ lower_typestore(int dtype, int base, int rhs)
   case TY_DBLE:
     ilm = plower("oii", "DST", base, rhs);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ilm = plower("oii", "QPST", base, rhs);
+    break;
+  // AOCC end
   case TY_CMPLX:
     ilm = plower("oii", "CST", base, rhs);
     break;

@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /*
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
@@ -105,6 +110,7 @@ static void put_int8(int);
 static void put_logical(LOGICAL, int);
 static void put_float(INT);
 static void put_double(int);
+static void put_quad(int);                // AOCC
 static void char_to_text(int);
 static void put_u_to_l(char *);
 static void put_l_to_u(char *);
@@ -246,6 +252,7 @@ negative_constant(int ast)
 {
   DBLINT64 inum1, inum2;
   DBLE dnum1, dnum2;
+  QUAD qnum1, qnum2;     // AOCC
 
   if (A_TYPEG(ast) == A_CNST) {
     int sptr;
@@ -267,6 +274,20 @@ negative_constant(int ast)
       if (xdcmp(dnum1, dnum2) < 0)
         return TRUE;
       break;
+    // AOCC begin
+    case TY_QUAD:
+      dnum1[0] = CONVAL1G(sptr);
+      dnum1[1] = CONVAL2G(sptr);
+      dnum1[2] = CONVAL3G(sptr);
+      dnum1[3] = CONVAL4G(sptr);
+      dnum2[0] = CONVAL1G(stb.quad0);
+      dnum2[1] = CONVAL2G(stb.quad0);
+      dnum2[2] = CONVAL3G(stb.quad0);
+      dnum2[3] = CONVAL4G(stb.quad0);
+      if (xqcmp(dnum1, dnum2) < 0)
+        return TRUE;
+      break;
+    // AOCC end
     case TY_INT8:
       inum1[0] = CONVAL1G(sptr);
       inum1[1] = CONVAL2G(sptr);
@@ -3896,6 +3917,15 @@ put_const(int sptr)
     }
     put_double(sptr);
     return;
+  // AOCC begin
+  case TY_QUAD:
+    if (NMPTRG(sptr)) {
+      put_string(SYMNAME(sptr));
+      return;
+    }
+    put_quad(sptr);
+    return;
+  // AOCC end
 
   case TY_CMPLX:
     if (NMPTRG(sptr)) {
@@ -4219,6 +4249,80 @@ put_double(int sptr)
   *end = '\0';
   put_string(start);
 }
+
+// AOCC begin
+static void
+put_quad(int sptr)
+{
+  INT num[4];
+  char b[128];
+  char *start;
+  char *end;
+  char *exp;
+  int expw;
+  int i;
+
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+
+
+  if (XBIT(49, 0x40000)) /* C90 */
+    cprintf(b, "%.15Lf", num);
+  else
+    cprintf(b, "%.37Lf", num);
+
+  for (start = b; *start == ' '; start++) /* skip leading blanks */
+    ;
+  /* only leave the sign if it's '-' */
+  if (*start == '+')
+    start++;
+
+  /* locate beginning of exponent */
+  exp = &b[strlen(b) - 1];
+  expw = -1; /* width of exponent less 'D' and the sign */
+  while (*exp != 'E' && *exp != 'e' && *exp != 'Q' && *exp != 'q') {
+    if (exp <= start) {
+      /* output from cprintf is [-]INF */
+      if (*start == '-')
+        put_char('-');
+      put_string("1d+309");
+      return;
+    }
+    exp--;
+    expw++;
+  }
+
+  i = (exp - b) - 1; /* last decimal digit */
+                     /*
+                      * omit trailing 0's; don't omit digit after the decimal point.
+                      */
+  while (b[i] == '0' && i > 3)
+    i--;
+  end = &b[i + 1];
+  /* exp locates 'D' */
+  if (DTY(DT_REAL) == TY_QUAD && XBIT(49, 0x800000))
+    /* change 'f' to 'e' only if default real is quad precision for
+     * the cray systems.
+     */
+    *end++ = 'e';
+  else
+    *end++ = 'q';
+  if (*++exp == '-') /* sign */
+    *end++ = '-';
+  if (expw == 2) {
+    if (*++exp != '0')
+      *end++ = *exp;
+    *end++ = *++exp;
+  } else {
+    while (expw--)
+      *end++ = *++exp;
+  }
+  *end = '\0';
+  put_string(start);
+}
+// AOCC end
 
 /*
  * emit a character with consideration given to the ', escape sequences,

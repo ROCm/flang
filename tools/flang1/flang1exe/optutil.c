@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /*  optutil.c - miscellaneous optimizer utility routines
@@ -1839,6 +1844,14 @@ cp_loop(int expr)
                   i);
         i = ast_intr(I_DBLE, DT_DBLE, 1, A_LOPG(i));
         break;
+      // AOCC begin
+      case TY_QUAD:
+        if (OPTDBG(9, 65536))
+          fprintf(gbl.dbgfil, "    cp_loop: def %d - I_QUAD(rhs %d)\n", rdef,
+                  i);
+        i = ast_intr(I_DBLE, DT_QUAD, 1, A_LOPG(i));
+        break;
+        // AOCC end
       default:
         if (OPTDBG(9, 65536))
           fprintf(gbl.dbgfil,

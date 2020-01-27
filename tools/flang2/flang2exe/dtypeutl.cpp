@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -222,7 +227,7 @@ _size_of(DTYPE dtype)
   case TY_UBINT:
   case TY_BLOG:
   case TY_DBLE:
-  case TY_QUAD:
+  case TY_QUAD:   // AOCC
   case TY_CMPLX:
   case TY_DCMPLX:
   case TY_INT8:
@@ -1109,6 +1114,7 @@ Scale_Of(DTYPE dtype, ISZ_T *size)
   case TY_UBINT:
   case TY_BLOG:
   case TY_DBLE:
+  case TY_QUAD:
   case TY_CMPLX:
   case TY_DCMPLX:
   case TY_INT8:

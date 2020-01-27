@@ -3,6 +3,12 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ *
  */
 
 #ifndef ILM_H_
@@ -70,25 +76,28 @@ typedef struct {
 #define ILMO_AR 13
 #define ILMO_SP 14
 #define ILMO_DP 15
-#define ILMO_SZ 16
-#define ILMO_SCZ 17
-#define ILMO_SCF 18
-#define ILMO_ISP 19
-#define ILMO_IDP 20
-#define ILMO_XRSYM 21
-#define ILMO_XDSYM 22
-#define ILMO__ESYM 23
-#define ILMO_LSYM 24
-#define ILMO_LLSYM 25
-#define ILMO_DRRET 26
-#define ILMO_ARRET 27
-#define ILMO_SPRET 28
-#define ILMO_DPRET 29
-#define ILMO_KRRET 30
-#define ILMO_DRPOS 31
-#define ILMO_ARPOS 32
-#define ILMO_SPPOS 33
-#define ILMO_DPPOS 34
+#define ILMO_QP 16        // AOCC
+#define ILMO_SZ 17
+#define ILMO_SCZ 18
+#define ILMO_SCF 19
+#define ILMO_ISP 20
+#define ILMO_IDP 21
+#define ILMO_XRSYM 22
+#define ILMO_XDSYM 23
+#define ILMO__ESYM 24
+#define ILMO_LSYM 25
+#define ILMO_LLSYM 26
+#define ILMO_DRRET 27
+#define ILMO_ARRET 28
+#define ILMO_SPRET 29
+#define ILMO_DPRET 30
+#define ILMO_QPRET 31     // AOCC
+#define ILMO_KRRET 32
+#define ILMO_DRPOS 33
+#define ILMO_ARPOS 34
+#define ILMO_SPPOS 35
+#define ILMO_DPPOS 36
+#define ILMO_QPPOS 37     // AOCC
 
 #define ILMO_P 1
 #define ILMO_RP 2

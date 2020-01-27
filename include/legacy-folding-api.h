@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /** \file
  * \brief Legacy constant folding API.
@@ -173,6 +178,7 @@ void xdabsv(IEEE64 f, IEEE64 r);
 void xeabsv(IEEE80 e, IEEE80 r);
 void xddabsv(IEEE6464 dd, IEEE6464 r);
 void xqabsv(IEEE128 f, IEEE128 r);
+void xqsqrt(IEEE128 f, IEEE128 r);      // AOCC
 void xdsqrt(IEEE64 f, IEEE64 r);
 void xfpow(IEEE32 f1, IEEE32 f2, IEEE32 *r);
 void xdpow(IEEE64 d1, IEEE64 d2, IEEE64 r);
@@ -241,6 +247,7 @@ void xefix(IEEE80 e, INT *i);
 void xddfix(IEEE6464 dd, INT *i);
 void xqfix(IEEE128 q, INT *i);
 
+void xquad(IEEE64 f, IEEE128 r);     // AOCC
 void xdble(IEEE32 f, IEEE64 r);
 void xsngl(IEEE64 d, IEEE32 *r);
 void xdtoe(IEEE64 d, IEEE80 r);

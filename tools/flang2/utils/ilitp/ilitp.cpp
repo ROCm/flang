@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /*  ilitp.cpp - for ILI generation.
@@ -61,8 +66,8 @@ struct processed_flags {
 // delivers the expansion of a line as a group of consecutive lines.
 std::vector<processed_flags> processed;
 
-/*static*/ ILIINFO ilis[1050]; /* declared external in ili.h  */
-SCHINFO schinfo[1050];
+/*static*/ ILIINFO ilis[2050]; /* declared external in ili.h  */
+SCHINFO schinfo[2050];  // AOCC: changed value from 1050 to 2050
 
 static void do_IL_line(int pass);
 static void do_AT_line(void);

@@ -10,6 +10,10 @@
  *
  *Complex datatype support for acosh , asinh , atanh
  * Modified on 07 January 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -1219,6 +1223,11 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DCMP:
     ILM_NME(curilm) = IL_DCMP;
     return;
+  // AOCC begin
+  case IM_QCMP:
+    ILM_NME(curilm) = IL_QCMP;
+    return;
+  // AOCC end
   case IM_UICMP:
     ILM_NME(curilm) = IL_UICMP;
     return;
@@ -3450,7 +3459,7 @@ exp_bran(ILM_OP opc, ILM *ilmp, int curilm)
     ILI_OP subop;  /* subtract op */
     ILI_OP cjmpop; /* compare and jump op */
     short msz;    /* msz for load/store */
-  } aif[5] = {
+  } aif[6] = {
       {IL_ICJMPZ, IL_CSEIR, DT_INT, IL_ST, IL_LD, IL_ICMPZ, IL_ISUB, IL_ICJMP,
        MSZ_WORD},
       {IL_FCJMPZ, IL_CSESP, DT_REAL, IL_STSP, IL_LDSP, IL_FCMPZ, IL_FSUB,
@@ -3459,6 +3468,10 @@ exp_bran(ILM_OP opc, ILM *ilmp, int curilm)
        IL_DCJMP, MSZ_F8},
       {IL_KCJMPZ, IL_CSEKR, DT_INT8, IL_STKR, IL_LDKR, IL_KCMPZ, IL_KSUB,
        IL_KCJMP, MSZ_I8},
+      // AOCC begin
+      {IL_QCJMPZ, IL_CSEQP, DT_QUAD, IL_STQP, IL_LDQP, IL_QCMPZ, IL_QSUB,
+       IL_QCJMP, MSZ_F16},
+      // AOCC end
   };
   int i;    /* temp */
   int ilix; /* ILI index */

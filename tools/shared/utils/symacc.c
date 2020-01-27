@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /********************************************************
@@ -70,8 +75,7 @@ sym_init_first(void)
 #if defined(PGHPF) && !defined(PGF90)
     stb.n_size = 7011;
 #else
-//    stb.n_size = 5024;
-    stb.n_size = 6024;
+    stb.n_size = 7024;   // AOCC
 #endif
     NEW(stb.n_base, char, stb.n_size);
     assert(stb.n_base, "sym_init: no room for namtab", stb.n_size, ERR_Fatal);
@@ -484,16 +488,23 @@ add_fp_constants(void)
   /* 1.0, 2.0, 0.5, -0.0  as double, quad */
   atoxd("0.0", &tmp[0], 3);
   stb.dbl0 = getcon(tmp, DT_DBLE);
-  stb.quad0 = getcon(tmp, DT_QUAD); /* quad currently the same as double */
   atoxd("1.0", &tmp[0], 3);
   stb.dbl1 = getcon(tmp, DT_DBLE);
-  stb.quad1 = getcon(tmp, DT_QUAD); /* quad currently the same as double */
   atoxd("2.0", &tmp[0], 3);
   stb.dbl2 = getcon(tmp, DT_DBLE);
-  stb.quad2 = getcon(tmp, DT_QUAD); /* quad currently the same as double */
   atoxd("0.5", &tmp[0], 3);
   stb.dblhalf = getcon(tmp, DT_DBLE);
-  stb.quadhalf = getcon(tmp, DT_QUAD); /* quad currently the same as double */
+
+  // AOCC begin
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad0 = getcon(tmp, DT_QUAD);
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad1 = getcon(tmp, DT_QUAD);
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad2 = getcon(tmp, DT_QUAD);
+  atoxq("0.0", &tmp[0], 4);
+  stb.quadhalf = getcon(tmp, DT_QUAD);
+  // AOCC end
 
   tmp[0] = 0;
   res[0] = 0;
@@ -504,7 +515,14 @@ add_fp_constants(void)
   tmp[1] = CONVAL2G(stb.dbl0);
   xdneg(tmp, res);
   stb.dblm0 = getcon(res, DT_DBLE);
-  stb.quadm0 = getcon(res, DT_QUAD); /* quad currently the same as double */
+  // AOCC begin
+  tmp[0] = CONVAL1G(stb.quad0);
+  tmp[1] = CONVAL2G(stb.quad0);
+  tmp[2] = CONVAL3G(stb.quad0);
+  tmp[3] = CONVAL4G(stb.quad0);
+  xqneg(tmp, res);
+  stb.quadm0 = getcon(res, DT_QUAD);
+  // AOCC end
 #endif
 
 #ifdef LONG_DOUBLE_X87

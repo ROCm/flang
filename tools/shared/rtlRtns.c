@@ -29,6 +29,10 @@
  * Support for Bit transformational intrinsic iany, iall, iparity.
  *
  * Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -743,6 +747,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"f90io_sc_ch_ldw", "", false, ""},
     {"f90io_sc_d_fmt_write", "", false, ""},
     {"f90io_sc_d_ldw", "", false, ""},
+    {"f90io_sc_q_fmt_write", "", false, ""},   // AOCC
+    {"f90io_sc_q_ldw", "", false, ""},         // AOCC
     {"f90io_sc_f_fmt_write", "", false, ""},
     {"f90io_sc_f_ldw", "", false, ""},
     {"f90io_sc_fmt_write", "", false, ""},

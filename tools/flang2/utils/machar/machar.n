@@ -153,7 +153,7 @@ lw(1n) lfCW | l | l | l | l | l | l.
 %TY_HALF%2%1%16%0%reg1%Half Precision Real
 %TY_REAL%4%3%32%0%reg1%Floating Point Real
 %TY_DBLE%8%7%64%0%reg2%Double Precision Real
-%TY_QUAD%0%0%64%0%reg2%Quad Precision Real
+%TY_QUAD%16%15%128%0%reg2%Quad Precision Real  \* AOCC \*
 %TY_HCMPLX%4%1%32%0%mem0%half precision complex
 %TY_CMPLX%8%3%64%0%mem0%Complex
 %TY_DCMPLX%16%7%128%0%mem1%Double Precision Complex

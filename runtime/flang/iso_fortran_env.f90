@@ -9,6 +9,10 @@
 !   NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR
 !   FITNESS FOR A PARTICULAR PURPOSE.
 !
+! Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+!
+! Added support for quad precision
+! Last modified: Feb 2020
 
 
 ! iso_fortran_env.f90
@@ -59,14 +63,15 @@
 	integer REAL64
 	parameter (REAL64 = 8)
 	integer REAL128
-	parameter (REAL128 = -1)
+	parameter (REAL128 = 16)
 
         integer INTEGER_KINDS(4)
         parameter (INTEGER_KINDS = (/INT8, INT16, INT32, INT64/))
         integer LOGICAL_KINDS(4)
+        ! AOCC: REAL128
         parameter (LOGICAL_KINDS = (/LOGICAL8, LOGICAL16, LOGICAL32, LOGICAL64/))
-        integer REAL_KINDS(2)
-        parameter (REAL_KINDS = (/REAL32, REAL64/))
+        integer REAL_KINDS(3)
+        parameter (REAL_KINDS = (/REAL32, REAL64, REAL128/))
 
         end module  ISO_FORTRAN_ENV
 

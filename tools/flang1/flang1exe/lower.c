@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -756,10 +761,14 @@ trav_struct(int dtype, int off)
     regclass[regi] = CLASS_SSEQ;
     return;
   case TY_QUAD:
-#if DEBUG
+  // AOCC begin
+    regclass[regi] = CLASS_SSEQ;
+    return;
+  // AOCC end
+/*#if DEBUG
     if (sizeof(DT_QUAD) == 16)
       interr("trav_struct: update handling of long doubles", dtype, 3);
-#endif
+#endif*/
   /* we're treating this like DBLE for now. */
   case TY_DBLE:
     regclass[regi] = CLASS_SSEDP;

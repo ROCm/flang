@@ -8,6 +8,8 @@
 \" * Complex data types support for acosh, asinh and atanh
 \" * Date of Modification: 08 January 2020
 \" *
+\" * Added support for quad precision
+\" * Last modified: Feb 2020
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -107,6 +109,9 @@ Convert unsigned short to unsigned integer.
 .OP SP2IR t1 rp1
 .OP UIKMV r t1
 .IL DTOUDI arth lnk
+.\" AOCC begin
+.IL QTOUDI arth lnk
+.\" AOCC end
 .AT i8
 .OP DP2KR r rp1
 .IL DTOUI arth lnk
@@ -116,6 +121,9 @@ Convert unsigned short to unsigned integer.
 .AT i8
 .OP KCON r v1
 .IL UDITOD arth lnk
+.\" AOCC begin
+.IL UQITOD arth lnk
+.\" AOCC end
 .OP KR2DP r p1
 .IL UDITOR arth lnk
 .OP KIMV t1 p1
@@ -211,6 +219,10 @@ Convert double precision floating point number to
 unsigned integer.
 .OP DFIXK t1 p1
 .OP KIMV r t1
+.IL QUAD arth lnk
+Convert double precision floating point value to quad precision.
+.OP QUAD r p1
+.IL QFIX arth lnk
 .IL REAL arth lnk
 Returns real part of complex number (single precision).
 .AT spec
@@ -219,6 +231,12 @@ Returns real part of complex number (single precision).
 Returns double precision real part of a double complex value.
 .AT spec
 .OP MVDP r rp1 iv-1
+.\" AOCC begin
+.IL QREAL arth lnk
+Returns quad precision real part of a quad complex value.
+.AT spec
+.OP MVQP r rp1 iv-1
+.\" AOCC end
 .IL IMAG arth lnk
 Returns imaginary part of complex value (single precision)
 (AIMAG intrinsic).
@@ -229,6 +247,13 @@ Returns double precision imaginary part of a double complex value
 (DIMAG intrinsic).
 .AT spec
 .OP MVDP r ip1 iv-1
+.\" AOCC begin
+.IL QIMAG arth lnk
+Returns quad precision imaginary part of a quad complex value
+(DIMAG intrinsic).
+.AT spec
+.OP MVQP r ip1 iv-1
+.\" AOendd
 .IL CMPLX arth lnk lnk
 Form complex number out of two single precision real values.
 .AT spec
@@ -253,6 +278,11 @@ AINT intrinsic (converts real to real).
 .IL DINT arth lnk
 DINT intrinsic (converts double to double).
 .OP DINT r p1
+.\" AOCC begin
+.IL QINT arth lnk
+QINT intrinsic (converts quad to quad).
+.OP QINT r p1
+.\" AOCC end
 .IL ANINT arth lnk
 ANINT intrinsic (converts real to real).
 .OP NULL t1 iv0
@@ -265,6 +295,14 @@ DNINT intrinsic (converts double to double).
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dnint t1
 .OP DFRDP r t2 dpret
+.\" AOCC begin
+.IL QNINT arth lnk
+QNINT intrinsic (converts quad to quad).
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_qnint t1
+.OP DFR128 r t2 qpret
+.\" AOCC end
 .IL NINT arth lnk
 NINT intrinsic (converts real to integer).
 \".OP NULL t1 iv0
@@ -294,10 +332,18 @@ Absolute value of single precision real number.
 .OP FABS r p1
 .IL DABS arth lnk
 .OP DABS r p1
+.\" AOCC begin
+.IL QABS arth lnk
+.OP QABS r p1
+.\" AOCC end
 .IL CABS arth lnk
 .AT spec
 .OP DBLE t1 rp1
 .OP DBLE t2 ip1
+.\" AOCC begin
+.OP QUAD t1 rp1
+.OP QUAD t2 ip1
+.\" AOCC end
 .OP DMUL t1 t1 t1
 .OP DMUL t2 t2 t2
 .OP DADD t3 t1 t2
@@ -384,6 +430,10 @@ EXP intrinsic for single precision floating point values.
 .OP FLOG r p1
 .IL DLOG arth lnk
 .OP DLOG r p1
+.\" AOCC begin
+.IL QLOG arth lnk
+.OP QLOG r p1
+.\" AOCC end
 .IL CLOG arth lnk
 .AT spec
 .IL CDLOG arth lnk
@@ -742,6 +792,8 @@ Integer negation.
 .OP FNEG r p1
 .IL DNEG arth lnk
 .OP DNEG r p1
+.IL QNEG arth lnk
+.OP QNEG r p1
 .IL CNEG arth lnk
 .AT spec
 .OP FNEG rr rp1
@@ -848,6 +900,10 @@ p3 - mask
 .OP FADD r p1 p2
 .IL DADD arth lnk lnk
 .OP DADD r p1 p2
+.\" AOCC begin
+.IL QADD arth lnk lnk
+.OP QADD r p1 p2
+.\" AOCC end
 .IL CADD arth lnk lnk
 .AT spec
 .OP FADD rr rp1 rp2
@@ -883,6 +939,10 @@ the pointer (lnk1) points to.
 .OP FSUB r p1 p2
 .IL DSUB arth lnk lnk
 .OP DSUB r p1 p2
+.\" AOCC begin
+.IL QSUB arth lnk lnk
+.OP QSUB r p1 p2
+.\" AOCC end
 .IL CSUB arth lnk lnk
 .AT spec
 .OP FSUB rr rp1 rp2
@@ -931,6 +991,8 @@ the pointer (lnk1) points to.
 .OP FMUL r p1 p2
 .IL DMUL arth lnk lnk
 .OP DMUL r p1 p2
+.IL QMUL arth lnk lnk
+.OP QMUL r p1 p2
 .IL CMUL arth lnk lnk
 .AT spec
 .OP FMUL t1 rp1 rp2
@@ -947,6 +1009,9 @@ the pointer (lnk1) points to.
 .OP DMUL t1 ip1 rp2
 .OP DMUL t2 ip2 rp1
 .OP DADD ir t2 t1
+.\" AOCC begin
+.OP QADD ir t2 t1
+.\" AOCC end
 .IL IDIV arth lnk lnk
 .OP IDIV r p1 p2
 .IL UIDIV arth lnk lnk
@@ -955,6 +1020,10 @@ the pointer (lnk1) points to.
 .OP FDIV r p1 p2
 .IL DDIV arth lnk lnk
 .OP DDIV r p1 p2
+.\" AOCC begin
+.IL QDIV arth lnk lnk
+.OP QDIV r p1 p2
+.\" AOCC end
 .IL CDIV arth lnk lnk
 .AT spec
 .IL CDIVR arth lnk lnk
@@ -1046,6 +1115,10 @@ precision value. (DPROD intrinsic).
 .OP FMAX r p1 p2
 .IL DMAX arth lnk lnk
 .OP DMAX p p1 p2
+.\" AOCC begin
+.IL QMAX arth lnk lnk
+.OP QMAX p p1 p2
+.\" AOCC end
 .IL IMIN arth lnk lnk
 .OP IMIN r p1 p2
 .IL UIMIN arth lnk lnk
@@ -1054,6 +1127,10 @@ precision value. (DPROD intrinsic).
 .OP FMIN r p1 p2
 .IL DMIN arth lnk lnk
 .OP DMIN r p1 p2
+.\" AOCC begin
+.IL QMIN arth lnk lnk
+.OP QMIN r p1 p2
+.\" AOCC end
 .IL INDEX fstr lnk lnk
 INDEX intrinsic (inputs are two character strings and result is an integer).
 .AT spec
@@ -1260,6 +1337,11 @@ CELING of real to real
 .IL DCEIL arth lnk
 CELING of double to double
 .OP DCEIL r p1
+.\" AOCC begin
+.IL QCEIL arth lnk
+CELING of quad to quad
+.OP QCEIL r p1
+.\" AOCC end
 .IL ICMP arth lnk lnk
 Integer comparision of two integer numbers.
 The compare ILMs are used only in the context of a relational expression
@@ -1274,6 +1356,11 @@ Compare two single precision floating point numbers.
 .AT spec
 .IL DCMP arth lnk lnk
 Compare two double precision floating point numbers.
+.\" AOCC begin
+.AT spec
+.IL QCMP arth lnk lnk
+Compare two quad precision floating point numbers.
+.\" AOCC end
 .AT spec
 .IL UICMP arth lnk lnk
 Unsigned integer comparison.
@@ -1375,6 +1462,10 @@ lnk3 - stride
 .OP FCON r v1
 .IL DCON cons sym
 .OP DCON r v1
+.\" AOCC begin
+.IL QCON cons sym
+.OP QCON r v1
+.\" AOCC end
 .IL CCON cons sym
 .AT spec
 .OP FCON rr iv0
@@ -1486,6 +1577,11 @@ Load real
 .IL DLD load lnk
 Load double
 .AT spec
+.\" AOCC begin
+.IL QPLD load lnk
+Load quad
+.AT spec
+.\" AOCC end
 .IL QLD load lnk
 Load m128
 .AT spec
@@ -1556,6 +1652,11 @@ Store float
 .IL DST store lnk lnk
 Store double
 .AT spec trm
+.\" AOCC begin
+.IL QPST store lnk lnk
+Store quad
+.AT spec trm
+.\" AOCC end
 .IL QST store lnk lnk
 Store m128
 .AT spec trm
@@ -1624,7 +1725,7 @@ loads and stores or a call (JSR) to one of:
 Zero memory locations.
 lnk1 - base address to zero
 lnk2 - number of units to zero
-stc  - data type of units to zero: char, short, int, dble
+stc  - data type of units to zero: char, short, int, dble, quad
 The expansion of this ILM can generate ILI for a sequence of
 stores or a JSR to one of
 "c_bzero"  zero bytes

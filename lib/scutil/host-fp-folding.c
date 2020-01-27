@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /** \file
  * \brief Implement floating-point folding with host arithmetic
@@ -693,6 +698,7 @@ fold_uint64_from_real128(uint64_t *res, const float128_t *arg)
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
 
+#ifdef FOLD_LDBL_128BIT
 enum fold_status
 fold_real128_from_int64(float128_t *res, const int64_t *arg)
 {
@@ -730,7 +736,7 @@ fold_real128_from_real64(float128_t *res, const float64_t *arg)
 }
 
 enum fold_status
-fold_real128_negate(float128_t *res, const float128_t *arg)
+fold_real128_negate(__float128 *res, const __float128 *arg)
 {
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
@@ -890,3 +896,205 @@ fold_real128_log10(float128_t *res, const float128_t *arg)
   *res = log10l(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+// AOCC begin
+// To support quad precision REAL128 type
+#else
+enum fold_status
+fold_real128_from_int64(__float128 *res, const int64_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_from_uint64(__float128 *res, const uint64_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_from_real32(__float128 *res, const float32_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_from_real64(__float128 *res, const float64_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_negate(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = -*arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_abs(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = fabsl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_sqrt(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = sqrtl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_add(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *x + *y;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_subtract(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *x - *y;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_multiply(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *x * *y;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_divide(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *x / *y;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_pow(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = powl(*x, *y);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+enum fold_status
+fold_real128_sin(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = sinl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_cos(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = cosl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_tan(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = tanl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_asin(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = asinl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_acos(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = acosl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_atan(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = atanl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_atan2(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = atan2l(*x, *y);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_exp(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = expl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_log(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = logl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_log10(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = log10l(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+// AOCC end
+#endif

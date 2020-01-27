@@ -28,6 +28,10 @@
  * Support for Bit transformational intrinsic iany, iall, iparity.
  *
  * Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -747,6 +751,8 @@ typedef enum {
   RTE_f90io_sc_ch_ldw,
   RTE_f90io_sc_d_fmt_write,
   RTE_f90io_sc_d_ldw,
+  RTE_f90io_sc_q_fmt_write,   // AOCC
+  RTE_f90io_sc_q_ldw,         // AOCC
   RTE_f90io_sc_f_fmt_write,
   RTE_f90io_sc_f_ldw,
   RTE_f90io_sc_fmt_write,
