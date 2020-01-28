@@ -3487,7 +3487,6 @@ assign(SST *newtop, SST *stktop)
       direct_loop_end(gbl.lineno, gbl.lineno);
     }
   }
-
   return ast;
 }
 
@@ -3496,6 +3495,8 @@ assign(SST *newtop, SST *stktop)
  * - if reshape has only two arguments : source and shape
  * - if source is an implied do
  * - if shape is an implied do and specifies a 2D/3D array
+ * - if LHS  is not of derived type
+ * - if number of dimensions of LHS and the result are same
  *and returns
  * - 1, if expanded
  * - 0, if not expanded.
@@ -3553,6 +3554,30 @@ static bool expand_reshape(SST *sst_rhs, SST *sst_lhs) {
   dims = sem.reshape.num_dims;
   source_ast = ARGT_ARG(args,0);
   shape_ast = ARGT_ARG(args,1);
+
+  ad_source = AD_DPTR(A_DTYPEG(SST_ASTG(sst_lhs)));
+  dims = AD_NUMDIM(ad_source);
+
+  //check if number of dimensions of LHS is equal to that
+  //of reshaped array
+  if(cnt != dims) {
+    return false;
+  }
+
+  lhs_ast = SST_ASTG(sst_lhs);
+  if(A_TYPEG(lhs_ast) == A_SUBSCR) {
+    lhs_ast = A_LOPG(lhs_ast);
+  }
+
+  //avoid reshaping if LHS is not of derived type.
+  int parent = A_PARENTG(lhs_ast);
+  if(parent > 0 && parent < astb.stg_avail) {
+    int dtype_parent = A_DTYPEG(parent);
+    dtype_parent = DTY(dtype_parent + 1);
+    if(DTY(dtype_parent) == TY_DERIVED) {
+      return false;
+    }
+  }
 
   //emit code to expand 2d-reshape.
   //create variables for indices of do loops
@@ -3640,10 +3665,6 @@ static bool expand_reshape(SST *sst_rhs, SST *sst_lhs) {
   ast = mk_assn_stmt(mk_id(source_index), expr,DT_INT);
   (void)add_stmt(ast);
   dest = add_subscript(source_ast, mk_id(source_index), DT_INT);
-  lhs_ast = SST_ASTG(sst_lhs);
-  if(A_TYPEG(lhs_ast) == A_SUBSCR) {
-	  lhs_ast = A_LOPG(lhs_ast);
-  }
   if(cnt == 2) {
     src = add_subscript_2d(lhs_ast, mk_id(index1), mk_id(index2), DT_INT);
   } else {

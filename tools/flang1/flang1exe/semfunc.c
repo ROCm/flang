@@ -7684,7 +7684,10 @@ ref_pd(SST *stktop, ITEM *list)
     if (SST_IDG(stkp) == S_ACONST && SST_ACLG(stkp) != 0) {
       ACL *aclp;
       aclp = SST_ACLG(stkp);
-      sem.reshape.is_source_ido = true;
+      //expand only if source is not a list of constants
+      if(!aclp->is_const) {
+        sem.reshape.is_source_ido = true;
+      }
     }
     //AOCC End
     argt_count = 4;
