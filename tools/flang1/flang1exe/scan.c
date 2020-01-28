@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ *Support type statement for intrinsic types
+ *Date of Modification: 24 January 2020
+*/
 
 /**
     \file scan.c
@@ -24,6 +30,7 @@
 #include "ccffinfo.h"
 #include "fih.h"
 #include "dinit.h"
+#include<string.h>
 
 /*  functions defined in this file:  */
 
@@ -76,7 +83,9 @@ static void check_continuation(int);
 static LOGICAL is_next_char(char *, int);
 static int double_type(char *, int *);
 void add_headerfile(char *, int, int);
-
+//AOCC Begin
+void check_type_intrinsic(int * , int * , char * , char *);
+//AOCC End
 /*  external declarations  */
 
 extern void parse_init(void);
@@ -5094,6 +5103,11 @@ get_keyword:
   tkntyp = keyword(id, &normalkw, &idlen, sig_blanks);
   if (tkntyp == 0)
     goto return_identifier;
+  //AOCC Begin
+  //Support for f2008 feature: type statement for intrinsic types
+  if(tkntyp == TK_TYPE && flg.std == F2008)
+    check_type_intrinsic(&tkntyp , &idlen , currc , cp);
+  //AOCC End
   bind_state = B_NONE;
   switch (scn.stmtyp = tkntyp) {
   case TK_FUNCTION:
@@ -9560,3 +9574,64 @@ double_type(char *ip, int *p_idlen)
   }
   return 0;
 }
+//AOCC Begin
+//Checks for type(intrinsic type)
+void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
+
+  char *curr_token;
+  char look_ahead[MAXIDLEN * 4];
+  int intrinsic_type;
+  int paran_count = 0;
+  int c , count , index = 0;
+  char *insert;
+  curr_token = cp;
+  count = MAXIDLEN * 4;
+  insert = look_ahead;
+
+  if(*curr_token == ' '){
+    ++curr_token;
+    index++;
+  }
+  if(*curr_token == '('){
+    ++curr_token;
+    index++;
+    if(*curr_token == ' '){
+      ++curr_token;
+      index++;
+    }
+    do {
+      c = *curr_token++;
+      index++;
+      if (--count >= 0)
+        *insert++ = c;
+    } while (isident(c));
+    if (insert != look_ahead)
+      --insert;
+    *insert = '\0';
+    int temp_idlen = curr_token - cp;
+    intrinsic_type = keyword(look_ahead, &normalkw, &temp_idlen, sig_blanks);
+    if(intrinsic_type){
+      *tkntyp = intrinsic_type;
+      if(*curr_token == ')'){
+        *idlen = index + 5;
+      }
+      else if (*(curr_token - 1) == ')'){
+        *idlen = index + 4;
+      }
+      else if (*(curr_token - 1) == '(' || *curr_token == '('){
+        while(index != strlen(cp)){
+          if(*curr_token == ')')
+            paran_count++;
+          index++;
+          if(paran_count == 2)
+            break;
+          *curr_token++;
+        }
+        if(paran_count == 2)
+          currc[index + 3] = ' ';
+          *idlen = index+3;
+      }
+    }
+  }
+}
+//AOCC End
