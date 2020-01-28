@@ -1128,7 +1128,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
           } else if (opc == IM_BCS) {
             ompaccel_symreplacer(false);
           // AOCC Begin
-          } else if (opc == IM_ECS) {
+          } else if (opc == IM_ECS || opc == IM_MP_NUMTEAMS) {
             ompaccel_symreplacer(true);
           // AOCC End
           } else if (ILM_OPC(ilmpx) == IM_ELEMENT && gbl.ompaccel_intarget ) {
@@ -1141,14 +1141,16 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             op1Pld = ILM_OPND(ilmpx, 1);
             ILM_OPND(ilmpx, 2) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 2));
-          } else if(gbl.ompaccel_intarget && !is_no_symbol_ilm(opc)) {
-            // AOCC Modification : Added condtion !is_no_symbol_ilm(opc).
-            //      No point in modifying 1st operand blindly without checking
-            //      if opc has sym operand or not. For such ILMs either control should
-            //      not reach here, or if reached should not to be modified blindly.
-            /* replace host sptr with device sptrs */
-            ILM_OPND(ilmpx, 1) =
-                ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 1));
+          // AOCC begin
+          } else if (gbl.ompaccel_intarget) {
+            // We only replace the symbol operands of ILMs and ignore others.
+            for (int i = 1; i <= ilms[opc].oprs; i++) {
+              if (IM_OPRFLAG(opc, i) == OPR_SYM) {
+                ILM_OPND(ilmpx, i) =
+                  ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, i));
+              }
+            }
+          // AOCC end
           }
         }
       }

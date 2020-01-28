@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 20th January 2020
+ */
 
 /**
     \file
@@ -4799,6 +4805,10 @@ lower_stmt(int std, int ast, int lineno, int label)
       } else {
         lower_expression(A_NTEAMSG(ast));
         ilm = lower_conv(A_NTEAMSG(ast), DT_INT);
+        // AOCC Begin
+        if (A_TYPEG(A_NTEAMSG(ast)) == A_ID)
+          plower("oS", "MP_NUMTEAMS", A_SPTRG(A_NTEAMSG(ast)));
+        // AOCC End
       }
       if (A_THRLIMITG(ast) == 0) {
         lilm = plower("oS", "ICON", lowersym.intzero);

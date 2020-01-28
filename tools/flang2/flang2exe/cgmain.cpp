@@ -12852,6 +12852,17 @@ isNVVM(char *fn_name)
 {
   if (!flg.omptarget)
     return false;
+
+  // AOCC begin
+  if (flg.x86_64_omptarget) {
+    if ((strncmp(fn_name, "f90_", 4) == 0) ||
+        (strncmp(fn_name, "_mp_", 4) == 0) ||
+        (strncmp(fn_name, "__ps", 4) == 0)) {
+      return true;
+    }
+  }
+  // AOCC end
+
   return (strncmp(fn_name, "__kmpc", 6) == 0) ||
          (strncmp(fn_name, "llvm.nvvm", 9) == 0) ||
          // AOCC Begin
@@ -13434,15 +13445,6 @@ emit_x86_device_offload_entry(SPTR func_sptr)
   assert(get_llasm_output_file() == gbl.ompaccfile && flg.x86_64_omptarget,
       "This function should only be called for x86 offloading and only "
       "during it's device IR emission", func_sptr, ERR_Fatal);
-
-  static bool mp_defined = false;
-  // Even though we emit calls to _mp_*cs_nest_red APIs for reduction regions in
-  // the device IR, flang, misses out declaring them. We hard code this here
-  // regardless whether we use these APIs or not.
-  if (!mp_defined) {
-    fprintf(get_llasm_output_file(), "declare signext i32 @_mp_ecs_nest_red(...)\ndeclare signext i32 @_mp_bcs_nest_red(...)\n");
-    mp_defined = true;
-  }
 
   if (!ompaccel_x86_is_entry_func(func_sptr))
     return;

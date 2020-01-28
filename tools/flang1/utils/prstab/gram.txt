@@ -1855,7 +1855,8 @@
 	       PRIORITY ( <expression> ) |
                NUM_TEAMS ( <expression> ) |
                THREAD_LIMIT ( <expression> ) |
-	       NOGROUP
+               NOGROUP |
+               NOWAIT
 
 <opt expression> ::= |
 	             ( <expression> )

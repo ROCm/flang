@@ -11,6 +11,7 @@
  * Date of modification 16th September 2019
  * Date of modification 23rd September 2019
  * Date of modification 10th December  2019
+ * Date of modification 20th January   2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -928,6 +929,31 @@ genIntLoad(SPTR sym)
   return ili;
 }
 
+// AOCC begin
+int
+_make_mp_push_num_teams(int nteams, int n_limit)
+{
+  int null_arg;
+  INT tmp[2];
+  tmp[0] = 0;
+  tmp[1] = 0;
+  int con = getcon(tmp, DT_INT);
+  null_arg = ad1ili(IL_ACON, con);
+
+  char *fn_name = "__kmpc_push_num_teams";
+  mk_prototype(fn_name, NULL, DT_NONE, 4, DT_CPTR, DT_INT,
+      DT_INT, DT_INT);
+
+  int argili = jsrAddArg(0, IL_ARGIR, n_limit);
+  argili = jsrAddArg(argili, IL_ARGIR, nteams);
+  argili = jsrAddArg(argili, IL_ARGIR, ll_get_gtid_val_ili());
+  argili = jsrAddArg(argili, IL_ARGAR, null_arg);
+
+  int ili = makeCall(fn_name, IL_QJSR, argili);
+  return ili;
+}
+// AOCC end
+
 void
 exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 {
@@ -1208,6 +1234,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     ccff_info(MSGOPENMP, "OMP001", gbl.findex, gbl.lineno,
               "Parallel region activated", NULL);
     break;
+  // AOCC Begin
+  case IM_MP_NUMTEAMS: {
+#ifdef OMP_OFFLOAD_LLVM
+      if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
+        ompaccel_set_numteams_sptr(ILM_SymOPND(ilmp, 1));
+      }
+#endif
+    break;
+  }
+  // AOCC End
   case IM_BTEAMS:
   case IM_BTEAMSN:
 #ifdef OMP_OFFLOAD_LLVM
@@ -1217,7 +1253,12 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
           int iliarg, nteams, n_limit;
           nteams = ILI_OF(ILM_OPND(ilmp, 1));
           n_limit = ILI_OF(ILM_OPND(ilmp, 2));
-          ili = ll_make_kmpc_push_num_teams(nteams, n_limit);
+          // For now serializing, ili when gbl.outlined is zero (illegal).
+          if (!nteams || !n_limit)
+            nteams = n_limit = ad_icon(1);
+
+          ili = _make_mp_push_num_teams(nteams, n_limit);
+
           iltb.callfg = 1;
           chk_block(ili);
         }

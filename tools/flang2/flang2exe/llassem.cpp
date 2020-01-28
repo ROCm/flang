@@ -1143,7 +1143,7 @@ write_libomtparget(void)
       }
 
       else if (flg.x86_64_omptarget) {
-         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+         // fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
