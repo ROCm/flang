@@ -552,7 +552,7 @@ ll_make_tgt_target(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr)
   int ili_hostptr;
 
   rname = SYMNAME(outlined_func_sptr);
-  NEW(name, char, 100);
+  NEW(name, char, strlen(rname)+16); // AOCC
 
   targetinfo = ompaccel_tinfo_get(outlined_func_sptr);
 #if OMP_OFFLOAD_LLVM
@@ -622,7 +622,7 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   OMPACCEL_TINFO *targetinfo = ompaccel_tinfo_get(outlined_func_sptr);
   int ili_hostptr, nargs = targetinfo->n_symbols;
   rname = SYMNAME(outlined_func_sptr);
-  NEW(name, char, 100);
+  NEW(name, char, strlen(rname)+16); // AOCC
 #if OMP_OFFLOAD_LLVM
   // AOCC begin
   // sptr = init_tgt_target_syms(rname);
@@ -699,7 +699,7 @@ ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
   OMPACCEL_TINFO *targetinfo = ompaccel_tinfo_get(outlined_func_sptr);
   int ili_hostptr, nargs = targetinfo->n_symbols;
   rname = SYMNAME(outlined_func_sptr);
-  NEW(name, char, 100);
+  NEW(name, char, strlen(rname)+16); // AOCC
   ili_hostptr = ad1ili(IL_ACON, get_acon(outlined_func_sptr, 0));
 
   sprintf(name, "%s_base", rname);
