@@ -25,6 +25,9 @@
  * Lowring llvm.log10.f64 to llvm.log10.f32 for AMDGPU
  * Lowring llvm.pow.f64 to llvm.pow.f32 for AMDGPU
  * Date of modification 21st January 2020
+ *
+ * Using sqrt from amdgcn math lib
+ * Date of modification 31st January 2020
  */
 
 /**
@@ -2571,6 +2574,15 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSQRT:
+      // AOCC Begin
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("sqrt", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "sqrt", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
+      // AOCC End
       (void)mk_prototype("llvm.sqrt.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sqrt.f64", 1, op1);
       return ad1altili(opc, op1, ilix);

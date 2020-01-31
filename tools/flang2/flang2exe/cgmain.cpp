@@ -29,6 +29,9 @@
  *
  * Compile time improvement changes
  * Date of modification 14th November 2019
+ *
+ * Allowing declaration of sqrt function in target module
+ * Date of modification 31st November 2020
  */
 
 /**
@@ -12874,6 +12877,7 @@ isNVVM(char *fn_name)
 #ifdef OMP_OFFLOAD_AMD
          (strncmp(fn_name, "nvvm.", 5) == 0) ||
          (strncmp(fn_name, "llvm.", 5) == 0) ||
+         (strncmp(fn_name, "sqrt", 4) == 0) ||
 #endif
          // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
