@@ -1534,6 +1534,20 @@ resolve_fwd_ref(int ref)
 int
 func_call(SST *stktop, ITEM *list)
 {
+/* AOCC begin */
+#if defined(OMP_OFFLOAD_LLVM)
+
+  /* Multi-device offloading is not supported at the moment, hence we
+   * evaluate omp_get_num_devices() call to 1
+   */
+  const char *func_name = SYMNAME(SST_SYMG(stktop));
+  if (flg.x86_64_omptarget &&
+      strcmp(func_name, "omp_get_num_devices") == 0) {
+    SST_ASTP(stktop, mk_cnst(stb.i1));
+    return 1;
+  }
+#endif
+/* AOCC end */
   int func_sptr;
   /* Note: If we have a generic tbp (or operator), pass a 0
    * flag only if the generic is private. We do this to turn off

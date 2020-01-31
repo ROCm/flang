@@ -12859,6 +12859,7 @@ isNVVM(char *fn_name)
   // AOCC begin
   if (flg.x86_64_omptarget) {
     if ((strncmp(fn_name, "f90_", 4) == 0) ||
+        (strncmp(fn_name, "f90io_", 6) == 0) ||
         (strncmp(fn_name, "_mp_", 4) == 0) ||
         (strncmp(fn_name, "__ps", 4) == 0)) {
       return true;

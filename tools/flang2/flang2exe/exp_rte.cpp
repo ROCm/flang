@@ -3304,6 +3304,23 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   nargs = ILM_OPND(ilmp, 1); /* # args */
   func_addr = 0;
   funcptr_flags = 0;
+
+  // AOCC begin
+#ifdef OMP_OFFLOAD_LLVM
+  // We can't do this evaulation at ast since for omp target-if the same
+  // ast-block is used for the outlined target function and host function.
+  // Since this evalutation must only happen at the outlined target function, we
+  // perform it here under gbl.ompaccel_intarget so that we're guaranteed not
+  // to modify the same call(if any) in the host.
+  if (gbl.ompaccel_intarget && flg.x86_64_omptarget) {
+    SPTR func_sptr = ILM_SymOPND(ilmp, 2);
+    if (strcmp(SYMNAME(func_sptr), "omp_is_initial_device") == 0) {
+      ILI_OF(curilm) = ad_icon(0); // ie. return false
+      return;
+    }
+  }
+#endif
+  // AOCC end
   switch (opc) {
   case IM_CALL:
     exp_call_sym = ILM_SymOPND(ilmp, 2); /* external reference  */
