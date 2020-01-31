@@ -3404,11 +3404,13 @@ assign(SST *newtop, SST *stktop)
 
   //AOCC Begin
   //if it is a direct assignment of an instrinsic call: reshape,
-  //try expanding reshape.
-  if(A_TYPEG(SST_ASTG(stktop)) == A_INTR) {
-    if(A_OPTYPEG(SST_ASTG(stktop)) == I_RESHAPE) {
-        if(expand_reshape(stktop, newtop))
-	 return 0;
+  //try expanding reshape if it is inside target region.
+  if(flg.omptarget) {
+    if(A_TYPEG(SST_ASTG(stktop)) == A_INTR) {
+      if(A_OPTYPEG(SST_ASTG(stktop)) == I_RESHAPE) {
+          if(expand_reshape(stktop, newtop))
+           return 0;
+      }
     }
   }
   if(sem.acl_ido.replace_temp && (sem.acl_ido.body_stds != NULL)) {
