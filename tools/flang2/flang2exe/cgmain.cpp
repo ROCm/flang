@@ -12878,6 +12878,12 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "nvvm.", 5) == 0) ||
          (strncmp(fn_name, "llvm.", 5) == 0) ||
          (strncmp(fn_name, "sqrt", 4) == 0) ||
+         (strncmp(fn_name, "sin", 3) == 0) ||
+         (strncmp(fn_name, "cos", 3) == 0) ||
+         (strncmp(fn_name, "pow", 3) == 0) ||
+         (strncmp(fn_name, "exp", 3) == 0) ||
+         (strncmp(fn_name, "log", 3) == 0) ||
+         (strncmp(fn_name, "log10", 5) == 0) ||
 #endif
          // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
