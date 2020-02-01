@@ -873,7 +873,7 @@ ll_make_struct(int count, char *name, TGT_ST_TYPE *meminfo, ISZ_T sz)
   char sname[MXIDLEN];
 
   tag = SPTR_NULL;
-  dtype = cg_get_type(6, TY_STRUCT, NOSYM);
+  dtype = cg_get_type(count+6, TY_STRUCT, NOSYM); // AOCC dont return used type
   if (name) {
     sprintf(sname, "%s", name);
     tag = getsymbol(sname);
