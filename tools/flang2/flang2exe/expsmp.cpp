@@ -13,6 +13,7 @@
  * Date of modification 10th December  2019
  * Date of modification 20th January   2020
  * Date of modification 24th January   2020
+ * Date of modification 3rd  February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -2767,6 +2768,8 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_TARGETUPDATE:
   // AOCC Begin
   case IM_BTARGETUPDATE:
+    if (ll_ilm_is_rewriting())
+      break;
   // AOCC End
 #ifdef OMP_OFFLOAD_AMD
     dotarget = ILI_OF(ILM_OPND(ilmp, 1));
