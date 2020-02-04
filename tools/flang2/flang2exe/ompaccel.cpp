@@ -24,6 +24,7 @@
  * Date of modification 10th December  2019
  * Date of modification 20th January   2020
  * Date of modification 24th January   2020
+ * Date of modification 04th February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -2397,7 +2398,7 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
     }
   case KMP_DISTRIBUTE_STATIC_CHUNKED:
   case KMP_DISTRIBUTE_STATIC:
-    // AOCC begin
+  case KMP_DISTRIBUTE_STATIC_CHUNKED_CHUNKONE: // AOCC
     // Force static scheduling if this is a target teams-distribute without a
     // parallel do.
     if (ompaccel_tinfo_current_target_mode() == mode_target_teams_distribute) {

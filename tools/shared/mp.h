@@ -5,6 +5,14 @@
  *
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ * Date of modification 04th February 2020
+ *
+ */
+
 /* mp.h  -  various OpenMP definitions */
 
 #ifndef __MP_H__
@@ -54,6 +62,10 @@
 #define MP_SCH_ATTR_CHUNKED 0x00020000 /* Chunked */
 #define MP_SCH_ATTR_DIST 0x00040000    /* distributed */
 #define MP_SCH_ATTR_DEVICEDIST 0x00080000    /* fast GPU scheduler for TTDPF */
+// AOCC Begin
+// Same as above, since 0x00080000 is too large to store in flags.
+#define MP_SCH_TEAMS_DIST 0x0001600
+// AOCC End
 
 /* Target/Target combine attribute */
 #define MP_TGT_NOWAIT 0x01   /* if NOWAIT is present */
