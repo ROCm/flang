@@ -20,6 +20,7 @@
  * Date of modification 30th November 2019
  * Date of modification 02nd December 2019
  * Date of modification 05th December 2019
+ * Date of modification 04th February 2020
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -6538,6 +6539,14 @@ do_dist_schedule(int doif, LOGICAL chk_collapse)
     DI_DISTCHUNK(doif) = 0;
   }
   DI_CHUNK(doif) = DI_DISTCHUNK(doif);
+  // AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target && !CL_PRESENT(CL_DIST_SCHEDULE) && target_ast  &&
+      A_COMBINEDTYPEG(target_ast) == mode_target_teams_distribute) {
+    DI_SCHED_TYPE(doif) = MP_SCH_TEAMS_DIST;
+  } else
+#endif
+  // AOCC End
   DI_SCHED_TYPE(doif) = DI_SCH_DIST_STATIC;
   DI_IS_ORDERED(doif) = CL_PRESENT(CL_ORDERED);
   DI_ISSIMD(doif) = 0;
