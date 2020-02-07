@@ -10,6 +10,13 @@
  * LLVM
  */
 
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * modification date: 7th Feb 2020
+ * fix the issue with multiply reduction
+ */
+
 #include "expatomics.h"
 #include "exputil.h"
 #include "error.h"
@@ -2858,20 +2865,22 @@ get_complex_update_operand(int* opnd, ILM* ilmp, int* nme, DTYPE dtype)
   rhs = opnd[RHS_IDX];
   ldst_msz(dtype, &ld, &st, &msz);
   load = ad3ili(ld, lhs, nme[LHS_IDX], msz);
-  if (!find_ili(rhs, load)) {
-    ili_unvisit();
-    if (find_ili(rhs, lhs)) {
-      ili_unvisit(); /* illlegel update statement */
-      return 0;
-    } else {
+  ATOMIC_RMW_OP aop = (ATOMIC_RMW_OP) ILM_OPND(ilmp, 4); 
+  if ( aop == AOP_UNDEF ) { // AOCC
+    if (!find_ili(rhs, load)) {
       ili_unvisit();
-      if ((lop = load_op_match_lhs(lhs, rhs)) == 0)
+      if (find_ili(rhs, lhs)) {
+        ili_unvisit(); /* illlegel update statement */
         return 0;
-
-      load = lop;
-    }
-  } else
-    ili_unvisit();
+      } else {
+        ili_unvisit();
+        if ((lop = load_op_match_lhs(lhs, rhs)) == 0)
+          return 0;
+        load = lop;
+      }
+    } else
+      ili_unvisit();
+  }
 
   stc = atomic_encode(msz, SS_PROCESS, AORG_OPENMP);
   expected_val = _exp_mp_atomic_read(stc, dtype, opnd, nme);
