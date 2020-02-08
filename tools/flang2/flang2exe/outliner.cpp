@@ -13,6 +13,7 @@
  * Date of modification 16th September 2019
  * Date of modification 15th October 2019
  * Date of modification 05th December 2019
+ * Date of modification 24th January 2020
  *
  */
 
@@ -1128,7 +1129,8 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
           } else if (opc == IM_BCS) {
             ompaccel_symreplacer(false);
           // AOCC Begin
-          } else if (opc == IM_ECS || opc == IM_MP_NUMTEAMS) {
+          } else if (opc == IM_ECS || opc == IM_MP_NUMTEAMS ||
+                                      opc == IM_MP_NUMTHREADS) {
             ompaccel_symreplacer(true);
           // AOCC End
           } else if (ILM_OPC(ilmpx) == IM_ELEMENT && gbl.ompaccel_intarget ) {

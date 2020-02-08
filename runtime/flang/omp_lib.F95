@@ -32,7 +32,8 @@
 ! *
 ! * Bug fixes.
 ! *
-!  * Date of Modification: November 2019
+! * Date of Modification: November 2019
+! * Date of Modification: 24th Jan'20
 !
 
 
@@ -178,7 +179,7 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_nested_,omp_get_nested_) :: omp_get_ne
   private ogs1, ogs2, ogs4, ogs8, ompgetschedule
 
   interface
-    function omp_get_thread_limit ()
+    function omp_get_thread_limit () bind(c, name='omp_get_thread_limit')
     use omp_lib_kinds
     integer ( kind=omp_integer_kind ) :: omp_get_thread_limit
 DECDIR ATTRIBUTES C :: omp_get_thread_limit
