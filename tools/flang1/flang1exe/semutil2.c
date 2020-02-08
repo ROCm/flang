@@ -17,6 +17,9 @@
  * Date of Modification: 24th October 2019
  * Date of Modification: 5th November 2019
  *
+ * Added code to support reshape with implied dos inside target region
+ * Date of Modification: 23rd January 2020
+ *
  */
 
 /** \file
@@ -2230,7 +2233,10 @@ init_constructf90()
   sub_i = 7;
 }
 
-static int
+//AOCC Begin
+//static int
+int
+//AOCC End
 add_subscript(int base_id, int indexast, DTYPE dtype)
 {
   int dest;
@@ -2240,6 +2246,34 @@ add_subscript(int base_id, int indexast, DTYPE dtype)
   dest = mk_subscr(base_id, &acs.subs[sub_i], 1, dtype);
   return dest;
 }
+
+//AOCC Begin
+int
+add_subscript_2d(int base_id, int indexast1, int indexast2, DTYPE dtype)
+{
+  int dest;
+
+  acs.subs[sub_i++] = indexast1;
+  acs.subs[sub_i] = indexast2;
+
+  /* generate subscripts as they are seen */
+  dest = mk_subscr(base_id, &acs.subs[sub_i-1], 2, dtype);
+  return dest;
+}
+int
+add_subscript_3d(int base_id, int indexast1, int indexast2, int indexast3, DTYPE dtype)
+{
+  int dest;
+
+  acs.subs[sub_i++] = indexast1;
+  acs.subs[sub_i++] = indexast2;
+  acs.subs[sub_i] = indexast3;
+
+  /* generate subscripts as they are seen */
+  dest = mk_subscr(base_id, &acs.subs[sub_i-2], 3, dtype);
+  return dest;
+}
+//AOCC End
 
 static int
 apply_shape_subscripts(int base_id, int shp, DTYPE dtype)
