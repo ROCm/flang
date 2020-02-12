@@ -6,6 +6,11 @@
  * Last modified: Nov 12, 2019
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ */
 
 /** \file
   \brief Abstract syntax tree access module.
@@ -5071,6 +5076,7 @@ ast_rewrite(int ast)
   case A_MP_EREDUCTION:
   case A_MP_BREDUCTION:
   case A_MP_REDUCTIONITEM:
+  case A_MP_DEFAULTMAP: // AOCC
     break;
   case A_MP_ATOMICWRITE:
     rop = ast_rewrite(A_ROPG(ast));
@@ -5933,6 +5939,7 @@ ast_trav_recurse(int ast, int *extra_arg)
   case A_MP_EREDUCTION:
   case A_MP_BREDUCTION:
   case A_MP_REDUCTIONITEM:
+  case A_MP_DEFAULTMAP: // AOCC
     break;
   case A_MP_BMPSCOPE:
 #if DEBUG

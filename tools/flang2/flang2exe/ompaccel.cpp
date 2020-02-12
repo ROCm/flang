@@ -25,6 +25,7 @@
  * Date of modification 20th January   2020
  * Date of modification 24th January   2020
  * Date of modification 04th February  2020
+ * Date of modification 12th February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -100,6 +101,7 @@ OMPACCEL_TINFO *old_tinfo = nullptr;
 
 // Store index of last emited tifno
 int last_tinfo_index = 0;
+int next_default_map_type = 0;
 // AOCC End
 
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
@@ -186,6 +188,10 @@ mk_ompaccel_ldsptr(SPTR sptr)
         nme = ILI_OPND(ili, 2);
       if (_pointer_type(dtype) || DTY(dtype) == TY_ARRAY) {
         return ad3ili(IL_LDA, ili, nme, MSZ_PTR);
+      // AOCC Begin
+      } else if (dtype == DT_CMPLX) {
+        return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F8);
+      // AOCC End
       } else {
         if (sz == 8)
           return ad3ili(IL_LDKR, ili, nme, MSZ_I8);
@@ -253,6 +259,18 @@ mk_ompaccel_store(int ili_value, DTYPE dtype, int nme, int ili_address)
     case DT_INT:
       return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_WORD);
       break;
+    // AOCC Begin
+    case DT_LOG8:
+      return ad4ili(IL_STKR, ili_value, ili_address, nme, MSZ_I8);
+    case DT_BINT:
+      return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_BYTE);
+      break;
+    case DT_SINT:
+      return ad4ili(IL_ST, ili_value, ili_address, nme, MSZ_SHWORD);
+      break;
+    case DT_CMPLX:
+      return ad4ili(IL_STSCMPLX, ili_value, ili_address, nme, MSZ_F8);
+    // AOCC End
     case DT_REAL:
       return ad4ili(IL_STSP, ili_value, ili_address, nme, MSZ_F4);
       break;
@@ -833,8 +851,12 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->n_quiet_symbols = 0;
   NEW(info->reduction_symbols, OMPACCEL_RED_SYM, tinfo_size_reductions);
   info->n_reduction_symbols = 0;
-  info->num_teams = SPTR_NULL; // AOCC
-  info->num_threads = SPTR_NULL; // AOCC
+  // AOCC Begin
+  info->num_teams = SPTR_NULL;
+  info->num_threads = SPTR_NULL;
+  info->default_map = next_default_map_type;
+  next_default_map_type = 0;
+  // AOCC End
 
   /* add ot to array */
   NEED(num_tinfos + 1, tinfos, OMPACCEL_TINFO *, tinfo_size,
@@ -898,6 +920,17 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
     if (flg.omptarget && DTY(DTYPEG(sptr)) == TY_PTR)
       byval = false;
 
+    for (int j = 0; j < current_tinfo->n_symbols; ++j) {
+      if (current_tinfo->symbols[j].host_sym == sptr) {
+        int map_type = current_tinfo->symbols[j].map_type;
+        if (TY_ISSCALAR(DTY(DTYPEG(sptr))) &&
+            map_type & OMP_TGT_MAPTYPE_FROM) {
+          byval = false;
+          break;
+        }
+      }
+    }
+
   } else {
   // AOCC end
     if (DTYPEG(sptr) == DT_ADDR || DTY(DTYPEG(sptr)) == TY_ARRAY)
@@ -923,10 +956,14 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
   }
 
   // AOCC Begin
-  // Interpreting all int32 args as int64 values
+  // Interpreting all int args as int64 values
 #ifdef OMP_OFFLOAD_AMD
-  if (dtype == DT_INT) {
+  if (dtype == DT_INT || dtype == DT_BINT || dtype == DT_SINT) {
     dtype = DT_INT8;
+  }
+
+  if (dtype == DT_LOG) {
+    dtype = DT_LOG8;
   }
 #endif
   // assume it's base of allocatable descriptor
@@ -1238,6 +1275,13 @@ void
 ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
                                int map_type)
 {
+  // AOCC Begin
+  if (map_type == 0 && current_tinfo->default_map != 0) {
+    if (TY_ISSCALAR(DTY(DTYPEG(host_symbol)))) {
+      map_type = current_tinfo->default_map;
+    }
+  }
+  // AOCC End
   if ((MIDNUMG(host_symbol) && SCG(host_symbol) == SC_BASED)) {
     NEED((current_tinfo->n_quiet_symbols + 1), current_tinfo->quiet_symbols,
          OMPACCEL_SYM, current_tinfo->sz_quiet_symbols,
@@ -3178,6 +3222,11 @@ ompaccel_set_numteams_sptr(SPTR num_teams) {
 void
 ompaccel_set_numthreads_sptr(SPTR num_threads) {
   current_tinfo->num_threads = num_threads;
+}
+
+void
+ompaccel_set_default_map(int maptype) {
+  next_default_map_type = maptype;
 }
 // AOCC End
 #endif

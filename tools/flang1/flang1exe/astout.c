@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ */
 
 /**
    \file
@@ -2242,6 +2247,11 @@ print_ast(int ast)
   case A_MP_TARGETLOOPTRIPCOUNT:
     put_string("target loop tripcount");
     break;
+  // AOCC Begin
+  case A_MP_DEFAULTMAP:
+    put_string("defaultmap");
+    break;
+  // AOCC End
   case A_MP_MAP:
     put_string("map");
     break;

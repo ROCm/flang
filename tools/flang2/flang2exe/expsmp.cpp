@@ -14,6 +14,7 @@
  * Date of modification 20th January   2020
  * Date of modification 24th January   2020
  * Date of modification 3rd  February  2020
+ * Date of modification 12th  February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -1237,6 +1238,15 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
               "Parallel region activated", NULL);
     break;
   // AOCC Begin
+  case IM_MP_DEFAULTMAP: {
+#ifdef OMP_OFFLOAD_LLVM
+    if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
+      int maptype = ILM_OPND(ilmp, 1);
+      ompaccel_set_default_map(maptype);
+    }
+#endif
+    break;
+  }
   case IM_MP_NUMTEAMS: {
 #ifdef OMP_OFFLOAD_LLVM
       if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
