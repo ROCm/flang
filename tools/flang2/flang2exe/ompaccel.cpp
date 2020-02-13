@@ -2092,10 +2092,16 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
 #else
   sprintf(name, "%s_%d", "ompaccelshmem", reductionFunctionCounter++);
 #endif
+  if (flg.amdgcn_target) {
+    sptrShmem = mk_ompaccel_addsymbol(
+        name, mk_ompaccel_array_dtype(DT_INT8, GV_Warp_Size),
+        SC_EXTERN, ST_ARRAY);
+  } else {
   // AOCC End
-  sptrShmem = mk_ompaccel_addsymbol(
-      name, mk_ompaccel_array_dtype(DT_INT8, NVVM_WARPSIZE),
-      SC_EXTERN, ST_ARRAY);
+    sptrShmem = mk_ompaccel_addsymbol(
+        name, mk_ompaccel_array_dtype(DT_INT8, NVVM_WARPSIZE),
+        SC_EXTERN, ST_ARRAY);
+  }
   OMPACCSHMEMP(sptrShmem, true);
   SYMLKP(sptrShmem, gbl.externs);
   gbl.externs = sptrShmem;
