@@ -11,6 +11,7 @@
  * Date of modification 20th January 2020
  * Date of modification 24th January 2020
  * Date of modification 04th February 2020
+ * Date of modification 12th February  2020
  */
 
 /**
@@ -5262,6 +5263,14 @@ lower_stmt(int std, int ast, int lineno, int label)
     ilm = plower("oin", "BTARGET", ilm, flag);
     lower_end_stmt(std);
     break;
+  // AOCC Begin
+  case A_MP_DEFAULTMAP:
+    lower_start_stmt(lineno, label, TRUE, std);
+    flag = A_PRAGMATYPEG(ast);
+    plower("on", "MP_DEFAULTMAP", flag);
+    lower_end_stmt(std);
+    break;
+  // AOCC End
   case A_MP_MAP:
       lower_start_stmt(lineno, label, TRUE, std);
       lop = A_LOPG(ast);

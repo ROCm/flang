@@ -3697,6 +3697,10 @@ sym Number of teams
 .IL MP_NUMTHREADS SMP sym
 Number of Threads symbol.
 sym Number of threads
+.AT spec trm
+.IL MP_DEFAULTMAP stc
+Default map construct.
+stc - Default map type
 .\" AOCC End
 .AT spec trm
 .IL MP_TARGETLOOPTRIPCOUNT SMP sym

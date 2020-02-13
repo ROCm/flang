@@ -12,6 +12,7 @@
  * Date of modification 05th November 2019
  * Date of modification 10th December 2019
  * Date of modification 24th January 2020
+ * Date of modification 12th February 2020
  *
  */
 
@@ -85,6 +86,7 @@ struct _OMPACCEL_TARGET{
   char *func_name;                        /*  Function name */  // AOCC
   SPTR num_teams;                         /*  Number of teams */ // AOCC
   SPTR num_threads;                       /*  Number of threads */ // AOCC
+  int default_map;                        /*  Default map type for current kernel */ //AOCC
 };
 
 static bool isOmpaccelRegistered = false;
@@ -532,12 +534,16 @@ void ompaccel_create_amd_reduction_wrappers();
   */
 void ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type);
 /**
-  \brief Update set number of teams sptr to current tinfo
+  \brief Set number of teams sptr to current tinfo
   */
 void ompaccel_set_numteams_sptr(SPTR sptr);
 /**
-  \brief Update set number of teams sptr to current tinfo
+  \brief Set number of teams sptr to current tinfo
   */
 void ompaccel_set_numthreads_sptr(SPTR sptr);
+/**
+  \brief Set default map type for current tinfo
+  */
+void ompaccel_set_default_map(int maptype);
 // AOCC End
 #endif

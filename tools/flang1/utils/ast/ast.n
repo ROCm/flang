@@ -3611,6 +3611,13 @@ Other Fields
 .SE LOP
 AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
 .lp
+.\" AOCC Begin
+.SM MP_DEFAULTMAP
+.SI "defaultmap"
+.lp
+OpenMP Default map
+.lp
+.\" AOCC End
 .SM MP_MAP
 .SI "map"
 .lp
