@@ -13,6 +13,7 @@
  * Date of modification 10th December 2019
  * Date of modification 24th January 2020
  * Date of modification 12th February 2020
+ * Date of modification 14th February 2020
  *
  */
 
@@ -112,14 +113,16 @@ typedef enum NVVM_SREG_ENUM {
 } nvvm_sregs;
 
 // AOCC Begin
+// Eventhough warpSize intrinsic is listed as nvvm.read.ptx.sreg.warpsize,
+// it's not being used anymore, constant value 64 is used instead.
 #ifdef OMP_OFFLOAD_AMD
 static const char *NVVM_SREG[] = {
-    "nvvm.read.ptx.sreg.tid.x",    "nvvm.read.ptx.sreg.tid.y",
-    "nvvm.read.ptx.sreg.tid.z",    "nvvm.read.ptx.sreg.ctaid.x",
-    "nvvm.read.ptx.sreg.ctaid.y",  "nvvm.read.ptx.sreg.ctaid.z",
-    "nvvm.read.ptx.sreg.ntid.x",   "nvvm.read.ptx.sreg.ntid.y",
-    "nvvm.read.ptx.sreg.ntid.z",   "nvvm.read.ptx.sreg.nctaid.x",
-    "nvvm.read.ptx.sreg.nctaid.y", "nvvm.read.ptx.sreg.nctaid.z",
+    "llvm.amdgcn.workitem.id.x",   "llvm.amdgcn.workitem.id.y",
+    "llvm.amdgcn.workitem.id.z",   "llvm.amdgcn.workgroup.id.x",
+    "llvm.amdgcn.workgroup.id.y",  "llvm.amdgcn.workgroup.id.z",
+    "__ockl_get_local_size",       "__ockl_get_local_size",
+    "__ockl_get_local_size",       "__ockl_get_num_groups",
+    "__ockl_get_num_groups",       "__ockl_get_num_groups",
     "nvvm.read.ptx.sreg.warpsize"};
 #else
 // AOCC End
@@ -139,8 +142,8 @@ typedef enum NVVM_INTRINSICS_ENUM { barrier0, barrier } nvvm_intrinsics;
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-static const char *NVVM_INTRINSICS[] = {"nvvm.barrier0",
-                                        "nvvm.barrier"};
+static const char *NVVM_INTRINSICS[] = {"llvm.amdgcn.s.barrier",
+                                        "llvm.amdgcn.s.barrier"};
 #else
 // AOCC End
 static const char *NVVM_INTRINSICS[] = {"llvm.nvvm.barrier0",
