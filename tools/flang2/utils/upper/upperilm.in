@@ -623,6 +623,7 @@ XOR64	ilm	ilm
 XOR8/KXOR	ilm	ilm
 MP_MAP ilm num
 #AOCC Begin
+MP_DEFAULTMAP num
 MP_NUMTEAMS sym
 MP_NUMTHREADS sym
 #AOCC End

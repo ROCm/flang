@@ -20,6 +20,7 @@
  * Date of modification 06th January 2020
  * Date of modification 20th January 2020
  * Date of modification 24th January 2020
+ * Date of modification 12th February 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -277,6 +278,14 @@ make_array_sptr(char *name, DTYPE atype, int arraysize)
   return array;
 } /* make_array_sptr*/
 
+// AOCC Begin
+static bool
+is_complex_dtype(DTYPE dtype) {
+  if (dtype == DT_CMPLX || dtype == DT_DCMPLX)
+    return true;
+  return false;
+}
+// AOCC End
 
 static int
 _tgt_target_fill_size(SPTR sptr, int map_type)
@@ -290,6 +299,10 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
     } else
       /* find the size of pointee */
       ilix = ad_kconi(size_of(DTySeqTyElement(dtype)));
+  // AOCC Begin
+  } else if (is_complex_dtype(dtype)) {
+    ilix = ad_kconi(size_of(dtype));
+  // AOCC End
   }
   else if (llis_vector_kind(dtype)) {
     ompaccelInternalFail("Vector data type is not implemented, cannot be passed to target region. ");
@@ -389,6 +402,10 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
 
     } else if (llis_array_kind(dtype)) {
 
+    // AOCC Begin
+    } else if (is_complex_dtype(dtype)) {
+      final_maptype |= OMP_TGT_MAPTYPE_LITERAL;
+    // AOCC End
     } else if (llis_vector_kind(dtype)) {
       ompaccelInternalFail("Don't know how to implicitly define map type for vector data type ");
     } else if (llis_integral_kind(dtype) || dtype == DT_DBLE || dtype == DT_FLOAT) {

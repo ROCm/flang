@@ -20,6 +20,9 @@
  *
  * Complex datatype support for acosh , asinh , atanh
  * Modified on 07 January 2020
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
  */
 
 /**
@@ -4558,7 +4561,7 @@ lower_intrinsic(int ast)
   return ilm;
 } /* lower_intrinsic */
 
-#if AST_MAX != 165
+#if AST_MAX != 166 // AOCC - 165 + 1
 #error "Need to edit lowerexp.c to add or delete A_... AST types"
 #endif
 

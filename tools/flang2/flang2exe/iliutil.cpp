@@ -28,6 +28,9 @@
  *
  * Using sqrt from amdgcn math lib
  * Date of modification 31st January 2020
+ *
+ * Added TY_BINT in mem_size function
+ * Date of modification 12th February 2020
  */
 
 /**
@@ -12623,6 +12626,16 @@ mem_size(TY_KIND ty)
   case TY_UINT:
     msz = MSZ_WORD;
     break;
+
+  // AOCC Begin
+  case TY_LOG8:
+    msz = MSZ_I8;
+    break;
+
+  case TY_BINT:
+    msz = MSZ_BYTE;
+    break;
+  // AOCC End
 
   case TY_SINT:
     msz = MSZ_SHWORD;

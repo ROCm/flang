@@ -21,6 +21,7 @@
  * Date of modification 02nd December 2019
  * Date of modification 05th December 2019
  * Date of modification 04th February 2020
+ * Date of modification 12th February 2020
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -140,6 +141,8 @@ static int get_omp_combined_mode(BIGINT64 type);
 static void mp_handle_map_clause(SST *, int, char *, int, int, bool);
 // AOCC Begin
 static void mp_handle_motion_clause(SST *, int, int);
+static void mp_check_defaultmap_val(const char *maptype);
+static int mp_get_map_type_for(const char *map_string);
 // AOCC End
 static void mp_check_maptype(const char *maptype);
 static LOGICAL is_in_omptarget_data(int d);
@@ -2575,7 +2578,18 @@ semsmp(int rednum, SST *top)
    *	<par attr> ::= DEFAULTMAP ( <id name> : <id name> ) |
    */
   case PAR_ATTR29:
-    error(547, ERR_Warning, gbl.lineno, "DEFAULTMAP", CNULL);
+    // AOCC Begin
+#if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
+    if (flg.omptarget) {
+      mp_check_maptype(scn.id.name + SST_CVALG(RHS(3)));
+      mp_check_defaultmap_val(scn.id.name + SST_CVALG(RHS(5)));
+      const char *map_type = scn.id.name + SST_CVALG(RHS(3));
+      int maptype = mp_get_map_type_for(map_type);
+      add_clause(CL_DEFAULTMAP, TRUE);
+      CL_VAL(CL_DEFAULTMAP) = maptype;
+    }
+#endif
+    // AOCC End
     break;
   /*
    *	<par attr> ::= <motion clause> |
@@ -6373,6 +6387,14 @@ emit_btarget(int atype)
   }
   if (CL_PRESENT(CL_NOWAIT)) {
   }
+  // AOCC Begin
+  if (CL_PRESENT(CL_DEFAULTMAP)) {
+    int new_ast = mk_stmt(A_MP_DEFAULTMAP, 0);
+    int maptype = CL_VAL(CL_DEFAULTMAP);
+    (void)add_stmt(new_ast);
+    A_PRAGMATYPEP(new_ast, maptype);
+  }
+  // AOCC End
   (void)add_stmt(ast);
   return ast;
 }
@@ -8597,6 +8619,14 @@ do_btarget(int doif)
   mp_create_bscope(0);
   DI_BTARGET(doif) = emit_btarget(A_MP_TARGET);
   par_push_scope(TRUE);
+  // AOCC Begin
+  if (CL_PRESENT(CL_DEFAULTMAP)) {
+    int new_ast = mk_stmt(A_MP_DEFAULTMAP, 0);
+    int maptype = CL_VAL(CL_DEFAULTMAP);
+    (void)add_stmt(new_ast);
+    A_PRAGMATYPEP(new_ast, maptype);
+  }
+  // AOCC End
   begin_parallel_clause(doif);
 }
 
@@ -10414,6 +10444,32 @@ mp_handle_motion_clause(SST *top, int clause, int op)
   else
     ((ITEM *)CL_LAST(clause))->next = itembeg;
   CL_LAST(clause) = itemend;
+}
+
+static void
+mp_check_defaultmap_val(const char *value) {
+  if (strcmp(value, "scalar"))
+    error(1219, ERR_Severe, gbl.lineno, value, 0);
+}
+
+static int
+mp_get_map_type_for(const char *map_string) {
+  int map_type = 0;
+  if (!strcmp(map_string, "tofrom"))
+    map_type |= OMP_TGT_MAPTYPE_FROM | OMP_TGT_MAPTYPE_TO;
+  else if (!strcmp(map_string, "from"))
+    map_type |= OMP_TGT_MAPTYPE_FROM;
+  else if (!strcmp(map_string, "to"))
+    map_type |= OMP_TGT_MAPTYPE_TO;
+  else if (!strcmp(map_string, "alloc"))
+    map_type |= OMP_TGT_MAPTYPE_NONE; // todo opmaccel dunno what to pass
+  else if (!strcmp(map_string, "delete"))
+    map_type |= OMP_TGT_MAPTYPE_DELETE;
+  else if (!strcmp(map_string, "release"))
+    map_type |= OMP_TGT_MAPTYPE_NONE; // todo opmaccel dunno what to pass
+  else
+    error(1205, ERR_Severe, gbl.lineno, map_string, 0);
+  return map_type;
 }
 // AOCC End
 

@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ */
 
 /**
       \file dump.c
@@ -1684,6 +1689,7 @@ dastreex(int astx, int l, int notlast)
   case A_MP_EREDUCTION:
   case A_MP_BREDUCTION:
   case A_MP_REDUCTIONITEM:
+  case A_MP_DEFAULTMAP: // AOCC
     break;
   default:
     fprintf(gbl.dbgfil, "NO DUMP AVL");
