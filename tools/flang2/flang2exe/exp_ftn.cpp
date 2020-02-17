@@ -3507,6 +3507,11 @@ exp_bran(ILM_OP opc, ILM *ilmp, int curilm)
     goto comaif;
   case IM_DAIF: /* double arithmetic IF */
     type = 2;
+  // AOCC begin
+    goto comaif;
+  case IM_QAIF: /* quad arithmetic IF */
+    type = 2;
+  // AOCC end
   comaif:
     /* arithmetic if processing */
     ilix = ILM_RESULT(ILM_OPND(ilmp, 1));
