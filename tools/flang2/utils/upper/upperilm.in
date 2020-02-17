@@ -526,6 +526,7 @@ QLOG	ilm
 #QLOG10	ilm
 QUAD	ilm
 QADD	ilm	ilm
+QAIF	ilm	sym	sym	sym
 QCON	sym
 QCMP	ilm	ilm
 QDIV	ilm	ilm

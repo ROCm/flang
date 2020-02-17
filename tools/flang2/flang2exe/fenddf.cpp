@@ -90,7 +90,7 @@ short ilm_opcode[NOPC][2][NTYPE + 1] = {
                 IM_ICMP, IM_KCMP, 0, IM_SCMP, IM_NSCMP},
      /* VCMP */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* AIF  */ {0, IM_IAIF, 0, 0, IM_IAIF, IM_IAIF, IM_IAIF, IM_KAIF, IM_RAIF, IM_RAIF,
-                 IM_DAIF, 0, 0, 0, IM_IAIF, IM_IAIF, IM_IAIF, IM_KAIF, 0, 0},
+                 IM_DAIF, IM_QAIF, 0, 0, IM_IAIF, IM_IAIF, IM_IAIF, IM_KAIF, 0, 0},
      /* VAIF non-existent */ {0}},
     {/* LD */ {0, 0, 0, 0, IM_CHLD, IM_SILD, IM_ILD, IM_KLD, IM_RLD, IM_RLD, IM_DLD, IM_QPLD,
                IM_CLD, IM_CLD, IM_CDLD, IM_CHLD, IM_SLLD, IM_LLD, IM_KLLD, 0},
