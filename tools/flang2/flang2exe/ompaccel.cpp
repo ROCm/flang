@@ -26,6 +26,7 @@
  * Date of modification 24th January   2020
  * Date of modification 04th February  2020
  * Date of modification 12th February  2020
+ * Date of modification 14th February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -717,6 +718,28 @@ create_nvvm_sym(const char *name, DTYPE dtype)
   return sptr;
 }
 
+// AOCC Begin
+INLINE static SPTR
+create_amdgcn_sym(const char *name, DTYPE dtype)
+{
+  SPTR sptr = getsymbol(name);
+  DEFDP(sptr, 1);
+  DTYPEP(sptr, dtype);
+  CFUNCP(sptr, 1);
+  STYPEP(sptr, ST_ENTRY);
+  SCP(sptr, SC_STATIC);
+  ADDRTKNP(sptr, 1);
+  PARAMCTP(sptr, 1);
+  return sptr;
+}
+
+INLINE static SPTR
+create_amdgcn_sregs(const char *name)
+{
+  return create_amdgcn_sym(name, DT_INT);
+}
+// AOCC End
+
 INLINE static SPTR
 create_sregs(const char *name)
 {
@@ -745,13 +768,25 @@ ompaccel_initsyms()
   create_sregs(NVVM_SREG[blockIdY]);
   create_sregs(NVVM_SREG[blockIdZ]);
   /* Create block id sreg symbols */
-  create_sregs(NVVM_SREG[blockDimX]);
-  create_sregs(NVVM_SREG[blockDimY]);
-  create_sregs(NVVM_SREG[blockDimZ]);
-  /* Create block id sreg symbols */
-  create_sregs(NVVM_SREG[gridDimX]);
-  create_sregs(NVVM_SREG[gridDimY]);
-  create_sregs(NVVM_SREG[gridDimZ]);
+  // AOCC Begin
+  if (flg.amdgcn_target) {
+    create_amdgcn_sregs(NVVM_SREG[blockDimX]);
+    create_amdgcn_sregs(NVVM_SREG[blockDimY]);
+    create_amdgcn_sregs(NVVM_SREG[blockDimZ]);
+    /* Create block id sreg symbols */
+    create_amdgcn_sregs(NVVM_SREG[gridDimX]);
+    create_amdgcn_sregs(NVVM_SREG[gridDimY]);
+    create_amdgcn_sregs(NVVM_SREG[gridDimZ]);
+  } else {
+  // AOCC End
+    create_sregs(NVVM_SREG[blockDimX]);
+    create_sregs(NVVM_SREG[blockDimY]);
+    create_sregs(NVVM_SREG[blockDimZ]);
+    /* Create block id sreg symbols */
+    create_sregs(NVVM_SREG[gridDimX]);
+    create_sregs(NVVM_SREG[gridDimY]);
+    create_sregs(NVVM_SREG[gridDimZ]);
+  }
   // todo create others nvvm things too
   create_sregs(NVVM_SREG[warpSize]);
 
@@ -763,10 +798,54 @@ ompaccel_initsyms()
 int
 ompaccel_nvvm_get(nvvm_sregs sreg)
 {
-  SPTR sptr = SPTR(init_nvvm_syms + sreg);
-  ll_make_ftn_outlined_params(sptr, 0, nullptr);
+  SPTR sptr;
+  if (!flg.amdgcn_target) {
+    sptr = SPTR(init_nvvm_syms + sreg);
+    sptr = SPTR(init_nvvm_syms + sreg);
+    ll_make_ftn_outlined_params(sptr, 0, nullptr);
+    ll_process_routine_parameters(sptr);
+    return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, nullptr);
+  }
+
+  // AOCC Begin
+  int dim = -1;
+  switch(sreg) {
+  case threadIdX:
+  case threadIdY:
+  case threadIdZ:
+  case blockIdX:
+  case blockIdY:
+  case blockIdZ:
+    sptr = SPTR(init_nvvm_syms + sreg);
+    ll_make_ftn_outlined_params(sptr, 0, nullptr);
+    ll_process_routine_parameters(sptr);
+    return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, nullptr);
+  case warpSize:
+    return ad_icon(GV_Warp_Size);
+  case blockDimX:
+  case gridDimX:
+    dim = 0;
+    break;
+  case blockDimY:
+  case gridDimY:
+    dim = 1;
+    break;
+  case blockDimZ:
+  case gridDimZ:
+    dim = 2;
+    break;
+  default:
+    ompaccelInternalFail("Unknown sreg type");
+  }
+
+  sptr = create_amdgcn_sregs(NVVM_SREG[sreg]);
+  DTYPE arg_types[] = {DT_INT};
+  int args[1];
+  args[0] = ad_icon(dim);
+  ll_make_ftn_outlined_params(sptr, 1, arg_types);
   ll_process_routine_parameters(sptr);
-  return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, nullptr);
+  return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 1, args);
+  // AOCC End
 }
 
 // AOCC Begin
@@ -781,6 +860,9 @@ ompaccel_nvvm_mk_barrier(nvvm_barriers btype, int ili)
   if (btype != PARTIAL_BARRIER) {
     ompaccelInternalFail("Barrier type not supported ");
   }
+
+  if (flg.amdgcn_target)
+    ompaccelInternalFail("Barrier type not supported ");
 
   sptr = (SPTR)(init_nvvm_intrinsics + barrier);
   ll_make_ftn_outlined_params(sptr, 2, arg_types);
@@ -799,6 +881,15 @@ ompaccel_nvvm_mk_barrier(nvvm_barriers btype)
     ll_process_routine_parameters(sptr);
     return ll_ad_outlined_func2(IL_NONE, IL_JSR, sptr, 0, nullptr);
   }
+
+  // AOCC Begin
+  if (btype == PARTIAL_BARRIER && flg.amdgcn_target) {
+    sptr = (SPTR)(init_nvvm_intrinsics + barrier);
+    ll_make_ftn_outlined_params(sptr, 0, 0);
+    ll_process_routine_parameters(sptr);
+    return ll_ad_outlined_func2(IL_NONE, IL_JSR, sptr, 0, nullptr);
+  }
+  // AOCC End
   static_assert(true, "Other nvvm intrinsics are not implemented yet.");
 }
 
@@ -3237,7 +3328,10 @@ is_nvvm_sreg_function(SPTR func_sptr)
 {
   const char* fname = get_llvm_name(func_sptr);
 #ifdef OMP_OFFLOAD_AMD
-  if (strncmp(fname,"nvvm.read.ptx.sreg",18)) return false;
+  if (strncmp(fname,"llvm.amdgcn.workitem.id",23) == 0) return true;
+  if (strncmp(fname,"llvm.amdgcn.workgroup.id",24) == 0) return true;
+  if (strncmp(fname,"__ockl_get_local_size",21) == 0) return true;
+  if (strncmp(fname,"__ockl_get_num_groups",21) == 0) return true;
 #else
   if (strncmp(fname,"llvm.nvvm.read.ptx.sreg",23)) return false;
 #endif

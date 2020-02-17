@@ -31,10 +31,13 @@
  * Date of modification 14th November 2019
  *
  * Allowing declaration of sqrt function in target module
- * Date of modification 31st November 2020
+ * Date of modification 31st Jan 2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ *
+ * Allowing declaration of __ockl_get* functions in target module
+ * Date of modification 14th February 2020
  *
  */
 
@@ -13035,6 +13038,7 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "exp", 3) == 0) ||
          (strncmp(fn_name, "log", 3) == 0) ||
          (strncmp(fn_name, "log10", 5) == 0) ||
+         (strncmp(fn_name, "__ockl_get", 10) == 0) ||
 #endif
          // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
