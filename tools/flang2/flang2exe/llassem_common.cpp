@@ -962,7 +962,7 @@ put_quad(int sptr)
   if ((num[0] & 0x7ff00000) == 0x7ff00000) /* exponent == 2047 */
     fprintf(ASMFIL, "0x%08x00000000", num[0]);
   else {
-    fprintf(ASMFIL, "0x%.8X%.8X%.8X%.8X", num[0], num[1], num[2], num[3]);
+    fprintf(ASMFIL, "0xL%.8X%.8X%.8X%.8X", num[0], num[1], num[2], num[3]);
   }
 }
 // AOCC end
