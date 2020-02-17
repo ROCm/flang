@@ -3610,11 +3610,10 @@ can_inline_minloc(int dest, int args) {
   int shape = A_SHAPEG(dest);
   if (!shape) return false;
   if (A_TYPEG(dest) == A_SUBSCR) {
-       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
-       return false;
-   } else if (A_TYPEG(dest) != A_ID) {
-       return false;
-   }
+    return false;
+  } else if (A_TYPEG(dest) != A_ID) {
+    return false;
+  }
 
   if (arg_gbl.inforall)
       if (contiguous_section_array(srcarray))
@@ -3624,7 +3623,7 @@ can_inline_minloc(int dest, int args) {
    if (A_TYPEG(astdim) != A_CNST) {
      return false;
    }
-    dim = get_int_cval(A_SPTRG(astdim));
+   dim = get_int_cval(A_SPTRG(astdim));
   }
 
   int astback = ARGT_ARG(args, 3);
@@ -3638,7 +3637,6 @@ can_inline_minloc(int dest, int args) {
 
   if (dim >= 1) {
      if (A_TYPEG(dest) == A_SUBSCR) {
-       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
        return false;
     } else if (A_TYPEG(dest) == A_ID) {
       int sptr = A_SPTRG(dest);
