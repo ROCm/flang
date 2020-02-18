@@ -84,6 +84,7 @@ static void put_i8(int);
 static void put_i16(int);
 static void put_r4(INT);
 static void put_r8(int, int);
+static void put_r16(int, int);  // AOCC
 static void put_int(INT);
 static void put_int8(INT);
 static void put_float(INT);
@@ -588,7 +589,7 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
                   "emit_init:put_r16 first_data:%d i8cnt:%ld ptrcnt:%d\n",
                   first_data, *i8cnt, *ptrcnt);
         }
-        put_quad((int)tconval);
+        put_r16((int)tconval, putval);
         break;
       // AOCC end
 
@@ -963,6 +964,34 @@ put_quad(int sptr)
     fprintf(ASMFIL, "0x%08x00000000", num[0]);
   else {
     fprintf(ASMFIL, "0xL%.8X%.8X%.8X%.8X", num[0], num[1], num[2], num[3]);
+  }
+}
+
+static void
+put_r16(int sptr, int putval)
+{
+  INT num[4];
+
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+  if (flg.endian) {
+    put_r4(num[0]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[1]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[2]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[3]);
+  } else {
+    put_r4(num[3]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[2]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[1]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[0]);
   }
 }
 // AOCC end
