@@ -21,7 +21,7 @@
          !select_rkind2
              8,         &
          !select_rkind3
-             -2,        &
+             16,        &
          !select_rkind4
              8,         &
          !select_rkind5
@@ -32,9 +32,9 @@
              -2,        &
          !select_rkind8
              -5,        &
-         !select_rkind7
-             -3,        &
-         !select_rkind7
+         !select_rkind9
+             16,        &
+         !select_rkind10
              -1         &
          /)
        integer,parameter :: select_rkind1 = selected_real_kind(6)

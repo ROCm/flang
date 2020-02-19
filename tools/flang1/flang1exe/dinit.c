@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -656,8 +661,8 @@ process_real_kind(int sptr, ACL *ict, int op)
       conval = 4;
     else if (con1 <= 15)
       conval = 8;
-    /*else if (con1 <= 31 && !XBIT(57, 4))
-      conval = 16; Currently real 16 is not supported */
+    else if (con1 <= 31 && (!XBIT(57, 0x4)))
+      conval = 16;
     else {
       conval = -1;
       p = -1;
@@ -693,10 +698,10 @@ process_real_kind(int sptr, ACL *ict, int op)
         } else if (con1 <= 307) {
           if (conval > 0 && conval <= 8)
             conval = 8;
-        } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+        } else if ((con1 <= 4931) && (!XBIT(57, 0x4))) {
           if (conval > 0 && conval <= 16)
             conval = 16;
-        }*/ else {
+        } else {
           if (conval > 0)
             conval = 0;
           conval = -2;
@@ -732,10 +737,10 @@ process_real_kind(int sptr, ACL *ict, int op)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    /*else if (conval > 0 && conval <= 16)
-              conval = 16;*/
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
             else if (p < 0 && r < 0)
-	    conval = -3;
+	      conval = -3;
           }
 	  else if (con1 != 2)
             conval = -5;

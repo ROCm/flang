@@ -51,6 +51,9 @@
  * Added code to support reshape with implied dos inside target region
  * Date of Modification: 23rd January 2020
  *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -8375,8 +8378,8 @@ ref_pd(SST *stktop, ITEM *list)
           conval = 4;
         else if (con1 <= 15)
           conval = 8;
-        /*else if (con1 <= 31 && !XBIT(57, 4))
-          conval = 16; currently real 16 is not supported */
+        else if (con1 <= 31 && (!XBIT(57, 0x4)))
+          conval = 16;
         else {
           conval = -1;
 	  p = -1;
@@ -8422,10 +8425,10 @@ ref_pd(SST *stktop, ITEM *list)
           } else if (con1 <= 307) {
             if (conval > 0 && conval <= 8)
               conval = 8;
-          } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+          } else if ((con1 <= 4931) && (!XBIT(57, 0x4))) {
             if (conval > 0 && conval <= 16)
               conval = 16;
-          }*/ else {
+          } else {
             if (conval > 0)
               conval = 0;
             conval = -2;
@@ -8473,8 +8476,8 @@ ref_pd(SST *stktop, ITEM *list)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    /*else if (conval > 0 && conval <= 16)
-              conval = 16;*/
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
 	    else if (p < 0 && r < 0)
 	      conval = -3;
           }
