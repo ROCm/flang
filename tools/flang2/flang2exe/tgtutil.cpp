@@ -21,6 +21,7 @@
  * Date of modification 20th January 2020
  * Date of modification 24th January 2020
  * Date of modification 12th February 2020
+ * Date of modification 20th February 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -443,6 +444,12 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
   /* fill the arrays */
   /* Build the list: (size, sptr) pairs. */
 
+  // AOCC Begin.
+  // This part of code to be emitted in host module, so disable the flag
+  bool old_intarget  = gbl.ompaccel_intarget;
+  gbl.ompaccel_intarget = false;
+  // AOCC End
+
   for (i = 0; i < targetinfo->n_symbols; ++i) {
     int nme_args, nme_size, nme_base, nme_types;
     nme_args = add_arrnme(NT_ARR, args_sptr, addnme(NT_VAR, args_sptr, 0, 0), 0, ad_icon(i), FALSE);
@@ -558,6 +565,10 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
                  TARGET_PTRSIZE == 8 ? MSZ_I8 : MSZ_WORD);
     chk_block(ilix);
   }
+
+  // AOCC Begin
+  gbl.ompaccel_intarget = old_intarget;
+  // AOCC End
 }
 
 int
