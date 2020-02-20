@@ -15,6 +15,7 @@
  * Date of modification 24th January   2020
  * Date of modification 3rd  February  2020
  * Date of modification 12th  February  2020
+ * Date of modification 20th  February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -64,6 +65,14 @@ inline SPTR GetPARUPLEVEL(SPTR sptr) {
 #undef PARUPLEVELG
 #define PARUPLEVELG GetPARUPLEVEL
 #endif
+
+// AOCC Begin
+#include <list>
+#include <algorithm>
+#include <iterator>
+static bool in_parallel = false;
+std::list<int> targetVector;
+// AOCC End
 
 static int incrOutlinedCnt(void);
 static int decrOutlinedCnt(void);
@@ -1069,6 +1078,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         break;
       }
 #endif
+    in_parallel = true; // AOCC
     if (flg.opt != 0) {
       wr_block();
       cr_block();
@@ -1369,6 +1379,11 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
               "Target region activated", NULL);
     break;
   case IM_ETARGET:
+    // AOCC Begin
+    if (in_parallel) {
+      targetVector.push_back(curilm);
+    }
+    // AOCC End
     if (outlinedCnt == 1) {
       ilm_outlined_pad_ilm(curilm);
     }
@@ -1390,6 +1405,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       // In Flang, We outline the region once, and offload it in the device
       // We don't generate outlined function for the host. so we don't have host fallback.
       exp_ompaccel_etarget(ilmp, curilm, targetfunc_sptr, outlinedCnt, (SPTR) uplevel_sptr, decrOutlinedCnt);
+      // AOCC Begin
+      std::list<int>::iterator it = std::find (targetVector.begin(),
+                                               targetVector.end(), curilm);
+      if (it != targetVector.end()) {
+        ili = ll_make_kmpc_barrier();
+        iltb.callfg = 1;
+        chk_block(ili);
+        targetVector.erase(it);
+      }
+      // AOCC End
       break;
     }
 #endif
@@ -1416,6 +1441,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         break;
       }
 #endif
+    in_parallel = false; // AOCC
     if (outlinedCnt == 1) {
       ilm_outlined_pad_ilm(curilm);
     }

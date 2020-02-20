@@ -27,6 +27,7 @@
  * Date of modification 04th February  2020
  * Date of modification 12th February  2020
  * Date of modification 14th February  2020
+ * Date of modification 20th February  2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Dec 2019
@@ -73,6 +74,8 @@
 // AOCC Begin
 #include <set>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 // Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
 #define GV_Warp_Size 64
@@ -1147,12 +1150,30 @@ add_symbol_to_function(SPTR func, SPTR sym)
   aux.dpdsc_avl += 1;
 }
 
+// AOCC Begin
+std::vector<OMPACCEL_TINFO* > tinfo_vector;
+// AOCC End
+
 INLINE static SPTR
 get_devsptr(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
 {
   int i;
   if (tinfo == nullptr)
     return host_symbol;
+
+  // AOCC Begin
+  if (std::find(tinfo_vector.begin(), tinfo_vector.end(), tinfo)
+                                                  == tinfo_vector.end()) {
+    tinfo_vector.push_back(tinfo);
+    for (i = 0; i < tinfo->n_symbols; ++i) {
+      if (tinfo->symbols[i].device_sym == NOSYM) {
+        tinfo->symbols[i].device_sym =
+            ompaccel_create_device_symbol(tinfo->symbols[i].host_sym, i);
+        add_symbol_to_function(tinfo->func_sptr, tinfo->symbols[i].device_sym);
+      }
+    }
+  }
+  // AOCC End
 
   for (i = 0; i < tinfo->n_symbols; ++i) {
     if (tinfo->symbols[i].host_sym == host_symbol) {
