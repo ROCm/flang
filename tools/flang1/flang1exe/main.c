@@ -10,6 +10,7 @@
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Month of modification : May 2019 - Added OMP offload support
+ * 2020/03/09: add fcprop pass to the flow.
  *
  */
 
@@ -459,6 +460,12 @@ main(int argc, char *argv[])
           sectinline();
           DUMP("sectinline");
         }
+        // AOCC begin
+        if (ZBIT(1, 0x1)) {
+          collect_fcprop();
+          DUMP("fcprop");
+        }
+        // AOCC end
         if (XBIT(70, 0x18)) {
           linearize_arrays();
           DUMP("linearize");
