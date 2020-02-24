@@ -217,8 +217,8 @@ main(int argc, char *argv[])
 
       /* AOCC begin */
 #ifdef OMP_OFFLOAD_LLVM
-      if (flg.x86_64_omptarget) {
-        ompaccel_x86_transform_ast();
+      if (flg.omptarget) {
+        ompaccel_ast_transform();
       }
 #endif
       /* AOCC end */
