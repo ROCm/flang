@@ -1345,20 +1345,23 @@ lldbg_create_local_variable_mdnode(LL_DebugInfo *db, int dw_tag,
   llmd_add_i32(mdb, 0);
 
   // AOCC begin
-  if (sptr) {
-
-    if (DTY(DTYPEG(sptr)) == TY_STRUCT) {
+  if (sptr && (flags & DIFLAG_ARTIFICIAL)) {
       /*
-       * Flang currently emits separate local variables in the case of
-       * separate asssignment of elements in an array of derived-type in a
-       * straight-line fashion. ie. (struct(i) = ...; struct(i+1) = ...; ...),
-       * although flang doesn't attempt to do so if you were to, say, do the
-       * assignment iteratively in a loop. We force DILocalVariable to be
-       * distinct here so that SROA (if it kicks in) on emitting
-       * DW_OP_LLVM_fragment won't choke the asm-printer of LLVM.
+       * Mark every anonymous DILocalVariable metadata as distinct 
+       * to avoid merging of metadata nodes having similar contents for
+       * a local/compiler generated variable. So that even if
+       * SROA happens on these variables later, they still have a 
+       * unique metadata node. Avoiding "Overlapping fragments".
+       *
+       * Incorrect case: Overlapping fragments:
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
+       *
+       * Corected case: No-Overlapping fragments:
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !20, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
        * */
       llmd_set_distinct(mdb);
-    }
   }
   // AOCC end
 
