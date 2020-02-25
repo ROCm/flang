@@ -10,6 +10,9 @@
 \" *
 \" * Added support for quad precision
 \" * Last modified: Feb 2020
+.\" *
+.\" * Support for Real128 support for math intrinsics
+.\" * Date of Modification: Feb 2020
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -455,6 +458,8 @@ Sine of a single precision value
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dsin t1
 \".OP DFRDP r t2 dpret
+.IL QSIN arth lnk
+.OP QSIN r p1
 .IL CSIN arth lnk
 .AT spec
 .IL CDSIN arth lnk
@@ -472,6 +477,8 @@ Cosine of a single precision number
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dcos t1
 \".OP DFRDP r t2 dpret
+.IL QCOS arth lnk
+.OP QCOS r p1
 .IL CCOS arth lnk
 .AT spec
 .IL CDCOS arth lnk
@@ -489,18 +496,26 @@ Tangent of a single precision value
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dtan t1
 \".OP DFRDP r t2 dpret
+.IL QTAN arth lnk
+.OP QTAN r p1
 .IL ASIN arth lnk
 .OP FASIN r p1
 .IL DASIN arth lnk
 .OP DASIN r p1
+.IL QASIN arth lnk
+.OP QASIN r p1
 .IL ACOS arth lnk
 .OP FACOS r p1
 .IL DACOS arth lnk
 .OP DACOS r p1
+.IL QACOS arth lnk
+.OP QACOS r p1
 .IL ATAN arth lnk
 .OP FATAN r p1
 .IL DATAN arth lnk
 .OP DATAN r p1
+.IL QATAN arth lnk
+.OP QATAN r p1
 .IL ATAN2 arth lnk lnk
 .OP FATAN2 r p1 p2
 .IL DATAN2 arth lnk lnk
@@ -596,14 +611,20 @@ ATAN2 in degrees.
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dsinh t1
 \".OP DFRDP r t2 dpret
+.IL QSINH arth lnk
+.OP QSINH r p1
 .IL COSH arth lnk
 .OP FCOSH r p1
 .IL DCOSH arth lnk
 .OP DCOSH r p1
+.IL QCOSH arth lnk
+.OP QCOSH r p1
 .IL TANH arth lnk
 .OP FTANH r p1
 .IL DTANH arth lnk
 .OP DTANH r p1
+.IL QTANH arth lnk
+.OP QTANH r p1
 .IL ERF arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -676,6 +697,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dacosh t1
 .OP DFRDP r t2 dpret
+.IL QACOSH arth lnk
+.OP QACOSH r p1
 .IL ASINH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -686,6 +709,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dasinh t1
 .OP DFRDP r t2 dpret
+.IL QASINH arth lnk
+.OP QASINH r p1
 .IL ATANH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -696,6 +721,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_datanh t1
 .OP DFRDP r t2 dpret
+.IL QATANH arth lnk
+.OP QATANH r p1
 .IL BESSEL_J0 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1

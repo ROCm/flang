@@ -8,6 +8,9 @@
 .\" * Added support for quad precision
 .\" * Last modified: Feb 2020
 .\" *
+.\" * Support for Real128 support for math intrinsics
+.\" * Date of Modification: Feb 2020
+.\" *
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -725,6 +728,11 @@ Double precision sine.  Implemented as a function call.
 .AT arth null dp cse
 .CG notAILI
 
+.IL QSIN qplnk
+Quad precision sine.  Implemented as a function call.
+.AT arth null qp cse
+.CG notAILI
+
 .IL FNCOS splnk
 Utility ili: only referenced by the 'alt' field of an FCOS ili;
 always points to an FSINCOS ili.
@@ -747,6 +755,11 @@ Double precision cosine.  Implemented as library call.
 .AT arth null dp cse
 .CG notAILI
 
+.IL QCOS qplnk
+Real128 cosine.  Implemented as library call.
+.AT arth null qp cse
+.CG notAILI
+
 .IL FSINCOS splnk
 Used to implement SINCOS optimization (single precision).
 .AT arth null sp cse
@@ -766,6 +779,11 @@ Single-precision floating-point tangent.
 Double-precision tangent.
 .AT arth null dp cse
 .CG notCG
+
+.IL QTAN qplnk
+Quad-precision tangent.
+.AT arth null qp cse
+.CG notAILI
 
 .IL FLOG splnk
 Single-precision floating-point natural logarithm.
@@ -814,6 +832,11 @@ Double-precision  arccosine.
 .AT arth null dp cse
 .CG notCG
 
+.IL QACOS qplnk
+Qaud-precision  arccosine.
+.AT arth null qp cse
+.CG notCG
+
 .IL FASIN splnk
 Single-precision floating-point arcsine.
 .AT arth null sp cse
@@ -824,6 +847,11 @@ Double-precision  arcsine.
 .AT arth null dp cse
 .CG notCG
 
+.IL QASIN qplnk
+Qaud-precision  arcsine.
+.AT arth null qp cse
+.CG notCG
+
 .IL FATAN splnk
 Single-precision floating-point arctangent.
 .AT arth null sp cse
@@ -832,6 +860,11 @@ Single-precision floating-point arctangent.
 .IL DATAN dplnk
 Double-precision  arctangent.
 .AT arth null dp cse
+.CG notCG
+
+.IL QATAN qplnk
+Qaud-precision  arctangent.
+.AT arth null qp cse
 .CG notCG
 
 .IL FATAN2 splnk splnk
@@ -854,6 +887,16 @@ Double-precision hyperbolic sin
 .AT arth null dp cse
 .CG notCG
 
+.IL QSINH dplnk
+Quad-precision hyperbolic sin
+.AT arth null qp cse
+.CG notCG
+
+.IL QASINH qplnk
+Quad-precision hyperbolic arc sine
+.AT arth null qp cse
+.CG notCG
+
 .IL FCOSH splnk
 Single-precision floating-point hyperbolic cos
 .AT arth null sp cse
@@ -864,6 +907,16 @@ Double-precision hyperbolic cos
 .AT arth null dp cse
 .CG notCG
 
+.IL QCOSH qplnk
+Quad-precision hyperbolic cos
+.AT arth null qp cse
+.CG notCG
+
+.IL QACOSH qplnk
+Quad-precision hyperbolic arc cos
+.AT arth null qp cse
+.CG notCG
+
 .IL FTANH splnk
 Single-precision floating-point hyperbolic tan
 .AT arth null sp cse
@@ -872,6 +925,16 @@ Single-precision floating-point hyperbolic tan
 .IL DTANH dplnk
 Double-precision hyperbolic tan
 .AT arth null dp cse
+.CG notCG
+
+.IL QTANH dplnk
+Quad-precision hyperbolic tan
+.AT arth null qp cse
+.CG notCG
+
+.IL QATANH qplnk
+Quad-precision hyperbolic arc tangent
+.AT arth null qp cse
 .CG notCG
 
 .IL FNEWT splnk splnk splnk

@@ -315,6 +315,9 @@ extern char *opmask_reg[N_OPMASK_REGS + 1];    /* OPMASK_REG_NAMES */
 #define DP_RETVAL XR_XMM0
 #define CS_RETVAL XR_XMM0
 #define CD_RETVAL XR_XMM0
+//AOCC Begin
+#define QP_RETVAL XR_XMM0
+//AOCC End
 
 #define IR_RETVAL IR_RAX
 #define AR_RETVAL IR_RAX

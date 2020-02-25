@@ -550,13 +550,23 @@ QFUNC	num	sym	ilms
 QREAL	ilm
 #QSIGN	ilm	ilm
 #QSIGNNZ	ilm	ilm
-#QSIN	ilm
+QCOS  ilm
+QCOSH ilm
+QACOS ilm
+QACOSH ilm
+QSIN	ilm
+QSINH ilm
+QASIN ilm
+QASINH ilm
 #QSIND	ilm
 #QSINH	ilm
 #QSQRT	ilm
 QPST	ilm	ilm
 QSUB	ilm	ilm
-#QTAN	ilm
+QTAN	ilm
+QTANH ilm
+QATAN ilm
+QATANH ilm
 #QTAND	ilm
 #QTANH	ilm
 #QTOD	ilm	ilm

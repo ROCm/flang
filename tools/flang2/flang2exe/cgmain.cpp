@@ -39,6 +39,8 @@
  * Allowing declaration of __ockl_get* functions in target module
  * Date of modification 14th February 2020
  *
+ * Support for Real128 support for math intrinsics
+ * Date of modification 24th February 2020
  */
 
 /**
@@ -7085,6 +7087,11 @@ update_return_type_for_ccfunc(int ilix, ILI_OP opc)
   case IL_DFRDP:
     new_dtype = cg_get_type(3, DTY(dtype), DT_DBLE);
     break;
+  //AOCC Begin
+  case IL_DFRQP:
+    new_dtype = cg_get_type(3, DTY(dtype), DT_QUAD);
+    break;
+  //AOCC End
   case IL_DFRIR:
     new_dtype = cg_get_type(3, DTY(dtype), DT_INT);
     break;
@@ -9164,6 +9171,12 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     if (expected_type == NULL)
       expected_type = make_lltype_from_dtype(DT_DBLE);
     goto _process_define_ili;
+  //AOCC Begin
+  case IL_DFRQP:
+    if (expected_type == NULL)
+      expected_type = make_lltype_from_dtype(DT_QUAD);
+    goto _process_define_ili;
+  //AOCC End
   case IL_DFR128:
     if (expected_type == NULL)
       expected_type = make_lltype_from_dtype(DT_128);
