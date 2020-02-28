@@ -8,6 +8,9 @@
 .\" * Added support for quad precision
 .\" * Last modified: Feb 2020
 .\" *
+.\" * Support for Real128 support for math intrinsics
+.\" * Date of Modification: Feb 2020
+.\" *
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -89,31 +92,37 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN CEXP 1 C C CEXP ftn_cexp 
 .IN CDEXP 1 CD CD CDEXP ftn_cdexp 
 .IN .SIN 1 R R SIN ftn_sin 
-.IN DSIN 1 D D DSIN ftn_dsin 
+.IN DSIN 1 D D DSIN ftn_dsin
+.IN QSIN 1 Q Q QSIN ftn_qsin 
 .IN CSIN 1 C C CSIN ftn_csin 
 .IN CDSIN 1 CD CD CDSIN ftn_cdsin 
 .IN .SIND 1 R R SIND ftn_sind
 .IN DSIND 1 D D DSIND ftn_dsind
 .IN .COS 1 R R COS ftn_cos
 .IN DCOS 1 D D DCOS ftn_dcos
+.IN QCOS 1 Q Q QCOS ftn_qcos
 .IN CCOS 1 C C CCOS ftn_ccos
 .IN CDCOS 1 CD CD CDCOS ftn_cdcos
 .IN .COSD 1 R R COSD ftn_cosd
 .IN DCOSD 1 D D DCOSD ftn_dcosd
 .IN .TAN 1 R R TAN ftn_tan 
 .IN DTAN 1 D D DTAN ftn_dtan
+.IN QTAN 1 Q Q QTAN ftn_qtan
 .IN .TAND 1 R R TAND ftn_tand
 .IN DTAND 1 D D DTAND ftn_dtand
 .IN .ASIN 1 R R ASIN ftn_asin
 .IN DASIN 1 D D DASIN ftn_dasin
+.IN QASIN 1 Q Q QASIN ftn_qasin
 .IN .ASIND 1 R R ASIND ftn_asind
 .IN DASIND 1 D D DASIND ftn_dasind
 .IN .ACOS 1 R R ACOS ftn_acos
 .IN DACOS 1 D D DACOS ftn_dacos
+.IN QACOS 1 Q Q QACOS ftn_qacos
 .IN .ACOSD 1 R R ACOSD ftn_acosd
 .IN DACOSD 1 D D DACOSD ftn_dacosd
 .IN .ATAN 1 R R ATAN ftn_atan
 .IN DATAN 1 D D DATAN ftn_datan
+.IN QATAN 1 Q Q QATAN ftn_qatan
 .IN .ATAND 1 R R ATAND ftn_atand
 .IN DATAND 1 D D DATAND ftn_datand
 .IN .ATAN2 2 R R ATAN2 ftn_atan2
@@ -122,10 +131,16 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN DATAN2D 2 D D DATAN2D ftn_datan2d
 .IN .SINH 1 R R SINH ftn_sinh
 .IN DSINH 1 D D DSINH ftn_dsinh
+.IN QSINH 1 Q Q QSINH ftn_qsinh
+.IN QASINH 1 Q Q QASINH ftn_qasinh
 .IN .COSH 1 R R COSH ftn_cosh
 .IN DCOSH 1 D D DCOSH ftn_dcosh
+.IN QCOSH 1 Q Q QCOSH ftn_qcosh
+.IN QACOSH 1 Q Q QACOSH ftn_qacosh
 .IN .TANH 1 R R TANH ftn_tanh
 .IN DTANH 1 D D DTANH ftn_dtanh
+.IN QTANH 1 Q Q QTANH ftn_qtanh
+.IN QATANH 1 Q Q QATANH ftn_qatanh
 .IN IABS 1 I I IABS ftn_iabs
 .IN IIABS 1 SI SI IABS ftn_iiabs
 .IN JIABS 1 I I IABS ftn_iabs
@@ -365,12 +380,12 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN EXP - - .EXP DEXP CEXP CDEXP -
 .GN LOG - - ALOG DLOG CLOG CDLOG -
 .GN LOG10 - - ALOG10 DLOG10 - - -
-.GN SIN - - .SIN DSIN CSIN CDSIN -
+.GN SIN - - .SIN DSIN CSIN CDSIN QSIN QASIN-
 .GN SIND - - .SIND DSIND - - -
-.GN COS - - .COS DCOS CCOS CDCOS -
+.GN COS - - .COS DCOS CCOS CDCOS QCOS QACOS-
 .GN COSD - - .COSD DCOSD - - -
 .GN TAN - - .TAN DTAN - - -
-.GN TAND - - .TAND DTAND - - -
+.GN TAND - - .TAND DTAND QTAN QATAN- - -
 .GN ASIN - - .ASIN DASIN - - -
 .GN ASIND - - .ASIND DASIND - - -
 .GN ACOS - - .ACOS DACOS - - -
@@ -379,9 +394,9 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN ATAND - - .ATAND DATAND - - -
 .GN ATAN2 - - .ATAN2 DATAN2 - - -
 .GN ATAN2D - - .ATAN2D DATAN2D - - -
-.GN SINH - - .SINH DSINH - - -
-.GN COSH - - .COSH DCOSH - - -
-.GN TANH - - .TANH DTANH - - -
+.GN SINH - - .SINH DSINH QSINH - - -
+.GN COSH - - .COSH DCOSH QCOSH - - -
+.GN TANH - - .TANH DTANH QTANH - - -
 .GN IBITS IIBITS JIBITS - - - - KIBITS 
 .GN IBSET IIBSET JIBSET - - - - KIBSET 
 .GN BTEST BITEST BJTEST - - - - BKTEST 

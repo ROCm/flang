@@ -15,6 +15,9 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Real128 support for math intrinsics
+ * Date of Modification : 24 Feb 2020
+ *
  */
 
 /**
@@ -1208,6 +1211,10 @@ dtype_from_return_type(ILI_OP ret_opc)
 #endif
   case IL_DFRDP:
     return DT_DBLE;
+  //AOCC Begin
+  case IL_DFRQP:
+    return DT_QUAD;
+  //AOCC End
   case IL_DFRIR:
     return DT_INT;
   case IL_DFRKR:

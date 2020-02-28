@@ -35,6 +35,9 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Real128 support for math intrinsics
+ * Last modified: Feb 2020
+ *
  */
 
 /**
@@ -910,6 +913,9 @@ ad_func(ILI_OP result_opc, ILI_OP call_opc, char *func_name, int nargs, ...)
     break;
   case IL_DFRCS:
     ilix = ad2ili(result_opc, ilix, CS_RETVAL);
+    break;
+  case IL_DFRQP:
+    ilix = ad2ili(result_opc, ilix, QP_RETVAL);
     break;
 #ifdef IL_DFRSPX87
   case IL_DFRSPX87:
@@ -2610,6 +2616,19 @@ addarth(ILI *ilip)
       (void)mk_prototype("llvm.cos.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.cos.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
+    //AOCC Begin
+    case IL_QCOS:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("cos", "f pure", DT_QUAD, 1, DT_QUAD);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "cos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
+      (void)mk_prototype("cosq", "f pure", DT_QUAD, 1, DT_QUAD);
+      ilix = ad_func(IL_DFRQP, IL_QJSR, "cosq", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    //AOCC End
 
     case IL_FSIN:
       (void)mk_prototype("llvm.sin.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
@@ -2628,7 +2647,19 @@ addarth(ILI *ilip)
       (void)mk_prototype("llvm.sin.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sin.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
-
+    //AOCC Begin
+    case IL_QSIN:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("sin", "f pure", DT_QUAD, 1, DT_QUAD);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "sin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
+      (void)mk_prototype("sinq", "f pure", DT_QUAD, 1, DT_QUAD);
+      ilix = ad_func(IL_DFRQP, IL_QJSR, "sinq", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    //AOCC End
     case IL_FFLOOR:
       (void)mk_prototype("llvm.floor.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.floor.f32", 1, op1);
@@ -5034,7 +5065,43 @@ addarth(ILI *ilip)
     }
     ilix = ad1altili(opc, op1, ilix);
     return ilix;
+  //AOCC Begin
+  case IL_QCOSH:
+    (void)mk_prototype("coshq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "coshq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
 
+  case IL_QSINH:
+    (void)mk_prototype("sinhq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "sinhq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+
+  case IL_QTANH:
+    (void)mk_prototype("tanhq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "tanhq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+  //AOCC End
+
+	//AOCC Begin
+  case IL_QACOSH:
+    (void)mk_prototype("acoshq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "acoshq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+  case IL_QASINH:
+    (void)mk_prototype("asinhq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "asinhq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+  case IL_QATANH:
+    (void)mk_prototype("atanhq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "atanhq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+	//AOCC End
   case IL_FTANH:
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tanh, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
@@ -6074,7 +6141,19 @@ addarth(ILI *ilip)
     ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_DTAN, 1, op1);
     return ad1altili(opc, op1, ilix);
 #endif
-
+  //AOCC Begin
+  case IL_QTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("tan", "f pure", DT_QUAD, 1, DT_QUAD);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "tan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
+			(void)mk_prototype("tanq", "f pure", DT_QUAD, 1, DT_QUAD);
+      ilix = ad_func(IL_DFRQP, IL_QJSR, "tanq", 1, op1);
+      return ad1altili(opc, op1, ilix);
+  //AOCC End
   case IL_FATAN:
     if (ncons == 1) {
       xfatan(con1v2, &res.numi[1]);
@@ -6227,7 +6306,25 @@ addarth(ILI *ilip)
     ilix = ad_func(IL_DFRDP, IL_QJSR, MTH_I_DATAN2, 2, op1, op2);
     return ad2altili(opc, op1, op2, ilix);
     break;
+  //AOCC Begin
+  case IL_QACOS:
+    (void)mk_prototype("acosq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "acosq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
 
+  case IL_QASIN:
+    (void)mk_prototype("asinq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "asinq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+
+  case IL_QATAN:
+    (void)mk_prototype("atanq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "atanq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+    break;
+  //AOCC End
   case IL_FLOG:
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_log, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
@@ -13806,6 +13903,11 @@ genretvalue(int ilix, ILI_OP resultopc)
   case IL_DFRDP:
     ilix = ad2ili(resultopc, ilix, DP_RETVAL);
     break;
+//AOCC Begin
+  case IL_DFRQP:
+    ilix = ad2ili(resultopc, ilix, QP_RETVAL);
+    break;
+//AOCC End
   case IL_DFRCS:
     ilix = ad2ili(resultopc, ilix, CS_RETVAL);
     break;
