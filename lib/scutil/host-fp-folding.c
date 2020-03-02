@@ -8,6 +8,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ *Support for "nearest" intrinsic
+ * Last modified: Feb 2020
  */
 /** \file
  * \brief Implement floating-point folding with host arithmetic
@@ -423,7 +425,16 @@ fold_real32_log10(float32_t *res, const float32_t *arg)
   *res = log10f(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
-
+//AOCC Begin
+enum fold_status
+fold_real32_nearest(float32_t *res, const float32_t *x, const float32_t *y)
+{ 
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = (*x) + (*y * 1.0/100000.0);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+//AOCC End
 /* 64-bit */
 
 enum fold_status
@@ -632,6 +643,17 @@ fold_real64_atan2(float64_t *res, const float64_t *x, const float64_t *y)
   *res = atan2(*x, *y);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+
+//AOCC Begin
+enum fold_status
+fold_real64_nearest(float64_t *res, const float64_t *x, const float64_t *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = (*x) + (*y * 1.0/100000.0);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+//AOCC End
 
 enum fold_status
 fold_real64_exp(float64_t *res, const float64_t *arg)
@@ -869,6 +891,16 @@ fold_real128_atan2(float128_t *res, const float128_t *x, const float128_t *y)
   *res = atan2l(*x, *y);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+//AOCC Begin
+enum fold_status
+fold_real128_nearest(float128_t *res, const float128_t *x, const float128_t *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = (*x) + (*y * 1.0/100000.0);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+//AOCC End
 
 enum fold_status
 fold_real128_exp(float128_t *res, const float128_t *arg)
@@ -1068,6 +1100,17 @@ fold_real128_atan2(__float128 *res, const __float128 *x, const __float128 *y)
   *res = atan2l(*x, *y);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+
+//AOCC Begin
+enum fold_status
+fold_real128_nearest(__float128 *res, const __float128 *x, const __float128 *y)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *x + ((*y) * 1.0/10000000000000000000000.0);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+//AOCC End
 
 enum fold_status
 fold_real128_exp(__float128 *res, const __float128 *arg)

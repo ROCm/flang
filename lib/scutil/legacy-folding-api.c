@@ -8,6 +8,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Support for "nearest" intrinsic
+ * Last modified: 01 March 2020
  */
 /** \file
  * \brief Implement legacy folding interfaces
@@ -769,7 +771,17 @@ xflog10(IEEE32 f, IEEE32 *r)
   check(fold_real32_log10(&x, &y));
   wrap_f(r, &x);
 }
-
+//AOCC Begin
+void
+xfnearest(IEEE32 f1, IEEE32 f2, IEEE32 *r)
+{
+  float32_t x, y, z;
+  unwrap_f(&y, &f1);
+  unwrap_f(&z, &f2);
+  check(fold_real32_nearest(&x, &y, &z)); 
+  wrap_f(r, &x); 
+}
+//AOCC End
 int
 xfcmp(IEEE32 f1, IEEE32 f2)
 {
@@ -1122,6 +1134,18 @@ xdatan2(IEEE64 d1, IEEE64 d2, IEEE64 r)
   check(fold_real64_atan2(&x, &y, &z));
   wrap_d(r, &x);
 }
+
+//AOCC Begin
+void
+xdnearest(IEEE64 d1, IEEE64 d2, IEEE64 r)
+{
+  float64_t x, y, z;
+  unwrap_d(&y, d1);
+  unwrap_d(&z, d2);
+  check(fold_real64_nearest(&x, &y, &z));
+  wrap_d(r, &x);
+}
+//AOCC End
 
 void
 xdexp(IEEE64 d, IEEE64 r)
@@ -2173,6 +2197,18 @@ xqatan2(IEEE128 q1, IEEE128 q2, IEEE128 r)
   wrap_q(r, &x);
 }
 
+//AOCC Begin
+void
+xqnearest(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  float128_t x, y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  check(fold_real128_nearest(&x, &y, &z));
+  wrap_q(r, &x);
+}
+//AOCC End
+
 void
 xqexp(IEEE128 q, IEEE128 r)
 {
@@ -2506,6 +2542,19 @@ atoxq(const char *s, IEEE128 q, int n)
 {
   return parse_q(s, q, n, false);
 }
+
+//AOCC Begin
+void
+xqnearest(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  check(fold_real128_nearest(&x, &y, &z));
+  wrap_q(r, &x);
+}
+//AOCC End
+
 // AOCC end
 #endif
 

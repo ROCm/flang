@@ -23,6 +23,9 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Support for nearest intrinsic
+ * Last modified: 01 March 2020
+ *
  */
 
 /** \file
@@ -3695,6 +3698,38 @@ construct_arg_list(int ast)
   }
   return argroot;
 }
+//AOCC Begin
+static ACL *
+mk_nearest_intrin(AC_INTRINSIC init_intr, int ast, DTYPE dtype)
+{
+  ACL *expracl = mk_init_intrinsic(init_intr);
+  int argt = A_ARGSG(ast);
+  ACL *argroot = NULL;
+  ACL **curarg = &argroot;
+  int argast = ARGT_ARG(argt, 0);
+  if (argast) {
+    *curarg = construct_acl_from_ast(argast, A_DTYPEG(argast), 0);
+    if (!*curarg) {
+      return 0;
+    }
+    curarg = &(*curarg)->next;
+  }
+  argast = ARGT_ARG(argt, 1);
+  if (argast) {
+    *curarg = construct_acl_from_ast(argast-2, A_DTYPEG(argast), 0);
+    if (!*curarg) {
+      return 0;
+    }
+    curarg = &(*curarg)->next;
+  }
+  if (sem.dinit_error) {
+    return 0;
+  }
+  expracl->dtype = dtype;
+  expracl->u1.expr->rop = argroot;
+  return expracl;
+}
+//AOCC End
 
 static ACL *
 mk_nonelem_init_intrinsic(AC_INTRINSIC init_intr, int ast, DTYPE dtype)
@@ -3725,7 +3760,6 @@ mk_elem_init_intrinsic(AC_INTRINSIC init_intr, int ast, DTYPE dtype,
     sem.dinit_error = TRUE;
     return 0;
   }
-
   arg1acl = arglist;
   arg1dtype = arg1acl->dtype;
   expracl->dtype = dtypebase;
@@ -3873,6 +3907,8 @@ map_I_to_AC(int intrin)
     return AC_I_minloc;
   case I_MINVAL:
     return AC_I_minval;
+  case I_NEAREST:
+    return AC_I_nearest;  //AOCC
   default:
     return AC_I_NONE;
   }
@@ -3962,6 +3998,8 @@ map_PD_to_AC(int pdnum)
     return AC_I_minloc;
   case PD_minval:
     return AC_I_minval;
+  case PD_nearest:
+    return AC_I_nearest;  //AOCC
   default:
     return AC_I_NONE;
   }
@@ -4041,6 +4079,10 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_selected_real_kind:
   case AC_I_selected_char_kind:
     return mk_nonelem_init_intrinsic(intrin, ast, A_DTYPEG(ast));
+  //AOCC Begin
+  case AC_I_nearest:
+        return mk_nearest_intrin(AC_I_nearest, ast, dtype);
+  //AOCC End
   case AC_I_size:
     return mk_size_intrin(ast);
   // AOCC begin
@@ -8486,6 +8528,57 @@ eval_dshift(ACL *arg, DTYPE dtype, bool is_left)
   }
 }
 /* AOCC end */
+//AOCC Begin
+static ACL *
+eval_nearest(ACL *arg, DTYPE dtype)
+{
+    ACL *rslt = arg;
+    ACL *arg1, *arg2;
+    INT conval;
+    arg1 = eval_init_expr_item(arg);
+    arg2 = eval_init_expr_item(arg->next);
+    rslt = clone_init_const(arg1, TRUE);
+    arg1 = (rslt->id == AC_ACONST ? rslt->subc : rslt);
+    arg2 = (arg2->id == AC_ACONST ? arg2->subc : arg2);
+
+    for (; arg1; arg1 = arg1->next, arg2 = arg2->next) {
+      INT num1[4], num2[4];
+      INT res[4];
+      INT con1, con2;
+      con1 = arg1->conval;
+      con2 = arg2->conval;
+      switch (DTY(arg1->dtype)) {
+      case TY_REAL:
+        xfnearest(con1, con2, &res[0]);
+        conval = res[0];
+        break;
+      case TY_DBLE:
+        num1[0] = CONVAL1G(con1);
+        num1[1] = CONVAL2G(con1);
+        num2[0] = CONVAL1G(con2);
+        num2[1] = CONVAL2G(con2);
+        xdnearest(num1, num2, res);
+        conval = getcon(res, DT_DBLE);
+        break;
+      case TY_CMPLX:
+      case TY_DCMPLX:
+        error(155, 3, gbl.lineno,
+              "Intrinsic not supported in initialization:", "nearest");
+        break;
+      case TY_HALF:
+      /* fallthrough to error */
+      default:
+        error(155, 3, gbl.lineno,
+              "Intrinsic not supported in initialization:", "nearest");
+        break;
+      }
+      conval = cngcon(conval, arg1->dtype, dtype);
+      arg1->conval = conval;
+      arg1->dtype = dtype;
+    }
+    return rslt;
+}
+//AOCC End
 
 static ACL *
 eval_ichar(ACL *arg, DTYPE dtype)
@@ -11059,6 +11152,11 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case AC_I_selected_char_kind:
       root = eval_selected_char_kind(rop);
       break;
+    //AOCC Begin
+    case AC_I_nearest:
+      root = eval_nearest(rop, dtype);
+      break;
+    //AOCC End
     case AC_I_scan:
       root = eval_scan(rop);
       break;

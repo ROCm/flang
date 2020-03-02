@@ -43,6 +43,9 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 12th February  2020
+ *
+ * Support for "nearest" intrinsic
+ * Last modified: Feb 2020
  */
 
 /**
@@ -2022,7 +2025,13 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
 
       return ast_intr(I_IOR, A_DTYPEG(i), 2, iand_i, iand_j);
     }
-
+    //AOCC Begin
+    case I_NEAREST: {
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      return ast_intr(I_NEAREST , A_DTYPEG(i), 2 , j , i);
+    }
+    //AOCC End
     case I_DSHIFTL:
     case I_DSHIFTR: {
       if (flg.std != F2008) {

@@ -8,6 +8,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Support for "nearest" intrinsic
+ * Last modified: Feb 2020
  */
 /** \file
  * \brief Legacy constant folding API.
@@ -217,9 +219,11 @@ void xddatan(IEEE6464, IEEE6464);
 void xqatan (IEEE128, IEEE128 );
 void xfatan2(IEEE32 , IEEE32 , IEEE32  *);
 void xdatan2(IEEE64 , IEEE64 , IEEE64   );
+void xdnearest(IEEE64 , IEEE64 , IEEE64); //AOCC
 void xeatan2(IEEE80 , IEEE80 , IEEE80   );
 void xddatan2(IEEE6464, IEEE6464, IEEE6464);
 void xqatan2(IEEE128, IEEE128, IEEE128  );
+void xqnearest(IEEE128 , IEEE128 , IEEE128); //AOCC
 void xfexp   (IEEE32 , IEEE32 *);
 void xdexp   (IEEE64 , IEEE64  );
 void xeexp   (IEEE80 , IEEE80  );
@@ -235,6 +239,7 @@ void xdlog10 (IEEE64 , IEEE64  );
 void xelog10 (IEEE80 , IEEE80  );
 void xddlog10(IEEE6464, IEEE6464);
 void xqlog10 (IEEE128, IEEE128 );
+void xfnearest(IEEE32 , IEEE32 , IEEE32 *);  //AOCC
 
 void xffloat(INT i, IEEE32 *f);
 void xdfloat(INT i, IEEE64 d);

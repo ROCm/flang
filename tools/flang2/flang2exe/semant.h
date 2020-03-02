@@ -12,6 +12,8 @@
  *
  * Date of Modification: 1st March 2019
  *
+ * Support for nearest intrinsic
+ * Last modified: 01 March 2020
  */
 
 #ifndef SEMANT_H_
@@ -441,6 +443,7 @@ struct CONST {
 #define AC_I_dshiftl 60
 #define AC_I_dshiftr 61
 /* AOCC end */
+#define AC_I_nearest 62
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 
 typedef struct {  /* STRUCTURE stack entries */

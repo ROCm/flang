@@ -15,6 +15,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Support for nearest intrinsic
+ * Last modified: 01 March 2020
  */
 
 /** \file
@@ -32,6 +34,7 @@
 #include "machardf.h"
 #include "semutil0.h"
 #include "symfun.h"
+#include <quadmath.h> //AOCC
 
 /** \brief Effective address of a reference being initialized */
 typedef struct {
@@ -3772,6 +3775,53 @@ eval_selected_char_kind(CONST *arg, DTYPE dtype)
   rslt->u1.conval = r;
   return rslt;
 }
+//AOCC Begin
+static CONST *
+eval_nearest(CONST *arg, DTYPE dtype)
+{
+  CONST *rslt;
+  CONST *arg1, *arg2;
+  INT conval;
+  arg1 = eval_init_expr_item(arg);
+  arg2 = eval_init_expr_item(arg->next);
+  rslt = clone_init_const_list(arg1, true);
+  arg1 = (rslt->id == AC_ACONST ? rslt->subc : rslt);
+  arg2 = (arg2->id == AC_ACONST ? arg2->subc : arg2);
+  for (; arg1; arg1 = arg1->next, arg2 = arg2->next) {
+    INT num1[4], num2[4];
+    INT res[4];
+    INT con1, con2;
+    con1 = arg1->u1.conval;
+    con2 = arg2->u1.conval;
+    switch (DTY(arg1->dtype)) {
+      case TY_REAL:
+        xfnearest(con1, con2, &res[0]);
+        conval = res[0];
+        break;
+      case TY_DBLE:
+      num1[0] = CONVAL1G(con1);
+      num2[0] = CONVAL1G(con2);
+      xdnearest(num1, num2, res);
+      conval = getcon(res, DT_DBLE);
+      break;
+    case TY_CMPLX:
+    case TY_DCMPLX:
+      error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,
+          "Intrinsic not supported in initialization:", "nearest");
+      break;
+    default:
+      error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,
+          "Intrinsic not supported in initialization:", "nearst");
+      break;
+    }
+    conval = cngcon(conval, arg1->dtype, dtype);
+    arg1->u1.conval = conval;
+    arg1->dtype = dtype;
+    arg1->id = AC_CONST;
+    arg1->repeatc = 1;
+  }
+  return rslt;
+}
 
 static CONST *
 eval_scan(CONST *arg, DTYPE dtype)
@@ -5025,6 +5075,9 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
       break;
     case AC_I_selected_char_kind:
       root = eval_selected_char_kind(rop, dtype);
+      break;
+    case AC_I_nearest:
+      root = eval_nearest(rop, dtype); //AOCC
       break;
     case AC_I_scan:
       root = eval_scan(rop, dtype);
