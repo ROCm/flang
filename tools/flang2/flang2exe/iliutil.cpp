@@ -6150,7 +6150,7 @@ addarth(ILI *ilip)
         return ad1altili(opc, op1, ilix);
       }
 #endif
-			(void)mk_prototype("tanq", "f pure", DT_QUAD, 1, DT_QUAD);
+      (void)mk_prototype("tanq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_DFRQP, IL_QJSR, "tanq", 1, op1);
       return ad1altili(opc, op1, ilix);
   //AOCC End

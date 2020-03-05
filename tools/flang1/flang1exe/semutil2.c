@@ -10501,7 +10501,8 @@ eval_sqrt(ACL *arg, DTYPE dtype)
 
 /*---------------------------------------------------------------------*/
 
-#define FPINTRIN1(iname, ent, fscutil, dscutil)                     \
+// AOCC parameter: qscutil
+#define FPINTRIN1(iname, ent, fscutil, dscutil, qscutil)                     \
   static ACL *ent(ACL *arg, DTYPE dtype)                            \
   {                                                                 \
     ACL *rslt;                                                      \
@@ -10525,6 +10526,16 @@ eval_sqrt(ACL *arg, DTYPE dtype)
         dscutil(num1, res);                                         \
         conval = getcon(res, DT_DBLE);                              \
         break;                                                      \
+      /* AOCC begin */                                              \
+      case TY_QUAD:                                                 \
+        num1[0] = CONVAL1G(con1);                                   \
+        num1[1] = CONVAL2G(con1);                                   \
+        num1[2] = CONVAL3G(con1);                                   \
+        num1[3] = CONVAL4G(con1);                                   \
+        qscutil(num1, res);                                         \
+        conval = getcon(res, DT_QUAD);                              \
+        break;                                                      \
+      /* AOCC end   */                                              \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
@@ -10544,25 +10555,26 @@ eval_sqrt(ACL *arg, DTYPE dtype)
     return rslt;                                                    \
   }
 
-FPINTRIN1("exp", eval_exp, xfexp, xdexp)
+FPINTRIN1("exp", eval_exp, xfexp, xdexp, xqexp)
 
-FPINTRIN1("log", eval_log, xflog, xdlog)
+FPINTRIN1("log", eval_log, xflog, xdlog, xqlog)
 
-FPINTRIN1("log10", eval_log10, xflog10, xdlog10)
+FPINTRIN1("log10", eval_log10, xflog10, xdlog10, xqlog10)
 
-FPINTRIN1("sin", eval_sin, xfsin, xdsin)
+FPINTRIN1("sin", eval_sin, xfsin, xdsin, xqsin)
 
-FPINTRIN1("cos", eval_cos, xfcos, xdcos)
+FPINTRIN1("cos", eval_cos, xfcos, xdcos, xqcos)
 
-FPINTRIN1("tan", eval_tan, xftan, xdtan)
+FPINTRIN1("tan", eval_tan, xftan, xdtan, xqtan)
 
-FPINTRIN1("asin", eval_asin, xfasin, xdasin)
+FPINTRIN1("asin", eval_asin, xfasin, xdasin, xqasin)
 
-FPINTRIN1("acos", eval_acos, xfacos, xdacos)
+FPINTRIN1("acos", eval_acos, xfacos, xdacos, xdacos)
 
-FPINTRIN1("atan", eval_atan, xfatan, xdatan)
+FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
 
-#define FPINTRIN2(iname, ent, fscutil, dscutil)                     \
+// AOCC parameter: qscutil
+#define FPINTRIN2(iname, ent, fscutil, dscutil, qscutil)            \
   static ACL *ent(ACL *arg, DTYPE dtype)                            \
   {                                                                 \
     ACL *rslt = arg;                                                \
@@ -10592,6 +10604,20 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan)
         dscutil(num1, num2, res);                                   \
         conval = getcon(res, DT_DBLE);                              \
         break;                                                      \
+      /* AOCC begin */                                              \
+      case TY_QUAD:                                                 \
+        num1[0] = CONVAL1G(con1);                                   \
+        num1[1] = CONVAL2G(con1);                                   \
+        num1[2] = CONVAL3G(con1);                                   \
+        num1[3] = CONVAL4G(con1);                                   \
+        num2[0] = CONVAL1G(con2);                                   \
+        num2[1] = CONVAL2G(con2);                                   \
+        num2[2] = CONVAL3G(con2);                                   \
+        num2[3] = CONVAL4G(con2);                                   \
+        qscutil(num1, num2, res);                                   \
+        conval = getcon(res, DT_QUAD);                              \
+        break;                                                      \
+      /* AOCC end */                                                \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
@@ -10611,7 +10637,7 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan)
     return rslt;                                                    \
   }
 
-FPINTRIN2("atan2", eval_atan2, xfatan2, xdatan2)
+FPINTRIN2("atan2", eval_atan2, xfatan2, xdatan2, xqatan2)
 
 static INT
 get_const_from_ast(int ast)

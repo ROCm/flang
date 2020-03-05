@@ -684,6 +684,7 @@ fold_real64_log10(float64_t *res, const float64_t *arg)
 
 /* 80, 64+64, or 128-bit */
 
+#ifdef FOLD_LDBL_128BIT
 enum fold_status
 fold_int32_from_real128(int32_t *res, const float128_t *arg)
 {
@@ -720,7 +721,6 @@ fold_uint64_from_real128(uint64_t *res, const float128_t *arg)
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
 
-#ifdef FOLD_LDBL_128BIT
 enum fold_status
 fold_real128_from_int64(float128_t *res, const int64_t *arg)
 {
@@ -931,6 +931,42 @@ fold_real128_log10(float128_t *res, const float128_t *arg)
 // AOCC begin
 // To support quad precision REAL128 type
 #else
+enum fold_status
+fold_int32_from_real128(int32_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_int64_from_real128(int64_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_uint32_from_real128(uint32_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_uint64_from_real128(uint64_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
 enum fold_status
 fold_real128_from_int64(__float128 *res, const int64_t *arg)
 {

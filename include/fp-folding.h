@@ -181,6 +181,10 @@ enum fold_status fold_real128_log10(float128_t *res, const float128_t *arg);
 // AOCC begin
 // To support quad precision REAL128 type
 #else
+enum fold_status fold_int32_from_real128(int32_t *res, const __float128 *arg);
+enum fold_status fold_int64_from_real128(int64_t *res, const __float128 *arg);
+enum fold_status fold_uint32_from_real128(uint32_t *res, const __float128 *arg);
+enum fold_status fold_uint64_from_real128(uint64_t *res, const __float128 *arg);
 enum fold_status fold_real128_from_int64(__float128 *res, const int64_t *arg);
 enum fold_status fold_real128_from_uint64(__float128 *res, const uint64_t *arg);
 enum fold_status fold_real128_from_real32(__float128 *res, const float32_t *arg);
