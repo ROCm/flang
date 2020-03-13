@@ -1512,6 +1512,22 @@ into real*8 values in 'xmm2'.
 .CG terminal notAILI
 
 
+.\" AOCC begin
+.IL QFLOAT irlnk
+Integer*4 to real*8 type conversion.
+.AT arth null qp cse
+.CG "cvtsi2sq" 'l' sse_avx asm_special
+.SI ld direct fst lat(6)
+.SI quad fst lat(11)
+
+.IL QFLOATK krlnk
+Integer*8 to real*8 type conversion.
+.AT arth null qp cse
+.CG "cvtsi2sq" 'q' avx_special
+.SI ld direct fst lat(6)
+.SI quad fst lat(11)
+.\" AOCC end
+
 .IL FIX splnk
 Real*4 to integer*4 type conversion.
 .AT arth null ir cse

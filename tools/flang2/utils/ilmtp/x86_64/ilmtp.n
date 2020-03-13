@@ -69,6 +69,11 @@ stc3 - number of words for this ILM block (including the BOS).
 .IL FLOAT arth lnk
 Convert integer to real number (REAL and FLOAT intrinsics).
 .OP FLOAT r p1
+\" AOCC BEGIN
+.IL QFLOAT arth lnk
+Convert integer to double precision (QFLOAT intrinsic).
+.OP QFLOAT r p1
+\" AOCC END
 .IL DFLOAT arth lnk
 Convert integer to double precision (DFLOAT intrinsic).
 .OP DFLOAT r p1
@@ -2467,6 +2472,12 @@ Return the value of an expression in a variable format item (<expr>).
 .AT spec trm
 .IL PRAGMA misc stc1 stc2 stc3
 pragma/directive ILM
+.\" AOCC Begin
+.IL QFLOATK arth lnk
+Convert long long to quad precision (QFLOAT intrinsic).
+.AT i8
+.OP QFLOATK r p1
+.\" AOCC end
 .IL FLOATK arth lnk
 Convert long long to real number (REAL and FLOAT intrinsics).
 .AT i8

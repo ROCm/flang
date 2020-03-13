@@ -538,6 +538,8 @@ QMUL	ilm	ilm
 QNEG	ilm
 #QNINT	ilm
 #QOBEG	ilm	sym	sym
+QFLOAT	ilm
+QFLOATK	ilm
 QFUNC	num	sym	ilms
 #QOBEGNZ	ilm	sym	sym	ilm
 #QOEND	sym	sym

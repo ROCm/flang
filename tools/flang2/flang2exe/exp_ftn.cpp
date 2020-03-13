@@ -1000,6 +1000,16 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     tmp = ad2ili(IL_QJSR, op2, tmp);
     ILM_RESULT(curilm) = ad2ili(IL_DFRDP, tmp, DP(0));
     return;
+  // AOCC begin
+  case IM_QFLOATK:
+    op1 = ILI_OF(ILM_OPND(ilmp, 1));
+    tmp = ad1ili(IL_NULL, 0);
+    op2 = mk_prototype(MTH_I_QFLOATK, "pure", DT_QUAD, 1, DT_INT8);
+    tmp = ad2ili(IL_ARGKR, op1, tmp);
+    tmp = ad2ili(IL_QJSR, op2, tmp);
+    ILM_RESULT(curilm) = ad2ili(IL_DFRQP, tmp, QP(0));
+    return;
+  // AOCC end
   case IM_D2K:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     ILM_RESULT(curilm) = ad1ili(IL_DP2KR, op1);

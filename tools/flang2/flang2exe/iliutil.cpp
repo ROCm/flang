@@ -3257,6 +3257,21 @@ addarth(ILI *ilip)
       goto add_qcon;
     }
     break;
+
+  case IL_QFLOATK:
+    if (ncons == 1) {
+      GETVALI64(num1, cons1);
+      xqflt64(num1.numi, res.numi);
+      goto add_qcon;
+    }
+    break;
+
+  case IL_QFLOAT:
+    if (ncons == 1) {
+      xqfloat(con1v2, res.numq);
+      goto add_qcon;
+    }
+    break;
   // AOCC end
 
   case IL_UNOT:

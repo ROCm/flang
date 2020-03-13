@@ -5024,6 +5024,7 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_FLOATU:
   case IL_DFLOATU:
   case IL_DFLOAT:
+  case IL_QFLOAT:             // AOCC
   case IL_ALLOC:
     opc_type = make_lltype_from_dtype(DT_INT);
     break;
@@ -5031,6 +5032,7 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_FLOATUK:
   case IL_DFLOATUK:
   case IL_DFLOATK:
+  case IL_QFLOATK:           // AOCC
     opc_type = make_lltype_from_dtype(DT_INT8);
     break;
   // AOCC begin
@@ -5207,6 +5209,7 @@ gen_minmax_expr(int ilix, OPERAND *op1, OPERAND *op2)
     break;
   case IL_FMIN:
   case IL_DMIN:
+  case IL_QMIN:     // AOCC
     cc_itype = I_FCMP;
     cc_val = convert_to_llvm_fltcc(CC_NOTGE);
     break;
@@ -5222,6 +5225,7 @@ gen_minmax_expr(int ilix, OPERAND *op1, OPERAND *op2)
     break;
   case IL_FMAX:
   case IL_DMAX:
+  case IL_QMAX:      // AOCC
     cc_itype = I_FCMP;
     cc_val = convert_to_llvm_fltcc(CC_NOTLE);
     break;
@@ -8614,6 +8618,8 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DFLOAT:
   case IL_DFLOATK:
   case IL_FLOATK:
+  case IL_QFLOAT:              // AOCC
+  case IL_QFLOATK:             // AOCC
     operand = gen_unary_expr(ilix, I_SITOFP);
     break;
   case IL_SNGL:
@@ -9621,6 +9627,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_KABS:
     operand = gen_abs_expr(ilix);
     break;
+  // AOCC begin
+  case IL_QABS:
+    operand = gen_call_llvm_intrinsic(
+        "fabs.f128",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FFLOOR:
     operand = gen_call_llvm_intrinsic(
         "floor.f32",
@@ -9671,11 +9685,13 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_UKMIN:
   case IL_FMIN:
   case IL_DMIN:
+  case IL_QMIN:
   case IL_IMAX:
   case IL_UIMAX:
   case IL_KMAX:
   case IL_UKMAX:
   case IL_FMAX:
+  case IL_QMAX:           // AOCC
   case IL_DMAX: {
     LL_Type *llTy;
     lhs_ili = ILI_OPND(ilix, 2);
@@ -12056,6 +12072,8 @@ make_type_from_opc(ILI_OP opc)
   case IL_QCJMP:
   case IL_QCJMPZ:
   case IL_QCMP:
+  case IL_QFLOAT:
+  case IL_QFLOATK:
   case IL_QUAD:
   case IL_QADD:
   case IL_QSUB:

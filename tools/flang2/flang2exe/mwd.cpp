@@ -3667,6 +3667,14 @@ _printili(int i)
     opval = "dfloat";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QFLOAT:
+  //case IL_QFLOATU:
+    n = 1;
+    opval = "qfloat";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DNEWT:
   case IL_FNEWT:
     n = 1;

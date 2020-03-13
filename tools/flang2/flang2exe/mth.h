@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Last modified: March 2020
+ * Added support for QFLOAT
+ *
  */
 
 #ifndef MTH_H_
@@ -196,6 +201,8 @@ typedef enum MTH_FN {
 #define MTH_I_DFLOAT "__mth_i_dfloat"
 #define MTH_I_DFLOATK "__mth_i_dfloatk"
 #define MTH_I_DFLOATUK "__mth_i_dfloatuk"
+#define MTH_I_QFLOAT "__mth_i_qfloat"       // AOCC
+#define MTH_I_QFLOATK "__mth_i_qfloatk"     // AOCC
 #define MTH_I_DMUL "__mth_i_dmul"
 #define MTH_I_DSQRT "__mth_i_dsqrt"
 #define MTH_I_DSUB "__mth_i_dsub"
