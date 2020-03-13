@@ -1995,24 +1995,22 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       return bitmask_temp_result;
     }
 
-    case I_SHIFTL:
-      if (flg.std == F2008) {
-        int val = ARGT_ARG(func_args, 0);
-        int shift = ARGT_ARG(func_args, 1);
+    case I_SHIFTL: {
+      int val = ARGT_ARG(func_args, 0);
+      int shift = ARGT_ARG(func_args, 1);
 
-        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
-        return shift_func;
-      }
+      int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
+      return shift_func;
+    }
 
-    case I_SHIFTR:
-      if (flg.std == F2008) {
-        int val = ARGT_ARG(func_args, 0);
-        int shift = ARGT_ARG(func_args, 1);
-        int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+    case I_SHIFTR: {
+      int val = ARGT_ARG(func_args, 0);
+      int shift = ARGT_ARG(func_args, 1);
+      int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
 
-        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
-        return shift_func;
-      }
+      int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
+      return shift_func;
+    }
 
     case I_MERGE_BITS: {
       int i = ARGT_ARG(func_args, 0);
