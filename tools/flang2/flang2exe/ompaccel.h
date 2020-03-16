@@ -15,6 +15,8 @@
  * Date of modification 12th February 2020
  * Date of modification 14th February 2020
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Mar 2020
  */
 
 /**
@@ -82,6 +84,7 @@ struct _OMPACCEL_TARGET{
   OMPACCEL_TINFO* parent_tinfo;           /*  Parent tinfo is used for nested outlining in device. */
   bool nowait;                            /*  async      */
   int n_reduction_symbols;                /*  Number of reduction symbols */
+  int sz_reduction_symbols;               /*  Size of reduction symbols */ // AOCC
   OMPACCEL_RED_SYM *reduction_symbols;    /*  Reduction symbols along with the reduction operator */
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
   char *func_name;                        /*  Function name */  // AOCC

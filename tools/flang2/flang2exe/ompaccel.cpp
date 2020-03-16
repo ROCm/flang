@@ -30,7 +30,7 @@
  * Date of modification 20th February  2020
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Dec 2019
+ * Last modified: Mar 2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -970,6 +970,7 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->nowait = false;
   info->n_quiet_symbols = 0;
   NEW(info->reduction_symbols, OMPACCEL_RED_SYM, tinfo_size_reductions);
+  info->sz_reduction_symbols = tinfo_size_reductions; // AOCC
   info->n_reduction_symbols = 0;
   // AOCC Begin
   info->num_teams = SPTR_NULL;
@@ -1348,6 +1349,15 @@ ompaccel_tinfo_current_add_reductionitem(SPTR private_sym, SPTR shared_sym,
 {
   if (current_tinfo == nullptr)
     ompaccel_msg_interr("XXX", "Current target info is not found.\n");
+
+  // AOCC begin
+  // Dynamically allocate reduction symbols
+  if (current_tinfo->sz_reduction_symbols <= current_tinfo->n_reduction_symbols) {
+    NEED((current_tinfo->n_reduction_symbols + 1), current_tinfo->reduction_symbols,
+        OMPACCEL_RED_SYM, current_tinfo->sz_reduction_symbols,
+        current_tinfo->sz_reduction_symbols * INC_EXP);
+  }
+  // AOCC end
 
   current_tinfo->reduction_symbols[current_tinfo->n_reduction_symbols]
       .private_sym = private_sym;
@@ -2587,11 +2597,7 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   case KMP_DISTRIBUTE_STATIC_CHUNKED:
   case KMP_DISTRIBUTE_STATIC:
   case KMP_DISTRIBUTE_STATIC_CHUNKED_CHUNKONE: // AOCC
-    // Force static scheduling if this is a target teams-distribute without a
-    // parallel do.
-    if (ompaccel_tinfo_current_target_mode() == mode_target_teams_distribute) {
-      loop_args.sched = (kmpc_sched_e)MP_SCH_STATIC;
-    }
+    // AOCC begin
     if (flg.x86_64_omptarget) {
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end

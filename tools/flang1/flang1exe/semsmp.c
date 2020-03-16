@@ -26,6 +26,8 @@
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Mar 2020
  */
 
 /** \file
@@ -6563,9 +6565,17 @@ do_dist_schedule(int doif, LOGICAL chk_collapse)
   DI_CHUNK(doif) = DI_DISTCHUNK(doif);
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && !CL_PRESENT(CL_DIST_SCHEDULE) && target_ast  &&
+  if (flg.omptarget && !CL_PRESENT(CL_DIST_SCHEDULE) && target_ast  &&
       A_COMBINEDTYPEG(target_ast) == mode_target_teams_distribute) {
-    DI_SCHED_TYPE(doif) = MP_SCH_TEAMS_DIST;
+    if (flg.amdgcn_target) {
+      DI_SCHED_TYPE(doif) = MP_SCH_TEAMS_DIST;
+    } else if (flg.x86_64_omptarget) {
+      // Force static scheduling if this is a target teams-distribute without a
+      // parallel do.
+      DI_SCHED_TYPE(doif) = MP_SCH_STATIC;
+    } else {
+      DI_SCHED_TYPE(doif) = DI_SCH_DIST_STATIC;
+    }
   } else
 #endif
   // AOCC End
