@@ -1928,7 +1928,7 @@ restartConcur:
         case IL_DFRSP:
         case IL_DFRDP:
         case IL_DFRCS:
-        case IL_DFR128:    // AOCC
+        case IL_DFRQP:    // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
         case IL_FLOAT128RESULT:
 #endif
@@ -9630,7 +9630,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   // AOCC begin
   case IL_QABS:
     operand = gen_call_llvm_intrinsic(
-        "fabs.f128",
+        "fabsq",
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
         make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
     break;
@@ -9745,6 +9745,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QSQRT:
+    operand = gen_call_llvm_intrinsic(
+        "sqrtq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FLOG:
     operand = gen_call_llvm_intrinsic(
         "log.f32",
@@ -9769,6 +9777,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QLOG10:
+    operand = gen_call_llvm_intrinsic(
+        "log10.f128",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FSIN:
     operand = gen_call_llvm_intrinsic(
         "sin.f32",
@@ -9840,6 +9856,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QEXP:
+    operand = gen_call_llvm_intrinsic(
+        "expq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FAND: {
     /* bitwise logical AND op. operand has floating-point type
        %copnd1 = bitcast float %opnd1 to iX

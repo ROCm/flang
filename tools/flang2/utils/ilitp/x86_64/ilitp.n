@@ -682,6 +682,13 @@ Double-precision square root.
 .CG "sqrtsd" avx_special
 .SI direct fmul lat(29:27)
 
+.\" AOCC begin
+.IL QSQRT qplnk
+Quad-precision square root.
+.AT arth null qp cse
+.CG notAILI
+.\" AOCC end
+
 .IL FRSQRT splnk
 Single-precision floating-point reciprocal square root.
 1.0/sqrt(x) -- will be replaced by the Newton's appx via the
@@ -812,6 +819,13 @@ Double-precision common logarithm.
 .AT arth null dp cse
 .CG notCG
 
+.\" AOCC begin
+.IL QLOG10 qplnk
+Quad-precision common logarithm.
+.AT arth null qp cse
+.CG notCG
+.\" AOCC end
+
 .IL FEXP splnk
 Single-precision floating-point exponential.
 .AT arth null sp cse
@@ -821,6 +835,13 @@ Single-precision floating-point exponential.
 Double-precision exponential.
 .AT arth null dp cse
 .CG notCG
+
+.\" AOCC begin
+.IL QEXP qplnk
+Quad-precision exponential.
+.AT arth null qp cse
+.CG notCG
+.\" AOCC end
 
 .IL FACOS splnk
 Single-precision floating-point arccosine.
@@ -2126,6 +2147,13 @@ Single-precision mod.
 Double-precision mod.
 .AT arth null dp cse
 .CG notCG
+
+.\" AOCC begin
+.IL QMOD qplnk qplnk
+Quad-precision mod.
+.AT arth null qp cse
+.CG notCG
+.\" AOCC end
 
 .IL IMAX irlnk irlnk
 Integer maximum value.  Expanded in-line by Code Generator.

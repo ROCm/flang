@@ -387,6 +387,10 @@ Square root of a single precision real number (SQRT intrinsic).
 .OP FSQRT r p1
 .IL DSQRT arth lnk
 .OP DSQRT r p1
+.\" AOCC begin
+.IL QSQRT arth lnk
+.OP QSQRT r p1
+.\" AOCC end
 .IL CSQRT arth lnk
 .AT spec
 .IL CDSQRT arth lnk
@@ -396,6 +400,10 @@ EXP intrinsic for single precision floating point values.
 .OP FEXP r p1
 .IL DEXP arth lnk
 .OP DEXP r p1
+.\" AOCC begin
+.IL QEXP arth lnk
+.OP QEXP r p1
+.\" AOCC end
 .IL CEXP arth lnk
 .AT spec
 .IL CDEXP arth lnk
@@ -450,6 +458,10 @@ EXP intrinsic for single precision floating point values.
 .OP FLOG10 r p1
 .IL DLOG10 arth lnk
 .OP DLOG10 r p1
+.\" AOCC begin
+.IL QLOG10 arth lnk
+.OP QLOG10 r p1
+.\" AOCC end
 .IL SIN arth lnk
 Sine of a single precision value
 .OP FSIN r p1
@@ -1087,6 +1099,10 @@ Integer remainder (MOD intrinsic).
 .OP FMOD r p1 p2
 .IL DMOD arth lnk lnk
 .OP DMOD r p1 p2
+.\" AOCC begin
+.IL QMOD arth lnk lnk
+.OP QMOD r p1 p2
+.\" AOCC end
 .IL ISIGN arth lnk lnk
 .OP ICMPZ t1 p2 lt
 .OP IABS t2 p1

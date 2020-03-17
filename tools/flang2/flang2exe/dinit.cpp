@@ -469,6 +469,12 @@ is_zero(DTYPE dtype, INT conval)
     if (conval == stb.dbl0)
       return true;
     break;
+  // AOCC begin
+  case TY_QUAD:
+    if (conval == stb.quad0)
+      return true;
+    break;
+  // AOCC end
   case TY_CMPLX:
     if (CONVAL1G(conval) == 0 && CONVAL2G(conval) == 0)
       return true;
@@ -1364,7 +1370,7 @@ get_ast_op(int op)
 static INT
 init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
 {
-  IEEE128 qtemp, qresult, qnum1;     // AOCC
+  IEEE128 qtemp, qresult, qnum1, qnum2;     // AOCC
   DBLE dtemp, dresult, num1, num2;
   DBLE dreal1, dreal2, drealrs, dimag1, dimag2, dimagrs;
   DBLE dtemp1, dtemp2;
@@ -1522,27 +1528,31 @@ init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
 
   // AOCC begin
   case TY_QUAD:
-    num1[0] = CONVAL1G(conval1);
-    num1[1] = CONVAL2G(conval1);
-    num2[0] = CONVAL1G(conval2);
-    num2[1] = CONVAL2G(conval2);
+    qnum1[0] = CONVAL1G(conval1);
+    qnum1[1] = CONVAL2G(conval1);
+    qnum1[2] = CONVAL3G(conval1);
+    qnum1[3] = CONVAL4G(conval1);
+    qnum2[0] = CONVAL1G(conval2);
+    qnum2[1] = CONVAL2G(conval2);
+    qnum2[2] = CONVAL3G(conval2);
+    qnum2[3] = CONVAL4G(conval2);
     switch (opr) {
     case OP_ADD:
-      xqadd(num1, num2, qresult);
+      xqadd(qnum1, qnum2, qresult);
       break;
     case OP_SUB:
-      xqsub(num1, num2, qresult);
+      xqsub(qnum1, qnum2, qresult);
       break;
     case OP_MUL:
-      xqmul(num1, num2, qresult);
+      xqmul(qnum1, qnum2, qresult);
       break;
     case OP_DIV:
-      xqdiv(num1, num2, qresult);
+      xqdiv(qnum1, qnum2, qresult);
       break;
     case OP_CMP:
-      return xqcmp(num1, num2);
+      return xqcmp(qnum1, qnum2);
     case OP_XTOX:
-      xqpow(num1, num2, qresult);
+      xqpow(qnum1, qnum2, qresult);
       break;
     default:
       goto err_exit;
@@ -1867,6 +1877,7 @@ static INT
 init_negate_const(INT conval, DTYPE dtype)
 {
   SNGL result;
+  IEEE128 qrealrs;     // AOCC
   DBLE drealrs, dimagrs;
   static INT num[4];
 
@@ -1892,6 +1903,16 @@ init_negate_const(INT conval, DTYPE dtype)
     num[1] = CONVAL2G(conval);
     xdneg(num, drealrs);
     return getcon(drealrs, DT_DBLE);
+
+  // AOCC begin
+  case TY_QUAD:
+    num[0] = CONVAL1G(conval);
+    num[1] = CONVAL2G(conval);
+    num[2] = CONVAL3G(conval);
+    num[3] = CONVAL4G(conval);
+    xqneg(num, qrealrs);
+    return getcon(qrealrs, DT_QUAD);
+  // AOCC end
 
   case TY_CMPLX:
     xfneg(CONVAL1G(conval), &num[0]); /* real part */
@@ -2523,6 +2544,14 @@ eval_abs(CONST *arg, DTYPE dtype)
       xdabsv(num1, res);
       con1 = getcon(res, dtype);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      con1 = wrkarg->u1.conval;
+      GET_QUAD(num1, con1);
+      xqabsv(num1, res);
+      con1 = getcon(res, dtype);
+      break;
+    // AOCC end
     case TY_CMPLX:
       con1 = wrkarg->u1.conval;
       num1[0] = CONVAL1G(con1);
@@ -2655,6 +2684,15 @@ eval_min(CONST *arg, DTYPE dtype)
           c->dtype = wrkarg2->dtype;
         }
         break;
+      // AOCC begin
+      case TY_QUAD:
+        if (init_fold_const(OP_CMP, wrkarg2->u1.conval, wrkarg1->u1.conval,
+                            dtype) < 0) {
+          c->u1 = wrkarg2->u1;
+          c->dtype = wrkarg2->dtype;
+        }
+        break;
+     // AOCC end
       }
       c = c->next;
       if (root == wrkarg1) {
@@ -2669,9 +2707,8 @@ eval_min(CONST *arg, DTYPE dtype)
         wrkarg2 = wrkarg2->next;
         if (wrkarg2) {
           repeatc2 = wrkarg2->repeatc;
-        } 
+        }
       }
-      
     }
     wrkarg1 = c = root;
   }
@@ -2786,6 +2823,15 @@ eval_max(CONST *arg, DTYPE dtype)
           c->dtype = wrkarg2->dtype;
         }
         break;
+      // AOCC begin
+      case TY_QUAD:
+        if (init_fold_const(OP_CMP, wrkarg2->u1.conval, wrkarg1->u1.conval,
+                            dtype) > 0) {
+          c->u1 = wrkarg2->u1;
+          c->dtype = wrkarg2->dtype;
+        }
+        break;
+      // AOCC end
       }
       c = c->next;
       if (root == wrkarg1) {
@@ -2837,6 +2883,11 @@ cmp_acl(DTYPE dtype, CONST *x, CONST *y, bool want_max, bool back)
   case TY_DBLE:
     cmp = init_fold_const(OP_CMP, x->u1.conval, y->u1.conval, dtype);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    cmp = init_fold_const(OP_CMP, x->u1.conval, y->u1.conval, dtype);
+    break;
+  // AOCC end
   default:
     interr("cmp_acl: bad dtype", dtype, ERR_Severe);
     return false;
@@ -2925,6 +2976,20 @@ _huge(DTYPE dtype)
       val[1] = 0xffffffff;
     }
     goto const_dble_val;
+  // AOCC begin
+  case TY_QUAD:
+    if (XBIT(49, 0x40000)) {               /* C90 */
+#define C90_HUGE "0.1363435169524269911828730305882e+2466L"
+                                                  /* 0577757777777777777777 */
+      atoxq(C90_HUGE, &val[0], strlen(C90_HUGE)); /* 7777777777777776 */
+    } else {
+      /* 1.189731495357231765085759326628007016E+4932 */
+      val[0] = 0x7ffeffffffffffff;
+      val[1] = 0xffffffffffffffff;
+    }
+    goto const_quad_val;
+// AOCC end
+
   default:
     return 0; /* caller must check */
   }
@@ -2939,6 +3004,11 @@ const_real_val:
 const_dble_val:
   tmp = getcon(val, DT_DBLE);
   return tmp;
+// AoCC begin
+const_quad_val:
+  tmp = getcon(val, DT_QUAD);
+  return tmp;
+// AOCC end
 }
 
 static INT
@@ -3233,34 +3303,35 @@ eval_scale(CONST *arg, int type)
   DBLINT64 inum1, inum2;
   INT e;
   DBLE dconval;
- 
+  IEEE128 qconval, qnum1, qnum2;     // AOCC
+
   rslt = (CONST*)getitem(4, sizeof(CONST));
   BZERO(rslt, CONST, 1);
   rslt->id = AC_CONST;
   rslt->repeatc = 1;
-  rslt->dtype = arg->dtype;  
+  rslt->dtype = arg->dtype;
 
   arg = eval_init_expr(arg);
   conval1 = arg->u1.conval;
   arg2 = arg->next;
- 
- 
+
+
   if (arg2->dtype == DT_INT8)
     error(S_0205_Illegal_specification_of_scale_factor, ERR_Warning, gbl.lineno, SYMNAME(arg2->u1.conval),
           "- Illegal specification of scale factor");
-  
+
   i = (arg2->dtype == DT_INT8) ? CONVAL2G(arg2->u1.conval) : arg2->u1.conval;
 
   switch (size_of(arg->dtype)) {
   case 4:
-     /* 8-bit exponent (127) to get an exponent value in the 
+     /* 8-bit exponent (127) to get an exponent value in the
       * range -126 .. +127 */
     e = 127 + i;
     if (e < 0)
       e = 0;
     else if (e > 255)
       e = 255;
-    
+
     /* calculate decimal value from it's IEEE 754 form*/
     conval2 = e << 23;
     xfmul(conval1, conval2, &conval);
@@ -3282,7 +3353,29 @@ eval_scale(CONST *arg, int type)
     xdmul(inum1, inum2, dconval);
     rslt->u1.conval = getcon(dconval, DT_DBLE);
     break;
+
+  // AOCC begin
+  case 16:
+    e = 16383 + i;
+    if (e < 0)
+      e = 0;
+    else if (e > 32767)
+      e = 32767;
+
+    qnum1[0] = CONVAL1G(conval1);
+    qnum1[1] = CONVAL2G(conval1);
+    qnum1[2] = CONVAL3G(conval1);
+    qnum1[3] = CONVAL4G(conval1);
+
+    qnum2[0] = e << 20;
+    qnum2[1] = 0;
+    qnum2[2] = 0;
+    qnum2[3] = 0;
+    xqmul(qnum1, qnum2, qconval);
+    rslt->u1.conval = getcon(qconval, DT_QUAD);
+    break;
   }
+  // AOCC end
 
   return rslt;
 }
@@ -3573,6 +3666,29 @@ eval_mod(CONST *arg, DTYPE dtype)
       xdsub(num1, num3, num3);
       conval = getcon(num3, DT_DBLE);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      num1[0] = CONVAL1G(con1);
+      num1[1] = CONVAL2G(con1);
+      num1[2] = CONVAL3G(con1);
+      num1[3] = CONVAL4G(con1);
+      num2[0] = CONVAL1G(con2);
+      num2[1] = CONVAL2G(con2);
+      num2[2] = CONVAL3G(con2);
+      num2[3] = CONVAL4G(con2);
+      xqdiv(num1, num2, num3);
+      con3 = getcon(num3, DT_QUAD);
+      con3 = cngcon(con3, DT_QUAD, DT_INT8);
+      con3 = cngcon(con3, DT_INT8, DT_QUAD);
+      num3[0] = CONVAL1G(con3);
+      num3[1] = CONVAL2G(con3);
+      num3[2] = CONVAL3G(con3);
+      num3[3] = CONVAL4G(con3);
+      xqmul(num3, num2, num3);
+      xqsub(num1, num3, num3);
+      conval = getcon(num3, DT_QUAD);
+      break;
+    // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
       error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,

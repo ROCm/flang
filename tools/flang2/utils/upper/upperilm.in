@@ -526,7 +526,7 @@ PUVFUNCA/PVFUNCA	num	num	sym	ilm	sym	args
 QABS	ilm
 QPLD	ilm
 QLOG	ilm
-#QLOG10	ilm
+QLOG10	ilm
 QUAD	ilm
 QADD	ilm	ilm
 QAIF	ilm	sym	sym	sym
@@ -536,7 +536,7 @@ QDIV	ilm	ilm
 QMAX	ilm	ilm
 #QMERGE	ilm	ilm	ilm
 QMIN	ilm	ilm
-#QMOD	ilm	ilm
+QMOD	ilm	ilm
 QMUL	ilm	ilm
 QNEG	ilm
 #QNINT	ilm
@@ -552,6 +552,8 @@ QFUNC	num	sym	ilms
 #QPROD	ilm	ilm
 #QPSCON	num
 #QPVAL	ilm
+QMAX	ilm	ilm
+QMIN	ilm	ilm
 QREAL	ilm
 #QSIGN	ilm	ilm
 #QSIGNNZ	ilm	ilm
@@ -559,13 +561,14 @@ QCOS  ilm
 QCOSH ilm
 QACOS ilm
 QACOSH ilm
+QEXP	ilm
 QSIN	ilm
 QSINH ilm
 QASIN ilm
 QASINH ilm
 #QSIND	ilm
 #QSINH	ilm
-#QSQRT	ilm
+QSQRT	ilm
 QPST	ilm	ilm
 QSUB	ilm	ilm
 QTAN	ilm

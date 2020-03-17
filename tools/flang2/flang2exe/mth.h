@@ -136,12 +136,14 @@ typedef enum MTH_FN {
 #define MTH_I_DSIGN "__mth_i_dsign"
 #define MTH_I_EXP "__mth_i_exp"
 #define MTH_I_DEXP "__mth_i_dexp"
+#define MTH_I_QEXP "__mth_i_qexp"          // AOCC
 #define MTH_I_ALOG "__mth_i_alog"
 #define MTH_I_DLOG "__mth_i_dlog"
 #define MTH_I_ALOG10 "__mth_i_alog10"
 #define MTH_I_DLOG10 "__mth_i_dlog10"
 #define MTH_I_AMOD "__mth_i_amod"
 #define MTH_I_DMOD "__mth_i_dmod"
+#define MTH_I_QMOD "__mth_i_qmod"          // AOCC
 #define MTH_I_SINH "__mth_i_sinh"
 #define MTH_I_COSH "__mth_i_cosh"
 #define MTH_I_TANH "__mth_i_tanh"
@@ -164,6 +166,7 @@ typedef enum MTH_FN {
 #define FMTH_I_DPOWD "__fmth_i_dpowd"
 #define FMTH_I_EXP "__fmth_i_exp"
 #define FMTH_I_DEXP "__fmth_i_dexp"
+#define FMTH_I_QEXP "__fmth_i_qexp"       // AOCC
 #define FMTH_I_ALOG "__fmth_i_alog"
 #define FMTH_I_DLOG "__fmth_i_dlog"
 #define FMTH_I_ALOG10 "__fmth_i_alog10"
@@ -171,6 +174,7 @@ typedef enum MTH_FN {
 #define FMTH_I_CBRT "__fmth_i_cbrt"
 #define FMTH_I_AMOD "__fmth_i_amod"
 #define FMTH_I_DMOD "__fmth_i_dmod"
+#define FMTH_I_QMOD "__fmth_i_qmod"      // AOCC
 #define FMTH_I_SIN "__fmth_i_sin"
 #define FMTH_I_DSIN "__fmth_i_dsin"
 #define FMTH_I_COS "__fmth_i_cos"
@@ -207,6 +211,7 @@ typedef enum MTH_FN {
 #define MTH_I_QFLOATK "__mth_i_qfloatk"     // AOCC
 #define MTH_I_DMUL "__mth_i_dmul"
 #define MTH_I_DSQRT "__mth_i_dsqrt"
+#define MTH_I_QSQRT "__mth_i_qsqrt"         // AOCC
 #define MTH_I_DSUB "__mth_i_dsub"
 #define MTH_I_FADD "__mth_i_fadd"
 #define MTH_I_FCMP "__mth_i_fcmp"

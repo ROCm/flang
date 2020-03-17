@@ -2106,7 +2106,7 @@ xqdiv(IEEE128 q1, IEEE128 q2, IEEE128 r)
 }
 
 void
-xqabs(IEEE128 q, IEEE128 r)
+xqabsv(IEEE128 q, IEEE128 r)
 {
   float128_t x, y;
   unwrap_q(&y, q);
@@ -2478,7 +2478,7 @@ xqdiv(IEEE128 q1, IEEE128 q2, IEEE128 r)
 }
 
 void
-xqabs(IEEE128 q, IEEE128 r)
+xqabsv(IEEE128 q, IEEE128 r)
 {
   __float128 x, y;
   unwrap_q(&y, q);

@@ -3681,6 +3681,13 @@ _printili(int i)
     opval = "recip";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QABS:
+    n = 1;
+    opval = "abs";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DABS:
     n = 1;
     opval = "abs";
@@ -3711,6 +3718,13 @@ _printili(int i)
     opval = "dsqrt";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QSQRT:
+    n = 1;
+    opval = "qsqrt";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
 
   case IL_KCJMP:
   case IL_UKCJMP:
