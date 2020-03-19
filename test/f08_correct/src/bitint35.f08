@@ -5,23 +5,21 @@
 !
 ! Date of Modification: Thu Mar 19 10:54:19 IST 2020
 !
-! Purpose: Test the operation of MASKL intrinsic
+! Purpose: Test the operation of MASKR intrinsic
+! when a value stored in an array is passed as an
+! argument
 !
-PROGRAM BITINT23
+PROGRAM BITINT35
   IMPLICIT NONE
-  INTEGER(1) :: SIZE, RESULT
+  INTEGER(1) :: SIZE(10), RESULT(10)
   INTEGER, PARAMETER :: N = 1
   LOGICAL EXP(N), RES(N)
-
-  SIZE = 7
-
-  RESULT = MASKL(SIZE, 1)
-
-  PRINT *, '------'
+  SIZE(4) = 6
+  RESULT = MASKR(SIZE(4), 2)
   PRINT *, RESULT
   PRINT '(B8.8)', RESULT
   WRITE(UNIT=*,FMT="(B32.32)") RESULT
-  IF (RESULT /= INT(B'11111110', 1)) THEN
+  IF (RESULT(4) /= INT(B'00111111')) THEN
     STOP "FAIL"
   ELSE
     PRINT *, "PASS"

@@ -6,22 +6,25 @@
 ! Date of Modification: Thu Mar 19 10:54:19 IST 2020
 !
 ! Purpose: Test the operation of MASKR intrinsic
+! when a value stored in an array is passed as an
+! argument
 !
-PROGRAM BITINT24
+PROGRAM BITINT36
   IMPLICIT NONE
-  INTEGER(1) :: SIZE, RESULT
   INTEGER, PARAMETER :: N = 1
   LOGICAL EXP(N), RES(N)
+  TYPE OPERAND
+    INTEGER(1) ID
+    INTEGER(1) RESULT
+  END TYPE
+  TYPE(OPERAND) X
 
-  SIZE = 5
-
-  RESULT = MASKR(SIZE, 1)
-
-  PRINT *, '------'
-  PRINT *, RESULT
-  PRINT '(B8.8)', RESULT
-  WRITE(UNIT=*,FMT="(B32.32)") RESULT
-  IF (RESULT /= INT(B'00011111')) THEN
+  X%ID = 7
+  X%RESULT = MASKR(X%ID, 1)
+  PRINT *, X%RESULT
+  PRINT '(B8.8)', X%RESULT
+  WRITE(UNIT=*,FMT="(B32.32)") X%RESULT
+  IF (X%RESULT /= INT(B'01111111')) THEN
     STOP "FAIL"
   ELSE
     PRINT *, "PASS"

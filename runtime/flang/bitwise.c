@@ -18,6 +18,10 @@
  *
  * Month of Modification: May 2019
  *
+ * Big fix for maskr intrinsic.
+ *
+ * Date of Modification: Thu Mar 19 10:54:19 IST 2020
+ *
  */
 
 /* clang-format off */
@@ -83,12 +87,24 @@ int ENTF90(BITCMP, bitcmp)(long *ptr_a, long *ptr_b, int *ptr_a_nbits, int *ptr_
   return unsigned_a > unsigned_b ? 1 : -1;
 }
 
-unsigned long ENTF90(BITMASK, bitmask)(int *ptr_n, int *ptr_kind, int *ptr_is_left) {
-  long n = *ptr_n;
+unsigned long ENTF90(BITMASK, bitmask)(unsigned int *ptr_n, int *ptr_kind, int *ptr_is_left) {
+  unsigned long n = *ptr_n;
   int kind = *ptr_kind;
   int is_left = *ptr_is_left;
   unsigned long ret = 0;
+  unsigned long mask_n = 0;
 
+  if (kind == 1) {
+    mask_n = 0xff;
+  } else if (kind == 2) {
+    mask_n = 0xffff;
+  } else if (kind == 4) {
+    mask_n = 0xffffffff;
+  } else if (kind == 8) {
+    mask_n = 0xffffffffffffff;
+  }
+ 
+  n = n & mask_n;
   if (is_left) {
     for (unsigned long i = ((kind * 8) - 1), j = 0; j < n; i--, j++) {
       ret |= ((unsigned long) 0x1 << i);
