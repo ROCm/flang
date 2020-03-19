@@ -60,6 +60,10 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Complex datatype support for atan2 under flag f2008
+ * Modified on 13th March 2020
+ *
+ *
  */
 
 /** \file
@@ -9083,6 +9087,20 @@ ref_pd(SST *stktop, ITEM *list)
     shaper = SST_SHAPEG(stkp);
     dtype1 = DDTG(dtyper);
     break;
+  //AOCC begin  
+  case PD_atan2:
+    if (count != 2) {
+      E74_CNT(pdsym, count, 2, 2);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
+      goto exit_;
+    stkp = ARG_STK(0);
+    dtyper = SST_DTYPEG(stkp);
+    shaper = SST_SHAPEG(stkp);
+    dtype1 = DDTG(dtyper);
+    break;
+  //AOCC end
   case PD_bessel_j0:
   case PD_bessel_j1:
   case PD_bessel_y0:

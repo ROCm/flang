@@ -8,6 +8,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Added support for F2008 feature complex type arguments for atan2
+ * Date of modification : March 2020
  */
 
 /** \file
@@ -861,7 +863,6 @@ intrinsic_as_arg(int intr)
   int sp2;
   int cp;
   FtnRtlEnum rtlRtn;
-
   sp2 = intr;
   switch (STYPEG(intr)) {
   case ST_GENERIC:
@@ -870,7 +871,12 @@ intrinsic_as_arg(int intr)
       return 0;
   case ST_PD:
   case ST_INTRIN:
-    cp = PNMPTRG(sp2);
+    //AOCC begin
+    if ((strcmp(SYMNAME(intr), "atan2")) == 0)
+      cp = PNMPTRG(GREALG(intr));
+    else
+      cp = PNMPTRG(sp2);
+    //AOCC end
     if (cp == 0 || stb.n_base[cp] == '-')
       return 0;
     if (stb.n_base[cp] != '*' || stb.n_base[++cp] != '\0') {

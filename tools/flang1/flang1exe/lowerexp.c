@@ -31,6 +31,10 @@
  * Added code to support SHIFTA intrinsic
  * Last modified: April 2020
  *
+ * Complex datatype support for atan2 under flag f2008
+ * Modified on 13th March 2020
+ *
+ *
  */
 
 /**
@@ -3431,8 +3435,17 @@ lower_intrinsic(int ast)
   /* atan2 family */
   case I_ATAN2:
   case I_DATAN2:
-    ilm = intrin_name("ATAN2", ast, in_r_D);
-    break;
+    //AOCC begin
+    if (flg.std == F2008) {
+      ilm = intrin_name("ATAN2", ast, in_r_D_C_CD);
+      break;
+    }
+    else
+    {
+      ilm = intrin_name("ATAN2", ast, in_r_D);
+      break;
+    }
+    //AOCC end
   case I_ATAN2D:
   case I_DATAN2D:
     ilm = intrin_name("ATAN2D", ast, in_r_D);

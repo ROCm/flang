@@ -180,6 +180,7 @@ set(MTH_CMPLX_SRCS
   casinh.c
   cacosh.c
   catanh.c
+  catan2.c
   #AOCC End
   cdabs.c
   cdacos.c

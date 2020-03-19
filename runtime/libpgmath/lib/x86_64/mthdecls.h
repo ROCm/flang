@@ -10,6 +10,9 @@
  * Complex type support for acosh , asinh , atanh
  * Date of Modification: 08 January 2020
  *
+ * Complex datatype support for atan2 under flag f2008
+ * Modified on 13th March 2020`
+ *
  */
 /**
  * \file
@@ -548,6 +551,7 @@ CMPLXDECL_C(__mth_i_ctanh);
 CMPLXDECL_C(__mth_i_cacosh);
 CMPLXDECL_C(__mth_i_casinh);
 CMPLXDECL_C(__mth_i_catanh);
+CMPLXDECL_C_C(__mth_i_catan2);
 //AOCC End
 
 DBLDECL_C(__mth_i_cdabs);
@@ -595,6 +599,7 @@ extern float_complex_t casinhf(float_complex_t);
 extern double_complex_t casinh(double_complex_t);
 extern float_complex_t catanhf(float_complex_t);
 extern double_complex_t catanh(double_complex_t);
+extern double_complex_t catan2(double_complex_t, double_complex_t);
 //AOCC end
 #endif		/* #if	! defined(_C_COMPLEX_T) */
 #endif		/* #if	defined(TARGET_WIN) */

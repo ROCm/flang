@@ -16,6 +16,11 @@
  *
  * Support for TRAILZ intrinsic.
  * Month of Modification: July 2019
+ *
+ * Complex datatype support for atan2 under flag f2008
+ * Modified on 13th March 2020
+ *
+ *
  */
 
 /** \file
@@ -638,6 +643,13 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CATAN:
     exp_qjsr("__mth_i_catan", DT_CMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CATAN2:
+    if (flg.std == F2008) {
+      exp_qjsr("__mth_i_catan2", DT_CMPLX, ilmp, curilm);
+      return;
+    }
+  //AOCC end
   case IM_CDATAN:
     exp_qjsr("__mth_i_cdatan", DT_DCMPLX, ilmp, curilm);
     return;

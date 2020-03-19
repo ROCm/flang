@@ -8,6 +8,9 @@
 #Complex data types support for acosh, asinh and atanh
 #Date of Modification:08 January 2020
 #
+# Complex datatype support for atan2 under flag f2008
+# Modified on 13th March 2020
+#
 # Added support for quad precision
 # Last modified: Feb 2020
 #
@@ -123,6 +126,7 @@ CDASIN	ilm
 CASINH ilm
 CDATAN	ilm
 CATANH ilm
+CATAN2   ilm    ilm
 CDCOSH   ilm
 CDSINH   ilm
 CDTANH   ilm

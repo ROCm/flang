@@ -11,6 +11,10 @@
 .\" * Added code to support SHIFTA intrinsic
 .\" * Last modified: April 2020
 .\" *
+.\" * Complex datatype support for atan2 under flag f2008
+.\" * Modified on 13th March 2020
+.\" *
+
 .\" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -400,6 +404,8 @@ EXP intrinsic for single precision floating point values.
 .IL CASINH arth lnk
 .AT spec
 .IL CATANH arth lnk
+.AT spec
+.IL CATAN2 arth lnk lnk
 .AT spec
 .IL ALOG arth lnk
 .OP FLOG r p1
