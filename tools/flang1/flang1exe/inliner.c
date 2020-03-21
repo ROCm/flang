@@ -254,6 +254,20 @@ extractor_possible(void)
   for (std = STD_NEXT(0); std; std = STD_NEXT(std)) {
     /* whether to allow loops or conditionals */
     switch (A_TYPEG(STD_AST(std))) {
+    // AOCC Begin
+    case A_MP_TARGET:
+    case A_MP_TARGETUPDATE:
+    case A_MP_TARGETDATA:
+    case A_MP_TARGETENTERDATA:
+    case A_MP_TARGETEXITDATA:
+       ccff_info(MSGNEGINLINER, "INL031", gbl.findex, gbl.funcline,
+                  "%module%separator%function is not HL inlineable: TARGET "
+                  "statements disallowed",
+                  "module=%s", gbl.currmod ? SYMNAME(gbl.currmod) : "",
+                  "separator=%s", gbl.currmod ? "::" : "", "function=%s",
+                  SYMNAME(gbl.currsub), NULL);
+      return false;
+    // AOCC End
     case A_DO:
       if (!XBIT(13, 0x100)) {
         ccff_info(MSGNEGINLINER, "INL031", gbl.findex, gbl.funcline,
@@ -430,6 +444,7 @@ extractor_end(void)
   int iStat;
   FILE *fd;
   char sTOCFile[MAX_FNAME_LEN];
+  char rmCmd[MAX_FNAME_LEN];
   LE *ple;
 
   if (!sExtDir)
@@ -455,8 +470,14 @@ extractor_end(void)
     fprintf(fd, "\n");
   }
   fclose(fd);
+  // AOCC Begin
+  // TBD: restricted to windows now
+  sprintf(rmCmd,"rm -rf %s", sExtDir);
+  system(rmCmd);
+  // AOCC End
 
   freearea(PERM_AREA);
+
 }
 
 void

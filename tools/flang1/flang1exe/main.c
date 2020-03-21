@@ -155,11 +155,16 @@ int
 main(int argc, char *argv[])
 {
   int savescope, savecurrmod = 0;
+  char *extDirName = NULL;
   get_rutime();
   init(argc, argv); /* initialize */
   if (gbl.fn == NULL)
     gbl.fn = gbl.src_file;
-
+   // AOCC. Forceful inlining of module procedures when
+   // offloading to omp targets. This can be extended
+   // as general optimization, but it will increase
+   // the code size and need to be tested
+   if (flg.omptarget) flg.inliner = true;   // AOCC
 #if DEBUG
   if (debugfunconly > 0)
     dodebug = 0;
@@ -188,6 +193,12 @@ main(int argc, char *argv[])
     if (!ipa_import_mode) {
       finish();
     }
+  }
+  if (flg.inliner) {
+   char template[] = "/tmp/tmpdir.XXXXXX";
+   extDirName = mkdtemp(template);
+   if (extDirName)
+     extractor_command_info(extDirName,1, NULL);
   }
   do { /* loop once for each user program unit */
 #if DEBUG
@@ -561,6 +572,7 @@ main(int argc, char *argv[])
       gbl.outerentries = gbl.entries;
     }
     stb.curr_scope = savescope;
+    if (flg.inliner) extractor();   // AOCC
     ccff_close_unit_f90();
   } while (!gbl.eof_flag);
   finish(); /* finish does not return */
@@ -1524,6 +1536,7 @@ finish(void)
     ipa_export_close();
   }
 
+  if (flg.inliner) extractor_end();  // AOCC
   freearea(8);      /* temporary filenames and pathnames space  */
   free_getitem_p(); /* getitem_p tbl contains area 8 pointers */
   destroy_action_map(&phase_dump_map);
