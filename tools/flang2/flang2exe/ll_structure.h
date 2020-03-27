@@ -145,6 +145,7 @@ typedef enum LL_IRVersion {
   LL_Version_6_0 = 60,
   LL_Version_7_0 = 70,
   LL_Version_8_0 = 80,
+  LL_Version_8_9 = 89,
   LL_Version_9_0 = 90,
   LL_Version_trunk = 1023
 } LL_IRVersion;
@@ -392,7 +393,7 @@ ll_feature_debug_info_ver90(const LL_IRFeatures *feature)
 INLINE static bool
 ll_feature_three_argument_ctor_and_dtor(const LL_IRFeatures *feature)
 {
-  return feature->version >= LL_Version_9_0;
+  return feature->version >= LL_Version_8_9;
 }
 
 INLINE static bool
