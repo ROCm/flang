@@ -28,6 +28,7 @@
  * Date of modification 12th February  2020
  * Date of modification 14th February  2020
  * Date of modification 20th February  2020
+ * Date of modification 31st March     2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -1969,15 +1970,19 @@ ompaccel_nvvm_emit_shuffle_reduce(OMPACCEL_RED_SYM *ReductionItems,
     }
 
     ili = mk_ompaccel_load(bili, DT_ADDR, nmeReduceData);
-    ili = mk_ompaccel_load(ili, dtypeReductionItem, nmeReduceData);
 
     // AOCC Begin
-    if (flg.amdgcn_target && (dtypeReductionItem == DT_DBLE || dtypeReductionItem == DT_FLOAT))
-      ili =
-          ll_make_kmpc_shuffle_f32(ili, mk_ompaccel_ldsptr(func_params[2]),
-                               ad_icon(size_of(dtypeReductionItem) * 8));
+    if (flg.amdgcn_target) {
+      if (dtypeReductionItem == DT_DBLE)
+        ili = mk_ompaccel_load(ili, DT_INT8, nmeReduceData);
+      else
+        ili = mk_ompaccel_load(ili, DT_INT, nmeReduceData);
+    } else {
     // AOCC End
-    else if (dtypeReductionItem == DT_DBLE)
+        ili = mk_ompaccel_load(ili, dtypeReductionItem, nmeReduceData);
+    }
+
+    if (dtypeReductionItem == DT_DBLE)
       ili =
           ll_make_kmpc_shuffle(ili, mk_ompaccel_ldsptr(func_params[2]),
                                ad_icon(size_of(dtypeReductionItem) * 8), true);
