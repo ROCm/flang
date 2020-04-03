@@ -3838,6 +3838,10 @@ sym Number of threads
 .IL MP_DEFAULTMAP SMP stc
 Default map construct.
 stc - Default map type
+.AT spec trm
+.IL MP_TARGETDECLARE SMP
+Target declare construct.
+sym - Target symbol
 .\" AOCC End
 .AT spec trm
 .IL MP_TARGETLOOPTRIPCOUNT SMP sym

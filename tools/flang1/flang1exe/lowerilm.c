@@ -11,7 +11,8 @@
  * Date of modification 20th January 2020
  * Date of modification 24th January 2020
  * Date of modification 04th February 2020
- * Date of modification 12th February  2020
+ * Date of modification 12th February 2020
+ * Date of modification 04th April    2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -5277,6 +5278,11 @@ lower_stmt(int std, int ast, int lineno, int label)
     lower_start_stmt(lineno, label, TRUE, std);
     flag = A_PRAGMATYPEG(ast);
     plower("on", "MP_DEFAULTMAP", flag);
+    lower_end_stmt(std);
+    break;
+  case A_MP_TARGETDECLARE:
+    lower_start_stmt(lineno, label, TRUE, std);
+    plower("o", "MP_TARGETDECLARE");
     lower_end_stmt(std);
     break;
   // AOCC End

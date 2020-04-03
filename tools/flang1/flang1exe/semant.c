@@ -17,6 +17,10 @@
  *
  * 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
  *             construct
+ *
+ * Support for AMDGPU OpenMP offloading
+ * Date of modification 04th April 2020
+ *
  */
 
 /**
@@ -12423,8 +12427,22 @@ proc_dcl_init:
       error(1200, ERR_Severe, gbl.lineno, "declare target",
             NULL);
     }
-    // AOCC End
 #endif
+    if (SST_BEGG(RHS(3))) {
+      for (itemp = SST_BEGG(RHS(3)); itemp != ITEM_END; itemp = itemp->next) {
+        /*
+         * Not handling as of now
+        int ast = mk_stmt(A_MP_TARGETDECLARE, 0);
+        (void)add_stmt(ast);
+        A_LOPP(ast, itemp->t.sptr);
+        OMPACCFUNCDEVP(itemp->t.sptr, 1);
+        */
+      }
+    } else {
+      int ast = mk_stmt(A_MP_TARGETDECLARE, 0);
+      (void)add_stmt(ast);
+    }
+    // AOCC End
 #endif
     break;
   /*

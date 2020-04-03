@@ -43,6 +43,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
  *
  * Support for "nearest" intrinsic
  * Last modified: Feb 2020
@@ -4554,6 +4555,7 @@ rewrite_calls(void)
     case A_MP_BREDUCTION:
     case A_MP_REDUCTIONITEM:
     case A_MP_DEFAULTMAP: // AOCC
+    case A_MP_TARGETDECLARE: // AOCC
       break;
     default:
       interr("rewrite_subroutine: unknown stmt found", ast, 4);

@@ -14,6 +14,7 @@
  * Date of modification 24th January 2020
  * Date of modification 12th February 2020
  * Date of modification 14th February 2020
+ * Date of modification 04th April 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -551,5 +552,9 @@ void ompaccel_set_numthreads_sptr(SPTR sptr);
   \brief Set default map type for current tinfo
   */
 void ompaccel_set_default_map(int maptype);
+/**
+  \brief Set symbol as target symbol
+  */
+void ompaccel_set_target_declare();
 // AOCC End
 #endif

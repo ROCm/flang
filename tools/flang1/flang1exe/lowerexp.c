@@ -23,6 +23,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -4719,7 +4720,7 @@ lower_intrinsic(int ast)
   return ilm;
 } /* lower_intrinsic */
 
-#if AST_MAX != 166 // AOCC - 165 + 1
+#if AST_MAX != 167 // AOCC - 165 + 1 + 1
 #error "Need to edit lowerexp.c to add or delete A_... AST types"
 #endif
 

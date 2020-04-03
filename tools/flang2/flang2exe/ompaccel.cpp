@@ -29,6 +29,7 @@
  * Date of modification 14th February  2020
  * Date of modification 20th February  2020
  * Date of modification 31st March     2020
+ * Date of modification 04th April     2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -3385,6 +3386,11 @@ ompaccel_set_numthreads_sptr(SPTR num_threads) {
 void
 ompaccel_set_default_map(int maptype) {
   next_default_map_type = maptype;
+}
+
+void
+ompaccel_set_target_declare() {
+  OMPACCFUNCDEVP(gbl.currsub, 1);
 }
 // AOCC End
 #endif

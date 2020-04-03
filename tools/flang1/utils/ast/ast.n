@@ -3617,6 +3617,11 @@ AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
 .lp
 OpenMP Default map
 .lp
+.SM MP_TARGETDECLARE
+.SI "targetdeclare"
+.lp
+OpenMP target declare
+.lp
 .\" AOCC End
 .SM MP_MAP
 .SI "map"

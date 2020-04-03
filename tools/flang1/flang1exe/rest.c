@@ -13,6 +13,7 @@
   *
   * Changes to support AMDGPU OpenMP offloading
   * Date of modification 12th February  2020
+  * Date of modification 04th April     2020
   *
   */
 
@@ -360,6 +361,7 @@ insert_comm_before(int std, int ast, LOGICAL *rhs_is_dist, LOGICAL is_subscript)
   case A_MP_BREDUCTION:
   case A_MP_REDUCTIONITEM:
   case A_MP_DEFAULTMAP: // AOCC
+  case A_MP_TARGETDECLARE: // AOCC
     return a;
   default:
     interr("insert_comm_before: unknown expression", std, 2);
@@ -4299,6 +4301,7 @@ transform_all_call(int std, int ast)
   case A_MP_BREDUCTION:
   case A_MP_REDUCTIONITEM:
   case A_MP_DEFAULTMAP: // AOCC
+  case A_MP_TARGETDECLARE: // AOCC
     return a;
   case A_PRAGMA:
     return a;

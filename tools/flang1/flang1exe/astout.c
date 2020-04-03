@@ -13,6 +13,7 @@
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
  *
  * Support for TRAILZ intrinsic.
  * Month of Modification: July 2019
@@ -2286,6 +2287,9 @@ print_ast(int ast)
   // AOCC Begin
   case A_MP_DEFAULTMAP:
     put_string("defaultmap");
+    break;
+  case A_MP_TARGETDECLARE:
+    put_string("target declare");
     break;
   // AOCC End
   case A_MP_MAP:
