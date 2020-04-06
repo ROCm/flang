@@ -17,7 +17,7 @@
  * Date of modification 04th April 2020
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Mar 2020
+ * Last modified: Apr 2020
  */
 
 /**
@@ -31,6 +31,7 @@
 
 #include "llmputil.h"
 #include "expand.h"
+#include "kmpcutil.h" // AOCC
 
 /* Find if the func_sptr whether it is a kernel or not. */
 #define IS_OMP_DEVICE_KERNEL(func_sptr) (OMPACCFUNCKERNELG(func_sptr))
@@ -335,6 +336,13 @@ bool ompaccel_x86_has_tid_args(SPTR func_sptr);
  * x86 offloading.
  */
 void ompaccel_x86_fix_arg_types(SPTR func_sptr);
+
+/**
+ * \brief generates a fork_call as per \p kmpc_api (ie. teams or fork) to \p
+ * outlined_func.
+ * Functions implementing -Mx,232,0x1 must use this.
+ */
+int ompaccel_x86_fork_call(SPTR outlined_func, int kmpc_api = KMPC_API_FORK_CALL);
 // AOCC End
 
 /* ################################################ */

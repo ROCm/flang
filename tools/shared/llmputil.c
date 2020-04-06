@@ -5,6 +5,14 @@
  *
  */
 
+/*
+ * Copyright (c) 2020, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
+ */
+
+
 /* llmputil.c: OpenMP utility routines for our LLVM compilers */
 
 #include "llmputil.h"
@@ -141,7 +149,9 @@ llmp_add_shared_var(LLUplevel *up, int shared_sptr)
 
   ++up->vals_count;
   NEED(up->vals_count, up->vals, int, up->vals_size, up->vals_size + 8);
+  NEED(up->vals_count, up->orig_vals, int, up->orig_vals_size, up->orig_vals_size + 8); // AOCC
   up->vals[idx] = shared_sptr;
+  up->orig_vals[idx] = shared_sptr; // AOCC
   return 1;
 }
 
@@ -157,7 +167,9 @@ llmp_add_shared_var_charlen(LLUplevel *up, int shared_sptr)
     if (up->vals[i] == shared_sptr) {
       ++up->vals_count;
       NEED(up->vals_count, up->vals, int, up->vals_size, up->vals_size + 8);
+      NEED(up->vals_count, up->orig_vals, int, up->orig_vals_size, up->orig_vals_size + 8); // AOCC
       up->vals[idx] = 0;
+      up->orig_vals[idx] = 0; // AOCC
     }
 }
 
@@ -201,8 +213,10 @@ llmp_reset_uplevel(void)
   if (llmp_all_uplevels.avl) {
     for (i = 1; i < llmp_all_uplevels.avl; ++i) {
       up = (LLUplevel *)(&llmp_all_uplevels.base[i]);
-      if (up->vals_count)
+      if (up->vals_count) {
         FREE(up->vals);
+        FREE(up->orig_vals); // AOCC
+      }
     }
     FREE(llmp_all_uplevels.base);
     memset(&llmp_all_uplevels, 0, sizeof(llmp_all_uplevels));

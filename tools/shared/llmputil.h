@@ -10,6 +10,8 @@
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 23rd September 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
  */
 
 #ifndef LLMPUTIL_H_
@@ -29,7 +31,9 @@
  */
 typedef struct {
   int *vals;      /* Array containing shared var sptrs */
+  int *orig_vals; /* Contains the original shared var sptrs */ /* AOCC */
   int vals_size;  /* Total allocated slots in vals */
+  int orig_vals_size;  /* Total allocated slots in orig_vals */ /* AOCC */
   int vals_count; /* Traditionally "available" or vals_avl */
   DTYPE dtype;    ///< The true dtype containing fields and their offsets
   SPTR parent;    /* sptr of its parent */

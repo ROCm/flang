@@ -3955,6 +3955,7 @@ fix_symbol(void)
           int parsptr = up->vals[i];
           parsptr = symbolxref[parsptr];
           up->vals[i] = parsptr;
+          up->orig_vals[i] = parsptr; // AOCC
         }
         if (up->parent) {
           up->parent = symbolxref[up->parent];

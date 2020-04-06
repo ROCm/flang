@@ -12,7 +12,7 @@
  * Date of modification 05th September 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Sept 2019
+ * Last modified: Apr 2020
  */
 
 /** \file
@@ -788,6 +788,45 @@ ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist)
 
   return mk_kmpc_api_call(KMPC_API_FORK_CALL, argc + 3, arg_types, args);
 }
+
+int
+ll_make_kmpc_fork_call_variadic2(SPTR sptr, int argc, SPTR *sptrlist, int kmpc_api)
+{
+  int argili, args[argc + 3];
+  DTYPE arg_types[argc + 3];
+
+  args[argc + 2] = gen_null_arg(); /* ident */
+  arg_types[0] = DT_CPTR;
+
+  args[argc + 1] = ad_icon(argc);
+  arg_types[1] = DT_INT;
+
+  args[argc + 0] = ad_acon(sptr, 0);
+  arg_types[2] = DT_CPTR;
+
+  for (int i = 0; i < argc; i++) {
+    int nme = addnme(NT_VAR, sptrlist[i], 0, (INT)0);
+    int ili = mk_address(sptrlist[i]);
+    if (!PASSBYVALG(sptrlist[i]))
+      args[argc - i - 1] = ad2ili(IL_LDA, ili, nme);
+    else {
+      if (DTY(DTYPEG(sptrlist[i])) == TY_PTR) {
+        args[argc - i - 1] = ad2ili(IL_LDA, ili, nme);
+      } else {
+        if (DTYPEG(sptrlist[i]) == DT_INT8)
+          args[argc - i - 1] = ad3ili(IL_LDKR, ili, nme, MSZ_I8);
+        else if (DTYPEG(sptrlist[i]) == DT_DBLE)
+          args[argc - i - 1] = ad3ili(IL_LDDP, ili, nme, MSZ_F8);
+        else
+          args[argc - i - 1] = ad3ili(IL_LD, ili, nme, MSZ_WORD);
+      }
+    }
+    arg_types[2 + i + 1] = DT_CPTR;
+  }
+
+  return mk_kmpc_api_call(kmpc_api, argc + 3, arg_types, args);
+}
+
 // AOCC end
 
 /* arglist is 1 containing the uplevel pointer */

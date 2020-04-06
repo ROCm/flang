@@ -32,7 +32,7 @@
  * Date of modification 04th April     2020
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Mar 2020
+ * Last modified: Apr 2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -1325,6 +1325,21 @@ ompaccel_tinfo_current_get_devsptr(SPTR host_symbol)
   return device_symbol;
 }
 
+// AOCC begin
+SPTR
+ompaccel_tinfo_current_get_hostsptr(SPTR dev_symbol)
+{
+  int i;
+  for (i = 0; i < current_tinfo->n_symbols; ++i) {
+    if (current_tinfo->symbols[i].device_sym == dev_symbol) {
+      return current_tinfo->symbols[i].host_sym;
+    }
+  }
+
+  return NOSYM;
+}
+// AOCC end
+
 static bool
 tinfo_update_maptype(OMPACCEL_SYM *tsyms, int nargs, SPTR host_symbol,
                      int map_type)
@@ -2471,12 +2486,20 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
       PARENCLFUNCP(scopeSptr, sptr);
     ll_write_ilm_header(sptr, curilm);
 
-    ili = ompaccel_nvvm_get(threadIdX);
-    ili = ll_make_kmpc_spmd_kernel_init(ili);
-    iltb.callfg = 1;
-    chk_block(ili);
+    // AOCC begin
+    if (!flg.x86_64_omptarget) {
+      ili = ompaccel_nvvm_get(threadIdX);
+      ili = ll_make_kmpc_spmd_kernel_init(ili);
+      iltb.callfg = 1;
+      chk_block(ili);
+    }
 
-    ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+    if (flg.x86_64_omptarget)
+      ili = ompaccel_x86_fork_call(sptr);
+    else
+      ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+    // AOCC end
+
     iltb.callfg = 1;
     chk_block(ili);
     gbl.ompoutlinedfunc = sptr;
@@ -3063,7 +3086,7 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     cr_block();
   }
 
-  if (flg.omptarget) {
+  if (flg.omptarget && !XBIT(232, 0x1)) { // AOCC
     ll_rewrite_ilms(-1, curilm, 0);
     return;
   }
@@ -3085,11 +3108,20 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
       PARENCLFUNCP(scopeSptr, sptr);
     ll_write_ilm_header(sptr, curilm);
     if (flg.omptarget) {
-      ili = ompaccel_nvvm_get(threadIdX);
-      ili = ll_make_kmpc_spmd_kernel_init(ili);
-      iltb.callfg = 1;
-      chk_block(ili);
-      ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+      // AOCC begin
+      if (!flg.x86_64_omptarget) {
+        ili = ompaccel_nvvm_get(threadIdX);
+        ili = ll_make_kmpc_spmd_kernel_init(ili);
+        iltb.callfg = 1;
+        chk_block(ili);
+      }
+
+      if (flg.x86_64_omptarget)
+        ili = ompaccel_x86_fork_call(sptr, KMPC_API_FORK_TEAMS);
+      else
+        ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+
+      // AOCC end
       iltb.callfg = 1;
       chk_block(ili);
       gbl.ompoutlinedfunc = sptr;

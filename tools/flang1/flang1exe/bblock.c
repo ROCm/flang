@@ -12,7 +12,7 @@
  * Date of Modification: April 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Dec 2019
+ * Last modified: Apr 2020
  *
  */
 
@@ -2843,6 +2843,9 @@ static void ompaccel_ast_segregate_parsec() {
 
 /* The main driver for openmp offloading AST transformation */
 void ompaccel_ast_transform() {
+  if (flg.x86_64_omptarget && XBIT(232, 0x1))
+    return;
+
   ompaccel_ast_segregate_parsec();
 }
 #endif

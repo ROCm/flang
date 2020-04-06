@@ -2,7 +2,7 @@
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Oct 2019
+ * Last modified: Apr 2020
  */
 #ifdef OMP_OFFLOAD_LLVM
 
@@ -227,6 +227,9 @@ bool ompaccel_x86_is_entry_func(SPTR func_sptr) {
     // Most likely an outlined parallel function, we should only add the
     // fork_wrapper func corresponding to this.
     if (ompaccel_x86_is_parallel_func(func_sptr)) {
+      if (XBIT(232, 0x1))
+        return true;
+
       return false;
     } else {
 
@@ -286,10 +289,22 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
   // Prepend the thread-id params.
   sym = mk_ompaccel_addsymbol("global_tid", DT_INT, SC_DUMMY, ST_VAR);
   OMPACCDEVSYMP(sym, TRUE);
+
+  if (XBIT(232, 0x1)) {
+    PASSBYREFP(sym, 1);
+    PASSBYVALP(sym, 0);
+  }
+
   aux.dpdsc_base[aux.dpdsc_avl + 0] = sym;
 
   sym = mk_ompaccel_addsymbol("bound_tid", DT_INT, SC_DUMMY, ST_VAR);
   OMPACCDEVSYMP(sym, TRUE);
+
+  if (XBIT(232, 0x1)) {
+    PASSBYREFP(sym, 1);
+    PASSBYVALP(sym, 0);
+  }
+
   aux.dpdsc_base[aux.dpdsc_avl + 1] = sym;
 
   // Append the original params.
@@ -397,4 +412,54 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   }
   return;
 }
+
+int ompaccel_x86_fork_call(SPTR outlined_func, int kmpc_api) {
+  int nargs, nme, ili, i;
+  SPTR sptr;
+  OMPACCEL_TINFO *omptinfo;
+  omptinfo = ompaccel_tinfo_get(outlined_func);
+  nargs = omptinfo->n_symbols;
+  int args[nargs + 2], garg_ilis[nargs + 2];
+  DTYPE arg_dtypes[nargs + 2];
+  SPTR sptr_args[nargs + 2];
+
+  DTYPEP(outlined_func, DT_NONE);
+  STYPEP(outlined_func, ST_PROC);
+  CFUNCP(outlined_func, 1);
+
+  args[nargs + 1] = ad_icon(10);
+  arg_dtypes[nargs + 1] = DT_INT;
+  args[nargs] = ad_icon(10);
+  arg_dtypes[nargs] = DT_INT;
+
+  for (i = 0; i < nargs; ++i) {
+    sptr = omptinfo->symbols[i].host_sym;
+    sptr_args[i] = sptr;
+    nme = addnme(NT_VAR, sptr, 0, (INT)0);
+    ili = mk_address(sptr);
+    if (!PASSBYVALG(sptr))
+      args[nargs - i - 1] = ad2ili(IL_LDA, ili, nme);
+    else {
+      if (DTY(DTYPEG(sptr)) == TY_PTR) {
+        args[nargs - i - 1] = ad2ili(IL_LDA, ili, nme);
+      } else {
+        if (DTYPEG(sptr) == DT_INT8)
+          args[nargs - i - 1] = ad3ili(IL_LDKR, ili, nme, MSZ_I8);
+        else if (DTYPEG(sptr) == DT_DBLE)
+          args[nargs - i - 1] = ad3ili(IL_LDDP, ili, nme, MSZ_F8);
+        else
+          args[nargs - i - 1] = ad3ili(IL_LD, ili, nme, MSZ_WORD);
+      }
+    }
+    arg_dtypes[nargs - i - 1] = DTYPEG(sptr);
+  }
+
+  ompaccel_x86_add_tid_params(outlined_func);
+
+  int call_ili =
+    mk_function_call(DT_NONE, nargs, arg_dtypes, args, outlined_func);
+
+  return ll_make_kmpc_fork_call_variadic2(outlined_func, nargs, sptr_args, kmpc_api);
+}
+
 #endif

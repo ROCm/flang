@@ -20,6 +20,8 @@
  * Date of modification 05th December 2019
  * Date of modification 24th January 2020
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
  */
 
 /**
@@ -49,6 +51,7 @@
 #include <unistd.h>
 #include "regutil.h"
 #include "symfun.h"
+#include <map> // AOCC
 #if !defined(TARGET_WIN)
 #include <unistd.h>
 #endif
@@ -2378,7 +2381,8 @@ outlined_need_recompile() {
 
 #ifdef OMP_OFFLOAD_LLVM
 static SPTR
-llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo)
+llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
+    std::map<SPTR, SPTR> orig_sptr_map) // AOCC
 {
   SPTR sym, sptr_alloc = ((SPTR)0), ignoredsym;
   char name[MXIDLEN + 2];
@@ -2392,6 +2396,15 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo)
 
   for (i = 0; i < current_tinfo->n_symbols; ++i) {
     SPTR sptr = current_tinfo->symbols[i].host_sym;
+
+    // AOCC begin
+    if (XBIT(232, 0x1)) {
+      if (orig_sptr_map.find(sptr) != orig_sptr_map.end()) {
+        sptr = orig_sptr_map[sptr];
+      }
+    }
+    // AOCC end
+
     sym = ompaccel_create_device_symbol(sptr, count);
     count++;
     current_tinfo->symbols[i].device_sym = sym;
@@ -2592,8 +2605,18 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
   SPTR func_sptr, arg_sptr;
   int n_args = 0, max_nargs, i, j;
   OMPACCEL_TINFO *current_tinfo;
+  std::map<SPTR, SPTR> orig_sptr_map; // AOCC
 
   uplevel = llmp_has_uplevel(stblk_sptr);
+
+  // AOCC begin
+  if (XBIT(232, 0x1)) {
+    if (uplevel && !uplevel->vals_count && uplevel->parent) {
+      uplevel = llmp_has_uplevel(uplevel->parent);
+    }
+  }
+  // AOCC end
+
   max_nargs = uplevel != NULL ? uplevel->vals_count : 0;
   /* Create function symbol for target region */
   func_sptr = create_target_outlined_func_sptr(scope_sptr, iskernel);
@@ -2609,6 +2632,12 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
     if (DESCARRAYG(arg_sptr))
       continue;
 
+    // AOCC begin
+    if (arg_sptr != (SPTR)uplevel->orig_vals[i]) {
+      orig_sptr_map[arg_sptr] = (SPTR)uplevel->orig_vals[i];
+    }
+    // AOCC end
+
     if (!iskernel && !OMPACCDEVSYMG(arg_sptr))
       arg_sptr = ompaccel_tinfo_parent_get_devsptr(arg_sptr);
     ompaccel_tinfo_current_add_sym(arg_sptr, SPTR_NULL, 0);
@@ -2616,7 +2645,7 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
     n_args++;
   }
 
-  llMakeFtnOutlinedSignatureTarget(func_sptr, current_tinfo);
+  llMakeFtnOutlinedSignatureTarget(func_sptr, current_tinfo, orig_sptr_map); // AOCC
 
   ompaccel_symreplacer(true);
   if (isReplacerEnabled) {
