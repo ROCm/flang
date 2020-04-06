@@ -13541,6 +13541,10 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   }
 #endif
   /* Start printing the defining line to the output file. */
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target && !flg.x86_64_omptarget)
+    print_token("attributes #0 = { \"amdgpu-flat-work-group-size\"=\"256,256\" }\n");
+#endif
   print_token("define");
 
 /* Function linkage. */
@@ -13590,8 +13594,12 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
       print_dbg_line_no_comma(subprogram);
     }
   }
-
-  print_line(" {\nL.entry:"); /* } so vi matches */
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target && linkage && (strcmp(linkage, " amdgpu_kernel")==0))
+    print_line(" #0 {\nL.entry:"); /* } so vi matches */
+  else
+#endif
+    print_line(" {\nL.entry:"); /* } so vi matches */
 
 #ifdef CONSTRUCTORG
   if (CONSTRUCTORG(func_sptr)) {
