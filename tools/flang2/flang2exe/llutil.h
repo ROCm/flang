@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/* 
- * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
- * Notified per clause 4(b) of the license.
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
  *
  * Added support for quad precision
- * Last modified: Feb 2020
- *
+ * Last modified: June 2020
  */
 
 #ifndef LLUTIL_H_
@@ -1599,6 +1598,11 @@ bool llis_array_kind(DTYPE dtype);
 bool llis_vector_kind(DTYPE dtype);
 bool llis_struct_kind(DTYPE dtype);
 bool llis_function_kind(DTYPE dtype);
+
+/**
+   \brief return whether param debug info should be preserved
+ */
+bool should_preserve_param(const DTYPE dtype);
 
 #ifdef OMP_OFFLOAD_LLVM
 /**

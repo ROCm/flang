@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ *
+ * Last modified: June 2020
+ */
+
 #ifndef UPPER_H_
 #define UPPER_H_
 
@@ -277,5 +284,10 @@ void upper_save_syminfo(void);
    \param sptr   The sptr of a Module variable
  */
 const char *lookup_modvar_alias(SPTR sptr);
+
+/**
+   \brief return start symbol SPTR
+ */
+SPTR get_symbol_start(void);
 
 #endif // UPPER_H_

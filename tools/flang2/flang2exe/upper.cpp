@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/* 
- * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
- * Notified per clause 4(b) of the license.
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
  *
- * Last Modified: May 2020
+ * Last modified: June 2020
  */
 
 /** \file
@@ -6506,6 +6506,8 @@ lookup_modvar_alias(SPTR sptr)
   }
   return NULL;
 }
+
+SPTR get_symbol_start(void) { return (SPTR)(oldsymbolcount + 1); }
 
 /**
    \brief Given a alias name of a mod var sptr, create a new alias_syminfo node
