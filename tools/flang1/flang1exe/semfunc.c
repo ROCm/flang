@@ -9811,7 +9811,12 @@ ref_pd(SST *stktop, ITEM *list)
     stkp = ARG_STK(0);
     shaper = SST_SHAPEG(stkp);
     ast = ARG_AST(0);
-    if (dtype1 != dtyper) {
+
+    /*
+     * AOCC: If -fdefault-integer-8, then we need to preserve the shape by
+     * generating a call, else future semantics will be mislead.
+     */
+    if (dtype1 != dtyper || XBIT(124, 0x10)) { /* AOCC */
       argt_count = 1;
       goto gen_call;
     }
