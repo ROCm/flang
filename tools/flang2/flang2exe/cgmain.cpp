@@ -12947,6 +12947,17 @@ write_external_function_declarations(int first_time)
   DBGTRACEOUT("");
 } /* write_external_function_declarations */
 
+#ifdef OMP_OFFLOAD_AMD
+INLINE static void write_kernel_attributes(FILE *out) {
+  if (flg.amdgcn_target) {
+    // We are not generating any debug info for GPU(as of now),
+    // so #0 won't be duplicated.
+    fprintf(out,
+        "attributes #0 = { \"amdgpu-flat-work-group-size\"=\"256,256\" }\n");
+  }
+}
+#endif
+
 /**
    \brief Emit function attributes in debugging mode output
 
@@ -13401,6 +13412,11 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
 
   print_token(")");
 
+#ifdef OMP_OFFLOAD_AMD
+  if (flg.amdgcn_target && OMPACCFUNCKERNELG(gbl.currsub))
+    print_token(" #0");
+#endif
+
   /* Function attributes.  With debugging turned on, the debug attributes
      contain "noinline", so there is no need to repeat it here. */
   if (need_debug_info(SPTR_NULL)) {
@@ -13541,10 +13557,6 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   }
 #endif
   /* Start printing the defining line to the output file. */
-#ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && !flg.x86_64_omptarget)
-    print_token("attributes #0 = { \"amdgpu-flat-work-group-size\"=\"256,256\" }\n");
-#endif
   print_token("define");
 
 /* Function linkage. */
@@ -13594,11 +13606,6 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
       print_dbg_line_no_comma(subprogram);
     }
   }
-#ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && linkage && (strcmp(linkage, " amdgpu_kernel")==0))
-    print_line(" #0 {\nL.entry:"); /* } so vi matches */
-  else
-#endif
     print_line(" {\nL.entry:"); /* } so vi matches */
 
 #ifdef CONSTRUCTORG
@@ -13818,6 +13825,7 @@ cg_llvm_end(void)
     ll_write_metadata(llvm_file(), gpu_llvm_module);
     ll_build_metadata_device(gbl.ompaccfile, gpu_llvm_module);
     ll_write_metadata(gbl.ompaccfile, gpu_llvm_module);
+    write_kernel_attributes(gbl.ompaccfile);
   }
 #endif
 }
