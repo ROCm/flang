@@ -20,6 +20,7 @@
  *
  * Support for AMDGPU OpenMP offloading
  * Date of modification 04th April 2020
+ * Date of modification 10th April 2020
  *
  */
 
@@ -12417,7 +12418,7 @@ proc_dcl_init:
 #endif
     break;
   /*
-   *	<mp decl> ::= <declare target> <opt par list> |
+   *	<mp decl> ::= <declare target>
    */
   case MP_DECL2:
 #ifdef OMP_OFFLOAD_LLVM
@@ -12428,27 +12429,30 @@ proc_dcl_init:
             NULL);
     }
 #endif
-    if (SST_BEGG(RHS(3))) {
-      for (itemp = SST_BEGG(RHS(3)); itemp != ITEM_END; itemp = itemp->next) {
-        /*
-         * Not handling as of now
-        int ast = mk_stmt(A_MP_TARGETDECLARE, 0);
-        (void)add_stmt(ast);
-        A_LOPP(ast, itemp->t.sptr);
-        OMPACCFUNCDEVP(itemp->t.sptr, 1);
-        */
-      }
-    } else {
+    if(flg.omptarget) {
       int ast = mk_stmt(A_MP_TARGETDECLARE, 0);
       (void)add_stmt(ast);
     }
     // AOCC End
 #endif
     break;
+
+  // AOCC Begin
+  /*
+   *	<mp decl> ::= <declare target> ( <ident list> ) |
+   */
+  case MP_DECL3:
+    break;
+  /*
+   *	<mp decl> ::= <declare target> <par list> |
+   */
+  case MP_DECL4:
+    break;
+  // AOCC End
   /*
    *	<mp decl> ::= <declarered begin> <declare reduction>
    */
-  case MP_DECL3:
+  case MP_DECL5:
     break;
 
   /* ------------------------------------------------------------------ */
