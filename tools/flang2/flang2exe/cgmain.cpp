@@ -41,6 +41,9 @@
  *
  * Support for Real128 support for math intrinsics
  * Date of modification 24th February 2020
+ *
+ * get_alloca_addrspace function is made public.
+ * Date of modification 13th April 2020
  */
 
 /**
@@ -1385,11 +1388,11 @@ remove_dead_instrs(void)
 
 // AOCC Begin
 /*
- * \brief Static function to calculate alloca addrespace from DL string
+ * \brief Function to calculate alloca addrespace from DL string
  *
  */
 #ifdef OMP_OFFLOAD_AMD
-static int get_alloca_addrspace(LL_Module *module) {
+int get_alloca_addrspace(LL_Module *module) {
   const char *dl = module->datalayout_string;
   while ((*dl) != 'A' && (*dl) != '\0')
     dl++;  if (dl[0] == '\0')

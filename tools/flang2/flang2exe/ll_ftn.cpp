@@ -9,6 +9,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 26th Nov 2019
+ * Date of modification 13th April 2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -835,11 +836,49 @@ write_local_overlap(void)
   if (!equiv_var)
     return;
 
+  // AOCC Begin
+  bool gpu_cg = false;
+  int addrspace = -1;
+#ifdef OMP_OFFLOAD_LLVM
+  gpu_cg = gbl.ompaccel_isdevice && flg.amdgcn_target;
+#endif
+#ifdef OMP_OFFLOAD_AMD
+  if (gpu_cg)
+    addrspace = get_alloca_addrspace(gpu_llvm_module);
+#endif
+  // AOCC End
+
+  if (addrspace == -1 || addrspace == 0) {
+    print_token("\t");
+    print_token(equiv_var);
+    print_token(" = alloca ");
+    write_type(equiv_type);
+    print_token(", align 4\n");
+    return;
+  }
+
+  // AOCC Begin
+  // Print alloca with proper address space
+  char buf[15];
+  sprintf (buf, " addrspace(%d)", addrspace);
   print_token("\t");
   print_token(equiv_var);
-  print_token(" = alloca ");
+  print_token(".tmp = alloca ");
   write_type(equiv_type);
-  print_token(", align 4\n");
+  print_token(", align 4, ");
+  print_token(buf);
+  print_token("\n\t");
+  print_token(equiv_var);
+  print_token(" = addrspacecast ");
+  write_type(equiv_type);
+  print_token(buf);
+  print_token("* ");
+  print_token(equiv_var);
+  print_token(".tmp to ");
+  write_type(equiv_type);
+  print_token("*");
+  print_token("\n");
+  // AOCC End
 }
 
 void

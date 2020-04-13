@@ -277,4 +277,14 @@ void add_debug_cmnblk_variables(LL_DebugInfo *db, SPTR sptr);
  */
 bool ftn_array_need_debug_info(SPTR sptr);
 
+// AOCC Begin
+/**
+  \brief Function to calculate alloca address space.
+  \param module LL_Module for which address space to be calculated.
+*/
+#ifdef OMP_OFFLOAD_AMD
+int get_alloca_addrspace(LL_Module *module);
+#endif
+// AOCC End
+
 #endif
