@@ -11,6 +11,9 @@
 .\" * Support for Real128 support for math intrinsics
 .\" * Date of Modification: Feb 2020
 .\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -2555,12 +2558,12 @@ This ili should have been replaced before code generator.
 .AT arth null ir cse
 .CG notCG
 
-.IL SHIFTA irlnk arlnk
+.IL SHIFTB irlnk arlnk
 Shift op1 logically by op2.  Left if op2 is > 0; else right.
 .AT arth null ir cse
 .CG notCG
 
-.IL USHIFTA irlnk arlnk
+.IL USHIFTB irlnk arlnk
 Unsigned shift op1 logically by op2.  Left if op2 is > 0; else right.
 .AT arth null ir cse
 .CG notCG
@@ -2586,6 +2589,13 @@ Shift left immediate.   This opcode used only in Code Generator.
 Shift left immediate of 64-bit value.
 .AT arth null kr cse
 .CG memdest ccarith shiftop "shl" CGonly 'q'
+.SI direct lat(4:1)
+
+.IL SHIFTA irlnk irlnk
+Shift op1 arithmetically (sign extended) right by op2.
+Used for right shifts (>> operator) of signed values.
+.AT arth null ir cse
+.CG memdest ccarith shiftop asm_special "sar" 'l'
 .SI direct lat(4:1)
 
 .IL RSHIFT irlnk irlnk

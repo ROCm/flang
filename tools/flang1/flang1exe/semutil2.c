@@ -26,6 +26,9 @@
  * Support for nearest intrinsic
  * Last modified: 01 March 2020
  *
+ * Added code to support SHIFTA intrinsic
+ * Last modified : April 2020
+ *
  */
 
 /** \file
@@ -3813,6 +3816,10 @@ map_I_to_AC(int intrin)
     return AC_I_lshift;
   case I_RSHIFT:
     return AC_I_rshift;
+  /* AOCC begin */
+  case I_SHIFTA:
+      return AC_I_shifta;
+  /* AOCC end */
   case I_IMIN0:
   case I_MIN0:
   case I_AMIN1:
@@ -4068,6 +4075,16 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
     int new_ast = ast_intr(I_ISHFT, A_DTYPEG(ast), 2, val, new_shift);
     return mk_elem_init_intrinsic(AC_I_ishft, new_ast, dtype, parent_acltype);
   }
+  /* AOCC begin */
+  case AC_I_shifta: {
+    int argt = A_ARGSG(ast);
+    int val = ARGT_ARG(argt, 0);
+    int shift = ARGT_ARG(argt, 1);
+    int new_shift = mk_unop(OP_SUB, shift, A_DTYPEG(shift));
+    int new_ast = ast_intr(I_ISHFT, A_DTYPEG(ast), 2, val, new_shift);
+    return mk_elem_init_intrinsic(AC_I_ishft, new_ast, dtype, parent_acltype);
+  }
+  /* AOCC end */
   case AC_I_len:
   case AC_I_lbound:
   case AC_I_ubound:

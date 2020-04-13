@@ -13,6 +13,11 @@
 .\" *
 .\" * Support for Real128 support for math intrinsics
 .\" * Date of Modification: Feb 2020
+.\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
+
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -1233,6 +1238,12 @@ value and second is assumed to be a positive integer.
 .OP RSHIFT r p1 p2
 .IL KRSHIFT arth lnk lnk
 .AT i8
+.IL SHIFTA arth lnk lnk
+Right shift operator (>>).  First operand is 32 bit signed integer
+value and second is assumed to be a positive integer.
+.OP SHIFTA r p1 p2
+.IL KSHIFTA arth lnk lnk
+.AT i8
 .OP KARSHIFT r p1 p2
 .IL ULSHIFT arth lnk lnk
 Left shift operator (<<) - first operand is 32 bit unsigned integer
@@ -1340,6 +1351,7 @@ IBITS(p1, p2, p3) - extract p3 bits beginning at p2 from p1.
 r = p3 != 0 ? (p1 >> p2) & (-1 >> (32 - p3)) : 0
 .fi
 .OP RSHIFT t1 p1 p2
+.OP SHIFTA t1 p1 p2
 .OP ICON t2 =i'-1
 .OP ICON t3 =i'32
 .OP ISUB t4 t3 p3
@@ -2270,6 +2282,7 @@ computed as (x+y) >> 1
 .OP ICON t1 =i'1
 .OP IADD t2 p1 p2
 .OP RSHIFT r t2 t1
+.OP SHIFTA r t2 t1
 .IL UHADD arth lnk lnk
 hadd(x,y), where x and y are unsigned char or unsigned short, and
 computed as (x+y) >> 1
@@ -2325,6 +2338,7 @@ computed as (x+y+1) >> 1
 .OP IADD t2 p1 p2
 .OP IADD t2 t2 t1
 .OP RSHIFT r t2 t1
+.OP SHIFTA r t2 t1
 .IL URHADD arth lnk lnk
 rhadd(x,y), where x and y are unsigned char or unsigned short, and
 computed as (x+y+1) >> 1

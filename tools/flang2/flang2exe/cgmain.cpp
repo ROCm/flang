@@ -42,8 +42,13 @@
  * Support for Real128 support for math intrinsics
  * Date of modification 24th February 2020
  *
+<<<<<<< HEAD
  * get_alloca_addrspace function is made public.
  * Date of modification 13th April 2020
+=======
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+>>>>>>> [CPUPC-2992]SHIFTA intrinsic
  */
 
 /**
@@ -6367,6 +6372,9 @@ gen_binary_expr(int ilix, int itype)
   case IL_URSHIFT:
   case IL_RSHIFT:
   case IL_ARSHIFT:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /*AOCC end */
     binops->next = gen_llvm_expr(rhs_ili, make_lltype_from_dtype(DT_UINT));
     break;
   case IL_VLSHIFTS:
@@ -8762,6 +8770,9 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_RSHIFT:
   case IL_ARSHIFT:
   case IL_KARSHIFT:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /* AOCC end */
     operand = gen_binary_expr(ilix, I_ASHR);
     break;
   case IL_VAND:
@@ -11993,6 +12004,9 @@ make_type_from_opc(ILI_OP opc)
   case IL_UIMAX:
   case IL_IABS:
   case IL_CMPXCHG_OLDI:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /* AOCC end */
     llt = make_lltype_from_dtype(DT_INT);
     break;
   case IL_KAND:

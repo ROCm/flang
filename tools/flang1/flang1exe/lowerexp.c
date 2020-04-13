@@ -28,6 +28,9 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+ *
  */
 
 /**
@@ -2850,7 +2853,9 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_KISHFTC:
   case I_LSHIFT:
   case I_RSHIFT:
-
+  /* AOCC begin */
+  case I_SHIFTA:
+  /* AOCC end */
   case I_IAND:
   case I_IOR:
   case I_IEOR:
@@ -3893,6 +3898,11 @@ lower_intrinsic(int ast)
   case I_RSHIFT:
     ilm = intrin_name("URSHIFT", ast, in_i_K);
     break;
+  /* AOCC begin */
+  case I_SHIFTA:
+      ilm = intrin_name("SHIFTA", ast, in_i_K);
+      break;
+  /* AOCC end */
 
   /* sign family */
   case I_IISIGN:

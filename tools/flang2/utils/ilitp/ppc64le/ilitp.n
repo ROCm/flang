@@ -3,6 +3,9 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" * 
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 13 "Power ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -1871,12 +1874,12 @@ This ili should have been replaced before code generator.
 .AT arth null ir cse
 .CG notCG
 
-.IL SHIFTA irlnk arlnk
+.IL SHIFTB irlnk arlnk
 Shift op1 logically by op2.  Left if op2 is > 0; else right.
 .AT arth null ir cse
 .CG notCG
 
-.IL USHIFTA irlnk arlnk
+.IL USHIFTB irlnk arlnk
 Unsigned shift op1 logically by op2.  Left if op2 is > 0; else right.
 .AT arth null ir cse
 .CG notCG
@@ -1900,6 +1903,12 @@ Shift left immediate.   This opcode used only in Code Generator.
 Shift left immediate of 64-bit value.
 .AT arth null kr cse
 .CG notAILI 'q'
+
+.IL SHIFTA irlnk irlnk
+Shift op1 arithmetically (sign extended) right by op2.
+Used for right shifts (>> operator) of signed values.
+.AT arth null ir cse
+.CG memdest ccarith shiftop asm_special "sar" 'l'
 
 .IL RSHIFT irlnk irlnk
 Shift op1 logically right by op2 (sign extended).

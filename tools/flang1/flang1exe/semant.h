@@ -19,6 +19,10 @@
  * Added code to support reshape with implied dos inside target region
  * Date of Modification: 23rd January 2020
  *
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+ *
+ *
  */
 
 /**
@@ -633,8 +637,9 @@ typedef enum {
   AC_I_shiftr,
   AC_I_dshiftl,
   AC_I_dshiftr,
-  AC_I_nearest
+  AC_I_nearest,
   /* AOCC end */
+  AC_I_shifta
 } AC_INTRINSIC;
 
 #define BINOP(p) ((p)->op != AC_NEG && (p)->op != AC_CONV)

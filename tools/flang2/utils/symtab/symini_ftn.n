@@ -11,6 +11,9 @@
 .\" * Support for Real128 support for math intrinsics
 .\" * Date of Modification: Feb 2020
 .\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -315,6 +318,9 @@ Converts complex*16 to quad.
 .IN .IRSHIFT 2 SI SI URSHIFT 
 .IN .JRSHIFT 2 I I URSHIFT 
 .IN =.KRSHIFT 2 I8 I8 KURSHIFT 
+.IN .ISHIFTA 2 SI SI SHIFTA
+.IN .JSHIFTA 2 I I SHIFTA
+.IN =.KSHIFTA 2 I8 I8 KSHIFTA
 .IN .2SCH 1 SI H CHAR 
 .IN .CHAR 1 I H CHAR 
 .IN =.2KCH 1 I8 H CHAR 
@@ -404,6 +410,7 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN ISHFTC IISHFTC JISHFTC - - - - KISHFTC 
 .GN LSHIFT .ILSHIFT .JLSHIFT - - - - .KLSHIFT 
 .GN RSHIFT .IRSHIFT .JRSHIFT - - - - .KRSHIFT 
+.GN SHIFTA .ISHIFTA .JSHIFTA - - - - .KSHIFTA
 .GN CHAR .2SCH .CHAR - - - - .2KCH 
 .bp
 .sh 2 "Predeclared\ Names"

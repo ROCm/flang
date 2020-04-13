@@ -8,6 +8,9 @@
 .\" * Added support for quad precision
 .\" * Last modified: Feb 2020
 .\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 24 "Target Machine" "Appendix III - "
 .de DN
@@ -111,6 +114,10 @@ signed quantity.
 .DA "( (x) << (y) )"
 .DN RSHIFT(x,y) 
 .DA "( (x) >> (y) )"
+.DN SHIFTA(x,y)
+.DA "( (x) & 0x80000000 ?"
+.DA "( (unsigned)(x) >> (y) ) | ( (~0u) << (32-(y)) ) :"
+.DA "(x) >> (y) )"
 .np
 Constant fold shift per target machine; operand which is shifted is an
 unsigned quantity.

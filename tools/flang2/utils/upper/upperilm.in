@@ -11,6 +11,9 @@
 # Added support for quad precision
 # Last modified: Feb 2020
 #
+# Added code to support SHIFTA intrinsic
+# Last modified: April 2020
+#
 ABS	ilm
 ACON	sym
 ACOS	ilm
@@ -683,6 +686,7 @@ UITOSC	ilm
 UITOUDI	ilm
 ULSHIFT	ilm	ilm
 URSHIFT	ilm	ilm
+SHIFTA  ilm     ilm
 V	sym
 XNOR/EQV	ilm	ilm
 XNOR64	ilm	ilm

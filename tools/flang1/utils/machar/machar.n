@@ -3,6 +3,9 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 24 "Target Machine" "Appendix III - "
 .de DN
@@ -113,6 +116,11 @@ signed quantity.
 .DA "( (x) << ((y)&31) )"
 .DN RSHIFT(x,y)
 .DA "( (x) >> ((y)&31) )"
+.DN SHIFTA(x,y)
+.DA "( ((y)&31) == 0 ? (x) :"
+.DA "( (x) & 0x80000000 ?"
+.DA "( (unsigned int)(x) >> ((y)&31) ) | ( ((unsigned int)-1) << (32-((y)&31)) ) :"
+.DA "(x) >> ((y)&31) ) )"
 .np
 Constant fold shift per target machine; operand which is shifted is an
 unsigned quantity.

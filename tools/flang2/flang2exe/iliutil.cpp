@@ -41,6 +41,9 @@
  * Real128 support for math intrinsics
  * Last modified: Feb 2020
  *
+ * Added code to support SHIFTA intrinsic 
+ * Last modified: April 2020
+ *
  */
 
 /**
@@ -5884,8 +5887,8 @@ addarth(ILI *ilip)
         goto add_icon;
       }
     }
-#ifdef TM_SHIFTAR
-    opc = IL_LSHIFTA;
+#ifdef TM_SHIFTBR
+    opc = IL_LSHIFTB;
     op2 = ad1ili(IL_IAMV, op2);
 #endif
     break;
@@ -5906,13 +5909,13 @@ addarth(ILI *ilip)
         goto add_icon;
       }
     }
-#ifdef TM_SHIFTAR
-    opc = IL_RSHIFTA;
+#ifdef TM_SHIFTBR
+    opc = IL_RSHIFTB;
     op2 = ad1ili(IL_IAMV, op2);
 #endif
     break;
-#ifdef TM_SHIFTAR
-  case IL_SHIFTA:
+#ifdef TM_SHIFTBR
+  case IL_SHIFTB:
     break;
 #endif
 
@@ -5932,8 +5935,8 @@ addarth(ILI *ilip)
         goto add_icon;
       }
     }
-#ifdef TM_SHIFTAR
-    opc = IL_ULSHIFTA;
+#ifdef TM_SHIFTBR
+    opc = IL_ULSHIFTB;
     op2 = ad1ili(IL_IAMV, op2);
 #endif
     break;
@@ -5958,13 +5961,13 @@ addarth(ILI *ilip)
         goto add_icon;
       }
     }
-#ifdef TM_SHIFTAR
-    opc = IL_URSHIFTA;
+#ifdef TM_SHIFTBR
+    opc = IL_URSHIFTB;
     op2 = ad1ili(IL_IAMV, op2);
 #endif
     break;
-#ifdef TM_SHIFTAR
-  case IL_USHIFTA:
+#ifdef TM_SHIFTBR
+  case IL_USHIFTB:
     break;
 #endif
   case IL_ARSHIFT:
@@ -5983,8 +5986,8 @@ addarth(ILI *ilip)
         goto add_icon;
       }
     }
-#ifdef TM_SHIFTAR
-    opc = IL_ARSHIFTA;
+#ifdef TM_SHIFTBR
+    opc = IL_ARSHIFTB;
     op2 = ad1ili(IL_IAMV, op2);
 #endif
     break;
@@ -11549,6 +11552,9 @@ prilitree(int i)
     opval = ">>";
     goto binop;
   case IL_ARSHIFT:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /* AOCC end */
   case IL_KARSHIFT:
     opval = "a>>";
     goto binop;

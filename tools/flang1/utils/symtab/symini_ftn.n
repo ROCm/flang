@@ -20,6 +20,10 @@
 .\" *
 .\" * Support for Bit transformational intrinsic iany, iall, iparity.
 .\" * Month of Modification: July 2019
+.\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -794,6 +798,13 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .KRSHIFT 2 I8 I8 none -
 .AT elemental i shift
 
+.IN .ISHIFTA 2 SI SI none -
+.AT elemental i shift
+.IN .JSHIFTA 2 I I none -
+.AT elemental i shift
+.IN .KSHIFTA 2 I8 I8 none -
+.AT elemental i shift
+
 .IN .2SCH 1 SI H CHAR -
 .AT elemental i
 .IN .CHAR 1 I H CHAR -
@@ -1031,6 +1042,8 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN LSHIFT .ILSHIFT .JLSHIFT - - - - .KLSHIFT - -
 .AT elemental i shift
 .GN RSHIFT .IRSHIFT .JRSHIFT - - - - .KRSHIFT - -
+.AT elemental i shift
+.GN SHIFTA .ISHIFTA .JSHIFTA - - - - .KSHIFTA - -
 .AT elemental i shift
 .GN MODULO .IMODULO .MODULO .AMODULO .DMODULO - - .KMODULO .QMODULO -
 .AT elemental a p
