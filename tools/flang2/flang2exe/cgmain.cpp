@@ -13152,7 +13152,8 @@ write_external_function_declarations(int first_time)
   DBGTRACEOUT("");
 } /* write_external_function_declarations */
 
-#ifdef OMP_OFFLOAD_AMD
+// AOCC Begin
+#ifdef OMP_OFFLOAD_LLVM
 INLINE static void write_kernel_attributes(FILE *out) {
   if (flg.amdgcn_target) {
     // We are not generating any debug info for GPU(as of now),
@@ -13162,6 +13163,7 @@ INLINE static void write_kernel_attributes(FILE *out) {
   }
 }
 #endif
+// AOCC End
 
 /**
    \brief Emit function attributes in debugging mode output
@@ -14031,7 +14033,7 @@ cg_llvm_end(void)
     ll_write_metadata(llvm_file(), gpu_llvm_module);
     ll_build_metadata_device(gbl.ompaccfile, gpu_llvm_module);
     ll_write_metadata(gbl.ompaccfile, gpu_llvm_module);
-    write_kernel_attributes(gbl.ompaccfile);
+    write_kernel_attributes(gbl.ompaccfile); // AOCC
   }
 #endif
 }
