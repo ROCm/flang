@@ -54,6 +54,9 @@
  * Added code to support reshape with implied dos inside target region
  * Date of Modification: 23rd January 2020
  *
+ * Added code to support atan with two arguments
+ * Date of Modification: 27th February 2020
+ *
  * Added support for quad precision
  * Last modified: Feb 2020
  *
@@ -4613,10 +4616,26 @@ ref_intrin(SST *stktop, ITEM *list)
     opc = ILMG(sptr);
   argtyp = ARGTYPG(sptr);
   paramct = PARAMCTG(sptr);
+  
+ /* AOCC begin */ 
+  if ((intast == I_ATAN) && (count == 2))
+    intast = I_ATAN2;
 
-  if (paramct != 12 && paramct != 11 && count > paramct) {
-    goto intrinsic_error;
+  else if (paramct != 12 && paramct != 11 && count > paramct) {
+    if(count > paramct) {
+      if (intast == I_ATAN) {
+        e74_cnt(sptre, count, paramct, 2);
+        return 0;
+      }
+      else {
+        e74_cnt(sptre, count, paramct, paramct);
+        return 0;
+      }
+    }
+    else
+      goto intrinsic_error;
   }
+  /* AOCC end */
 
   if (paramct == 11) { /* CMPLX/DCMPLX intrinsic */
     if (ARG_STK(1))
