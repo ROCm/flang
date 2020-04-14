@@ -11,6 +11,10 @@
 # More details in case MOTION_CLAUSE1 and MOTION_CLAUSE2 of semsmp()
 # Date of modification 23rd September 2019
 #
+# Removed <declare target> from <mp decl> and added individual definitions
+# for same.
+# Date of modification 10th April 2020
+#
 
 <stmt> ::= <stbeg> <statement> <stend>
 
@@ -886,7 +890,9 @@
 <mp decl begin> ::=
 
 <mp decl> ::= <mp declaresimd> <declare simd> |
-              <mp declaretarget> <declare target> |
+              <mp declaretarget> |
+              <mp declaretarget> ( <ident list> ) |
+              <mp declaretarget> <par list> |
 	            <declarered begin> <declare reduction>
 
 <declarered begin> ::= <mp declarereduction>

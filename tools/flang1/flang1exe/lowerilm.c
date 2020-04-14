@@ -5270,6 +5270,11 @@ lower_stmt(int std, int ast, int lineno, int label)
     plower("on", "MP_DEFAULTMAP", flag);
     lower_end_stmt(std);
     break;
+  case A_MP_TARGETDECLARE:
+    lower_start_stmt(lineno, label, TRUE, std);
+    plower("o", "MP_TARGETDECLARE");
+    lower_end_stmt(std);
+    break;
   // AOCC End
   case A_MP_MAP:
       lower_start_stmt(lineno, label, TRUE, std);

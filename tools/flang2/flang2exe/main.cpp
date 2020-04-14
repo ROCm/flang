@@ -10,6 +10,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 9th July 2019
+ * Date of modification 04th April 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Oct 2019
@@ -351,7 +352,17 @@ process_input(char *argv0, bool *need_cuda_constructor)
 
         TR("F90 SCHEDULER begins\n");
         DUMP("before-schedule");
+        // AOCC Begin
+#if defined(OMP_OFFLOAD_LLVM)
+        bool orig = gbl.ompaccel_isdevice;
+        if (OMPACCFUNCDEVG(gbl.currsub))
+          gbl.ompaccel_isdevice = true;
         schedule();
+        gbl.ompaccel_isdevice = orig;
+#else
+        // AOCC End
+        schedule();
+#endif // AOCC
         xtimes[5] += get_rutime();
         DUMP("schedule");
       } /* CUDAG(GBL_CURRFUNC) & CUDA_HOST */

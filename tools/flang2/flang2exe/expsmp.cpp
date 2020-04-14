@@ -1238,6 +1238,13 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
               "Parallel region activated", NULL);
     break;
   // AOCC Begin
+  case IM_MP_TARGETDECLARE:
+#ifdef OMP_OFFLOAD_LLVM
+      if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {
+        ompaccel_set_target_declare();
+      }
+#endif
+    break;
   case IM_MP_DEFAULTMAP: {
 #ifdef OMP_OFFLOAD_LLVM
     if(flg.omptarget &&  !(IS_OMP_DEVICE_CG)) {

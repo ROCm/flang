@@ -2251,6 +2251,9 @@ print_ast(int ast)
   case A_MP_DEFAULTMAP:
     put_string("defaultmap");
     break;
+  case A_MP_TARGETDECLARE:
+    put_string("target declare");
+    break;
   // AOCC End
   case A_MP_MAP:
     put_string("map");
