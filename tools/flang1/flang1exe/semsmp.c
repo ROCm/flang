@@ -8883,10 +8883,8 @@ begin_combine_constructs(BIGINT64 construct)
 #ifdef OMP_OFFLOAD_LLVM
     if (flg.omptarget) {
       if (combinedMode == mode_target_teams_distribute_parallel_for_simd) {
-        errwarn(1203);
         combinedMode = mode_target_teams_distribute_parallel_for;
       } else if (combinedMode == mode_target_parallel_for_simd) {
-        errwarn(1203);
         combinedMode = mode_target_parallel_for;
       } else if (combinedMode == mode_target_teams_distribute) {
         // AOCC Begin
