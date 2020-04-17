@@ -52,6 +52,7 @@
 #include "regutil.h"
 #include "symfun.h"
 #include <map> // AOCC
+#include <vector> // AOCC
 #if !defined(TARGET_WIN)
 #include <unistd.h>
 #endif
@@ -2379,6 +2380,28 @@ outlined_need_recompile() {
   return false;
 }
 
+// AOCC begin
+// Populates \p arg_vectors with SPTRs from each uplevel-sptr starting from
+// \p uplevel. Set \p is_orig to fetch the originally assigned SPTR in the
+// uplevel data-structure. (see comments in LLUplevel's definition)
+void get_arg_vector_from_uplevel_chain(std::vector<SPTR> &arg_vector,
+    const LLUplevel *uplevel, bool is_orig) {
+  while (uplevel) {
+    for (int i = 0; i < uplevel->vals_count; i++) {
+      if (is_orig)
+        arg_vector.push_back((SPTR)uplevel->orig_vals[i]);
+      else
+        arg_vector.push_back((SPTR)uplevel->vals[i]);
+    }
+
+    if (!uplevel->parent)
+      break;
+
+    uplevel = llmp_has_uplevel(uplevel->parent);
+  }
+}
+// AOCC end
+
 #ifdef OMP_OFFLOAD_LLVM
 static SPTR
 llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
@@ -2413,6 +2436,35 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
   }
   return ignoredsym;
 }
+
+// AOCC begin
+// The llMakeFtnOutlinedSignatureTarget() version for
+// ll_make_outlined_ompaccel_func2()
+// TODO: Inline this in ll_make_outlined_ompaccel_func2()
+static SPTR
+llMakeFtnOutlinedSignatureTarget2(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
+    std::vector<SPTR> &arg_vector)
+{
+  int dpdscp = aux.dpdsc_avl;
+
+  PARAMCTP(func_sptr, arg_vector.size());
+  DPDSCP(func_sptr, dpdscp);
+  aux.dpdsc_avl += arg_vector.size();
+  NEED(aux.dpdsc_avl, aux.dpdsc_base, int, aux.dpdsc_size,
+       aux.dpdsc_size + arg_vector.size() + 100);
+
+  int argi = 0;
+  for (SPTR arg : arg_vector) {
+    SPTR dev_sptr = ompaccel_create_device_symbol(arg, argi);
+    current_tinfo->symbols[argi].device_sym = dev_sptr;
+    argi++;
+    OMPACCDEVSYMP(dev_sptr, TRUE);
+    aux.dpdsc_base[dpdscp++] = dev_sptr;
+  }
+
+  return (SPTR)0;
+}
+// AOCC end
 
 int
 ll_make_outlined_ompaccel_call(SPTR parent_func_sptr, SPTR outlined_func)
@@ -2666,4 +2718,59 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
 
   return func_sptr;
 }
+
+// AOCC begin
+SPTR
+ll_make_outlined_ompaccel_func2(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
+{
+  const LLUplevel *uplevel;
+  SPTR func_sptr;
+  OMPACCEL_TINFO *current_tinfo;
+  uplevel = llmp_has_uplevel(stblk_sptr);
+
+  std::vector<SPTR> arg_vector, orig_arg_vector;
+  get_arg_vector_from_uplevel_chain(arg_vector, uplevel, /* is_orig */ false);
+  get_arg_vector_from_uplevel_chain(orig_arg_vector, uplevel, /* is_orig */ true);
+
+  /* Create function symbol for target region */
+  func_sptr = create_target_outlined_func_sptr(scope_sptr, iskernel);
+
+  current_tinfo = ompaccel_tinfo_create(func_sptr, arg_vector.size());
+
+  for (SPTR arg_sptr : arg_vector) {
+    if (!arg_sptr && !ompaccel_tinfo_current_is_registered(arg_sptr))
+      continue;
+    if (SCG(arg_sptr) == SC_PRIVATE)
+      continue;
+    if (DESCARRAYG(arg_sptr))
+      continue;
+
+    if (!iskernel && !OMPACCDEVSYMG(arg_sptr))
+      arg_sptr = ompaccel_tinfo_parent_get_devsptr(arg_sptr);
+    ompaccel_tinfo_current_add_sym(arg_sptr, SPTR_NULL, 0);
+  }
+
+  llMakeFtnOutlinedSignatureTarget2(func_sptr, current_tinfo, orig_arg_vector);
+
+  ompaccel_symreplacer(true);
+  if (isReplacerEnabled) {
+    /* Data dtype replication for allocatable arrays */
+    for (int i = 0; i < ompaccel_tinfo_current_get()->n_quiet_symbols; ++i) {
+      ompaccel_tinfo_current_get()->quiet_symbols[i].device_sym =
+          ompaccel_copy_arraydescriptors(
+              ompaccel_tinfo_current_get()->quiet_symbols[i].host_sym);
+    }
+
+    for (int i = 0; i < ompaccel_tinfo_current_get()->n_symbols; ++i) {
+      if (SDSCG(ompaccel_tinfo_current_get()->symbols[i].host_sym))
+        ompaccel_tinfo_current_get()->symbols[i].device_sym =
+            ompaccel_copy_arraydescriptors(
+                ompaccel_tinfo_current_get()->symbols[i].host_sym);
+    }
+  }
+  ompaccel_symreplacer(false);
+
+  return func_sptr;
+}
+// AOCC end
 #endif /* End #ifdef OMP_OFFLOAD_LLVM */

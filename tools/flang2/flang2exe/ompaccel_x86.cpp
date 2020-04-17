@@ -149,7 +149,14 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
     return;
 
-  if (ompaccel_x86_is_parallel_func(func_sptr)) {
+  // -Mx,232,0x1 implementation of parallel and teams expansion uses the
+  // ompaccel_x86_fork_call() which adds tid_args and fixes the arg types of the
+  // callback. So func_sptr with tid_args are already fixed.
+  if (XBIT(232, 0x1) && ompaccel_x86_has_tid_args(func_sptr)) {
+    return;
+  }
+
+  if (ompaccel_x86_has_tid_args(func_sptr)) {
     // Then skip the first 2 tid args.
     adjust_idx = 2;
     func_paramct -= 2;
@@ -175,9 +182,20 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
       if (reduc_syms.find(arg_sptr) != reduc_syms.end()) { continue; }
 
       DTYPEP(arg_sptr, DT_INT8);
+      if (XBIT(232, 0x1)) {
+        // FIXME! This condition is not suppose to happen, but it does in
+        // -Mx,232,0x1.
+        if (PASSBYVALG(arg_sptr) == PASSBYREFG(arg_sptr) &&
+            PASSBYREFG(arg_sptr) == 1) {
+          PASSBYREFP(arg_sptr, 1);
+          PASSBYVALP(arg_sptr, 0);
+        }
+      }
       if (debug_me) {
-        printf("[ompaccel-x86]: setting %s's type as DT_INT8\n",
-            SYMNAME(arg_sptr));
+        printf("[ompaccel-x86]: For %s setting %s's type as DT_INT8 ",
+            SYMNAME(func_sptr), SYMNAME(arg_sptr));
+        printf("PASSBYVAL: %d PASSBYREF: %d\n",
+            PASSBYVALG(arg_sptr), PASSBYREFG(arg_sptr));
       }
     }
   }
@@ -427,39 +445,16 @@ int ompaccel_x86_fork_call(SPTR outlined_func, int kmpc_api) {
   STYPEP(outlined_func, ST_PROC);
   CFUNCP(outlined_func, 1);
 
-  args[nargs + 1] = ad_icon(10);
-  arg_dtypes[nargs + 1] = DT_INT;
-  args[nargs] = ad_icon(10);
-  arg_dtypes[nargs] = DT_INT;
-
   for (i = 0; i < nargs; ++i) {
-    sptr = omptinfo->symbols[i].host_sym;
-    sptr_args[i] = sptr;
-    nme = addnme(NT_VAR, sptr, 0, (INT)0);
-    ili = mk_address(sptr);
-    if (!PASSBYVALG(sptr))
-      args[nargs - i - 1] = ad2ili(IL_LDA, ili, nme);
-    else {
-      if (DTY(DTYPEG(sptr)) == TY_PTR) {
-        args[nargs - i - 1] = ad2ili(IL_LDA, ili, nme);
-      } else {
-        if (DTYPEG(sptr) == DT_INT8)
-          args[nargs - i - 1] = ad3ili(IL_LDKR, ili, nme, MSZ_I8);
-        else if (DTYPEG(sptr) == DT_DBLE)
-          args[nargs - i - 1] = ad3ili(IL_LDDP, ili, nme, MSZ_F8);
-        else
-          args[nargs - i - 1] = ad3ili(IL_LD, ili, nme, MSZ_WORD);
-      }
-    }
-    arg_dtypes[nargs - i - 1] = DTYPEG(sptr);
+    sptr_args[i] = omptinfo->symbols[i].host_sym;
   }
 
+  ompaccel_x86_fix_arg_types(outlined_func);
   ompaccel_x86_add_tid_params(outlined_func);
 
-  int call_ili =
-    mk_function_call(DT_NONE, nargs, arg_dtypes, args, outlined_func);
-
-  return ll_make_kmpc_fork_call_variadic2(outlined_func, nargs, sptr_args, kmpc_api);
+  // The fork_call should be aware of the callback's type here
+  ll_process_routine_parameters(outlined_func);
+  return ll_make_kmpc_fork_call_variadic2(outlined_func, nargs, sptr_args);
 }
 
 #endif

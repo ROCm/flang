@@ -30,10 +30,18 @@
  * are represented as a list of unique sptrs.
  */
 typedef struct {
+  /* AOCC begin */
+  /*
+   * orig_vals[] track the original SPTRs assigned to this uplevel.
+   * change_target_func_smbols() is called for omptarget compilation that
+   * changes vals[i] to it's corresponding device-sptr. So APIs that require
+   * the originally assigned SPTR should refer to orig_vals[] instead of vals[]
+   */
+  int *orig_vals; /* Contains the original shared var sptrs */
+  int orig_vals_size;  /* Total allocated slots in orig_vals */
+  /* AOCC end */
   int *vals;      /* Array containing shared var sptrs */
-  int *orig_vals; /* Contains the original shared var sptrs */ /* AOCC */
   int vals_size;  /* Total allocated slots in vals */
-  int orig_vals_size;  /* Total allocated slots in orig_vals */ /* AOCC */
   int vals_count; /* Traditionally "available" or vals_avl */
   DTYPE dtype;    ///< The true dtype containing fields and their offsets
   SPTR parent;    /* sptr of its parent */

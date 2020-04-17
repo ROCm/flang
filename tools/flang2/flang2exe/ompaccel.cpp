@@ -112,6 +112,7 @@ OMPACCEL_TINFO *old_tinfo = nullptr;
 // Store index of last emited tifno
 int last_tinfo_index = 0;
 int next_default_map_type = 0;
+SPTR curr_teams_outlined_sptr = (SPTR)0; // AOCC
 // AOCC End
 
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
@@ -2473,6 +2474,22 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
     ll_rewrite_ilms(-1, curilm, 0);
     return;
   }
+
+  // AOCC begin
+  //
+  // Force the parallel codegen on the outlined function of teams for now.
+  if (flg.x86_64_omptarget && gbl.currsub == curr_teams_outlined_sptr) {
+    outlinedCnt = incrOutlinedCnt();
+    BIH_FT(expb.curbih) = TRUE;
+    BIH_QJSR(expb.curbih) = TRUE;
+    BIH_NOMERGE(expb.curbih) = TRUE;
+    if (gbl.outlined)
+      expb.sc = SC_PRIVATE;
+
+    ll_rewrite_ilms(-1, curilm, 0);
+    return;
+  }
+  // AOCC end
   outlinedCnt = incrOutlinedCnt();
   BIH_FT(expb.curbih) = TRUE;
   BIH_QJSR(expb.curbih) = TRUE;
@@ -2480,7 +2497,8 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
   if (gbl.outlined)
     expb.sc = SC_PRIVATE;
   if (outlinedCnt == 1) {
-    sptr = ll_make_outlined_ompaccel_func(uplevel_sptr, scopeSptr, FALSE);
+    sptr = ll_make_outlined_ompaccel_func2(uplevel_sptr,
+        scopeSptr, FALSE); // AOCC
 
     if (!PARENCLFUNCG(scopeSptr))
       PARENCLFUNCP(scopeSptr, sptr);
@@ -2613,6 +2631,20 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   loop_args.last = ILM_SymOPND(ilmp, 5);
   loop_args.dtype = (DTYPE)ILM_OPND(ilmp, 6); // ???
   loop_args.sched = (kmpc_sched_e)ILM_OPND(ilmp, 7);
+
+  // AOCC begin
+  // For -Mx,232,0x1 on x86 offloading we emit the teams distribute code
+  // just like a parallel region (ie. only one invocation of for_static_init).
+  // The codegen for emitting the fork_teams with a callback to fork_call (ie.
+  // the one with 2 for_static_inits like -fopenmp) has lots of issues (like the
+  // bounds are not properly propagated from the teams callback to the fork_call
+  // callback etc.)
+  if (flg.x86_64_omptarget && XBIT(232, 0x1) &&
+      mp_sched_to_kmpc_sched(loop_args.sched) == KMP_DISTRIBUTE_STATIC) {
+    loop_args.sched = (kmpc_sched_e) MP_SCH_STATIC;
+  }
+  // AOCC end
+
   sched = mp_sched_to_kmpc_sched(loop_args.sched);
   switch (sched) {
   case KMP_SCH_STATIC:
@@ -3101,9 +3133,11 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     expb.sc = SC_PRIVATE;
   if (outlinedCnt == 1) {
     if (flg.omptarget)
-      sptr = ll_make_outlined_ompaccel_func(uplevel_sptr, scopeSptr, FALSE);
+      sptr = ll_make_outlined_ompaccel_func2(uplevel_sptr,
+          scopeSptr, FALSE); // AOCC
     else
       sptr = ll_make_outlined_func(uplevel_sptr, scopeSptr);
+    curr_teams_outlined_sptr = sptr; // AOCC
     if (!PARENCLFUNCG(scopeSptr))
       PARENCLFUNCP(scopeSptr, sptr);
     ll_write_ilm_header(sptr, curilm);
@@ -3117,7 +3151,7 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
       }
 
       if (flg.x86_64_omptarget)
-        ili = ompaccel_x86_fork_call(sptr, KMPC_API_FORK_TEAMS);
+        ili = ompaccel_x86_fork_call(sptr);
       else
         ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
 
