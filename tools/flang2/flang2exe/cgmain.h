@@ -293,4 +293,10 @@ int get_alloca_addrspace(LL_Module *module);
 #endif
 // AOCC End
 
+/**
+   \brief Check if sptr is the midnum of a scalar and scalar has POINTER/ALLOCATABLE attribute
+   \param sptr  A symbol
+ */
+bool pointer_scalar_need_debug_info(SPTR sptr);
+
 #endif
