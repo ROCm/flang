@@ -22,6 +22,7 @@
  * Date of modification 05th December 2019
  * Date of modification 04th February 2020
  * Date of modification 12th February 2020
+ * Date of modification 20th April    2020
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -7847,6 +7848,20 @@ do_map()
   int ast;
   if (CL_PRESENT(CL_MAP)) {
     for (item = (ITEM *)CL_FIRST(CL_MAP); item != ITEM_END; item = item->next) {
+      // AOCC Begin
+      SPTR blk = A_SPTRG(item->ast);
+      if (blk && STYPEG(blk) == ST_CMBLK) {
+        for (SPTR sptr = CMEMFG(blk); sptr > NOSYM;
+                                          sptr = (SPTR) SYMLKG(sptr)) {
+          int sptr_ast = mk_id(sptr);
+          ast = mk_stmt(A_MP_MAP, 0);
+          (void)add_stmt(ast);
+          A_LOPP(ast, sptr_ast);
+          A_PRAGMATYPEP(ast, item->t.cltype);
+        }
+        continue;
+      }
+      // AOCC End
       ast = mk_stmt(A_MP_MAP, 0);
       (void)add_stmt(ast);
       A_LOPP(ast, item->ast);
