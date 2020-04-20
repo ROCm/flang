@@ -18,9 +18,9 @@
 int ENT3F(STIME, stime)(int *tp)
 {
   int i;
-  time_t t = *tp;
-
-  if ((i = stime(&t)))
+  struct timespec ts = {};
+  ts.tv_sec = *tp;
+  if ((i = clock_settime(CLOCK_REALTIME, &ts)))
     i = __io_errno();
 
   return i;
