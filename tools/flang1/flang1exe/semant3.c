@@ -14,6 +14,8 @@
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 14th October 2019
  *
+ * Support for Associate Block for OpenMP
+ * Date of modification : 20th April 2020
  */
 /**
     \file semant3.c
@@ -6749,7 +6751,8 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   STYPEP(lhs_sptr, is_array ? ST_ARRAY : ST_VAR);
   POINTERP(lhs_sptr, TRUE);
   DCLDP(lhs_sptr, TRUE); /* dodge spurious errors with IMPLICIT NONE */
-  SCOPEP(lhs_sptr, stb.curr_scope);
+  //SCOPEP(lhs_sptr, stb.curr_scope);   //AOCC
+  SCOPEP(lhs_sptr, SCOPEG(rhs_sptr));
   ADDRTKNP(lhs_sptr,
            TRUE); /* do not remove pointer assignment in optimization */
   SCP(lhs_sptr, SC_BASED);
@@ -6844,9 +6847,13 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   set_descriptor_rank(FALSE /* to reset the hidden API state :-P */);
   get_all_descriptors(lhs_sptr);
   if (sem.parallel || sem.target || sem.task) {
-    if (SDSCG(lhs_sptr)) {
-      SCP(SDSCG(lhs_sptr), SC_PRIVATE);  
-    }
+  //AOCC Begin
+  /* The following condition is commented to avoid the creation of double
+   * pointer to the associate-name */
+   /*if (SDSCG(lhs_sptr)) {
+      SCP(SDSCG(lhs_sptr), SC_PRIVATE);
+    }*/
+  //AOCC End
     if (MIDNUMG(lhs_sptr)) {
       SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);  
     }
@@ -6854,7 +6861,6 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
       SCP(PTROFFG(lhs_sptr), SC_PRIVATE);  
     }
   }
-
   lhs_ast = mk_id(lhs_sptr); /* must follow descriptor creation */
   is_lhs_unl_poly = is_unl_poly(lhs_sptr);
 
