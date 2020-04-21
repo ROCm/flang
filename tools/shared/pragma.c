@@ -10,6 +10,9 @@
  * Support for vector and novector directives
  * Date of Modification: 19th July 2019
  *
+ * Ignoring simd directive for AMDGCN target
+ * Date of modification: 21st April 2020
+ *
  */
 
 /** \file
@@ -1529,6 +1532,11 @@ rouprg_enter(void)
 void
 apply_nodepchk(int dir_lineno, int dir_scope)
 {
+  // AOCC Begin
+  if (flg.amdgcn_target) {
+    return;
+  }
+  // AOCC End
   int index, diroff;
   DIRSET* tempdir;
   if (!ALLOW_NODEPCHK_SIMD)
