@@ -15,6 +15,9 @@
 # for same.
 # Date of modification 10th April 2020
 #
+# Including common block names in declare target list
+# Date of modification 21st April 2020
+#
 
 <stmt> ::= <stbeg> <statement> <stend>
 
@@ -891,7 +894,7 @@
 
 <mp decl> ::= <mp declaresimd> <declare simd> |
               <mp declaretarget> |
-              <mp declaretarget> ( <ident list> ) |
+              <mp declaretarget> ( <cmn ident list> ) |
               <mp declaretarget> <par list> |
 	            <declarered begin> <declare reduction>
 
