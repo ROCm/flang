@@ -13,7 +13,7 @@
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  *
- * last modified : May 2020
+ * Last modified : June 2020
  */
 
 #include "lldebug.h"
@@ -1860,7 +1860,11 @@ lldbg_emit_lexical_block(LL_DebugInfo *db, int sptr, int lineno, int findex,
   NEEDB((db->blk_idx + 1), db->blk_tab, BLKINFO, db->blk_tab_size,
         (db->blk_tab_size + 64));
   db->blk_tab[db->blk_idx].mdnode =
-      lldbg_create_block_mdnode(db, parent_blk_mdnode, lineno, 1, findex, ID++);
+ // AOCC Begin
+      STYPEG(sptr) == ST_BLOCK ? lldbg_create_block_mdnode(db,
+                   parent_blk_mdnode, lineno, 1, findex, ID++)
+                   : parent_blk_mdnode;
+  // AOCC End
   db->blk_tab[db->blk_idx].sptr = sptr;
   db->blk_tab[db->blk_idx].startline = startline;
   db->blk_tab[db->blk_idx].endline = endline;
