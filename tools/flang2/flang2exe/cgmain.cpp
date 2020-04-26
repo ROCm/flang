@@ -42,13 +42,11 @@
  * Support for Real128 support for math intrinsics
  * Date of modification 24th February 2020
  *
-<<<<<<< HEAD
  * get_alloca_addrspace function is made public.
  * Date of modification 13th April 2020
-=======
+ *
  * Added code to support SHIFTA intrinsic
  * Last modified: April 2020
->>>>>>> [CPUPC-2992]SHIFTA intrinsic
  */
 
 /**
