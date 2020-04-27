@@ -4826,6 +4826,12 @@ static void
 insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
                         OPERAND *exprMDOp, OperandFlag_t opflag)
 {
+
+#ifdef OMP_OFFLOAD_LLVM
+  if (flg.omptarget) {
+    return;  //FIXME: need to fully generate dbg info o ntarget.
+  }
+#endif
   EXFUNC_LIST *exfunc;
   OPERAND *call_op;
   static bool dbg_declare_defined = false;
@@ -5511,6 +5517,12 @@ insertLLVMDbgValue(OPERAND *load, LL_MDRef mdnode, SPTR sptr, LL_Type *type)
   LLVMModuleRef mod = cpu_llvm_module;
   LL_DebugInfo *di = mod->debug_info;
   INSTR_LIST *callInsn = make_instr(I_CALL);
+
+#ifdef OMP_OFFLOAD_LLVM
+  if (flg.omptarget) {
+    return;  //FIXME: need to fully generate dbg info o ntarget.
+  }
+#endif
 
   if (!defined) {
     EXFUNC_LIST *exfunc;
@@ -10914,8 +10926,7 @@ INLINE static bool
 need_debug_info(SPTR sptr)
 {
 #ifdef OMP_OFFLOAD_LLVM
-  if (is_ompaccel(sptr) && ISNVVMCODEGEN)
-    return false;
+// FIXME: We used to suppress -g for target here.
 #endif
   return generating_debug_info() && needDebugInfoFilt(sptr);
 }
