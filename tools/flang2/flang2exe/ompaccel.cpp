@@ -31,6 +31,7 @@
  * Date of modification 31st March     2020
  * Date of modification 04th April     2020
  * Date of modification 27th April     2020
+ * Date of modification 29th April     2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020
@@ -103,6 +104,11 @@ int tinfo_size_reductions = 20; // AOCC
 int num_tinfos = 0;
 OMPACCEL_TINFO **tinfos;
 OMPACCEL_TINFO *current_tinfo = nullptr;
+
+// AOCC Begin
+// Keeping target data tinfos in a stack. Array wont work for nested cases.
+std::vector<OMPACCEL_TINFO *>  targetDataTinfos;
+// AOCC End
 
 // AOCC Begin
 // This is used for target update. Since target update can appear anywhere in
@@ -1223,6 +1229,13 @@ get_devsptr2(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
 OMPACCEL_TINFO *
 ompaccel_tinfo_current_get_targetdata()
 {
+  // AOCC Begin
+  if (flg.amdgcn_target) {
+    OMPACCEL_TINFO* tinfo = targetDataTinfos.back();
+    targetDataTinfos.pop_back();
+    return tinfo;
+  }
+  // AOCC End
   OMPACCEL_TINFO *tinfo = current_tinfo;
   while (tinfo != nullptr) {
     if (tinfo->mode == mode_target_data_region)
@@ -3290,8 +3303,10 @@ exp_ompaccel_targetdata(ILM *ilmp, int curilm, ILM_OP opc)
     ompaccel_tinfo_current_set_mode(mode_target_data_exit_region);
   else if (opc == IM_TARGETENTERDATA)
     ompaccel_tinfo_current_set_mode(mode_target_data_enter_region);
-  else if (opc == IM_BTARGETDATA)
+  else if (opc == IM_BTARGETDATA) {
     ompaccel_tinfo_current_set_mode(mode_target_data_region);
+    targetDataTinfos.push_back(current_tinfo); // AOCC
+  }
   dotarget = ILI_OF(ILM_OPND(ilmp, 1));
   beg_label = getlab();
   end_label = getlab();

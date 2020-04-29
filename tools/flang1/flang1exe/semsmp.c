@@ -23,6 +23,7 @@
  * Date of modification 04th February 2020
  * Date of modification 12th February 2020
  * Date of modification 20th April    2020
+ * Date of modification 29th April    2020
  *
  * Added support for !$omp target and !$omp teams blocks
  * Date of modification 16th October 2019
@@ -132,6 +133,7 @@ static int mk_atomic_update_intr(int, int);
 static void do_map();
 // AOCC Begin
 static void do_tofrom();
+static void do_usedeviceptr();
 // AOCC End
 static LOGICAL use_atomic_for_reduction(int);
 
@@ -1592,13 +1594,19 @@ semsmp(int rednum, SST *top)
     add_stmt(ast);
   }
     SST_ASTP(LHS, 0);
+    do_usedeviceptr(); // AOCC
     do_map();
     break;
   /*
    *	<mp stmt> ::= <mp endtargetdata> |
    */
   case MP_STMT44: {
-    doif = leave_dir(DI_TARGETDATA, TRUE, 0);
+    // AOCC Begin
+    if (flg.amdgcn_target)
+      doif = leave_dir(DI_TARGETDATA, FALSE, 0);
+    else
+    // AOCC End
+      doif = leave_dir(DI_TARGETDATA, TRUE, 0);
     ast = mk_stmt(A_MP_ENDTARGETDATA, 0);
     if (CL_PRESENT(CL_IF)) {
       A_IFEXPRP(ast, CL_VAL(CL_IF));
@@ -2684,6 +2692,30 @@ semsmp(int rednum, SST *top)
   case PAR_ATTR38:
     add_clause(CL_NOWAIT, TRUE);
     break;
+  /*
+   *  <par attr> ::= USE_DEVICE_PTR ( <accel data list> )
+   */
+  case PAR_ATTR39: {
+    ITEM *itemp, *itembeg, *itemend;
+    int type = OMP_TGT_MAPTYPE_TARGET_PARAM |
+               OMP_TGT_MAPTYPE_RETURN_PARAM;
+    int clause = CL_USE_DEVICE_PTR;
+
+    itembeg = SST_BEGG(RHS(3));
+    itemend = SST_ENDG(RHS(3));
+    if (itembeg == ITEM_END)
+      return;
+    for (itemp = itembeg; itemp != ITEM_END; itemp = itemp->next) {
+      itemp->t.cltype = type;
+    }
+    add_clause(clause, FALSE);
+    if (CL_FIRST(clause) == NULL)
+      CL_FIRST(clause) = itembeg;
+    else
+      ((ITEM *)CL_LAST(clause))->next = itembeg;
+    CL_LAST(clause) = itemend;
+    break;
+  }
   // AOCC END
   /* ------------------------------------------------------------------ */
   /*
@@ -3553,8 +3585,14 @@ semsmp(int rednum, SST *top)
     doif = enter_dir(DI_TARGETDATA, TRUE, 0,
                      DI_B(DI_ATOMIC_CAPTURE) | DI_B(DI_TARGET) |
                          DI_B(DI_TARGETENTERDATA) | DI_B(DI_TARGETEXITDATA) |
-                         DI_B(DI_TARGETUPDATE) | DI_B(DI_TARGETDATA));
-    SST_CVALP(LHS, doif);
+                         DI_B(DI_TARGETUPDATE));
+    // AOCC Begin
+    if (flg.amdgcn_target)
+      SST_CVALP(LHS, sem.doif_depth);
+    else
+    // AOCC End
+      SST_CVALP(LHS, doif);
+
     break;
 
   /* ------------------------------------------------------------------ */
@@ -7835,6 +7873,25 @@ do_tofrom()
   }
   ast = mk_stmt(A_MP_EMAP, 0);
   (void)add_stmt(ast);
+}
+
+static void
+do_usedeviceptr()
+{
+  if (!flg.omptarget)
+    return;
+
+  ITEM *item;
+  int ast;
+  if (CL_PRESENT(CL_USE_DEVICE_PTR)) {
+    for (item = (ITEM *)CL_FIRST(CL_USE_DEVICE_PTR); item != ITEM_END;
+                                                     item = item->next) {
+      ast = mk_stmt(A_MP_MAP, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
 }
 // AOCC End
 

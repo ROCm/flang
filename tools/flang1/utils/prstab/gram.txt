@@ -18,6 +18,9 @@
 # Including common block names in declare target list
 # Date of modification 21st April 2020
 #
+# Adding grammer for use_device_ptr
+# Date of modification 29th April 2020
+#
 
 <stmt> ::= <stbeg> <statement> <stend>
 
@@ -1865,7 +1868,8 @@
                NUM_TEAMS ( <expression> ) |
                THREAD_LIMIT ( <expression> ) |
                NOGROUP |
-               NOWAIT
+               NOWAIT |
+               USE_DEVICE_PTR ( <accel data list> )
 
 <opt expression> ::= |
 	             ( <expression> )
