@@ -30,6 +30,7 @@
  * Date of modification 20th February  2020
  * Date of modification 31st March     2020
  * Date of modification 04th April     2020
+ * Date of modification 27th April     2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020
@@ -669,10 +670,11 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
     //AOCC Begin
-  case 347:
+  case 350:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
     // AOCC End
   default:
+    ompaccelInternalFail("Unknown red op type"); // AOCC
     static_assert(true, "Rest of reduction operators are not implemented yet.");
     break;
   }
@@ -1543,7 +1545,7 @@ dumptargetreduction(OMPACCEL_RED_SYM targetred)
   case 346:
     fprintf(gbl.dbgfil, "max:");
     break;
-  case 347:
+  case 350:
     fprintf(gbl.dbgfil, "min:");
     break;
   case 327:
@@ -2945,7 +2947,7 @@ static void emit_array_reduction(SPTR sptrReduceData) {
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
                             store_addr);
     break;
-  case 347:
+  case 350:
     ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
     ili = mk_ompaccel_store(ili, dtypeReductionItem,
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
@@ -3082,15 +3084,14 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 347:
+      case 350:
         ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
       default:
-        fprintf(stderr, "ERROR : This reduction type is not supported yet\n");
-        exit(1);
+        ompaccelInternalFail("Unknown red op type");
       // AOCC End
       }
 
