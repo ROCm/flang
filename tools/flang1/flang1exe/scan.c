@@ -9632,7 +9632,7 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
   char look_ahead[MAXIDLEN * 4];
   int intrinsic_type;
   int paran_count = 0;
-  int c , count , index = 0;
+  int c , count , index = 0 , space = 0;
   char *insert;
   curr_token = cp;
   count = MAXIDLEN * 4;
@@ -9641,6 +9641,7 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
   if(*curr_token == ' '){
     ++curr_token;
     index++;
+    space++;
   }
   if(*curr_token == '('){
     ++curr_token;
@@ -9648,6 +9649,7 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
     if(*curr_token == ' '){
       ++curr_token;
       index++;
+      space++;
     }
     do {
       c = *curr_token++;
@@ -9679,7 +9681,7 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
         }
         if(paran_count == 2)
           currc[index + 3] = ' ';
-          *idlen = index+3;
+          *idlen = space+strlen(look_ahead)+5;
       }
     }
   }
