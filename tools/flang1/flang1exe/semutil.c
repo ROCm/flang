@@ -4,29 +4,31 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
-  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
-  *
-  * Bug fixes.
-  *
-  * Date of Modification: December 2018
-  *
-  * Changes to support AMD GPU Offloading
-  * Added code to avoid allocations for implied do inside target region
-  * Date of Modification: 24th October 2019
-  * Date of Modification: 5th November 2019
-  *
-  * Changes to emit proper error message when pointer is associated with 
-  * a constant
-  * Date of Modification: 17th December 2019
-  *
-  * Added code to support reshape with implied dos inside target region
-  * Date of Modification: 23rd January 2020
-  *
-  * Added support for quad precision
-  * last modified: feb 2020
-  *
-  */
+
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Bug fixes.
+ *   Date of Modification: December 2018
+ *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ *   Date of Modification: 24th October 2019
+ *   Date of Modification: 5th November 2019
+ *
+ * Changes to emit proper error message when pointer is associated with 
+ * a constant
+ *   Date of Modification: 17th December 2019
+ *
+ * Added code to support reshape with implied dos inside target region
+ *   Date of Modification: 23rd January 2020
+ *
+ * Added support for quad precision
+ *   last modified: feb 2020
+ *
+ */
 
 
 /** \file

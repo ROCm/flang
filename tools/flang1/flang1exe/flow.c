@@ -6,8 +6,11 @@
  */
 
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
  *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
  * Support for DNORM intrinsic
  *
  * Date of Modification: 21st February 2019

@@ -5,17 +5,18 @@
  *
  */
 /*
-  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
-  *
-  * Bug fixes.
-  *
-  * Date of Modification: March 2019
-  *
-  * Changes to support AMDGPU OpenMP offloading
-  * Date of modification 12th February  2020
-  * Date of modification 04th April     2020
-  *
-  */
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *
+ * Date of Modification: March 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
+ *
+ */
 
 
 /** \file rest.c

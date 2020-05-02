@@ -5,28 +5,12 @@
  *
  */
 
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Date of modification 9th July 2019
- * Date of modification 5th September 2019
- * Date of modification 16th September 2019
- * Date of modification 20th September 2019
- * Date of modification 23rd September 2019
- * Date of modification 07th October 2019
- * Date of modification 14th October 2019
- * Date of modification 15th November 2019
- * Date of modification 30th November 2019
- * Date of modification 02nd December 2019
- * Date of modification 05th December 2019
- * Date of modification 04th February 2020
- * Date of modification 12th February 2020
- * Date of modification 20th April    2020
- * Date of modification 29th April    2020
- *
- * Added support for !$omp target and !$omp teams blocks
- * Date of modification 16th October 2019
+ * Last Modified: April 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020

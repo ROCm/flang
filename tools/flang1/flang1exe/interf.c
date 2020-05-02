@@ -5,11 +5,12 @@
  *
  */
 
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes made to support f2008 support of change in maximum array dimensions
- * Date of Modification: 26th June 2019
+ *   Date of Modification: 26th June 2019
  *
  */
 /**

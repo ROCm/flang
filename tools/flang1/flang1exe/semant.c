@@ -4,23 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
- *
- * Date of Modification : 9th July 2019
  * Support for AMDGPU OpenMP offloading
+ *   Date of Modification : 9th July 2019
  *
- * Date of Modification: 16th July 2019
  * Suppressed a duplicate diagnostic message: "Redundant specification of array"
+ *   Date of Modification: 16th July 2019
  *
- * 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
- *             construct
+ * Fix for allowing atomic read/write construct inside omp critical construct
+ *   Date of Modification: November 2019
  *
  * Support for AMDGPU OpenMP offloading
- * Date of modification 04th April 2020
- * Date of modification 10th April 2020
+ *   Date of modification 04th April 2020
+ *   Date of modification 10th April 2020
  *
  */
 

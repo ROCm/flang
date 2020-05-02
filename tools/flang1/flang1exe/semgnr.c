@@ -4,14 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Fixes for CP2K application build
- * Month of Modification: November 2019
+ *  Month of Modification: November 2019
  *
  * Fixed issues related to type bound procedures with and without nopass clause
- * Date of Modification: December 2019
+ *  Date of Modification: December 2019
  */
 
 /** \file

@@ -7,8 +7,11 @@
  */
 
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
  * Month of modification : May 2019 - Added OMP offload support
  * 2020/03/09: add fcprop pass to the flow.
  *

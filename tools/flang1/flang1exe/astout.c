@@ -3,20 +3,20 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Added support for quad precision
- * Last modified: Feb 2020
- *
  */
+
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 12th February  2020
- * Date of modification 04th April     2020
+ *   Date of modification 12th February  2020
+ *   Date of modification 04th April     2020
  *
  * Support for TRAILZ intrinsic.
- * Month of Modification: July 2019
+ *   Month of Modification: July 2019
+ * Added support for quad precision
+ *   Last modified: Feb 2020
  */
 
 /**

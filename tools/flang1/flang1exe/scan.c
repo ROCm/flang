@@ -5,13 +5,16 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
- *Support type statement for intrinsic types
- *Date of Modification: 24 January 2020
+ * Changes to support AMDGPU OpenMP offloading
+ *
+ * Support type statement for intrinsic types
+ *   Date of Modification: 24 January 2020
  *
  * Added support for quad precision
- * Last modified: Feb 2020
+ *   Last modified: Feb 2020
  *
  */
 

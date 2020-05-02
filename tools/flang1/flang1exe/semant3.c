@@ -5,16 +5,18 @@
  *
  */
 
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Last modified: Nov 12, 2019
- * Raise error for non integer nd non character stop codes
+ *  Raise error for non integer nd non character stop codes
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Date of modification 14th October 2019
+ *  Date of modification 14th October 2019
  *
  */
+
 /**
     \file semant3.c
     \brief This file contains part 3 of the compiler's semantic actions

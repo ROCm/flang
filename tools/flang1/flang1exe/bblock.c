@@ -5,8 +5,10 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
+ * Changes to support AMDGPU OpenMP offloading
  * Implemented diagnostics for simpler case of uninitialized variable use.
  *
  * Date of Modification: April 2019

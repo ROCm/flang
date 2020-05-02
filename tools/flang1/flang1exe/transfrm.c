@@ -5,13 +5,15 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
+ * Changes to support AMDGPU OpenMP offloading
  * Support for parity intrinsic.
- * Month of Modification: July 2019
+ *   Month of Modification: July 2019
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
- * Month of Modification: July 2019
+ *   Month of Modification: July 2019
  */
 
 /** \brief Fortran transformation module */
