@@ -4,19 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes for AMD GPU OpenMP offloading and bug fixes.
- * Date of Modification: 05th Septemeber 2019
- *
- * Date of Modification: November 2018
+ *   Date of Modification: 05th Septemeber 2019
  *
  * Added support for quad precision
- * Last modified: Feb 2020
+ *  Last modified: Feb 2020
  *
  * Real128 support for math intrinsics
- * Date of Modification : 24 Feb 2020
+ *  Date of Modification : 24 Feb 2020
  *
  */
 

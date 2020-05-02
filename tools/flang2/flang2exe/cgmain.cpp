@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Date of Modification: May 2018
+
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for ivdep directive
  * Date of Modification: 11th march 2019

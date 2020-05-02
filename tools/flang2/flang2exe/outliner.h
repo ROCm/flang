@@ -5,8 +5,10 @@
  *
  */
 
-/*
- * Copyright (c) 2020, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020

@@ -3,7 +3,10 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -13,13 +16,6 @@
 /** \file
  * \brief OpenMP/OpenACC/C++11 atomics expander routines; all targets including
  * LLVM
- */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * modification date: 7th Feb 2020
- * fix the issue with multiply reduction
  */
 
 #include "expatomics.h"

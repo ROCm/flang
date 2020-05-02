@@ -5,18 +5,18 @@
  *
  */
 
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for transpose intrinsic during initialization
- *
- * Date of Modification: 1st March 2019
+ *  Date of Modification: 1st March 2019
  *
  * Added support for quad precision
- * Last modified: Feb 2020
+ *  Last modified: Feb 2020
  *
  * Support for nearest intrinsic
- * Last modified: 01 March 2020
+ *  Last modified: 01 March 2020
  */
 
 /** \file
