@@ -1583,7 +1583,28 @@ lldbg_emit_compile_unit(LL_DebugInfo *db)
   int lang_tag;
   assert(db, "Debug info not enabled", 0, ERR_Fatal);
   if (LL_MDREF_IS_NULL(db->comp_unit_mdnode)) {
-    lang_tag = DW_LANG_Fortran90;
+    // AOCC begin
+    const unsigned dwarfVers = ll_feature_dwarf_version(&db->module->ir);
+    switch (flg.std) {
+    case F77:
+      lang_tag = DW_LANG_Fortran77;
+      break;
+    case F90:
+      lang_tag = DW_LANG_Fortran90;
+      break;
+    case F95:
+      lang_tag = DW_LANG_Fortran95;
+      break;
+    case F2003:
+      lang_tag = dwarfVers > 4 ? DW_LANG_Fortran03 : DW_LANG_Fortran90;
+      break;
+    case F2008:
+      lang_tag = dwarfVers > 4 ? DW_LANG_Fortran08 : DW_LANG_Fortran90;
+      break;
+    default:
+      lang_tag = DW_LANG_Fortran90;
+    }
+    // AOCC end
     db->comp_unit_mdnode = lldbg_create_compile_unit_mdnode(
         db, lang_tag, get_filename(1), get_currentdir(), db->producer, 1,
         flg.opt >= 1, "",

@@ -474,6 +474,10 @@ dwarf_lang_name(unsigned value)
     CASERET(DW_LANG_D);
     CASERET(DW_LANG_Mips_Assembler);
     CASERET(DW_LANG_Upc);
+    // AOCC begin
+    CASERET(DW_LANG_Fortran08);
+    CASERET(DW_LANG_Fortran03);
+    // AOCC end
   }
   return "DW_LANG_<unknown>";
 }

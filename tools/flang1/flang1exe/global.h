@@ -29,7 +29,11 @@ typedef enum SPTR {
 // AOCC begin
 typedef enum {
   STD_UNKNOWN, /* default */
-  F2008
+  F2008,
+  F2003,
+  F95,
+  F90,
+  F77
 } FORTRAN_STD;
 // AOCC end
 
