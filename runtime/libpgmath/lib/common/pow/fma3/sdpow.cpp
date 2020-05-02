@@ -5,16 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Bug fixes.
- *
- * Date of Modification: November 2018
- *
- */
-
 #if defined(TARGET_LINUX_POWER)
 #include "xmm2altivec.h"
 #elif defined(TARGET_LINUX_ARM64)

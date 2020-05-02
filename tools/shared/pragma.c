@@ -4,14 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for vector and novector directives
- * Date of Modification: 19th July 2019
+ *  Date of Modification: 19th July 2019
  *
  * Ignoring simd directive for AMDGCN target
- * Date of modification: 21st April 2020
+ *  Date of modification: 21st April 2020
  *
  */
 

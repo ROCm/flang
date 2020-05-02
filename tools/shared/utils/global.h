@@ -6,8 +6,9 @@
  *
  */
 
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Use llvm math intrinsic instead of flang runtime;
  * assume function arguments are aliasing.

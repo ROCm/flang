@@ -4,8 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
  *
  * Using clock_gettime to gather CPU times of all threads.
  * Date of modification 9th Dec 2019

@@ -7,8 +7,8 @@
 #
 
 #
-# Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
-#
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #
 # AMD Support for DNORM intrinsic
 # Date of Modification: 21st February 2019

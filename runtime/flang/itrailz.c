@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for TRAILZ intrinsic.
- *
- * Month of Modification: May 2019
+ *  Month of Modification: May 2019
  */
 
 int

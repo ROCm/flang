@@ -5,37 +5,30 @@
  *
  */
 
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for DNORM intrinsic
- *
- * Date of Modification: 21st February 2019
- *
+ *  Date of Modification: 21st February 2019
  *
  * Support for Bit Sequence Comparsion intrinsic
- *
- * Month of Modification: May 2019
- *
+ *  Month of Modification: May 2019
  *
  * Support for Bit Masking intrinsics.
- *
- * Month of Modification: May 2019
+ *  Month of Modification: May 2019
  *
  * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
- *
- * Month of Modification: July 2019
+ *  Month of Modification: July 2019
  *
  * Support for TRAILZ intrinsic.
- *
- * Month of Modification: July 2019
+ *  Month of Modification: July 2019
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
- *
- * Month of Modification: July 2019
+ *  Month of Modification: July 2019
  *
  * Added support for quad precision
- * Last modified: Feb 2020
+ *  Last modified: Feb 2020
  *
  */
 

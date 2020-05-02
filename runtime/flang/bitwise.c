@@ -5,22 +5,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for Bit Sequence Comparsion intrinsics.
- *
  * Month of Modification: May 2019
- *
  *
  * Support for Bit Masking intrinsics.
- *
  * Month of Modification: May 2019
- *
- * Big fix for maskr intrinsic.
- *
- * Date of Modification: Thu Mar 19 10:54:19 IST 2020
  *
  */
 

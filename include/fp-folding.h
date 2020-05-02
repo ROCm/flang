@@ -24,7 +24,11 @@
  *  from integers, while the routines use names like "real32" to
  *  distinguish them from complex operations that might be added.
  *
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+ */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
  *
  * Added support for quad precision
  * Last modified: Feb 2020

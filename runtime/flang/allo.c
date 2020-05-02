@@ -11,8 +11,10 @@
  * Runtime memory allocation routines
  */
 
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
  *
  * Changes to return allocation status
  * Date of Modification: February 2020
