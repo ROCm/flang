@@ -2,7 +2,7 @@
  * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Apr 2020
+ * Last modified: May 2020
  */
 #ifdef OMP_OFFLOAD_LLVM
 
@@ -170,6 +170,9 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
     OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
     OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
+
+    if (!ompaccel_sym)
+      continue;
     SPTR device_sym = ompaccel_sym->device_sym;
     reduc_syms.insert(device_sym);
   }

@@ -14,7 +14,7 @@
  * Date of Modification: April 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Apr 2020
+ * Last modified: May 2020
  *
  */
 
@@ -2493,6 +2493,11 @@ static int get_target_teams_scope_std(int std) {
   return STD_PREV(std);
 }
 
+/* returns the BMPSCOPE of PARALLEL std at \p std */
+static int get_parallel_scope_std(int std) {
+  return STD_PREV(std);
+}
+
 /* returns a cloned TARGET of \p std */
 static int clone_target_std(int std) {
   int new_ast = new_node(A_MP_TARGET);
@@ -2634,6 +2639,51 @@ static int begin_target_std(int curr_target_std, int at_std) {
   return new_target_std;
 }
 
+/* returns the MP_ENDPDO of \p pdo_std */
+int get_pdo_buddy_std(int pdo_std) {
+  int std = STD_NEXT(pdo_std);
+
+  for (; std > 0; std = STD_NEXT(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    if (asttype == A_MP_ENDPDO) {
+      return std;
+    }
+  }
+}
+
+/* returns the parallel std of \p pdo_std */
+int get_pdo_parallel_std(int pdo_std) {
+  int std = STD_PREV(pdo_std);
+
+  for (; std > 0; std = STD_PREV(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    if (asttype == A_MP_PARALLEL) {
+      return std;
+    }
+  }
+}
+
+/*
+ * Converts MP_PDO std \p pdo_std to the corresponding DO std by stripping off
+ * the parallel std's
+ */
+static void conv_pdo_to_do_std(int pdo_std) {
+  /* convert MP_PDO */
+  int pdo_ast = STD_AST(pdo_std);
+  A_TYPEP(pdo_ast, A_DO);
+
+  /*convert MP_ENDPDO */
+  int endpdo_std = get_pdo_buddy_std(pdo_std);
+  int endpdo_ast = STD_AST(endpdo_std);
+  A_TYPEP(endpdo_ast, A_ENDDO);
+
+  /* remove MP_PARALLEL */
+  int parallel_std = get_pdo_parallel_std(pdo_std);
+  int end_parallel_std = A_STDG(A_LOPG(STD_AST(parallel_std)));
+  remove_stmt(parallel_std);
+  remove_stmt(end_parallel_std);
+}
+
 /*
  * Returns true if the target region has multiple parallel sections
  * in an else-if ladder
@@ -2688,6 +2738,62 @@ static bool ompaccel_has_switched_parsec() {
 
     if (has_switches && has_multi_parsec)
       return true;
+  }
+
+  ast_unvisit();
+  return false;
+}
+
+/*
+ * AST transformation that transforms multi-nested parallel region to
+ * single-nested ones
+ */
+static bool ompaccel_ast_simplify_nested_parsec() {
+  bool debug_me = false;
+  ast_visit(1, 1);
+
+  bool in_target = false, in_target_parallel = false;
+
+  int std_next = -1;
+  int target_parallel_do_nesting = 0;
+
+  for (int std = STD_NEXT(0); std > 0; std = std_next) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+    std_next = STD_NEXT(std);
+
+    if (asttype == A_MP_TARGET) {
+      in_target = true;
+
+    } else if (asttype == A_MP_ENDTARGET) {
+      in_target = false;
+
+    } else if (asttype == A_MP_PARALLEL && in_target) {
+      in_target_parallel = true;
+
+    } else if (asttype == A_MP_ENDPARALLEL && in_target) {
+      in_target_parallel = false;
+
+    } else if (in_target_parallel) {
+      switch (asttype) {
+      case A_MP_PDO:
+        target_parallel_do_nesting++;
+
+        if (target_parallel_do_nesting == 2) {
+          if (debug_me) {
+            printf("[ompaccel-ast] Found nested parallel region in %s:%d\n",
+                gbl.src_file, STD_LINENO(std));
+          }
+          conv_pdo_to_do_std(std);
+          target_parallel_do_nesting--;
+        }
+        break;
+
+      case A_MP_ENDPDO:
+        target_parallel_do_nesting--;
+        break;
+      }
+    }
   }
 
   ast_unvisit();
@@ -2772,9 +2878,6 @@ static void ompaccel_ast_segregate_parsec() {
     if (debug_me)
       printf("[ompaccel-ast] switch/else-if found amid multiple parallel "
           "sections\n");
-
-    if (!flg.amdgcn_target)
-      ompaccel_ast_serialize_parsec();
     return;
   }
 
@@ -2848,7 +2951,13 @@ void ompaccel_ast_transform() {
   if (flg.x86_64_omptarget && XBIT(232, 0x1))
     return;
 
-  ompaccel_ast_segregate_parsec();
+  if (flg.amdgcn_target) {
+    ompaccel_ast_segregate_parsec();
+  }
+
+  if (flg.x86_64_omptarget) {
+    ompaccel_ast_simplify_nested_parsec();
+  }
 }
 #endif
 /* AOCC end */

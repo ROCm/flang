@@ -12,7 +12,7 @@
  * Last modified: Apr 2020
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Apr 2020
+ * Last modified: May 2020
  *
  * Added support for quad precision
  * Last modified: Feb 2020
@@ -1439,6 +1439,13 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget && gbl.ompaccel_intarget) {
         exp_ompaccel_epar(ilmp, curilm, outlinedCnt, decrOutlinedCnt);
+        // AOCC begin
+        if (flg.x86_64_omptarget && gbl.outlined && !XBIT(232, 0x1)) {
+          ili = ll_make_kmpc_barrier();
+          iltb.callfg = 1;
+          chk_block(ili);
+        }
+        // AOCC end
         break;
       }
 #endif
