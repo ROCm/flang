@@ -15,6 +15,8 @@
  * Changes to support AMDGPU OpenMP offloading.
  *  Date of modification 14th October 2019
  *
+ * Support for Associate Block in OpenMP
+ * Date of modification : 9th May 2020
  */
 
 /**
@@ -6846,14 +6848,17 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   set_descriptor_rank(FALSE /* to reset the hidden API state :-P */);
   get_all_descriptors(lhs_sptr);
   if (sem.parallel || sem.target || sem.task) {
-    if (SDSCG(lhs_sptr)) {
+    //AOCC Begin
+    /*if (SDSCG(lhs_sptr)) {
       SCP(SDSCG(lhs_sptr), SC_PRIVATE);  
-    }
+    }*/
+    SCOPEP(lhs_sptr , SCOPEG(rhs_sptr));
+    //AOCC End
     if (MIDNUMG(lhs_sptr)) {
-      SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);  
+      SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);
     }
     if (PTROFFG(lhs_sptr)) {
-      SCP(PTROFFG(lhs_sptr), SC_PRIVATE);  
+      SCP(PTROFFG(lhs_sptr), SC_PRIVATE);
     }
   }
 
