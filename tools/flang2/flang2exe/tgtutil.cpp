@@ -9,7 +9,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading
- * Last modified: 20th February 2020
+ * Last modified: 11th May 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -889,7 +889,7 @@ ll_make_struct(int count, char *name, TGT_ST_TYPE *meminfo, ISZ_T sz)
   char sname[MXIDLEN];
 
   tag = SPTR_NULL;
-  dtype = cg_get_type(count+6, TY_STRUCT, NOSYM); // AOCC dont return used type
+  dtype = cg_get_type(count, TY_STRUCT, NOSYM); // AOCC dont return used type
   if (name) {
     sprintf(sname, "%s", name);
     tag = getsymbol(sname);
@@ -1019,6 +1019,9 @@ init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
   strcpy(sname_entry, ".openmp.offload.entry.");
   strcat(sname_entry, kernelname);
   eptr3 = (SPTR)addnewsym(sname_entry);
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   DTYPEP(eptr3, tgt_offload_entry_type);
   SCP(eptr3, SC_EXTERN);
   STYPEP(eptr3, ST_STRUCT);
