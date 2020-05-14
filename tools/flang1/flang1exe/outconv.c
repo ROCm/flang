@@ -8,7 +8,12 @@
 /** \file
 *   \brief Routines for descriptor optimizatons and forall transformations
 */
-
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * last modified : May 2020
+ */
 #include "gbldefs.h"
 #include "global.h"
 #include "error.h"
@@ -1482,6 +1487,7 @@ _sect(int ast, int i8)
   if (dims > rank || dims <= 0)
     return 0;
   needgsize = 0;
+
   if (XBIT(47, 0x1000000) || SCG(sptroldsd) == SC_CMBLK || gbl.internal == 1 ||
       (gbl.internal > 1 && INTERNALG(sptroldsd)) || ARGG(sptroldsd))
     needgsize = 1;
@@ -2066,6 +2072,10 @@ _template(int ast, int rank, LOGICAL usevalue, int i8)
   if (flags & 0x100) /* BOGUSFLAG */
     return 0;
   flags |= TEMPLATE | SEQSECTION;
+
+  if (!sptrnewsd || (STYPEG(sptrnewsd) != ST_ARRDSC && STYPEG(sptrnewsd) != ST_DESCRIPTOR &&
+	  DTY(DTYPEG(sptrnewsd)) != TY_ARRAY))
+      return 0;
 
   /* set newsd.rank = rank */
   insert_assign(get_desc_rank(sptrnewsd), mk_isz_cval(rank, astb.bnd.dtype),

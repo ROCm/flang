@@ -47,6 +47,11 @@
  *
  * Added code to support SHIFTA intrinsic
  * Last modified: April 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+ *
+ * Last modified: May 2020
  */
 
 /**
@@ -1922,6 +1927,8 @@ restartConcur:
                   ENABLE_CSE_OPT && ILT_DELETE(ilt) &&
                       (IL_TYPE(opc) == ILTY_STORE),
                   SPTR_NULL, ilt);
+//        make_stmt(STMT_ST, ilix, true,
+//                  SPTR_NULL, ilt);
       } else if (opc == IL_JSR && cgmain_init_call(ILI_OPND(ilix, 1))) {
         make_stmt(STMT_SZERO, ILI_OPND(ilix, 2), false, SPTR_NULL, ilt);
       } else if (opc == IL_SMOVE) {
@@ -4950,11 +4957,10 @@ gen_const_expr(int ilix, LL_Type *expected_type)
       operand->ll_type = expected_type;
     } else {
       // AOCC Begin
-      // operand->ll_type = make_lltype_from_dtype(DT_INT);
-      if (expected_type && ll_type_int_bits(expected_type))
-        operand->ll_type = make_lltype_from_dtype(DT_INT);
-      else
+      if (expected_type && expected_type->data_type == LL_PTR)
         operand->ll_type = make_lltype_from_dtype(DT_INT8);
+      else
+        operand->ll_type = make_lltype_from_dtype(DT_INT);
       // AOCC End
       operand->val.sptr = sptr;
     }
