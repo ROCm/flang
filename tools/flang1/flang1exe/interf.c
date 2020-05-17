@@ -12,6 +12,8 @@
  * Changes made to support f2008 support of change in maximum array dimensions
  *   Date of Modification: 26th June 2019
  *
+ * Modified to support compiler_options()
+ * Date of modification: 21st May 2020
  */
 /**
    \file interf.c
@@ -2089,7 +2091,16 @@ import(lzhandle *fdlz, WantPrivates wantPrivates, int ivsn)
       if (strcmp(module_name, "iso_c_binding") == 0) {
         if (strcmp(SYMNAME(sptr), "c_sizeof") == 0) {
           STYPEP(sptr, ST_PD);
-        } else {
+        }
+        //AOCC Begin
+        else if(strcmp(SYMNAME(sptr), "compiler_options") == 0){
+          STYPEP(sptr, ST_PD);
+        }
+        else if(strcmp(SYMNAME(sptr), "compiler_version") == 0){
+          STYPEP(sptr, ST_PD);
+        }
+        //AOCC End
+        else {
           STYPEP(sptr, ST_INTRIN);
         }
       } else if (strcmp(module_name, "ieee_arithmetic") == 0) {

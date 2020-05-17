@@ -11,6 +11,9 @@
  *
  *
  * Month of Modification: May 2019 : f2008 support
+ *
+ * Modified for compiler_options()
+ * Date of Modification : 21st May 2020
  */
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
@@ -229,6 +232,7 @@ typedef struct {
   int tpvalue[TPNVERSION]; /* target processor(s), for unified binary */
   int accmp;
   char *cmdline; /* command line used to invoke the compiler */
+  char* source_file; /* get the name of the file being executed */  //AOCC
   LOGICAL func_args_alias;      /* assume function arguments are aliasing */ // AOCC
   // AOCC begin
   char *std_string; /* input string arg of -std= */

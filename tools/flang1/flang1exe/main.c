@@ -15,6 +15,8 @@
  * Month of modification : May 2019 - Added OMP offload support
  * 2020/03/09: add fcprop pass to the flow.
  *
+ * Modified for compiler_options()
+ * Date of modification: 21st May 2020
  */
 
 /** \file main.c
@@ -859,6 +861,7 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
                        false);
   register_string_arg(arg_parser, "cmdline", &(flg.cmdline), NULL);
+  register_string_arg(arg_parser, "source_file", &(flg.source_file), NULL);//AOCC
   register_boolean_arg(arg_parser, "func_args_alias", 
                        (bool *)&(flg.func_args_alias), false); // AOCC
   // AOCC begin
@@ -871,6 +874,7 @@ init(int argc, char *argv[])
 
   /* Set values form command line arguments */
   parse_arguments(arg_parser, argc, argv);
+  flg.source_file = sourcefile;//AOCC
 
   /* Direct debug output */
   if (was_value_set(arg_parser, &(flg.dbg)) ||

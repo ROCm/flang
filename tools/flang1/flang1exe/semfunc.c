@@ -64,6 +64,8 @@
  * Complex datatype support for atan2 under flag f2008
  *  Modified on 13th March 2020
  *
+ * Modified to omit source file name in compiler_options()
+ * Date of modification:21st May 2020
  */
 
 /** \file
@@ -11591,6 +11593,25 @@ ref_pd(SST *stktop, ITEM *list)
         ;
       for (; isspace(*sname); ++sname)
         ;
+      //AOCC Begin
+      sname[strlen(sname)-1] = '\0';
+      int i, j ,count;
+      for(i = 0 ; i < strlen(sname) ; i++)
+      {
+        count = 0 , j=0;
+        while(sname[i] == flg.source_file[j] && sname[i]!='\0')
+        {
+           i++, j++ , count++;
+        }
+        if(count == strlen(flg.source_file))
+        {
+          for(i; i < strlen(sname) ; i++)
+            sname[i-count] = sname[i];
+          sname[i-count] = '\0';
+          break;
+        }
+      }
+      //AOCC End
       sptr = getstring(sname, strlen(sname));
     } else {
       interr("compiler_options: command line not available", 0, 3);
