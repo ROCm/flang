@@ -9,6 +9,12 @@
    \file
    \brief Main module to generate LLVM debug informations using metadata
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * last modified : May 2020
+ */
 
 #include "lldebug.h"
 #include "dtypeutl.h"
