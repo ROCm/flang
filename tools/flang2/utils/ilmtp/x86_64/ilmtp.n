@@ -184,6 +184,10 @@ Cast a real to a 64-bit unsigned integer (dword).
 .AT i8
 .OP SP2IR t1 p1
 .OP UIKMV r t1
+./" AOCC begin
+.IL CQTOI arth lnk lnk
+.AT spec
+./" AOCC end
 .IL CRTOI arth lnk lnk
 Cast a complex to integer (C)
 .AT spec
@@ -251,6 +255,8 @@ Returns double precision real part of a double complex value.
 .AT spec
 .OP MVDP r rp1 iv-1
 .\" AOCC begin
+.IL CQTOCQ arth lnk lnk
+.AT spec dcmplx
 .IL QREAL arth lnk
 Returns quad precision real part of a quad complex value.
 .AT spec
@@ -269,16 +275,21 @@ Returns double precision imaginary part of a double complex value
 .\" AOCC begin
 .IL QIMAG arth lnk
 Returns quad precision imaginary part of a quad complex value
-(DIMAG intrinsic).
+(QIMAG intrinsic).
 .AT spec
 .OP MVQP r ip1 iv-1
-.\" AOendd
+.\" AOCC end
 .IL CMPLX arth lnk lnk
 Form complex number out of two single precision real values.
 .AT spec
 .IL DCMPLX arth lnk lnk
 Form double complex number out of two double precision real values.
 .AT spec dcmplx
+.\" AOCC begin
+.IL QCMPLX arth lnk lnk
+Form quad complex number out of two quad precision real values.
+.AT spec
+.\" AOCC end
 .IL ICHAR fstr lnk
 Converts single character to integer.
 .AT spec
@@ -375,6 +386,15 @@ Absolute value of single precision real number.
 .OP DADP t2 rp1 dp(1) t1
 .OP QJSR t3 =e'%d%__mth_i_cdabs t2
 .OP DFRDP r t3 dpret
+./" AOCC begin
+.IL CQABS arth lnk
+.AT spec
+.OP NULL t1 iv0
+.OP DAQP t1 ip1 qp(0) t1
+.OP DAQP t2 rp1 qp(1) t1
+.OP QJSR t3 =e'%d%cqabs t2
+.OP DFRQP r t3 qpret
+./" AOCC end
 .IL LEN fstr lnk
 Length of a character expression.  This ILM contains a link to
 one character expression.
@@ -393,6 +413,13 @@ Conjugate of a double complex number.
 .AT spec dcmplx
 .OP MVDP rr rp1 iv-1
 .OP DNEG ir ip1
+.\" AOCC begin
+.IL QCONJG arth lnk
+Conjugate of a quad complex number.
+.AT spec
+.OP MVQP rr rp1 iv-1
+.OP QNEG ir ip1
+.\" AOCC end
 .IL SQRT arth lnk
 Square root of a single precision real number (SQRT intrinsic).
 .OP FSQRT r p1
@@ -401,6 +428,8 @@ Square root of a single precision real number (SQRT intrinsic).
 .\" AOCC begin
 .IL QSQRT arth lnk
 .OP QSQRT r p1
+.IL CQSQRT arth lnk
+.AT spec
 .\" AOCC end
 .IL CSQRT arth lnk
 .AT spec
@@ -414,6 +443,8 @@ EXP intrinsic for single precision floating point values.
 .\" AOCC begin
 .IL QEXP arth lnk
 .OP QEXP r p1
+.IL CQEXP arth lnk
+.AT spec
 .\" AOCC end
 .IL CEXP arth lnk
 .AT spec
@@ -435,10 +466,20 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDCOSH arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQCOSH arth lnk
+.AT spec
+.\" AOCC end
 .IL CSINH arth lnk
 .AT spec
 .IL CDSINH arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQSINH arth lnk
+.AT spec
+.IL CQTANH arth lnk
+.AT spec
+.\" AOCC end
 .IL CTANH arth lnk
 .AT spec
 .IL CDTANH arth lnk
@@ -447,6 +488,10 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDTAN arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQTAN arth lnk
+.AT spec
+.\" AOCC end
 .IL CACOSH arth lnk
 .AT spec
 .IL CASINH arth lnk
@@ -472,6 +517,8 @@ EXP intrinsic for single precision floating point values.
 .IL DLOG10 arth lnk
 .OP DLOG10 r p1
 .\" AOCC begin
+.IL CQLOG arth lnk
+.AT spec
 .IL QLOG10 arth lnk
 .OP QLOG10 r p1
 .\" AOCC end
@@ -494,6 +541,8 @@ Sine of a single precision value
 .AT spec
 .IL CDSIN arth lnk
 .AT spec dcmplx
+.IL CQSIN arth lnk
+.AT spec
 .IL COS arth lnk
 Cosine of a single precision number
 .OP FCOS r p1
@@ -513,6 +562,10 @@ Cosine of a single precision number
 .AT spec
 .IL CDCOS arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQCOS arth lnk
+.AT spec
+.\" AOCC end
 .IL TAN arth lnk
 Tangent of a single precision value
 .OP FTAN r p1
@@ -860,6 +913,13 @@ Double complex negation.
 .AT spec dcmplx
 .OP DNEG rr rp1
 .OP DNEG ir ip1
+./" AOCC begin
+.IL CQNEG arth lnk
+Quad complex negation.
+.AT spec
+.OP QNEG rr rp1
+.OP QNEG ir ip1
+./" AOCC end
 .IL NOT64 arth lnk
 Bitwise negation of 64 bit value (NOT intrinsic).
 .AT i8
@@ -949,6 +1009,17 @@ p3 - mask
 .fi
 .OP ICMPZ t1 p3 ne
 .OP CDSELECT r t1 p2 p1
+./" AOCC begin
+.IL CQMERGE arth lnk lnk lnk
+Real*16 complex valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP CQSELECT r t1 p2 p1
+./" AOCC end
 .IL IADD arth lnk lnk
 .OP IADD r p1 p2
 .IL UIADD arth lnk lnk
@@ -960,6 +1031,10 @@ p3 - mask
 .\" AOCC begin
 .IL QADD arth lnk lnk
 .OP QADD r p1 p2
+.IL CQADD arth lnk lnk
+.AT spec dcmplx
+.OP QADD rr rp1 rp2
+.OP QADD ir ip1 ip2
 .\" AOCC end
 .IL CADD arth lnk lnk
 .AT spec
@@ -999,13 +1074,17 @@ the pointer (lnk1) points to.
 .\" AOCC begin
 .IL QSUB arth lnk lnk
 .OP QSUB r p1 p2
+.IL CQSUB arth lnk lnk
+.AT spec
+.OP QSUB rr rp1 rp2
+.OP QSUB ir ip1 ip2
 .\" AOCC end
 .IL CSUB arth lnk lnk
 .AT spec
 .OP FSUB rr rp1 rp2
 .OP FSUB ir ip1 ip2
 .IL CDSUB arth lnk lnk
-.AT spec dcmplx
+.AT spec
 .OP DSUB rr rp1 rp2
 .OP DSUB ir ip1 ip2
 .IL PSUB arth lnk lnk stc
@@ -1067,6 +1146,13 @@ the pointer (lnk1) points to.
 .OP DMUL t2 ip2 rp1
 .OP DADD ir t2 t1
 .\" AOCC begin
+.IL CQMUL arth lnk lnk
+.AT spec
+.OP QMUL t1 rp1 rp2
+.OP QMUL t2 ip1 ip2
+.OP QSUB rr t1 t2
+.OP QMUL t1 ip1 rp2
+.OP QMUL t2 ip2 rp1
 .OP QADD ir t2 t1
 .\" AOCC end
 .IL IDIV arth lnk lnk
@@ -1080,6 +1166,12 @@ the pointer (lnk1) points to.
 .\" AOCC begin
 .IL QDIV arth lnk lnk
 .OP QDIV r p1 p2
+.IL CQDIV arth lnk lnk
+.AT spec
+.IL CQDIVQ arth lnk lnk
+.AT spec
+.OP QDIV rr rp1 p2
+.OP QDIV ir ip1 p2
 .\" AOCC end
 .IL CDIV arth lnk lnk
 .AT spec
@@ -1143,6 +1235,18 @@ Real valued SIGN intrinsic that distinguishes negative zero.
 .OP DABS t2 p1
 .OP DNEG t3 t2
 .OP DSELECT r t1 t2 t3
+./" AOCC begin
+.IL QSIGN arth lnk lnk
+.OP QCMPZ t1 p2 lt
+.OP QABS t2 p1
+.OP QNEG t3 t2
+.OP QSELECT r t1 t2 t3
+.IL QSIGNNZ arth lnk lnk
+.OP QCMPZNZ t1 p2 lt
+.OP QABS t2 p1
+.OP QNEG t3 t2
+.OP QSELECT r t1 t2 t3
+./" AOCC end
 .IL IDIM arth lnk lnk
 .OP NULL t1 iv0
 .OP DAIR t1 p2 dr(1) t1
@@ -1436,6 +1540,9 @@ Unsigned integer comparison.
 .IL UDICMP arth lnk lnk
 Unsigned double integer comparison.
 .AT spec
+.IL UQICMP arth lnk lnk
+Unsigned quad integer comparison.
+.AT spec
 .CL PCMP arth lnk lnk
 Pointer comparison.
 .AT spec
@@ -1447,6 +1554,12 @@ The value computed is 0 if equal and -1 or 1 if not equal.
 Compare two double complex numbers.
 The value computed is the same as for the ICMP ILM.
 .AT spec
+./" AOCC begin
+.IL CQCMP arth lnk lnk
+Compare two quad complex numbers.
+The value computed is the same as for the ICMP ILM.
+.AT spec
+./" AOCC end
 .IL SCMP fstr lnk lnk
 Compare two strings.
 The value computed is the same as for the ICMP ILM.  SCMP has no
@@ -1533,6 +1646,10 @@ lnk3 - stride
 .\" AOCC begin
 .IL QCON cons sym
 .OP QCON r v1
+.IL CQCON cons sym
+.AT spec
+.OP QCON rr iv0
+.OP QCON ir iv0
 .\" AOCC end
 .IL CCON cons sym
 .AT spec
@@ -1667,6 +1784,10 @@ Load m256
 .AT spec
 .IL CDLD load lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQLD load lnk
+.AT spec
+.\" AOCC end
 .IL LLD load lnk
 Load logical value.
 .AT spec
@@ -1753,6 +1874,15 @@ Store the real part of a double complex
 .AT spec trm
 .IL CDSTI store lnk lnk
 Store the imaginary part of a double complex
+.\" AOCC begin
+.IL CQST store lnk lnk
+.AT spec trm
+.IL CQSTR store lnk lnk
+Store the real part of a quad complex
+.AT spec trm
+.IL CQSTI store lnk lnk
+Store the imaginary part of a quad complex
+.\" AOCC end
 .AT spec trm
 .IL LST store lnk lnk
 .AT spec trm
@@ -2594,6 +2724,8 @@ Exponentiation - integer to an integer power.
 .AT spec
 .IL CDTOK intr lnk lnk
 .AT spec dcmplx
+.IL CQTOK intr lnk lnk
+.AT spec
 .IL KCMP arth lnk lnk
 .AT spec
 .IL UKCMP arth lnk lnk

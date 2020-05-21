@@ -254,8 +254,10 @@ typedef enum {
   RTE_mergel2,
   RTE_mergel8,
   RTE_mergeq,
+  RTE_mergeqc,           // AOCC
   RTE_merger,
   RTE_min,
+  RTE_mmul_cmplx32,      // AOCC
   RTE_mmul_cmplx16,
   RTE_mmul_cmplx8,
   RTE_mmul_real4,
@@ -337,6 +339,7 @@ typedef enum {
   RTE_ptrchk,
   RTE_ptrcp,
   RTE_real,
+  RTE_real32,
   RTE_real16,
   RTE_real4,
   RTE_real8,
@@ -743,6 +746,8 @@ typedef enum {
   RTE_f90io_open_sharea,
   RTE_f90io_print_init,
   RTE_f90io_rewind,
+  RTE_f90io_sc_cq_fmt_write,  // AOCC
+  RTE_f90io_sc_cq_ldw,        // AOCC
   RTE_f90io_sc_cd_fmt_write,
   RTE_f90io_sc_cd_ldw,
   RTE_f90io_sc_cf_fmt_write,

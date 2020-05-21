@@ -13,6 +13,7 @@
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ * Last Modified: Jun 2020
  *
  */
 
@@ -1600,6 +1601,9 @@ scan_args:
         pf->mem_off += 8;
       else if (argdtype == DT_DCMPLX)
         pf->mem_off += 16;
+      // AOCC
+      else if (argdtype == DT_QCMPLX)
+        pf->mem_off += 32;
       else if (DTY(argdtype) == TY_STRUCT)
         pf->mem_off += size_of(argdtype);
       else
@@ -1737,6 +1741,7 @@ pp_params_mixedstrlen(int func)
     break;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:         // AOCC
     /*
      * If this is a function which returns complex, the first arg is
      * also for the return value.  The last entry in the function's
@@ -1818,6 +1823,8 @@ scan_args:
         pf->mem_off += 8;
       else if (argdtype == DT_DCMPLX)
         pf->mem_off += 16;
+      else if (argdtype == DT_QCMPLX)   // AOCC
+        pf->mem_off += 32;
       else if (DTY(argdtype) == TY_STRUCT)
         pf->mem_off += size_of(argdtype);
       else
@@ -3119,7 +3126,7 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
       store = IL_STSP;
       msz = MSZ_F4;
     }
-  } else {
+  } else if (DTY(dtype) == TY_DCMPLX) {
     if (XBIT(70, 0x40000000) && !imag) {
       load = IL_LDDCMPLX;
       store = IL_STDCMPLX;
@@ -3129,7 +3136,19 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
       store = IL_STDP;
       msz = MSZ_F8;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000) && !imag) {
+      load = IL_LDQCMPLX;
+      store = IL_STQCMPLX;
+      msz = MSZ_F32;
+    } else {
+      load = IL_LDQP;
+      store = IL_STQP;
+      msz = MSZ_F16;
+    }
   }
+  // AOCC end
   if (!XBIT(70, 0x40000000)) {
     size = size_of(dtype) / 2;
   } else {
@@ -3187,8 +3206,10 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
   if (XBIT(70, 0x40000000) && !imag) {
     if (dtype == DT_CMPLX)
       chk_block(ad4ili(IL_STSCMPLX, real, *addr, *nme, msz));
-    else
+    else if (dtype == DT_DCMPLX)
       chk_block(ad4ili(IL_STDCMPLX, real, *addr, *nme, msz));
+    else
+      chk_block(ad4ili(IL_STQCMPLX, real, *addr, *nme, msz));
   } else {
     chk_block(ad4ili(store, real, *addr, addnme(NT_MEM, SPTR_NULL, *nme, 0), msz));
     chk_block(ad4ili(store, imag,
@@ -3781,14 +3802,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       }
       if (ILM_RESTYPE(ilm1) == ILM_ISCMPLX ||
           ILM_RESTYPE(ilm1) == ILM_ISDCMPLX || dtype == DT_CMPLX ||
-          dtype == DT_DCMPLX) {
+          dtype == DT_DCMPLX || dtype == DT_QCMPLX) {
         int res, mem_msz, msz;
         ILI_OP st_opc, ld_opc, arg_opc;
         argili = ILM_RRESULT(ilm1);
         if (ILM_RESTYPE(ilm1) == ILM_ISCMPLX)
           arg_opc = IL_ARGSP;
-        else
+        else if (ILM_RESTYPE(ilm1) == ILM_ISDCMPLX)
           arg_opc = IL_ARGDP;
+        // AOCC
+        else
+          arg_opc = IL_ARGQP;
 
         if (XBIT(70, 0x40000000)) {
           int rili;
@@ -3806,11 +3830,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
             add_to_args(arg_opc, argili);
             argili = ad1ili(IL_SCMPLX2REAL, rili);
             add_to_args(arg_opc, argili);
-          } else {
+          } else if (dtype == DT_DCMPLX) {
             arg_opc = IL_ARGDP;
             argili = ad1ili(IL_DCMPLX2IMAG, rili);
             add_to_args(arg_opc, argili);
             argili = ad1ili(IL_DCMPLX2REAL, rili);
+            add_to_args(arg_opc, argili);
+          } else {
+            arg_opc = IL_ARGQP;
+            argili = ad1ili(IL_QCMPLX2IMAG, rili);
+            add_to_args(arg_opc, argili);
+            argili = ad1ili(IL_QCMPLX2REAL, rili);
             add_to_args(arg_opc, argili);
           }
           cmplx_to_mem(ILM_RESULT(ilm1), 0, dtype, &addr, &nme);
@@ -3823,14 +3853,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
 #if   defined(IL_GJSR) && defined(USE_LLVM_CMPLX) /* New functionality */
         res = ILI_OPND(ILM_RESULT(ilm1), 1);
         basenm = 0;
-        dtype = ILM_RESTYPE(ilm1) == ILM_ISCMPLX ? DT_CMPLX : DT_DCMPLX;
-        ld_opc = dtype == DT_CMPLX ? IL_LDSCMPLX : IL_LDDCMPLX;
-        msz = dtype == DT_CMPLX ? MSZ_F8 : MSZ_F16;
-        mem_msz = dtype == DT_CMPLX ? MSZ_F4 : MSZ_F8;
+        dtype = ILM_RESTYPE(ilm1) == ILM_ISCMPLX ? DT_CMPLX :
+                ILM_RESTYPE(ilm1) == ILM_ISDCMPLX ? DT_DCMPLX : DT_QCMPLX;
+        ld_opc = dtype == DT_CMPLX ? IL_LDSCMPLX : dtype == DT_DCMPLX
+                                   ? IL_LDDCMPLX : IL_LDQCMPLX;
+        msz = dtype == DT_CMPLX ? MSZ_F8 : dtype == DT_DCMPLX ? MSZ_F16 : MSZ_F32;
+        mem_msz = dtype == DT_CMPLX ? MSZ_F4 : dtype == DT_DCMPLX ? MSZ_F8 : MSZ_F16;
         if (!ILIA_ISAR(IL_RES(ILI_OPC(res)))) {
           /* Not an address, so we need to add a temp store */
-          st_opc = dtype == DT_CMPLX ? IL_STSP : IL_STDP;
-          skip = dtype == DT_CMPLX ? size_of(DT_FLOAT) : size_of(DT_DBLE);
+          st_opc = dtype == DT_CMPLX ? IL_STSP : dtype == DT_DCMPLX ? IL_STDP : IL_STQP;
+          skip = dtype == DT_CMPLX ? size_of(DT_FLOAT) : dtype == DT_DCMPLX
+                                   ? size_of(DT_DBLE) : size_of(DT_QUAD);
           sym = mkrtemp_cpx_sc(dtype, expb.sc);
           ADDRTKNP(sym, 1);
           basenm = addnme(NT_VAR, sym, 0, 0);
@@ -3949,6 +3982,24 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         add_to_args(IL_ARGDP, argili);
         break;
       }
+      // AOCC begin
+      if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+        dtype = DT_QUAD;
+        argili = ILM_RRESULT(ilm1);
+        add_to_args(IL_ARGQP, argili);
+        if (XBIT(121, 0x800)) {
+          garg_ili[gi].ilix = gargili;
+          garg_ili[gi].dtype = dtype;
+          garg_ili[gi].val_flag = NME_VOL;
+          gi++;
+          ngargs++;
+        }
+        argili = ILM_IRESULT(ilm1);
+        gargili = argili;
+        add_to_args(IL_ARGQP, argili);
+        break;
+      }
+      // AOCC end
       /* word expression by value */
       argili = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(argili))) {
@@ -4010,6 +4061,22 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         gargili = argili;
         add_to_args(IL_ARGDP, argili);
         break;
+      // AOCC begin
+      case ILIA_CQ:
+        dtype = DT_QUAD;
+        argili = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        add_to_args(IL_ARGQP, argili);
+        if (XBIT(121, 0x800)) {
+          garg_ili[gi].ilix = argili;
+          garg_ili[gi].dtype = dtype;
+          gi++;
+          ngargs++;
+        }
+        argili = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        gargili = argili;
+        add_to_args(IL_ARGQP, argili);
+        break;
+      // AOCC end
       default:
         interr("exp_call:bad ili for DPVAL", argili, ERR_Severe);
       }
@@ -4083,6 +4150,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           sym = mkrtemp_cpx_sc(DT_CMPLX, expb.sc);
         } else if (ILM_RESTYPE(ilm1) == ILM_ISDCMPLX) {
           sym = mkrtemp_cpx_sc(DT_DCMPLX, expb.sc);
+        // AOCC begin
+        } else if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+          sym = mkrtemp_cpx_sc(DT_QCMPLX, expb.sc);
+        // AOCC end
         } else
           sym = mkrtemp_sc(ILM_RESULT(ilm1), expb.sc);
         ADDRTKNP(sym, 1);
@@ -4109,6 +4180,18 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           ilix = ad4ili(IL_STDP, ilix, ad_acon(sym, skip),
                         addnme(NT_MEM, NOSYM, basenm, skip), MSZ_F8);
           chk_block(ilix);
+        // AOCC begin
+        } else if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+          skip = size_of(DT_QUAD);
+          ilix = ILM_RRESULT(ilm1);
+          ilix = ad4ili(IL_STQP, ilix, argili,
+                        addnme(NT_MEM, SPTR_NULL, basenm, 0), MSZ_F16);
+          chk_block(ilix);
+          ilix = ILM_IRESULT(ilm1);
+          ilix = ad4ili(IL_STQP, ilix, ad_acon(sym, skip),
+                        addnme(NT_MEM, NOSYM, basenm, skip), MSZ_F16);
+          chk_block(ilix);
+        // AOCC end
         } else {
           ilix = ILM_RESULT(ilm1);
           switch (IL_RES(ILI_OPC(ilix))) {
@@ -4138,6 +4221,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           case ILIA_CD:
             ilix = ad4ili(IL_STDCMPLX, ilix, argili, basenm, MSZ_F16);
             break;
+          // AOCC begin
+          case ILIA_CQ:
+            ilix = ad4ili(IL_STQCMPLX, ilix, argili, basenm, MSZ_F32);
+            break;
+          // AOCC end
           default:
             // in exp_call for IM_SFUNC, we decide to save IL_JSR
             // in the ILI_OF(or ILM_RESULT) field.
@@ -4570,6 +4658,12 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       arg_dp(ILM_IRESULT(ilm1), &ainfo);
       arg_dp(ILM_RRESULT(ilm1), &ainfo);
       break;
+    // AOCC begin
+    case ILM_ISQCMPLX:
+      arg_qp(ILM_IRESULT(ilm1), &ainfo);
+      arg_qp(ILM_RRESULT(ilm1), &ainfo);
+      break;
+    // AOCC end
     default:
       ilix = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(ilix))) {
@@ -4585,6 +4679,11 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       case ILIA_DP:
         arg_dp(ilix, &ainfo);
         break;
+    // AOCC begin
+      case ILIA_QP:
+        arg_qp(ilix, &ainfo);
+        break;
+    // AOCC end
       case ILIA_KR:
         arg_kr(ilix, &ainfo);
         break;
@@ -4601,6 +4700,14 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
         ilix = ad1ili(IL_DCMPLX2REAL, ILM_RESULT(ilm1));
         arg_dp(ilix, &ainfo);
         break;
+    // AOCC begin
+      case ILIA_CQ:
+        ilix = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        ilix = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        break;
+    // AOCC end
 #endif
       default:
         interr("exp_qjsr: ili ret type not cased", ilix, ERR_Severe);
@@ -4625,7 +4732,7 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 4), MSZ_F4);
       ILM_RESTYPE(curilm) = ILM_ISCMPLX;
     }
-  } else {
+  } else if (res_dtype == DT_DCMPLX) {
     if (XBIT(70, 0x40000000)) {
       ILM_RESULT(curilm) = ad3ili(IL_LDDCMPLX, res_addr, res_nme, MSZ_F16);
     } else {
@@ -4636,7 +4743,20 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 8), MSZ_F8);
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, res_addr, res_nme, MSZ_F32);
+    } else {
+
+      ILM_RRESULT(curilm) = ad3ili(IL_LDQP, res_addr, addnme(NT_MEM, SPTR_NULL, res_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) =
+          ad3ili(IL_LDQP, ad3ili(IL_AADD, res_addr, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, res_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
   }
+  // AOCC end
 
   end_ainfo(&ainfo);
 }
@@ -4700,6 +4820,12 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       arg_dp(ILM_IRESULT(ilm1), &ainfo);
       arg_dp(ILM_RRESULT(ilm1), &ainfo);
       break;
+    // AOCC begin
+    case ILM_ISQCMPLX:
+      arg_qp(ILM_IRESULT(ilm1), &ainfo);
+      arg_qp(ILM_RRESULT(ilm1), &ainfo);
+      break;
+    // AOCC end
     default:
       ilix = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(ilix))) {
@@ -4715,6 +4841,11 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       case ILIA_DP:
         arg_dp(ilix, &ainfo);
         break;
+      // AOCC begin
+      case ILIA_QP:
+        arg_qp(ilix, &ainfo);
+        break;
+      // AOCC end
       case ILIA_KR:
         arg_kr(ilix, &ainfo);
         break;
@@ -4732,6 +4863,14 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
         arg_dp(ilix, &ainfo);
         break;
 #endif
+      // AOCC begin
+      case ILIA_CQ:
+        ilix = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        ilix = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        break;
+      // AOCC end
       default:
         interr("exp_zqjsr: ili ret type not cased", ilix, ERR_Severe);
         break;
@@ -4756,7 +4895,7 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 4), MSZ_F4);
       ILM_RESTYPE(curilm) = ILM_ISCMPLX;
     }
-  } else {
+  } else if (res_dtype == DT_DCMPLX) {
     if (XBIT(70, 0x40000000)) {
       ILM_RESULT(curilm) = ad3ili(IL_LDDCMPLX, res_addr, res_nme, MSZ_F16);
     } else {
@@ -4766,7 +4905,19 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 8), MSZ_F8);
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, res_addr, res_nme, MSZ_F32);
+    } else {
+      ILM_RRESULT(curilm) =
+          ad3ili(IL_LDQP, res_addr, addnme(NT_MEM, SPTR_NULL, res_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) = ad3ili(IL_LDQP, ad3ili(IL_AADD, res_addr, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, res_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
   }
+  // AOCC end
 
   end_ainfo(&ainfo);
 }

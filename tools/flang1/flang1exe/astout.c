@@ -948,6 +948,12 @@ print_ast(int ast)
       /* since LOP may be aimag, force the name 'dimag' */
       put_call(ast, 0, "dimag", 0);
       break;
+    // AOCC begin
+    case I_QIMAG:
+      /* since LOP may be aimag, force the name 'qimag' */
+      put_call(ast, 0, "qimag", 0);
+      break;
+    // AOCC end
     case I_INDEX:
       if (A_ARGCNTG(ast) != 2) {
         rtlRtn = RTE_indexa;
@@ -3969,6 +3975,20 @@ put_const(int sptr)
     put_const((int)CONVAL2G(sptr));
     put_char(')');
     return;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    if (NMPTRG(sptr)) {
+      put_string(SYMNAME(sptr));
+      return;
+    }
+    put_char('(');
+    put_const((int)CONVAL1G(sptr));
+    put_char(',');
+    put_const((int)CONVAL2G(sptr));
+    put_char(')');
+    return;
+  // AOCC end
 
   case TY_HOLL:
     sptr2 = CONVAL1G(sptr);

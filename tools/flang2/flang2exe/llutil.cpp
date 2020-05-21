@@ -309,6 +309,7 @@ ll_convert_basic_dtype_with_addrspace(LL_Module *module, DTYPE dtype, int addrsp
     break;
   // AOCC
   case TY_QUAD:
+  case TY_QCMPLX:
     /* TY_QUAD represents a float128  on systems that map long
      * double to IEEE128. */
   case TY_FLOAT128:
@@ -829,6 +830,7 @@ llis_struct_kind(DTYPE dtype)
   case TY_CMPLX128:
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:            // AOCC
   case TY_STRUCT:
   case TY_UNION:
     return true;
@@ -863,6 +865,7 @@ is_struct_kind(DTYPE dtype, bool check_return,
   case TY_CMPLX:
     return check_return;
   case TY_DCMPLX:
+  case TY_QCMPLX:       // AOCC
   case TY_CMPLX128:
     return true;
   }
@@ -1077,6 +1080,10 @@ get_dtype_from_tytype(TY_KIND ty)
     return DT_CMPLX;
   case TY_DCMPLX:
     return DT_DCMPLX;
+  // AOCC begin
+  case TY_QCMPLX:
+    return DT_QCMPLX;
+  // AOCC end
   case TY_INT8:
     return DT_INT8;
   case TY_UINT8:
@@ -2004,6 +2011,7 @@ write_vconstant_value(int sptr, LL_Type *type, unsigned long long undef_bitmask)
     undef_bitmask >>= 1;
 
     switch (vtype->data_type) {
+    case LL_FP128:   // AOCC
     case LL_DOUBLE:
       write_constant_value(VCON_CONVAL(edtype + i), 0, 0, 0,0,0, false);
       break;
@@ -2105,14 +2113,27 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conv
         fprintf(LLVMFIL, ", %s ", ctype);
         write_constant_value(0, float_type, CONVAL2G(sptr), 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
-      } else {
+      } else if (DTY(DTYPEG(sptr)) == TY_DCMPLX) {
         ctype = llvm_fc_type(DTYPEG(CONVAL1G(sptr)));
         fprintf(LLVMFIL, "<{ %s ", ctype);
         write_constant_value(CONVAL1G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, ", %s ", ctype);
         write_constant_value(CONVAL2G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
+      // AOCC begin
+      } else {
+        ctype = llvm_fc_type(DTYPEG(CONVAL1G(sptr)));
+        fprintf(LLVMFIL, "<{ %s ", ctype);
+        write_constant_value(CONVAL1G(sptr), 0, 0, 0,0,0, uns);
+        fprintf(LLVMFIL, ", %s ", ctype);
+        write_constant_value(CONVAL2G(sptr), 0, 0, 0,0,0, uns);
+        fprintf(LLVMFIL, "<{ %s ", ctype);
+        write_constant_value(CONVAL3G(sptr), 0, 0, 0,0,0, uns);
+        fprintf(LLVMFIL, ", %s ", ctype);
+        write_constant_value(CONVAL4G(sptr), 0, 0, 0,0,0, uns);
+        fprintf(LLVMFIL, "}>");
       }
+      // AOCC end
     } else {
       assert(conval0 == 0 && conval1 == 0,
              "write_constant_value(): non zero struct", 0, ERR_Fatal);
@@ -2212,11 +2233,36 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conv
     return;
 #endif
   case LL_FP128:
+#if 0
+    if (sptr) {
+      num[0] = CONVAL1G(sptr);
+      num[1] = CONVAL2G(sptr);
+      num[0] = CONVAL1G(sptr);
+      num[1] = CONVAL2G(sptr);
+    } else {
+      num[0] = conval0;
+      num[1] = conval1;
+      num[2] = conval2;
+      num[3] = conval3;
+    }
+
+    cprintf(d, "%.37lF", num);
+    /* Check for  `+/-Infinity` and 'NaN' based on the IEEE bit patterns */
+    if ((num[0] & 0x7ff00000) == 0x7ff00000) /* exponent == 2047 */
+      sprintf(d, "0x%08x%08x%08x%08x", num[0], num[1], num[2], num[3]);
+    /* also check for -0 */
+    else if (num[0] == 0x80000000 && num[1] == 0x00000000)
+      sprintf(d, "-0.00000000e+00");
+    /* remember to make room for /0 */
+    fprintf(LLVMFIL, "%s", d);
+    return;
+#endif
+#if 1
     assert(sptr, "write_constant_value(): fp128 constant without sptr", 0, ERR_Fatal);
     fprintf(LLVMFIL, "0xL%08x%08x%08x%08x", CONVAL3G(sptr), CONVAL4G(sptr),
             CONVAL1G(sptr), CONVAL2G(sptr));
     return;
-
+#endif
   case LL_PPC_FP128:
     assert(sptr, "write_constant_value(): double-double constant without sptr",
            0, ERR_Fatal);
@@ -2769,6 +2815,7 @@ llvm_fc_type(DTYPE dtype)
   case TY_128:
     retc = "fp128";
     break;
+  case TY_QCMPLX:
   case TY_CMPLX128:
     retc = "{fp128, fp128}";
     break;
@@ -3543,6 +3590,22 @@ add_init_const_op(DTYPE dtype, OPERAND *cur_op, ISZ_T conval, ISZ_T *repeat_cnt,
         cur_op = cur_op->next->next;
         address += 16;
         break;
+      // AOCC begin
+      case TY_QCMPLX:
+        cur_op->next = make_constval_opL(make_lltype_from_dtype(DT_QUAD),
+                                        CONVAL4G(CONVAL1G(conval)),
+                                        CONVAL3G(CONVAL1G(conval)),
+                                        CONVAL2G(CONVAL1G(conval)),
+                                        CONVAL1G(CONVAL1G(conval)));
+        cur_op->next->next = make_constval_opL(make_lltype_from_dtype(DT_QUAD),
+                                              CONVAL4G(CONVAL2G(conval)),
+                                              CONVAL3G(CONVAL2G(conval)),
+                                              CONVAL2G(CONVAL2G(conval)),
+                                              CONVAL1G(CONVAL2G(conval)));
+        cur_op = cur_op->next->next;
+        address += 32;
+        break;
+      // AOCC end
       case TY_CHAR:
         address += DTyCharLength(DTYPEG(conval));
         if (STYPEG(conval) == ST_CONST)

@@ -79,6 +79,7 @@ static void put_ncharstring_n(char *, ISZ_T, int);
 static void put_zeroes(ISZ_T);
 static void put_cmplx_n(int, int);
 static void put_dcmplx_n(int, int);
+static void put_qcmplx_n(int, int);
 static void put_i8(int);
 static void put_i16(int);
 static void put_r4(INT);
@@ -469,6 +470,13 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         if (CONVAL1G(tconval) == stb.dbl0 && CONVAL2G(tconval) == stb.dbl0)
           goto do_zeroes;
         break;
+      // AOCC begin
+      case TY_QCMPLX:
+        if (CONVAL1G(tconval) == stb.quad0 && CONVAL2G(tconval) == stb.quad0
+            && CONVAL4G(tconval) == stb.quad0 && CONVAL4G(tconval) == stb.quad0)
+          goto do_zeroes;
+        break;
+      // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
       case TY_FLOAT128:
         if (tconval == stb.float128_0)
@@ -609,6 +617,17 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         }
         put_dcmplx_n((int)tconval, putval);
         break;
+
+      // AOCC begin
+      case TY_QCMPLX:
+        if (DBGBIT(5, 32)) {
+          fprintf(gbl.dbgfil,
+                  "emit_init:put_qcmplx_n first_data:%d i8cnt:%ld ptrcnt:%d\n",
+                  first_data, *i8cnt, *ptrcnt);
+        }
+        put_qcmplx_n((int)tconval, putval);
+        break;
+      // AOCC end
 
       case TY_PTR:
         if (*i8cnt) {
@@ -1048,6 +1067,16 @@ put_dcmplx_n(int sptr, int putval)
   fprintf(ASMFIL, ",");
   put_r8((int)CONVAL2G(sptr), putval);
 }
+
+// AOCC begin
+static void
+put_qcmplx_n(int sptr, int putval)
+{
+  put_r16((int)CONVAL1G(sptr), putval);
+  fprintf(ASMFIL, ",");
+  put_r16((int)CONVAL2G(sptr), putval);
+}
+// AOCC end
 
 /**
    \brief Generate an expression to add an offset to a ptr

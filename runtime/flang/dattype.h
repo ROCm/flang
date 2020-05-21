@@ -36,8 +36,10 @@
 #define TY_NCHAR 16
 #define TY_INT8 17
 #define TY_LOG8 18
+#define TY_QCMPLX 19
 
-#define Is_complex(parm) ((parm) == TY_CMPLX || (parm) == TY_DCMPLX)
+// AOCC : TY_QCMPLX
+#define Is_complex(parm) ((parm) == TY_CMPLX || (parm) == TY_DCMPLX || (parm) == TY_QCMPLX)
 // AOCC : TY_QUAD
 #define Is_real(parm) ((parm) == TY_REAL || (parm) == TY_DBLE || (param) == TY_QUAD)
 

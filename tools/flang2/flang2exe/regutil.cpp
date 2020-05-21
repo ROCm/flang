@@ -10,6 +10,7 @@
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ * Last Modified: Jun 2020
  *
  */
 
@@ -161,6 +162,10 @@ addrcand(int ilix)
     goto ac_load;
 
   // AOCC begin
+  case IL_LDQCMPLX:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto ac_load;
   case IL_LDQP: /* load quad precision */
     rtype = RATA_QP;
     msize = MSZ_F16;
@@ -278,6 +283,10 @@ addrcand(int ilix)
     msize = MSZ_F8;
     goto ac_store;
   // AOCC begin
+  case IL_STQCMPLX:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto ac_store;
   case IL_STQP: /* store quad precision */
     rtype = RATA_QP;
     msize = MSZ_F16;
@@ -335,6 +344,10 @@ addrcand(int ilix)
     msize = MSZ_F8;
     goto add_constant;
   // AOCC begin
+  case IL_QCMPLXCON:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto add_constant;
   case IL_QCON:
     rtype = RATA_QP;
     msize = MSZ_F16;
@@ -841,6 +854,11 @@ storedums(int exitbih, int first_rat)
     case RATA_CDP:
       (void)addilt(0, ad4ili(IL_STDCMPLX, i, addr, nme, MSZ_F16));
       break;
+    // AOCC begin
+    case RATA_CQP:
+      (void)addilt(0, ad4ili(IL_STQCMPLX, i, addr, nme, MSZ_F16));
+      break;
+    // AOCC end
     }
   }
   BIH_SMOVE(exitbih) = 1; /* (temp) mark block so sched limits scratch set */
@@ -889,7 +907,7 @@ static struct {  /* Register temporary information */
     {'g', "ga", DT_INT8, 0, 0, -1},   /* 4: integer*8 temps */
     {'h', "ha", DT_CMPLX, 0, 0, -1},  /* 5: complex temps */
     {'k', "ka", DT_DCMPLX, 0, 0, -1}, /* 6: double complex temps */
-    {'h', "ha", DT_NONE, 0, 0, -1},   /* 7: filler */
+    {'h', "ha", DT_QCMPLX, 0, 0, -1}, /* 7: quad complex temps */
     {'v', "va", DT_NONE, 0, 0, -1},   /* 8: vector temps */
 #if   defined LONG_DOUBLE_FLOAT128
     {'X', "Xa", DT_FLOAT128, 0, 0, -1}, /* 9: float128 temps */
@@ -994,6 +1012,11 @@ mkrtemp_cpx_sc(DTYPE dtype, SC_KIND sc)
   case DT_DCMPLX:
     type = 6;
     break;
+  // AOCC begin
+  case DT_QCMPLX:
+    type = 7;
+    break;
+  // AOOC end
 #ifdef LONG_DOUBLE_FLOAT128
   case DT_CMPLX128:
     type = 10;
@@ -1035,6 +1058,10 @@ mkrtemp_arg1_sc(DTYPE dtype, SC_KIND sc)
     type = 5;
   else if (dtype == DT_DCMPLX)
     type = 6;
+  // AOCC begin
+  else if (dtype == DT_QCMPLX)
+    type = 7;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   else if (dtype == DT_CMPLX128)
     type = 6;
@@ -1171,6 +1198,11 @@ _assn_rtemp(int ili, int temp)
   case IL_STDCMPLX:
     opc = IL_LDDCMPLX;
     break;
+  // AOCC begin
+  case IL_STQCMPLX:
+    opc = IL_LDQCMPLX;
+    break;
+  // AOCC end
   }
 
   switch (IL_RES(opc)) {
@@ -1212,6 +1244,14 @@ _assn_rtemp(int ili, int temp)
     RCAND_MSIZE(rcand) = MSZ_F16;
     break;
 #endif
+  // AOCC begin
+#ifdef ILIA_CQ
+  case ILIA_CQ:
+    rtype = RCAND_RTYPE(rcand) = RATA_CQP;
+    RCAND_MSIZE(rcand) = MSZ_F16;
+    break;
+#endif
+  // AOCC end
   case ILIA_LNK:
     if (IL_VECT(ILI_OPC(ili))) {
       RCAND_MSIZE(rcand) = ili_get_vect_dtype(ili);

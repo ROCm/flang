@@ -184,7 +184,7 @@ void lower_check_generics(void);
 
 struct lower_syms {
   int license, localmode, ptr0, ptr0c;
-  int intzero, intone, realzero, dblezero;
+  int intzero, intone, realzero, dblezero, quadzero;
   /* pointers for functions: loc, exit, allocate */
   int loc, exit, alloc, alloc_chk, ptr_alloc, dealloc, dealloc_mbr, lmalloc,
       lfree;
@@ -357,6 +357,7 @@ int lowersym_pghpf_cmem(int *whichmem);
 #define CLASS_MEM 13
 #define CLASS_FSTK 14 // TODO: UNUSEDS delete
 #define CLASS_PTR 15
+#define CLASS_SSEQP 16
 
 /* mostly used for small structs passed in regs stuff.*/
 /* These values must be kept insync with the values in the BE file exp_rte.c */

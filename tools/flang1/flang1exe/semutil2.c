@@ -6,7 +6,7 @@
  */
 
 /*
-/* 
+/*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  *
@@ -30,6 +30,7 @@
  * Added code to support SHIFTA intrinsic
  *   Last modified : April 2020
  *
+ * Last modified: Jun 2020
  */
 
 /** \file
@@ -929,14 +930,14 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
     break;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:
     switch (kind_val) {
     case 16:
-      if (!XBIT(57, 0x8))
-        out_dtype = DT_QCMPLX;
-      if (XBIT(57, 0x10)) {
+        out_dtype = DT_CMPLX32;
+      /*if (XBIT(57, 0x10)) {
         error(437, 2, gbl.lineno, "COMPLEX(16)", "COMPLEX(8)");
         out_dtype = DT_CMPLX16;
-      }
+      }*/
       break;
     case 8:
       out_dtype = DT_CMPLX16;
@@ -8745,6 +8746,14 @@ eval_abs(ACL *arg, DTYPE dtype)
       xdabsv(num1, res);
       con1 = getcon(res, dtype);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      con1 = wrkarg->conval;
+      GET_QUAD(num1, con1);
+      xqabsv(num1, res);
+      con1 = getcon(res, dtype);
+      break;
+    // AOCC end
     case TY_CMPLX:
       con1 = wrkarg->conval;
       f1 = CONVAL1G(con1);
@@ -8760,6 +8769,12 @@ eval_abs(ACL *arg, DTYPE dtype)
       con1 = wrkarg->conval;
       rsltdtype = DT_REAL;
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      con1 = wrkarg->conval;
+      rsltdtype = DT_REAL;
+      break;
+    // AOCC end
     default:
       con1 = wrkarg->conval;
       break;
@@ -9515,7 +9530,14 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[0] = CONVAL2G(conval);
     dest[1] = CONVAL1G(conval);
     break;
-
+  // AOCC begin
+  case TY_QUAD:
+    dest[0] = CONVAL4G(conval);
+    dest[1] = CONVAL3G(conval);
+    dest[2] = CONVAL2G(conval);
+    dest[3] = CONVAL1G(conval);
+    break;
+  // AOCC end
   case TY_CMPLX:
     dest[0] = CONVAL1G(conval);
     dest[1] = CONVAL2G(conval);
@@ -9529,6 +9551,21 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[2] = CONVAL2G(imag);
     dest[3] = CONVAL1G(imag);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    real = CONVAL1G(conval);
+    imag = CONVAL2G(conval);
+    dest[0] = CONVAL4G(real);
+    dest[1] = CONVAL3G(real);
+    dest[2] = CONVAL2G(real);
+    dest[3] = CONVAL1G(real);
+    dest[0] = CONVAL4G(imag);
+    dest[1] = CONVAL3G(imag);
+    dest[2] = CONVAL2G(imag);
+    dest[3] = CONVAL1G(imag);
+    break;
+  // AOCC end
 
   case TY_CHAR:
     memcpy(dest, stb.n_base + CONVAL1G(conval), size_of(dtype));
@@ -9544,7 +9581,7 @@ static INT
 transfer_load(DTYPE dtype, char *source)
 {
   int *src = (int *)source;
-  INT num[2], real[2], imag[2];
+  INT num[4], real[4], imag[4];
 
   if (DT_ISWORD(dtype))
     return src[0];
@@ -9571,6 +9608,27 @@ transfer_load(DTYPE dtype, char *source)
     num[0] = getcon(real, DT_REAL8);
     num[1] = getcon(imag, DT_REAL8);
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    num[3] = src[0];
+    num[2] = src[1];
+    num[1] = src[2];
+    num[0] = src[3];
+    break;
+  case TY_QCMPLX:
+    real[3] = src[0];
+    real[2] = src[1];
+    real[1] = src[2];
+    real[0] = src[3];
+    imag[3] = src[0];
+    imag[2] = src[1];
+    imag[1] = src[2];
+    imag[0] = src[3];
+    num[0] = getcon(real, DT_QUAD);
+    num[1] = getcon(imag, DT_QUAD);
+    break;
+  // AOCC end
 
   case TY_CHAR:
     return getstring(source, size_of(dtype));
@@ -10480,8 +10538,19 @@ eval_sqrt(ACL *arg, DTYPE dtype)
       xdsqrt(num1, res);
       conval = getcon(res, DT_DBLE);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      num1[0] = CONVAL1G(con1);
+      num1[1] = CONVAL2G(con1);
+      num1[2] = CONVAL3G(con1);
+      num1[3] = CONVAL4G(con1);
+      xqsqrt(num1, res);
+      conval = getcon(res, DT_QUAD);
+      break;
+    // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:  // AOCC
       /*
           a = sqrt(real**2 + imag**2);  "hypot(real,imag)
           if (a == 0) {
@@ -10556,6 +10625,7 @@ eval_sqrt(ACL *arg, DTYPE dtype)
       /* AOCC end   */                                              \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \
@@ -10638,6 +10708,7 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
       /* AOCC end */                                                \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \

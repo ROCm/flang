@@ -6010,6 +6010,11 @@ fill_links_symbol(SYMITEM *ps, WantPrivates wantPrivates)
     break;
   case ST_INTRIN:
     switch (DTY(dtype)) {
+    // AOCC begin
+    case TY_QCMPLX:
+      GQCMPLXP(GNRINTRG(sptr), sptr);
+      break;
+    // AOCC end
     case TY_DCMPLX:
       GDCMPLXP(GNRINTRG(sptr), sptr);
       break;

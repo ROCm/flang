@@ -1466,6 +1466,7 @@ put_dtype(DTYPE dtype)
   case TY_CMPLX:
   case TY_DBLE:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
   case TY_FLOAT:
   case TY_INT:
   case TY_INT8:

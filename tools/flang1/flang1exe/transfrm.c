@@ -14,6 +14,7 @@
  *
  * Support for Bit transformational intrinsic iany, iall, iparity.
  *   Month of Modification: July 2019
+ * Last modified: Jun 2020
  */
 
 /** \brief Fortran transformation module */
@@ -2258,6 +2259,12 @@ collapse_assignment(int asn, int std)
       if (CONVAL1G(cnst) == stb.dbl0 && CONVAL2G(cnst) == stb.dbl0)
         is_zero = 1;
       break;
+    // AOCC begin
+    case DT_CMPLX32:
+      if (CONVAL1G(cnst) == stb.quad0 && CONVAL2G(cnst) == stb.quad0)
+        is_zero = 1;
+      break;
+    // AOCC end
     case DT_BINT:
     case DT_SINT:
     case DT_INT4:
@@ -2273,7 +2280,7 @@ collapse_assignment(int asn, int std)
       break;
     default:
       if (cnst == stb.i0 || cnst == stb.k0 || cnst == stb.flt0 ||
-          cnst == stb.dbl0)
+          cnst == stb.dbl0 || cnst == stb.quad0)
         is_zero = 1;
       break;
     }

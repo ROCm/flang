@@ -101,6 +101,7 @@ typedef struct {
 #define ILMO_SPPOS 35
 #define ILMO_DPPOS 36
 #define ILMO_QPPOS 37     // AOCC
+#define ILMO_IQP 38
 
 #define ILMO_P 1
 #define ILMO_RP 2
@@ -123,6 +124,7 @@ typedef struct {
 #define IM_NOINLC(i) (ilms[i].oprflag & 0x01000000)
 #define IM_DOUBLEDOUBLECPLX(i) (ilms[i].oprflag & 0x00800000)
 #define IM_FLOAT128CPLX(i) (ilms[i].oprflag & 0x00400000)
+#define IM_QCPLX(i) (ilms[i].oprflag & 0x00080000)
 
 /* ***  ILM Template Declarations  *****/
 

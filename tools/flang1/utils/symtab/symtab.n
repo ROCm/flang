@@ -2128,6 +2128,7 @@ means the arguments can be either
 .cw DT_QUAD ,
 .cw DT_CMPLX ,
 or
+.cw DT_QCMPLX .
 .cw DT_DCMPLX .
 .cw DT_WORD
 means the argument must be one of the 32-bit data types,
@@ -2878,6 +2879,7 @@ means the arguments can be either
 .cw DT_DBLE ,
 .cw DT_CMPLX ,
 or
+.cw DT_QCMPLX .
 .cw DT_DCMPLX .
 .cw DT_WORD
 means the argument must be one of the 32-bit data types,
@@ -3235,7 +3237,8 @@ on context.  Internal to the Fortran compiler.
 .PD DT_CMPLX4 "half complex" TY_HCMPLX
 .PD DT_CMPLX8 complex TY_CMPLX
 .PD DT_CMPLX16 "double complex" TY_DCMPLX
-.PD DT_QCMPLX "complex*32" TY_QCMPLX
+.PD DT_CMPLX32  "quad complex" TY_QCMPLX
+./" .PD DT_QCMPLX "complex*32" TY_QCMPLX
 .PD DT_BLOG "logical*1" TY_BLOG
 .PD DT_SLOG "logical*2" TY_SLOG
 .PD DT_LOG4 "logical" TY_LOG

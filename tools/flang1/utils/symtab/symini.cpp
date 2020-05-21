@@ -32,6 +32,7 @@
  *
  * Added support for quad precision
  *  Last modified: Feb 2020
+ * Last modified: Jun 2020
  *
  */
 
@@ -177,7 +178,7 @@ public:
     argtype["L8"] = DT_LOG8;
     argtype["K"] = DT_NCHAR;
     argtype["Q"] = DT_QUAD;
-    argtype["CQ"] = DT_QCMPLX;
+    argtype["CQ"] = DT_CMPLX32;
     argtype["BI"] = DT_BINT;
     argtype["AD"] = DT_ADDR;
     elt[".IN"] = LT_IN;
@@ -685,6 +686,8 @@ private:
           INTASTP(sptr1, intast_sym.size() - 1);
         }
       }
+
+      // AOCC begin
       /* cqname */
       tok = makeLower(getToken());
       if (tok.empty() || tok[0] == '-')
@@ -698,6 +701,8 @@ private:
           INTASTP(sptr1, intast_sym.size() - 1);
         }
       }
+      // AOCC end
+
       /* gsame */
       SPTR sptr1 = find_symbol(std::string(".") + SYMNAME(sptr));
       if (sptr1 != 0 && STYPEG(sptr1) == ST_INTRIN) {
@@ -1176,6 +1181,7 @@ const char *SyminiFE90::init_names0[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -1186,6 +1192,7 @@ const char *SyminiFE90::init_names0[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -1311,16 +1318,19 @@ const char *SyminiFE90::init_names0[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -1478,6 +1488,12 @@ const char *SyminiFE90::init_names0[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -1576,6 +1592,7 @@ const char *SyminiFE90::init_names0[] = {
     "iall",
     "iany",
     "quad",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -1707,6 +1724,7 @@ const char *SyminiFE90::init_names1[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -1717,6 +1735,7 @@ const char *SyminiFE90::init_names1[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -1842,16 +1861,19 @@ const char *SyminiFE90::init_names1[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -2012,6 +2034,12 @@ const char *SyminiFE90::init_names1[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -2110,6 +2138,7 @@ const char *SyminiFE90::init_names1[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2242,6 +2271,7 @@ const char *SyminiFE90::init_names2[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -2252,6 +2282,7 @@ const char *SyminiFE90::init_names2[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -2377,16 +2408,19 @@ const char *SyminiFE90::init_names2[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -2547,6 +2581,12 @@ const char *SyminiFE90::init_names2[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -2645,6 +2685,7 @@ const char *SyminiFE90::init_names2[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2830,6 +2871,7 @@ const char *SyminiFE90::init_names3[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -2840,6 +2882,7 @@ const char *SyminiFE90::init_names3[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -2965,16 +3008,19 @@ const char *SyminiFE90::init_names3[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -3135,6 +3181,12 @@ const char *SyminiFE90::init_names3[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -3233,6 +3285,7 @@ const char *SyminiFE90::init_names3[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",

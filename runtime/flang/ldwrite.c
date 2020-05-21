@@ -1179,6 +1179,19 @@ ENTF90IO(SC_CD_LDW, sc_cd_ldw)(double real, double imag, int type)
   return __f90io_ldw(type, 1, 0, (char *)&dum, 0);
 }
 
+// AOCC begin
+ENTF90IO(SC_CQ_LDW, sc_cq_ldw)(__float128 real, __float128 imag, int type)
+{
+  struct {
+    __float128 real;
+    __float128 imag;
+  } dum;
+  dum.real = real;
+  dum.imag = imag;
+  return __f90io_ldw(type, 1, 0, (char *)&dum, 0);
+}
+// AOCC end
+
 __INT_T
 ENTF90IO(SC_CH_LDW, sc_ch_ldw)(char *item, int type, int len)
 {

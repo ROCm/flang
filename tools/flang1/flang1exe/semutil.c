@@ -28,6 +28,7 @@
  * Added support for quad precision
  *   last modified: feb 2020
  *
+ * Last modified: Jun 2020
  */
 
 
@@ -516,8 +517,12 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
     /* fall thru ... */
     case TY_DBLE:
       break;
-    case TY_QUAD:    // AOCC
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+    case TY_QUAD:
       break;
+    // AOCC end
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -552,6 +557,12 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
     /* fall thru ... */
     case TY_DBLE:
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+    case TY_QUAD:
+      break;
+    // AOCC end
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -582,6 +593,12 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
     /* fall thru ... */
     case TY_DBLE:
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+    case TY_QUAD:
+      break;
+    // AOCC end
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -613,6 +630,12 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
     /* fall thru to */
     case TY_REAL:
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+    case TY_QUAD:
+      break;
+    // AOCC end
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -633,13 +656,16 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       cngtyp(old, DT_INT);
       SST_DTYPEP(old, DT_INT);
     /* fall thru ... */
-    case TY_DBLE:
     case TY_LOG:
     case TY_INT:
     case TY_LOG8:
     case TY_INT8:
       cngtyp(old, DT_REAL);
+    case TY_QCMPLX:
+      break;
     case TY_DCMPLX:
+      mkexpr1(old);
+    case TY_DBLE:
       break;
     case TY_CMPLX:
       mkexpr1(old);
@@ -667,6 +693,7 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       SST_DTYPEP(old, DT_INT);
 /* fall thru to ... */
     case TY_DBLE:
+    case TY_QUAD:
     case TY_LOG:
     case TY_INT:
     case TY_LOG8:
@@ -685,6 +712,13 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       mkexpr1(old);
       SST_IDP(old, S_EXPR);
       goto done;
+
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+    // AOCC end
 
     case TY_CHAR:
     case TY_NCHAR:
@@ -725,6 +759,13 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       SST_IDP(old, S_EXPR);
       goto done;
 
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+    // AOCC end
+
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -735,6 +776,61 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       goto type_error;
     }
 
+  // AOCC begin
+  case TY_QCMPLX:
+    switch (from) {
+    case TY_BINT:
+    case TY_BLOG:
+    case TY_SINT:
+    case TY_SLOG:
+      cngtyp(old, DT_INT);
+      SST_DTYPEP(old, DT_INT);
+    /* fall thru ... */
+    case TY_REAL:
+    case TY_LOG:
+    case TY_INT:
+    case TY_LOG8:
+    case TY_INT8:
+      cngtyp(old, DT_QUAD);
+    /* fall thru ... */
+    case TY_DBLE:
+      if (fromisv)
+        mkexpr1(old);
+      else
+        mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+
+    case TY_QUAD:
+      if (fromisv)
+        mkexpr1(old);
+      else
+        mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+
+    case TY_CMPLX:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+
+    // AOCC begin
+    case TY_DCMPLX:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+    // AOCC end
+
+    case TY_CHAR:
+    case TY_NCHAR:
+    case TY_STRUCT:
+    case TY_DERIVED:
+    /* fall thru ... */
+
+    default:
+      goto type_error;
+    }
+  // AOCC end
   case TY_CHAR:
   case TY_NCHAR:
     if (from != to) {
@@ -812,14 +908,15 @@ done:
     if ((to == TY_BLOG || to == TY_SLOG || to == TY_LOG || to == TY_LOG8) &&
         (from == TY_BINT || from == TY_SINT || from == TY_INT ||
          from == TY_INT8 || from == TY_REAL || from == TY_DCMPLX ||
-         from == TY_DBLE || from == TY_CMPLX || from == TY_QUAD
+         from == TY_DBLE || from == TY_CMPLX || from == TY_QCMPLX ||
+         from == TY_QUAD
          ))
       goto type_error;
     if ((from == TY_BLOG || from == TY_SLOG || from == TY_LOG ||
          from == TY_LOG8) &&
         (to == TY_BINT || to == TY_SINT || to == TY_INT || to == TY_INT8 ||
          to == TY_REAL || to == TY_DCMPLX || to == TY_DBLE || to == TY_CMPLX ||
-         to == TY_QUAD
+         to == TY_QUAD || to == TY_QCMPLX
          ))
       goto type_error;
   }
@@ -1095,6 +1192,8 @@ again:
     case TY_CMPLX:
       break;
     case TY_DCMPLX:
+      break;
+    case TY_QCMPLX:   // AOCC
       break;
     case TY_CHAR:
       break;
@@ -5109,6 +5208,14 @@ chkopnds(SST *lop, SST *operator, SST *rop)
     cngtyp(lop, DT_CMPLX16);
   }
 
+  // AOCC begin
+  if ((TY_OF(lop) == TY_QUAD && TY_OF(rop) == TY_CMPLX) ||
+      (TY_OF(lop) == TY_CMPLX && TY_OF(rop) == TY_QUAD)) {
+    cngtyp(rop, DT_CMPLX32);
+    cngtyp(lop, DT_CMPLX32);
+  }
+  // AOCC end
+
   if (opc == OP_CMP) {
     /* Rules for relational expressions: nondecimal constants result
      * in a typeless comparison.  Size of the larger operand is used.
@@ -5286,6 +5393,31 @@ chkopnds(SST *lop, SST *operator, SST *rop)
           return;
         }
         break;
+      // AOCC begin
+      case TY_QCMPLX:
+        conval = SST_CVALG(rop);
+        if (!is_quad0(CONVAL2G(conval)))
+          break;
+        conval = CONVAL1G(conval);
+        goto ck_quad_pw;
+      case TY_QUAD:
+        conval = SST_CVALG(rop);
+      ck_quad_pw:
+        num[0] = CONVAL1G(conval);
+        num[1] = CONVAL2G(conval);
+        num[2] = CONVAL3G(conval);
+        num[3] = CONVAL4G(conval);
+        is_int = xqisint(num, &pw);
+        if ((!flg.ieee || pw == 1 || pw == 2) && is_int) {
+          if (TY_OF(lop) < TY_OF(rop))
+            cngtyp(lop, (int)SST_DTYPEG(rop)); /* Normal rule */
+          SST_CVALP(rop, pw);
+          SST_DTYPEP(rop, DT_INT4);
+          SST_ASTP(rop, mk_cval1(pw, DT_INT4));
+          return;
+        }
+        break;
+      // AOCC end
       default:
         break;
       }
@@ -5908,6 +6040,13 @@ mod_type(int dtype, int ty, int kind, int len, int propagated, int sptr)
     error(31, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) :
                                      (ty == TY_HALF ? "real2" : "real"), CNULL);
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    if (sem.ogdtype == DT_CMPLX32 && kind != 0) {
+      error(32, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) : "quadcomplex", CNULL);
+      break;
+    }
+  // AOCC end
   case TY_DCMPLX:
     if (sem.ogdtype == DT_CMPLX16 && kind != 0) {
       error(32, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) : "doublecomplex", CNULL);
@@ -5927,6 +6066,10 @@ mod_type(int dtype, int ty, int kind, int len, int propagated, int sptr)
           return DT_QCMPLX;
         }
       }
+      // AOCC begin
+      if (len == 32)
+        return DT_CMPLX32;
+      // AOCC end
       if (len == 16)
         return DT_CMPLX16;
       if (len == 8)
@@ -7179,6 +7322,47 @@ _xtok(INT conval1, BIGINT64 count, int dtype)
     num1[1] = getcon(dimagrs, DT_REAL8);
     conval = getcon(num1, DT_CMPLX16);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    qreal1[0] = CONVAL1G(CONVAL1G(conval1));
+    qreal1[1] = CONVAL2G(CONVAL1G(conval1));
+    qreal1[2] = CONVAL3G(CONVAL1G(conval1));
+    qreal1[3] = CONVAL4G(CONVAL1G(conval1));
+
+    qimag1[0] = CONVAL1G(CONVAL2G(conval1));
+    qimag1[1] = CONVAL2G(CONVAL2G(conval1));
+    qimag1[2] = CONVAL3G(CONVAL2G(conval1));
+    qimag1[3] = CONVAL4G(CONVAL2G(conval1));
+
+    qrealrs[0] = CONVAL1G(CONVAL1G(one));
+    qrealrs[1] = CONVAL2G(CONVAL1G(one));
+    qrealrs[2] = CONVAL3G(CONVAL1G(one));
+    qrealrs[3] = CONVAL4G(CONVAL1G(one));
+
+    qimagrs[0] = CONVAL1G(CONVAL2G(one));
+    qimagrs[1] = CONVAL2G(CONVAL2G(one));
+    qimagrs[2] = CONVAL3G(CONVAL2G(one));
+    qimagrs[3] = CONVAL4G(CONVAL2G(one));
+    while (count--) {
+      /* (a + bi) * (c + di) ==> (ac-bd) + (ad+cb)i */
+      qrealpv[0] = qrealrs[0];
+      qrealpv[1] = qrealrs[1];
+      qrealpv[2] = qrealrs[2];
+      qrealpv[3] = qrealrs[3];
+
+      xqmul(qreal1, qrealrs, qtemp1);
+      xqmul(qimag1, qimagrs, qtemp);
+      xqsub(qtemp1, qtemp, qrealrs);
+      xqmul(qreal1, qimagrs, qtemp1);
+      xqmul(qrealpv, qimag1, qtemp);
+      xqadd(qtemp1, qtemp, qimagrs);
+    }
+    num1[0] = getcon(drealrs, DT_QUAD);
+    num1[1] = getcon(dimagrs, DT_QUAD);
+    conval = getcon(num1, DT_CMPLX32);
+    break;
+  // AOCC end
 
   case TY_BLOG:
   case TY_SLOG:

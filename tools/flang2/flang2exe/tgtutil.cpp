@@ -13,6 +13,7 @@
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
+ * Last Modified: Jun 2020
  */
 
 /** \file
@@ -270,7 +271,7 @@ make_array_sptr(char *name, DTYPE atype, int arraysize)
 // AOCC Begin
 static bool
 is_complex_dtype(DTYPE dtype) {
-  if (dtype == DT_CMPLX || dtype == DT_DCMPLX)
+  if (dtype == DT_CMPLX || dtype == DT_DCMPLX || dtype == DT_QCMPLX)
     return true;
   return false;
 }

@@ -48,6 +48,9 @@
  *
  * Support for "nearest" intrinsic
  *   Last modified: Feb 2020
+ *
+ *   Last modified: Jun 2020
+ *
  */
 
 /**
@@ -6182,6 +6185,10 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         conjg = I_CONJG;
       } else if (dtyperes == DT_CMPLX16) {
         conjg = I_DCONJG;
+        // AOCC begin
+      } else if (dtyperes == DT_CMPLX32) {
+        conjg = I_QCONJG;
+       // AOCC end
       } else {
         return ast;
       }
@@ -7333,6 +7340,15 @@ matmul(int func_ast, int func_args, int lhs)
       rtlRtn = RTE_matmul_cplx16;
     }
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    if (matmul_transpose) {
+      rtlRtn = RTE_matmul_cplx16mxv_t;
+    } else {
+      rtlRtn = RTE_matmul_cplx32;
+    }
+    break;
+  // AOCC end
   case TY_BLOG:
     rtlRtn = RTE_matmul_log1;
     break;
@@ -7549,6 +7565,17 @@ mmul(int func_ast, int func_args, int lhs)
     beta = getcon(num, DT_CMPLX16);
     rtlRtn = RTE_mmul_cmplx16;
     break;
+  // AOCC begin
+  case DT_CMPLX32:
+    num[0] = stb.quad0;
+    num[1] = stb.quad0;
+    alpha = getcon(num, DT_CMPLX32);
+    num[0] = stb.quad0;
+    num[1] = stb.quad0;
+    beta = getcon(num, DT_CMPLX32);
+    rtlRtn = RTE_mmul_cmplx32;
+    break;
+  // AOCC end
   default:
     return -1;
   }

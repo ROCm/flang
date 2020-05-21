@@ -158,6 +158,7 @@ amd64_update_class(void *context, DTYPE dtype, unsigned address,
     cls[1] = AMD64_INTEGER;
     break;
 
+  case TY_QCMPLX:   // AOCC
   case TY_DCMPLX:
     cls[0] = AMD64_SSE;
     cls[1] = AMD64_SSE;

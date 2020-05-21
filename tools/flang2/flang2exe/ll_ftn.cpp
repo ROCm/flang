@@ -118,6 +118,7 @@ is_fastcall(int ilix)
     case IL_DASP: /* splnk sp lnk */
     case IL_DACS: /* cslnk cs lnk */
     case IL_DACD: /* cdlnk cd lnk */
+    case IL_DACQ: /* cdlnk cq lnk */   // AOCC
       return true;
     }
     break;
@@ -647,6 +648,7 @@ get_return_type(SPTR func_sptr)
     return DT_NONE;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:      // AOCC
     if (CFUNCG(func_sptr) || CMPLXFUNC_C)
       break;
     return DT_NONE;

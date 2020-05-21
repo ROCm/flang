@@ -5,7 +5,7 @@
  *
  */
 
-/* 
+/*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  *
@@ -14,7 +14,8 @@
  *
  * Support for assumed size array as parameter
  *   Date of modification 9th June 2020
-
+ *
+ * Last modified: Jun 2020
  *
 */
 
@@ -1479,7 +1480,8 @@ semant2(int rednum, SST *top)
       if (strcmp(SYMNAME(sptr1), "re") == 0 ||
           strcmp(SYMNAME(sptr1), "im") == 0) {
         /* build a phoney member ast that will be rewritten later */
-        dtype = DTY(dtype) == TY_CMPLX ? DT_REAL4 : DT_REAL8;
+        dtype = DTY(dtype) == TY_CMPLX ? DT_REAL4 : DTY(dtype) == TY_DCMPLX ?
+                              DT_REAL8 : DT_QUAD;
         STYPEP(sptr1, ST_MEMBER);
         DTYPEP(sptr1, dtype); /* don't count on this, it will change */
         SST_ASTP(LHS, mk_member(SST_ASTG(RHS(1)), mk_id(sptr1), dtype));
@@ -1926,7 +1928,7 @@ semant2(int rednum, SST *top)
    *      <constant> ::= <qcomplex> |
    */
   case CONSTANT9:
-    SST_DTYPEP(LHS, DT_QCMPLX);
+    SST_DTYPEP(LHS, DT_CMPLX32);
     /* value set by scan */
     ast_cnst(top);
     break;
@@ -2843,6 +2845,11 @@ rewrite_cmplxpart_rval(SST *e)
     case TY_DBLE:
       intrnm = part == 1 ? "dreal" : "dimag";
       break;
+    // AOCC begin
+    case TY_QUAD:
+      intrnm = part == 1 ? "qreal" : "qimag";
+      break;
+    // AOCC end
     default:
       interr("rewrite_cmplxpart_rval: unexpected type", DTY(dtype), 3);
     }
@@ -2885,10 +2892,14 @@ form_cmplx_const(SST *res, SST *rp, SST *ip)
     i = SST_DTYPEG(rp);
     if (i == DT_DBLE || i == DT_DCMPLX)
       dtype = DT_DBLE;
+    else if (i == DT_QUAD || i == DT_QCMPLX)
+      dtype = DT_QUAD;
     else {
       i = SST_DTYPEG(ip);
       if (i == DT_DBLE || i == DT_DCMPLX)
         dtype = DT_DBLE;
+      else if (i == DT_QUAD || i == DT_QCMPLX)
+        dtype = DT_QUAD;
       else
         dtype = DT_REAL;
     }
@@ -2896,7 +2907,8 @@ form_cmplx_const(SST *res, SST *rp, SST *ip)
     val[0] = SST_CVALG(rp);
     cngtyp(ip, dtype);
     val[1] = SST_CVALG(ip);
-    dtype = (dtype == DT_DBLE) ? DT_DCMPLX : DT_CMPLX;
+    dtype = (dtype == DT_DBLE) ? DT_DCMPLX : (dtype == DT_QUAD) ?
+                                 DT_QCMPLX : DT_CMPLX;
   }
   SST_IDP(res, S_CONST);
   SST_DTYPEP(res, dtype);

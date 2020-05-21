@@ -84,7 +84,6 @@ enum fold_relation {
 
 enum fold_relation fold_real32_compare(const float32_t *x, const float32_t *y);
 enum fold_relation fold_real64_compare(const float64_t *x, const float64_t *y);
-enum fold_relation fold_real128_compare(const float128_t *x, const float128_t *y);
 
 /*
  *  Operations.  These all return a status code.
@@ -99,6 +98,7 @@ enum fold_status {
 };
 
 #ifdef FOLD_LDBL_128BIT
+enum fold_relation fold_real128_compare(const float128_t *x, const float128_t *y);
 enum fold_status fold_int32_from_real32(int32_t *res, const float32_t *arg);
 enum fold_status fold_int64_from_real32(int64_t *res, const float32_t *arg);
 enum fold_status fold_uint64_from_real32(uint64_t *res, const float32_t *arg);
@@ -185,6 +185,7 @@ enum fold_status fold_real128_log10(float128_t *res, const float128_t *arg);
 // AOCC begin
 // To support quad precision REAL128 type
 #else
+enum fold_relation fold_real128_compare(const __float128 *x, const __float128 *y);
 enum fold_status fold_int32_from_real128(int32_t *res, const __float128 *arg);
 enum fold_status fold_int64_from_real128(int64_t *res, const __float128 *arg);
 enum fold_status fold_uint32_from_real128(uint32_t *res, const __float128 *arg);

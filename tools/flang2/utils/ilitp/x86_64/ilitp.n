@@ -370,6 +370,16 @@ Double-precision complex constant.
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
 
+.\" AOCC begin
+.IL QCMPLXCON sym
+Quad-precision complex constant.
+.AT cons null cq cse
+.CG "movapq" move sse_avx
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+.\" AOCC end
+
 .IL LD arlnk nme stc
 \'arlnk' points to an address expression.
 .br
@@ -431,6 +441,16 @@ Load double precision complex value.  'stc' is not used.
 .SI ld double fadd fmul fst lat(3)
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
+
+.\" AOCC begin
+.IL LDQCMPLX arlnk nme stc
+Load quad precision complex value.  'stc' is not used.
+.AT load null cq
+.CG "movupq" move sse_avx
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+.\" AOCC end
 
 .IL LDQ arlnk nme stc
 Load an __m128 value.  'stc' is not used.
@@ -545,6 +565,14 @@ cgoptim1.c:lili_peephole_opts_2().
 .AT arth null cd cse
 .CG notAILI
 
+.\" AOCC begin
+.IL QCMPLXNEG cqlnk
+Complex*32 negation.  This LILI is replaced by a QCMPLXXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null cq cse
+.CG notAILI
+.\" AOCC end
+
 .IL FXOR splnk splnk
 This only appears in the LILIs and AILIs, not in shared ILIs.  It is
 generated in cgoptim1.c:lili_peephole_opts_2() by transforming
@@ -594,6 +622,17 @@ XORing its sign bits with 1.  This ILI is specified as non-commutative
 .AT arth null cd cse
 .CG CGonly "xorpd" sse_avx
 
+.\" AOCC begin
+.IL QCMPLXXOR cqlnk cqlnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+QCMPLXNEG( op1 ) into a QCMPLXXOR LILI in order to negate 'op1' by
+XORing its sign bits with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null cq cse
+.CG CGonly "xorpq" sse_avx
+.\" AOCC end
+
 .IL SCMPLXCONJG cslnk
 Single-precision complex conjugate.
 .AT arth null cs cse
@@ -603,6 +642,13 @@ Single-precision complex conjugate.
 Double-precision complex conjugate.
 .AT arth null cd cse
 .CG "xorpd" sse_avx asm_special
+
+.\" AOCC begin
+.IL QCMPLXCONJG cqlnk
+Quad-precision complex conjugate.
+.AT arth null cq cse
+.CG "xorpq" sse_avx asm_special
+.\" AOCC end
 
 .IL IABS irlnk
 Integer absolute value.  Expanded into shift-xor-sub sequence.
@@ -1083,6 +1129,13 @@ Double-precision complex exponential.
 .AT arth null cd cse
 .CG notCG
 
+.\" AOCC begin
+.IL QCMPLXEXP cqlnk
+Quad-precision complex exponential.
+.AT arth null cq cse
+.CG notCG
+.\" AOCC end
+
 .IL SCMPLXCOS cslnk
 Single-precision complex cosine.
 .AT arth null cs cse
@@ -1092,6 +1145,13 @@ Single-precision complex cosine.
 Double-precision complex cosine.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXCOS cqlnk
+Quad-precision complex cos.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXSIN cslnk
 Single-precision complex sine.
@@ -1103,6 +1163,13 @@ Double-precision complex sine.
 .AT arth null cd cse
 .CG notCG
 
+./" AOCC begin
+.IL QCMPLXSIN cqlnk
+Quad-precision complex sine.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
 .IL SCMPLXTAN cslnk
 Single-precision complex tangent.
 .AT arth null cs cse
@@ -1112,6 +1179,13 @@ Single-precision complex tangent.
 Double-precision complex tangent.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXTAN cqlnk
+Quad-precision complex tangent.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXACOS cslnk
 Single-precision complex arccosine.
@@ -1123,6 +1197,13 @@ Double-precision complex arccosine.
 .AT arth null cd cse
 .CG notCG
 
+./" AOCC begin
+.IL QCMPLXACOS cqlnk
+Quad-precision complex arccosine.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
 .IL SCMPLXASIN cslnk
 Single-precision complex arcsine.
 .AT arth null cs cse
@@ -1132,6 +1213,13 @@ Single-precision complex arcsine.
 Double-precision complex arcsine.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXASIN cqlnk
+Quad-precision complex arcsine.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXATAN cslnk
 Single-precision complex arctangent.
@@ -1143,6 +1231,13 @@ Double-precision complex arctangent.
 .AT arth null cd cse
 .CG notCG
 
+./" AOCC begin
+.IL QCMPLXATAN cqlnk
+Quad-precision complex arctangent.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
 .IL SCMPLXCOSH cslnk
 Single-precision complex hyperbolic cos.
 .AT arth null cs cse
@@ -1152,6 +1247,13 @@ Single-precision complex hyperbolic cos.
 Double-precision complex hyperbolic cos.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXCOSH cqlnk
+Quad-precision complex hyperbolic cos.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXSINH cslnk
 Single-precision complex hyperbolic sin.
@@ -1163,6 +1265,13 @@ Double-precision complex hyperbolic sin.
 .AT arth null cd cse
 .CG notCG
 
+./" AOCC begin
+.IL QCMPLXSINH cqlnk
+Quad-precision complex hyperbolic sin.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
 .IL SCMPLXTANH cslnk
 Single-precision complex hyperbolic tan.
 .AT arth null cs cse
@@ -1172,6 +1281,13 @@ Single-precision complex hyperbolic tan.
 Double-precision complex hyperbolic tan.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXTANH cqlnk
+Quad-precision complex hyperbolic tan.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXLOG cslnk
 Single-precision complex natural logarithm.
@@ -1183,6 +1299,13 @@ Double-precision complex natural logarithm.
 .AT arth null cd cse
 .CG notCG
 
+./" AOCC begin
+.IL QCMPLXLOG cqlnk
+Quad-precision complex natural logarithm.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
 .IL SCMPLXSQRT cslnk
 Single-precision complex square root.
 .AT arth null cs cse
@@ -1192,6 +1315,13 @@ Single-precision complex square root.
 Double-precision complex square root.
 .AT arth null cd cse
 .CG notCG
+
+./" AOCC begin
+.IL QCMPLXSQRT cqlnk
+Quad-precision complex square root.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
 
 .IL SCMPLXPOW cslnk cslnk
 Single-precision complex raised to a single-precision complex power.
@@ -1203,6 +1333,13 @@ Double-precision complex raised to a double-precision complex power.
 .AT arth null cd cse
 .CG notCG
 
+.\"AOCC begin
+.IL QCMPLXPOW cqlnk cqlnk
+Quad-precision complex raised to a quad-precision complex power.
+.AT arth null cq cse
+.CG notCG
+.\"AOCC end
+
 .IL SCMPLXPOWI cslnk irlnk
 Single-precision complex raised to an integer power.
 .AT arth null cs cse
@@ -1213,6 +1350,13 @@ Double-precision complex raised to an integer power.
 .AT arth null cd cse
 .CG notCG
 
+.\"AOCC begin
+.IL QCMPLXPOWI cqlnk cqlnk
+Quad-precision complex raised to an integer power.
+.AT arth null cq cse
+.CG notCG
+.\"AOCC end
+
 .IL SCMPLXPOWK cslnk krlnk
 Single-precision complex raised to an integer power.
 .AT arth null cs cse
@@ -1222,6 +1366,13 @@ Single-precision complex raised to an integer power.
 Double-precision complex raised to an integer power.
 .AT arth null cd cse
 .CG notCG
+
+.\"AOCC begin
+.IL QCMPLXPOWK cqlnk cqlnk
+Quad-precision complex raised to an integer power.
+.AT arth null cq cse
+.CG notCG
+.\"AOCC end
 
 .\"
 .\" Start of type conversion ILIs.
@@ -1539,18 +1690,29 @@ into real*8 values in 'xmm2'.
 
 .\" AOCC begin
 .IL QFLOAT irlnk
-Integer*4 to real*8 type conversion.
+Integer*4 to real*16 type conversion.
 .AT arth null qp cse
 .CG "cvtsi2sq" 'l' sse_avx asm_special
 .SI ld direct fst lat(6)
 .SI quad fst lat(11)
 
 .IL QFLOATK krlnk
-Integer*8 to real*8 type conversion.
+Integer*8 to real*16 type conversion.
 .AT arth null qp cse
 .CG "cvtsi2sq" 'q' avx_special
 .SI ld direct fst lat(6)
 .SI quad fst lat(11)
+
+.IL QFLOATUK krlnk
+Unsigned integer*8 to real*16 type conversion.
+.AT arth null qp cse
+.CG notAILI
+
+.IL QFLOATU irlnk
+Unsigned integer*4 to real*16 type conversion.
+Equivalent to UIKMV + QFLOATK combination.
+.AT arth null qp cse
+.CG notCG
 .\" AOCC end
 
 .IL FIX splnk
@@ -1603,6 +1765,21 @@ KIMV combination.
 .AT arth null ir cse
 .CG notCG
 
+./" AOCC begin
+.IL QFIX qplnk
+Real*16 to integer*4 type conversion.
+.AT arth null ir cse
+.CG "cvttsq2si" 'l' sse_avx asm_special
+.SI quad fst lat(9)
+.SI ld vector fadd fmul fstore lat(10)
+
+.IL QFIXU qplnk
+Real*16 to unsigned integer*4 type conversion.  Equivalent to QFIXK +
+KIMV combination.
+.AT arth null ir cse
+.CG notCG
+./" AOCC end
+
 .IL PDFIX arlnk xmm nme
 Convert 2 real*8 values from 'arlnk' into 2 integer*4 values in the
 low half of 'xmm'.
@@ -1628,6 +1805,19 @@ Real*8 to unsigned integer*8 type conversion.  Implemented as a QJSR.
 .AT arth null kr cse
 .CG notCG
 
+./" AOCC begin
+.IL QFIXK dplnk
+Real*16 to to integer*8 type conversion.
+.AT arth null kr cse
+.CG "cvttsq2si" 'q' sse_avx asm_special
+.SI quad fst lat(9)
+.SI ld vector fadd fmul fstore lat(10)
+
+.IL QFIXUK qplnk
+Real*16 to unsigned integer*8 type conversion.  Implemented as a QJSR.
+.AT arth null kr cse
+.CG notCG
+./" AOCC end
 
 .IL SNGL dplnk
 Real*8 to real*4 type conversion.
@@ -1821,6 +2011,14 @@ Double-precision complex addition.
 .CG "addpd" sse_avx
 .SI double fadd lat(5:7)
 
+.\" AOCC begin
+.IL QCMPLXADD cqlnk cqlnk
+Quad-precision complex addition.
+.AT arth comm cq cse
+.CG "addpq" sse_avx
+.SI quad fadd lat(5:7)
+.\" AOCC end
+
 .IL ISUB irlnk irlnk
 Signed 32-bit integer subtraction.
 .AT arth null ir cse
@@ -1888,6 +2086,14 @@ Double-precision complex subtraction.
 .CG "subpd" sse_avx
 .SI double fadd lat(7:5)
 
+./" AOCC begin
+.IL QCMPLXSUB cqlnk cqlnk
+Quad-precision complex subtraction.
+.AT arth null cq cse
+.CG "subpd" sse_avx
+.SI quad fadd lat(7:5)
+./" AOCC end
+
 .IL IMUL irlnk irlnk
 Integer Multiply.  It'a a bug to give this opcode the 'cc' attribute.
 .AT arth comm ir cse
@@ -1951,7 +2157,7 @@ Double-precision multiply.
 Quad-precision multiply.
 .AT arth comm qp cse
 .CG "mulsq" sse_avx
-.SI direct fmul lat(6:4)
+.SI direct fmul lat(10:8)
 .\" AOCC end
 
 .IL SCMPLXMUL cslnk cslnk
@@ -1963,6 +2169,13 @@ Single-complex multiply.
 Double-complex multiply.
 .AT arth comm cd cse
 .CG sse_avx asm_special
+
+./" AOCC begin
+.IL QCMPLXMUL cqlnk cqlnk
+Quad-complex multiply.
+.AT arth comm cq cse
+.CG sse_avx asm_special
+./" AOCC end
 
 .IL IDIV irlnk irlnk
 Signed integer divide.
@@ -2081,6 +2294,13 @@ Single precision complex divide.
 Double precision complex divide.
 .AT arth null cd cse
 .CG "divpd" sse_avx
+
+.\" AOCC begin
+.IL QCMPLXDIV cqlnk cqlnk
+Quad precision complex divide.
+.AT arth null cq cse
+.CG "divpq" sse_avx
+.\" AOCC end
 
 .IL MOD irlnk irlnk
 Integer remainder.
@@ -2391,6 +2611,14 @@ Double precision complex compare with result of true or false.
 .CG asm_special "ucomisd" ccmod sse_avx
 .SI vector fadd lat(5:4)
 
+./" AOCC  begin
+.IL QCMPLXCMP qplnk qplnk stc
+QUad precision complex compare with result of true or false.
+.AT arth comm ir cse
+.CG asm_special "ucomisd" ccmod sse_avx
+.SI vector fadd lat(5:4)
+./" AOCC  end
+
 .IL ICMPZ irlnk stc
 Integer compare with zero.
 Conditions are same as ICJMP ILI.
@@ -2440,6 +2668,11 @@ Double precision compare with zero.
 Quad precision compare with zero.
 .AT arth null ir cse
 .CG notCG
+
+.IL QCMPZNZ qplnk stc
+Quad precision compare with zero which distinguishes negative zero.
+.AT arth null ir cse
+.CG notCG
 .\" AOCC end
 
 .IL DCMPZNZ dplnk stc
@@ -2481,12 +2714,22 @@ operation pointed to by the 1st operand.
 .AT other null dp cse
 .CG notAILI
 
+./" AOCC begin
+.IL QSELECT irlnk qplnk qplnk
+.AT other null qp cse
+.CG notAILI
+./" AOCC end
+
 .IL CSSELECT irlnk cslnk cslnk
 .AT other null cs cse
 .CG notAILI
 
 .IL CDSELECT irlnk cdlnk cdlnk
 .AT other null cd cse
+.CG notAILI
+
+.IL CQSELECT irlnk cqlnk cqlnk
+.AT other null cq cse
 .CG notAILI
 
 .IL AND irlnk irlnk
@@ -2919,6 +3162,13 @@ Double precision complex register cse.
 .AT arth null cd
 .CG notCG
 
+./" AOCC begin
+.IL CSECQ cqlnk
+Quad precision complex register cse.
+.AT arth null cq
+.CG notCG
+./" AOCC end
+
 .IL CSEAR arlnk
 Address register cse.
 .AT arth null ar
@@ -3093,6 +3343,16 @@ Store double precision complex quantity.  'stc' is not used.
 .SI ld double fadd fmul fst lat(3)
 .SI st direct fst lat(2)
 .SI direct fadd fmul lat(2)
+
+./" AOCC  begin
+.IL STQCMPLX cqlnk arlnk nme stc
+Store quad precision complex quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "movupq" move sse_avx
+.SI ld quad fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+./" AOCC  end
 
 .IL STQ dplnk arlnk nme stc
 Store an __m128 quantity.  'stc' is not used.
@@ -3343,6 +3603,16 @@ Define a C struct argument of two double, passed in the indicated xmm register.
 .SI st double fst lat(4)
 .SI double fadd fmul lat(2)
 
+./" AOCC begin
+.IL DACQ cqlnk cd lnk
+Define a C struct argument of two quad, passed in the indicated xmm register.
+.AT define null lnk
+.CG "movupq" move sse_avx
+.SI ld quad fadd fmul fst lat(4)
+.SI st quad fst lat(4)
+.SI quad fadd fmul lat(2)
+./" AOCC end
+
 .IL DADP dplnk dp lnk
 Define a double precision argument for a JSR or QJSR.
 .AT define null lnk
@@ -3441,6 +3711,13 @@ Define single precision complex function result in an xmm register.
 Define double precision complex function result in an xmm register.
 .AT define null cd cse
 .CG terminal asm_nop
+
+./" AOCC begin
+.IL DFRCQ lnk cd
+Define quad precision complex function result in an xmm register.
+.AT define null cq cse
+.CG terminal asm_nop
+./" AOCC end
 
 .IL DFR128 lnk dp
 Define 128-bit function result in an xmm register.
@@ -3548,6 +3825,18 @@ Form a double complex value out of two double precision real values, imaginary p
 .AT other null cd cse
 .CG "unpcklpd" sse_avx asm_special
 
+.\" AOCC begin
+.IL QPQP2QCMPLX qplnk qplnk
+Form a quad complex value out of two quad precision real values.
+.AT other null cq cse
+.CG "unpcklpq" sse_avx asm_special
+
+.IL QPQP2QCMPLXI0 qplnk
+Form a quad complex value out of two quad precision real values, imaginary part is 0.
+.AT other null cq cse
+.CG "unpcklpq" sse_avx asm_special
+.\" AOCC end
+
 .IL SCMPLX2IMAG cslnk
 Return single precision imaginary part of a single complex value.
 .AT other null sp cse
@@ -3558,6 +3847,13 @@ Return double precision imaginary part of a double complex value.
 .AT other null dp cse
 .CG "unpckhpd" sse_avx asm_special
 
+.\" AOCC begin
+.IL QCMPLX2IMAG cqlnk
+Return quad precision imaginary part of a quad complex value.
+.AT other null qp cse
+.CG "unpckhpd" sse_avx asm_special
+.\" AOCC end
+
 .IL SCMPLX2REAL cslnk
 Return single precision real part of a single complex value.
 .AT other null sp cse
@@ -3567,6 +3863,13 @@ Return single precision real part of a single complex value.
 Return double precision real part of a double complex value.
 .AT other null dp cse
 .CG "movsd" sse_avx asm_special
+
+.\" AOCC begin
+.IL QCMPLX2REAL cqlnk
+Return quad precision real part of a quad complex value.
+.AT other null qp cse
+.CG "movsq" sse_avx asm_special
+.\" AOCC end
 
 .IL MVDP dplnk dp
 This ili represents a double precision function return value.
@@ -3701,6 +4004,12 @@ The FREExx ili are eliminated by the linearizer phase of the code generator.
 .IL FREECD cdlnk
 .AT other null trm
 .CG terminal notAILI
+
+./" AOCC begin
+.IL FREECQ cqlnk
+.AT other null trm
+.CG terminal notAILI
+./" AOCC end
 
 .IL FREEAR arlnk
 .AT other null trm

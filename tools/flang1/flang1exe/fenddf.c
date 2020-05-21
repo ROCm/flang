@@ -12,6 +12,7 @@
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ * Last Modified: Jun 2020
  *
  */
 
@@ -67,7 +68,7 @@ INT cast_types[NTYPE][2][2] = {
     /* DT_CMPLX4 */ {{-1, -1}, {1, -1}},
     /* DT_CMPLX */ {{-1, -1}, {1, -1}},
     /* DT_DCMPLX */ {{-1, -1}, {1, -1}},
-    /* DT_QCMPLX */ {{-1, -1}, {-1, -1}},
+    /* DT_QCMPLX */ {{-1, -1}, {1, -1}},
     /* DT_BLOG */ {{1, 1}, {1, 1}},
     /* DT_SLOG */ {{1, 1}, {1, 1}},
     /* DT_LOG */ {{1, 1}, {1, 1}},

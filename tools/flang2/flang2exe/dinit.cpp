@@ -17,6 +17,7 @@
  *
  * Support for nearest intrinsic
  *  Last modified: 01 March 2020
+ * Last Modified : Jun 2020
  */
 
 /** \file
@@ -472,6 +473,10 @@ is_zero(DTYPE dtype, INT conval)
   // AOCC begin
   case TY_QUAD:
     if (conval == stb.quad0)
+      return true;
+    break;
+  case TY_QCMPLX:
+    if (CONVAL1G(conval) == stb.quad0 && CONVAL2G(conval) == stb.quad0)
       return true;
     break;
   // AOCC end
@@ -1289,6 +1294,13 @@ _ddiv(INT *dividend, INT *divisor, INT *quotient)
 #endif
 }
 
+// AOCC begin
+static void
+_qdiv(INT *dividend, INT *divisor, INT *quotient)
+{
+  xqdiv(dividend, divisor, quotient);
+}
+// AOCC end
 static int
 get_ast_op(int op)
 {
@@ -1371,6 +1383,8 @@ static INT
 init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
 {
   IEEE128 qtemp, qresult, qnum1, qnum2;     // AOCC
+  IEEE128 qreal1, qreal2, qrealrs, qimag1, qimag2, qimagrs;
+  IEEE128 qtemp1, qtemp2;
   DBLE dtemp, dresult, num1, num2;
   DBLE dreal1, dreal2, drealrs, dimag1, dimag2, dimagrs;
   DBLE dtemp1, dtemp2;
@@ -1779,6 +1793,129 @@ init_fold_const(int opr, INT conval1, INT conval2, DTYPE dtype)
     num1[1] = getcon(dimagrs, DT_DBLE);
     return getcon(num1, DT_DCMPLX);
 
+  // AOCC begin
+  case TY_QCMPLX:
+    qreal1[0] = CONVAL1G(CONVAL1G(conval1));
+    qreal1[1] = CONVAL2G(CONVAL1G(conval1));
+    qreal1[2] = CONVAL3G(CONVAL1G(conval1));
+    qreal1[3] = CONVAL4G(CONVAL1G(conval1));
+    qimag1[0] = CONVAL1G(CONVAL2G(conval1));
+    qimag1[1] = CONVAL2G(CONVAL2G(conval1));
+    qimag1[2] = CONVAL3G(CONVAL2G(conval1));
+    qimag1[3] = CONVAL4G(CONVAL2G(conval1));
+    qreal2[0] = CONVAL1G(CONVAL1G(conval2));
+    qreal2[1] = CONVAL2G(CONVAL1G(conval2));
+    qreal2[2] = CONVAL3G(CONVAL1G(conval2));
+    qreal2[3] = CONVAL4G(CONVAL1G(conval2));
+    qimag2[0] = CONVAL1G(CONVAL2G(conval2));
+    qimag2[1] = CONVAL2G(CONVAL2G(conval2));
+    qimag2[2] = CONVAL3G(CONVAL2G(conval2));
+    qimag2[3] = CONVAL4G(CONVAL2G(conval2));
+    switch (opr) {
+    case OP_ADD:
+      xqadd(qreal1, qreal2, qrealrs);
+      xqadd(qimag1, qimag2, qimagrs);
+      break;
+    case OP_SUB:
+      xqsub(qreal1, qreal2, qrealrs);
+      xqsub(qimag1, qimag2, qimagrs);
+      break;
+    case OP_MUL:
+      /* (a + bi) * (c + di) ==> (ac-bd) + (ad+cb)i */
+      xqmul(qreal1, qreal2, qtemp1);
+      xqmul(qimag1, qimag2, qtemp);
+      xqsub(qtemp1, qtemp, qrealrs);
+      xqmul(qreal1, qimag2, qtemp1);
+      xqmul(qreal2, qimag1, qtemp);
+      xqadd(qtemp1, qtemp, qimagrs);
+      break;
+    case OP_DIV:
+      qtemp2[0] = CONVAL1G(stb.dbl0);
+      qtemp2[1] = CONVAL2G(stb.dbl0);
+      /*  qrealrs = qreal2;
+       *  if (qrealrs < 0)
+       *      qrealrs = -qrealrs;
+       *  qimagrs = qimag2;
+       *  if (qimagrs < 0)
+       *      qimagrs = -qimagrs;
+       */
+      if (xqcmp(qreal2, qtemp2) < 0)
+        xqsub(qtemp2, qreal2, qrealrs);
+      else {
+        qrealrs[0] = qreal2[0];
+        qrealrs[1] = qreal2[1];
+      }
+      if (xqcmp(qimag2, qtemp2) < 0)
+        xqsub(qtemp2, qimag2, qimagrs);
+      else {
+        qimagrs[0] = qimag2[0];
+        qimagrs[1] = qimag2[1];
+      }
+
+      /* avoid overflow */
+
+      qtemp2[0] = CONVAL1G(stb.quad1);
+      qtemp2[1] = CONVAL2G(stb.quad1);
+      if (xqcmp(qrealrs, qimagrs) <= 0) {
+        /*  if (qrealrs <= qimagrs) {
+         *     qtemp = qreal2 / qimag2;
+         *     qtemp1 = 1.0 / (qimag2 * (1 + qtemp * qtemp));
+         *     qrealrs = (qreal1 * qtemp + qimag1) * qtemp1;
+         *     qimagrs = (qimag1 * qtemp - qreal1) * qtemp1;
+         *  }
+         */
+        _qdiv(qreal2, qimag2, qtemp);
+
+        xqmul(qtemp, qtemp, qtemp1);
+        xqadd(qtemp2, qtemp1, qtemp1);
+        xqmul(qimag2, qtemp1, qtemp1);
+        _qdiv(qtemp2, qtemp1, qtemp1);
+
+        xqmul(qreal1, qtemp, qrealrs);
+        xqadd(qrealrs, qimag1, qrealrs);
+        xqmul(qrealrs, qtemp1, qrealrs);
+
+        xqmul(qimag1, qtemp, qimagrs);
+        xqsub(qimagrs, qreal1, qimagrs);
+        xqmul(qimagrs, qtemp1, qimagrs);
+      } else {
+        /*  else {
+         *  	qtemp = qimag2 / qreal2;
+         *  	qtemp1 = 1.0 / (qreal2 * (1 + qtemp * qtemp));
+         *  	qrealrs = (qreal1 + qimag1 * qtemp) * qtemp1;
+         *  	qimagrs = (qimag1 - qreal1 * qtemp) * qtemp1;
+         *  }
+         */
+        _qdiv(qimag2, qreal2, qtemp);
+
+        xqmul(qtemp, qtemp, qtemp1);
+        xqadd(qtemp2, qtemp1, qtemp1);
+        xqmul(qreal2, qtemp1, qtemp1);
+        _qdiv(qtemp2, qtemp1, qtemp1);
+
+        xqmul(qimag1, qtemp, qrealrs);
+        xqadd(qreal1, qrealrs, qrealrs);
+        xqmul(qrealrs, qtemp1, qrealrs);
+
+        xqmul(qreal1, qtemp, qimagrs);
+        xqsub(qimag1, qimagrs, qimagrs);
+        xqmul(qimagrs, qtemp1, qimagrs);
+      }
+      break;
+    case OP_CMP:
+      /*
+       * for complex, only EQ and NE comparisons are allowed, so return
+       * 0 if the two constants are the same, else 1:
+       */
+      return (conval1 != conval2);
+    default:
+      goto err_exit;
+    }
+
+    num1[0] = getcon(qrealrs, DT_QUAD);
+    num1[1] = getcon(qimagrs, DT_QUAD);
+    return getcon(num1, DT_QCMPLX);
+  // AOCC end
   case TY_BLOG:
   case TY_SLOG:
   case TY_LOG:
@@ -1877,7 +2014,7 @@ static INT
 init_negate_const(INT conval, DTYPE dtype)
 {
   SNGL result;
-  IEEE128 qrealrs;     // AOCC
+  IEEE128 qresult, qrealrs, qimagrs;  // AOCC 
   DBLE drealrs, dimagrs;
   static INT num[4];
 
@@ -1929,6 +2066,23 @@ init_negate_const(INT conval, DTYPE dtype)
     num[0] = getcon(drealrs, DT_DBLE);
     num[1] = getcon(dimagrs, DT_DBLE);
     return getcon(num, DT_DCMPLX);
+
+  // AOCC begin
+  case TY_QCMPLX:
+    num[0] = CONVAL1G(CONVAL1G(conval));
+    num[1] = CONVAL2G(CONVAL1G(conval));
+    num[2] = CONVAL3G(CONVAL1G(conval));
+    num[3] = CONVAL4G(CONVAL1G(conval));
+    xqneg(num, qrealrs);
+    num[0] = CONVAL1G(CONVAL2G(conval));
+    num[1] = CONVAL2G(CONVAL2G(conval));
+    num[2] = CONVAL3G(CONVAL2G(conval));
+    num[3] = CONVAL4G(CONVAL2G(conval));
+    xqneg(num, qimagrs);
+    num[0] = getcon(drealrs, DT_QUAD);
+    num[1] = getcon(dimagrs, DT_QUAD);
+    return getcon(num, DT_QCMPLX);
+    // AOCC end
 
   default:
     interr("init_negate_const: bad dtype", dtype, ERR_Severe);
@@ -3060,6 +3214,23 @@ negate_const_be(INT conval, DTYPE dtype)
     num[1] = getcon(dimagrs, DT_DBLE);
     return getcon(num, DT_DCMPLX);
 
+  // AOCC begin
+  case TY_QCMPLX:
+    qresult[0] = CONVAL1G(CONVAL1G(conval));
+    qresult[1] = CONVAL2G(CONVAL1G(conval));
+    qresult[2] = CONVAL3G(CONVAL1G(conval));
+    qresult[3] = CONVAL4G(CONVAL1G(conval));
+    xqneg(qresult, qrealrs);
+    qresult[0] = CONVAL1G(CONVAL2G(conval));
+    qresult[1] = CONVAL2G(CONVAL2G(conval));
+    qresult[2] = CONVAL3G(CONVAL2G(conval));
+    qresult[3] = CONVAL4G(CONVAL2G(conval));
+    xqneg(dresult, qimagrs);
+    num[0] = getcon(qrealrs, DT_QUAD);
+    num[1] = getcon(qimagrs, DT_QUAD);
+    return getcon(num, DT_QCMPLX);
+  // AOCC end
+
   default:
     interr("negate_const: bad dtype", dtype, ERR_Severe);
     return (0);
@@ -3091,6 +3262,7 @@ mk_unop(int optype, int lop, DTYPE dtype)
     case TY_QUAD:     // AOCC
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:     // AOCC
     case TY_INT8:
     case TY_LOG8:
       conval = negate_const_be(lop, dtype);
@@ -3691,6 +3863,7 @@ eval_mod(CONST *arg, DTYPE dtype)
     // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:  // AOCC
       error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,
             "Intrinsic not supported in initialization:", "mod");
       break;
@@ -3921,6 +4094,7 @@ eval_nearest(CONST *arg, DTYPE dtype)
       break;
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:   // AOCC
       error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,
           "Intrinsic not supported in initialization:", "nearest");
       break;
@@ -4586,6 +4760,21 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[3] = CONVAL1G(imag);
     break;
 
+  // AOCC begin
+  case TY_QCMPLX:
+    real = CONVAL1G(conval);
+    imag = CONVAL2G(conval);
+    dest[0] = CONVAL4G(real);
+    dest[1] = CONVAL3G(real);
+    dest[2] = CONVAL2G(real);
+    dest[3] = CONVAL1G(real);
+    dest[0] = CONVAL4G(imag);
+    dest[1] = CONVAL3G(imag);
+    dest[2] = CONVAL2G(imag);
+    dest[3] = CONVAL1G(imag);
+    break;
+  // AOCC begin
+
   case TY_CHAR:
     memcpy(dest, stb.n_base + CONVAL1G(conval), size_of(dtype));
     break;
@@ -4636,6 +4825,21 @@ transfer_load(DTYPE dtype, char *source)
     num[0] = getcon(real, DT_DBLE);
     num[1] = getcon(imag, DT_DBLE);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    real[0] = src[2];
+    real[1] = src[3];
+    real[2] = src[0];
+    real[3] = src[1];
+    imag[0] = src[2];
+    imag[1] = src[3];
+    imag[2] = src[0];
+    imag[3] = src[1];
+    num[0] = getcon(real, DT_QUAD);
+    num[1] = getcon(imag, DT_QUAD);
+    break;
+  // AOCC end
 
   case TY_CHAR:
     return getstring(source, size_of(dtype));
@@ -4787,6 +4991,7 @@ eval_sqrt(CONST *arg, DTYPE dtype)
     // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:
       /*
           a = sqrt(real**2 + imag**2);  "hypot(real,imag)
           if (a == 0) {
@@ -4862,6 +5067,7 @@ eval_sqrt(CONST *arg, DTYPE dtype)
       /* AOCC end   */                                              \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,               \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \
@@ -4944,6 +5150,7 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
       /* AOCC end   */                                              \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(S_0155_OP1_OP2, ERR_Severe, gbl.lineno,               \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \

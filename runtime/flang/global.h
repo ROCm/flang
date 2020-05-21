@@ -18,7 +18,8 @@
 #include "fioMacros.h"
 #include "stdioInterf.h" /* stubbed version of stdio.h */
 #include "cnfg.h" /* declarations for configuration items */
-
+#include <quadmath.h>
+#include<complex.h>
 #define GBL_SIZE_T_FORMAT "zu"
 
 typedef int DBLINT64[2];

@@ -520,6 +520,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental z
 .IN .QIMAG 1 CQ Q QIMAG * V
 .AT elemental x
+.IN QIMAG 1 CQ Q QIMAG * V
+.AT elemental z
 
 .IN ..CONJG 1 C C CONJG * V
 .AT elemental z
@@ -531,6 +533,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental z
 .IN .QCONJG 1 CQ CQ QCONJG * V
 .AT elemental x
+.IN QCONJG 1 CQ CQ QCONJG * V
+.AT elemental z
 
 .IN DPROD 2 R D DPROD * V
 .AT elemental x y
@@ -899,6 +903,11 @@ Extension to Fortran-77.
 .IN DREAL 1 CD D tc
 .AT elemental a
 Converts complex*16 to double.
+.\" AOCC begin
+.IN QREAL 1 CQ Q tc
+Converts complex*32 to quad.
+.AT elemental a
+.\" AOCC end
 .IN .2D 1 N D tc
 Convert any numeric data type to double precision.
 .AT elemental a
@@ -908,6 +917,14 @@ Convert any numeric data type to complex.
 .IN .2CD 11 N CD tc
 Convert any numeric data type to double complex.
 .AT elemental a
+.\" AOCC begin
+.IN .2Q 1 N Q tc
+Convert any numeric data type to quad precision.
+.AT elemental a
+.IN .2CQ 11 N CQ tc
+Convert any numeric data type to quad complex.
+.AT elemental a
+.\" AOCC end
 .IN DINT 1 D D none * V
 .AT elemental a
 
@@ -966,11 +983,17 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .AT elemental a
 .GN DCMPLX .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD
 .AT elemental x *y
-.GN IMAG - - - - .AIMAG DIMAG - - .QIMAG
+./" AOCC begin
+.GN QUAD QFLOTI QFLOAT .2Q .2Q .2Q QREAL .2Q .2Q .2Q
+.AT elemental a
+.GN QCMPLX .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ
+.AT elemental x *y
+./" AOCC end
+.GN IMAG - - - - .AIMAG DIMAG - QIMAG QIMAG
 .AT elemental z
-.GN AIMAG - - - - .AIMAG DIMAG - - .QIMAG
+.GN AIMAG - - - - .AIMAG DIMAG - QIMAG QIMAG
 .AT elemental z
-.GN CONJG - - - - .CONJG DCONJG - - .QCONJG
+.GN CONJG - - - - .CONJG DCONJG - QCONJG QCONJG
 .AT elemental z
 .GN ININT - - .ININT IIDNNT - - - - -
 .AT elemental a
@@ -996,7 +1019,7 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .AT elemental x
 .GN LOG10 - - ALOG10 DLOG10 - - - .QLOG10 -
 .AT elemental x
-.GN SIN - - .SIN DSIN CSIN CDSIN - .QSIN .CQSIN
+.GN SIN - - .SIN DSIN CSIN CDSIN - .QSIN .CQSIN CQSIN
 .AT elemental x
 .GN SIND - - .SIND DSIND - - - .QSIND .CQSIND
 .AT elemental x

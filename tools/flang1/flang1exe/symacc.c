@@ -10,8 +10,8 @@
  * Notified per clause 4(b) of the license.
  *
  * Added support for quad precision
- *   Last modified: Feb 2020
- *
+ * Last modified: Feb 2020
+ * Last modified: Jun 2020
  */
 
 /********************************************************
@@ -81,6 +81,7 @@ sym_init_first(void)
   DT_LOG = DT_LOG4;
   DT_DBLE = DT_REAL8;
   DT_DCMPLX = DT_CMPLX16;
+  DT_QCMPLX = DT_CMPLX32;
   DT_PTR = DT_INT4;
 }
 

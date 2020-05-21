@@ -2402,6 +2402,7 @@ dwarf_encoding(DTYPE dtype)
     return DW_ATE_float;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
     return DW_ATE_complex_float;
   default:
     break;

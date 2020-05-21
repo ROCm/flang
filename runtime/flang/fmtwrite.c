@@ -2876,6 +2876,17 @@ ENTF90IO(SC_CD_FMT_WRITE, sc_cd_fmt_write)(double real, double imag, int type)
   return __f90io_fmt_write(__REAL8, 1, 0, (char *)&imag, 0);
 }
 
+// AOCC begin
+__INT_T
+ENTF90IO(SC_CQ_FMT_WRITE, sc_cq_fmt_write)(__float128 real, __float128 imag, int type)
+{
+  int err;
+  err = __f90io_fmt_write(__REAL16, 1, 0, (char *)&real, 0);
+  if (err)
+    return err;
+  return __f90io_fmt_write(__REAL16, 1, 0, (char *)&imag, 0);
+}
+// AOCC end
 /* --------------------------------------------------------------------- */
 #define CHAR_ONLY 1
 #define CHAR_AND_VLIST 2

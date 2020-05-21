@@ -9,6 +9,7 @@
  * reserved. Notified per clause 4(b) of the license.
  *
  * Last modified: June 2020
+ *
  */
 
 /** \file
@@ -141,7 +142,7 @@ static const namelist Datatypes[] = {
     "Logical2",  "L2",  TY_SLOG,   "Logical4",   "L4", TY_LOG,
     "Logical8",  "L8",  TY_LOG8,   "Numeric",    "N",  TY_NUMERIC,
     "Pointer",   "P",   TY_PTR,    "proc",       "p",  TY_PROC,
-    "Real2",     "R2",  TY_HALF,  
+    "Real2",     "R2",  TY_HALF,   "Complex32", "C32", TY_QCMPLX,
     "Real4",     "R4",  TY_REAL,   "Real8",      "R8", TY_DBLE,
     "Real16",    "R16", TY_QUAD,   "Struct",     "S",  TY_STRUCT,
     "Word4",     "W4",  TY_WORD,   "Word8",      "W8", TY_DWORD,
@@ -1653,6 +1654,11 @@ read_datatype(void)
   case TY_DCMPLX:
     datatypexref[dtype] = DT_DCMPLX;
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    datatypexref[dtype] = DT_QCMPLX;
+    break;
+  // AOCC end
   case TY_HOLL:
     datatypexref[dtype] = DT_HOLL;
     break;
@@ -2512,6 +2518,23 @@ read_symbol(void)
       val[3] = gethex();
       newsptr = getcon(val, dtype);
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      val[0] = getval("sym");
+      val[1] = getval("sym");
+      val[2] = getval("sym");
+      val[3] = getval("sym");
+      /* always add a new symbol; don't use getcon()
+       * because the symbol pointers have not been resolved yet */
+      newsptr = newsymbol();
+      CONVAL1P(newsptr, val[0]);
+      CONVAL2P(newsptr, val[1]);
+      CONVAL3P(newsptr, val[0]);
+      CONVAL4P(newsptr, val[1]);
+      STYPEP(newsptr, ST_CONST);
+      DTYPEP(newsptr, dtype);
+      break;
+    // AOCC end
     case TY_PTR:
       val[0] = getval("sym");
       address = getval("offset");
@@ -3802,6 +3825,18 @@ fix_symbol(void)
         val = CONVAL2G(sptr);
         CONVAL2P(sptr, symbolxref[val]);
         break;
+      // AOCC begin
+      case TY_QCMPLX:
+        val = CONVAL1G(sptr);
+        CONVAL1P(sptr, symbolxref[val]);
+        val = CONVAL2G(sptr);
+        CONVAL2P(sptr, symbolxref[val]);
+        val = CONVAL3G(sptr);
+        CONVAL2P(sptr, symbolxref[val]);
+        val = CONVAL4G(sptr);
+        CONVAL2P(sptr, symbolxref[val]);
+        break;
+      // AOCC end
       case TY_PTR:
         val = CONVAL1G(sptr);
         CONVAL1P(sptr, symbolxref[val]);

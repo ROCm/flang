@@ -320,6 +320,7 @@ extern char *opmask_reg[N_OPMASK_REGS + 1];    /* OPMASK_REG_NAMES */
 #define CD_RETVAL XR_XMM0
 //AOCC Begin
 #define QP_RETVAL XR_XMM0
+#define CQ_RETVAL XR_XMM0
 //AOCC End
 
 #define IR_RETVAL IR_RAX
@@ -363,6 +364,7 @@ extern int mr_res_xr[MR_MAX_XREG_RES];
 #define QP(i) ARG_XR(i)  // AOCC: 128 bit
 #define ISP(i) (i + 100) /* not used? */
 #define IDP(i) (i + 100)
+#define IQP(i) (i + 100)
 
 /* Macro for defining alternate-return register for fortran subprograms.
  */

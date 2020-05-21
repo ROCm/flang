@@ -67,8 +67,8 @@
  * Modified to omit source file name in compiler_options()
  * Date of modification:21st May 2020
  *
- * Support for ifort's mm_prefetch intrinsic
  * Last modified: Jun 2020
+ *
  */
 
 /** \file
@@ -4224,6 +4224,11 @@ gen_newer_intrin(int sptrgenr, int dtype)
       //AOCC end 
     if (DT_ISCMPLX(dtype)) {
       switch (DTY(dtype)) {
+      // AOCC begin
+      case TY_QCMPLX:
+        strcat(nmptr, "cq");
+        break;
+      // AOCC end
       case TY_DCMPLX:
         strcat(nmptr, "cd");
         break;
@@ -4251,6 +4256,11 @@ gen_newer_intrin(int sptrgenr, int dtype)
       INTASTP(sptr, NEW_INTRIN);
 
       switch (DTY(dtype)) {
+      // AOCC begin
+      case TY_QCMPLX:
+        GQCMPLXP(sptrgenr, sptr);
+        break;
+      // AOCC end
       case TY_DCMPLX:
         GDCMPLXP(sptrgenr, sptr);
         break;
@@ -4361,6 +4371,12 @@ ref_intrin(SST *stktop, ITEM *list)
      * is used as the respective internal respresentation
      */
     switch (intrin) {
+    // AOCC begin
+    case I_QUAD:
+    case I_QCMPLX:
+      dt_cast_word = DT_QUAD;
+      break;
+    // AOCC end
     case I_DBLE:
     case I_DCMPLX:
       dt_cast_word = DT_DBLE;
@@ -4845,6 +4861,7 @@ ref_intrin(SST *stktop, ITEM *list)
         goto const_return;
       case IM_IMAG:
       case IM_DIMAG:
+      case IM_QIMAG:     // AOCC
         conval = CONVAL2G(con1);
         goto const_return;
       case IM_CONJG:
@@ -4857,6 +4874,13 @@ ref_intrin(SST *stktop, ITEM *list)
         con2 = CONVAL2G(con1);
         res[1] = const_fold(OP_SUB, (INT)stb.dbl0, con2, DT_REAL8);
         goto const_getcon;
+      // AOCC begin
+      case IM_QCONJG:
+        res[0] = CONVAL1G(con1);
+        con2 = CONVAL2G(con1);
+        res[1] = const_fold(OP_SUB, (INT)stb.quad0, con2, DT_QUAD);
+        goto const_getcon;
+      // AOCC end
 #ifdef IM_DPROD
       case IM_DPROD:
         con2 = GET_CVAL_ARG(1);
@@ -9615,9 +9639,11 @@ ref_pd(SST *stktop, ITEM *list)
     stkp1 = ARG_STK(1);
     stkp2 = ARG_STK(2);
 
+    // AOCC : DT_CMPLX32
     if (stkp2) { /* kind */
       dtyper = set_kind_result(stkp2, DT_CMPLX, TY_CMPLX);
-      dtype1 = dtyper == DT_CMPLX16 ? DT_REAL8 : DT_REAL4;
+      dtype1 = dtyper == DT_CMPLX16 ? DT_REAL8 : dtyper == DT_CMPLX32 ?
+                                                 DT_QUAD : DT_REAL4;
       if (!dtyper) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
@@ -11892,6 +11918,11 @@ getMergeSym(int dt, int ikind)
   case TY_DCMPLX:
     rtlRtn = RTE_mergedc;
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    rtlRtn = RTE_mergeqc;
+    break;
+  // AOCC end
   case TY_BLOG:
     rtlRtn = RTE_mergel1;
     break;

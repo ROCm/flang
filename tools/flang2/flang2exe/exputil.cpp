@@ -666,6 +666,12 @@ check_ilm(int ilmx, int ilix)
           case IL_FREECD:
             ilix = ad4ili(IL_STDCMPLX, cse, base, nme, MSZ_F16);
             break;
+          // AOCC begin
+          case IL_STQCMPLX:
+          case IL_FREECQ:
+            ilix = ad4ili(IL_STQCMPLX, cse, base, nme, MSZ_F32);
+            break;
+          // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
           case IL_FLOAT128ST:
           case IL_FLOAT128FREE:

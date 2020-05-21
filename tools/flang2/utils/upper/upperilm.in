@@ -160,6 +160,47 @@ CDUFUNC/CDFUNC	num	sym	args
 CDUFUNCA/CDFUNCA	num	num	ilm	args
 PCDUFUNCA/PCDFUNCA	num	num	sym	ilm	args
 CDUVFUNCA/CDVFUNCA	num	num	sym	ilm	sym	args
+# AOCC BEGIN
+CQABS	ilm
+#CQACOS	ilm
+#CACOSH ilm
+#CQASIN	ilm
+#CASINH ilm
+#CQATAN	ilm
+#CATANH ilm
+CQCOSH   ilm
+CQSINH   ilm
+CQTANH   ilm
+CQTAN    ilm
+CQADD    ilm	ilm
+CQCMP	ilm	ilm
+CQCON	sym
+CQCOS	ilm
+CQDIV	ilm	ilm
+CQEXP	ilm
+#CQFUNC	num	sym	ilms
+#CQFUNCA	num	num	ilm	ilms
+#PCQFUNCA	num	num	sym	ilm	ilms
+#CQVFUNCA	num	num	sym	ilm	sym	ilms
+#CDIV	ilm	ilm
+CQLD	ilm
+CQLOG	ilm
+#CQMERGE	ilm	ilm	ilm
+CQMUL	ilm	ilm
+CQNEG	ilm
+CQSIN	ilm
+CQSQRT	ilm
+CQST	ilm	ilm
+CQSUB	ilm	ilm
+CQTOCQ	ilm	ilm
+#CQTOI	ilm	ilm
+#CQTOK	ilm	ilm
+#CQTOUDI	ilm
+#CQUFUNC/CQFUNC	num	sym	args
+#CQUFUNCA/CQFUNCA	num	num	ilm	args
+#PCQUFUNCA/PCQFUNCA	num	num	sym	ilm	args
+#CQUVFUNCA/CQVFUNCA	num	num	sym	ilm	sym	args
+# AOCC END
 CEXP	ilm
 CFUNC	num	sym	ilms
 CFUNCA	num	num	ilm	ilms
@@ -542,6 +583,7 @@ QUAD	ilm
 QADD	ilm	ilm
 QAIF	ilm	sym	sym	sym
 QCON	sym
+QCONJG	ilm
 QCMP	ilm	ilm
 QDIV	ilm	ilm
 QMAX	ilm	ilm
@@ -586,6 +628,8 @@ QTAN	ilm
 QTANH ilm
 QATAN ilm
 QATANH ilm
+QCMPLX	ilm	ilm
+QIMAG	ilm
 #QTAND	ilm
 #QTANH	ilm
 #QTOD	ilm	ilm

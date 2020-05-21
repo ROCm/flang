@@ -21,6 +21,7 @@
 #include "error.h"
 #include "machar.h"
 #include "global.h"
+#include "gbldefs.h"
 #include "symtab.h"
 #include "ilm.h"
 #include "fih.h"
@@ -1847,10 +1848,6 @@ dsym(int sptr)
     GINTP(0, 0);
     putnsym("gint8", GINT8G(0));
     GINT8P(0, 0);
-#ifdef GQCMPLXG
-    putnsym("gqcmplx", GQCMPLXG(0));
-    GQCMPLXP(0, 0);
-#endif
 #ifdef GQUADG
     putnsym("gquad", GQUADG(0));
     GQUADP(0, 0);
@@ -2814,6 +2811,11 @@ putdty(TY_KIND dty)
   case TY_DCMPLX:
     r = appendstring1("double complex");
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    r = appendstring1("quad complex");
+    break;
+  // AOCC end
   case TY_CMPLX128:
     r = appendstring1("cmplx128");
     break;
@@ -3296,6 +3298,7 @@ optype(int opc)
   case IL_UKNEG:
   case IL_SCMPLXNEG:
   case IL_DCMPLXNEG:
+  case IL_QCMPLXNEG:   // AOCC
   case IL_FNEG:
   case IL_QNEG:    // AOCC
   case IL_DNEG:
@@ -3562,6 +3565,8 @@ _printili(int i)
   case IL_FCMP:
   case IL_SCMPLXCMP:
   case IL_DCMPLXCMP:
+  case IL_QCMPLXCMP:       // AOCC
+  case IL_QCMP:            // AOCC
   case IL_DCMP:
   case IL_ACMP:
   case IL_UICMP:
@@ -3572,11 +3577,13 @@ _printili(int i)
   case IL_INEG:
   case IL_KNEG:
   case IL_UKNEG:
+  case IL_QNEG:
   case IL_DNEG:
   case IL_UINEG:
   case IL_FNEG:
   case IL_SCMPLXNEG:
   case IL_DCMPLXNEG:
+  case IL_QCMPLXNEG:      // AOCC
     opval = "-";
     typ = UNOP;
     break;
@@ -3592,6 +3599,7 @@ _printili(int i)
   case IL_UKCMPZ:
   case IL_FCMPZ:
   case IL_DCMPZ:
+  case IL_QCMPZ:         // AOCC
   case IL_ACMPZ:
   case IL_UICMPZ:
     opval = ccvalzero[ILI_OPND(i, 2)];
@@ -3671,8 +3679,14 @@ _printili(int i)
     typ = INTRINSIC;
     break;
   // AOCC begin
+  case IL_QFIX:
+  case IL_QFIXU:
+    n = 1;
+    opval = "qfix";
+    typ = INTRINSIC;
+    break;
   case IL_QFLOAT:
-  //case IL_QFLOATU:
+  case IL_QFLOATU:
     n = 1;
     opval = "qfloat";
     typ = INTRINSIC;
@@ -3933,6 +3947,7 @@ _printili(int i)
   case IL_CSEAR:
   case IL_CSECS:
   case IL_CSECD:
+  case IL_CSECQ:  // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CSE:
 #endif
@@ -4744,6 +4759,7 @@ dilitreex(int ilix, int l, int notlast)
   case IL_CSEDP:
   case IL_CSECS:
   case IL_CSECD:
+  case IL_CSECQ:     // AOCC
   case IL_CSEAR:
   case IL_CSEKR:
   case IL_CSE:
@@ -5424,7 +5440,7 @@ printname(int sptr)
   }
 
   if (STYPEG(sptr) == ST_CONST) {
-    INT num[2], cons1, cons2;
+    INT num[4], cons1, cons2, cons3, cons4;
     int pointee;
     char *bb, *ee;
     switch (DTY(DTYPEG(sptr))) {
@@ -5529,6 +5545,45 @@ printname(int sptr)
                           CONVAL3G(sptr), CONVAL4G(sptr));
     // AOCC end
       break;
+
+    #if 0
+    case TY_QCMPLX:
+      cons1 = CONVAL1G(sptr);
+      cons2 = CONVAL2G(sptr);
+      cons3 = CONVAL3G(sptr);
+      cons4 = CONVAL4G(sptr);
+      num[0] = CONVAL1G(cons1);
+      num[1] = CONVAL2G(cons1);
+      num[2] = CONVAL3G(cons1);
+      num[3] = CONVAL4G(cons1);
+      if ((num[0] & 0x7ff00000) == 0x7ff00000) {
+        /* Infinity or NaN */
+        int len;
+        len = snprintf(b, 200, "(0x%8.8x%8.8x%8.8x%8.8xLL, ", num[0], num[1]);
+        bb = b + len;
+
+      } else {
+        b[0] = '(';
+        cprintf(&b[1], "%44.37Lf", num);
+        b[25] = ',';
+        b[26] = ' ';
+        bb = &b[27];
+      }
+
+      num[0] = CONVAL1G(cons2);
+      num[1] = CONVAL2G(cons2);
+      if ((num[0] & 0x7ff00000) == 0x7ff00000) {
+        /* Infinity or NaN */
+        snprintf(bb, 200, "0x%8.8x%8.8xLL", num[0], num[1]);
+      } else {
+        cprintf(bb, "%24.17le", num);
+        bb += 24;
+        *bb++ = ')';
+        *bb = '\0';
+      }
+
+      break;
+    #endif
 
     case TY_PTR:
       pointee = CONVAL1G(sptr);

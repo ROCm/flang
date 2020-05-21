@@ -250,8 +250,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"mergel2", "", false, ""},
     {"mergel8", "", false, ""},
     {"mergeq", "", false, ""},
+    {"mergeqc", "", false, ""},      // AOCC
     {"merger", "", false, ""},
     {"min", "", false, "k"},
+    {"mmul_cmplx32", "", false, ""},
     {"mmul_cmplx16", "", false, ""},
     {"mmul_cmplx8", "", false, ""},
     {"mmul_real4", "", false, ""},
@@ -333,6 +335,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"ptrchk", "", false, ""},
     {"ptrcp", "", false, ""},
     {"real", "", false, ""},
+    {"real32", "", false, ""},
     {"real16", "", false, ""},
     {"real4", "", false, ""},
     {"real8", "", false, ""},
@@ -739,6 +742,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"f90io_open_sharea", "", false, ""},
     {"f90io_print_init", "", false, ""},
     {"f90io_rewind", "", false, ""},
+    {"f90io_sc_cq_fmt_write", "", false, ""},  // AOCC
+    {"f90io_sc_cq_ldw", "", false, ""},        // AOCC
     {"f90io_sc_cd_fmt_write", "", false, ""},
     {"f90io_sc_cd_ldw", "", false, ""},
     {"f90io_sc_cf_fmt_write", "", false, ""},

@@ -10,6 +10,7 @@
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ * Last Modified: Jun 2020
  *
  */
 
@@ -501,8 +502,10 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         num[1] = CONVAL2G(oldval);
         xdfix(num, &result);
         return result;
-      case TY_QUAD:
         // AOCC begin
+      case TY_QCMPLX:
+        oldval = CONVAL1G(oldval);
+      case TY_QUAD:
         num[0] = CONVAL1G(oldval);
         num[1] = CONVAL2G(oldval);
         num[2] = CONVAL3G(oldval);
@@ -563,8 +566,10 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         num1[1] = CONVAL2G(oldval);
         xdfix64(num1, num);
         return getcon(num, newtyp);
-      case TY_QUAD:
         // AOCC begin
+      case TY_QCMPLX:
+        oldval = CONVAL1G(oldval);
+      case TY_QUAD:
         num1[0] = CONVAL1G(oldval);
         num1[1] = CONVAL2G(oldval);
         num1[2] = CONVAL3G(oldval);
@@ -620,13 +625,15 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
         num[1] = CONVAL2G(oldval);
         xsngl(num, &result);
         return result;
-      case TY_QUAD:
         // AOCC begin
+      case TY_QCMPLX:
+        oldval = CONVAL1G(oldval);
+      case TY_QUAD:
         num[0] = CONVAL1G(oldval);
         num[1] = CONVAL2G(oldval);
         num[2] = CONVAL3G(oldval);
         num[3] = CONVAL4G(oldval);
-        xqfix(num, &result);
+        xsngl(num, &result);
         return result;
         // AOCC end
       case TY_CHAR:
@@ -655,7 +662,12 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       xdflt64(num1, num);
     } else if (TY_ISINT(from))
       xdfloat(oldval, num);
-    else if (from == TY_DCMPLX)
+    // AOCC begin
+    else if (from == TY_QCMPLX) {
+      oldval = CONVAL1G(oldval);
+      xdble(oldval, num);
+    // AOCC end
+    } else if (from == TY_DCMPLX)
       return CONVAL1G(oldval);
     else if (from == TY_CMPLX) {
       oldval = CONVAL1G(oldval);
@@ -707,9 +719,12 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       xqflt64(num1, num);
     } else if (TY_ISINT(from))
       xqfloat(oldval, num);
-    else if (from == TY_DCMPLX)
+    else if (from == TY_QCMPLX)
       return CONVAL1G(oldval);
-    else if (from == TY_CMPLX) {
+    else if (from == TY_DCMPLX) {
+      oldval = CONVAL1G(oldval);
+      xquad(&oldval, num);
+    } else if (from == TY_CMPLX) {
       oldval = CONVAL1G(oldval);
       xquad(&oldval, num);
     } else if (from == TY_REAL) {
@@ -776,7 +791,16 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num1[0] = CONVAL1G(CONVAL2G(oldval));
       num1[1] = CONVAL2G(CONVAL2G(oldval));
       xsngl(num1, &num[1]);
+    // AOCC begin
+    } else if (from == TY_QCMPLX) {
+      num1[0] = CONVAL1G(CONVAL1G(oldval));
+      num1[1] = CONVAL2G(CONVAL1G(oldval));
+      xsngl(num1, &num[0]);
+      num1[0] = CONVAL1G(CONVAL2G(oldval));
+      num1[1] = CONVAL2G(CONVAL2G(oldval));
+      xsngl(num1, &num[1]);
     } else if (from == TY_HOLL || from == TY_CHAR) {
+    // AOCC end
       if (flg.standard && from == TY_CHAR)
         ERR170("conversion of CHARACTER constant to numeric");
       cp = stb.n_base + CONVAL1G(oldval);
@@ -823,6 +847,13 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num[0] = getcon(num1, DT_DBLE);
       xdble(CONVAL2G(oldval), num1);
       num[1] = getcon(num1, DT_DBLE);
+    // AOCC begin
+    } else if (from == TY_QCMPLX) {
+      xdble(CONVAL1G(oldval), num1);
+      num[0] = getcon(num1, DT_DBLE);
+      xdble(CONVAL2G(oldval), num1);
+      num[1] = getcon(num1, DT_DBLE);
+    // AOCC end
     } else if (from == TY_HOLL || from == TY_CHAR) {
       if (flg.standard && from == TY_CHAR)
         ERR170("conversion of CHARACTER constant to numeric");
@@ -857,6 +888,80 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       errsev((error_code_t)91);
     }
     return getcon(num, DT_DCMPLX);
+  // AOCC begin
+  case TY_QCMPLX:
+    if (from == TY_WORD) {
+      num[0] = 0;
+      num[1] = oldval;
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0;
+    } else if (from == TY_DWORD) {
+      num[0] = CONVAL1G(oldval);
+      num[1] = CONVAL2G(oldval);
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0; /* when is stb.quad0 set? -nzm */
+    } else if (from == TY_INT8 || from == TY_LOG8) {
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      xqflt64(num1, num);
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0;
+    } else if (TY_ISINT(from)) {
+      xqfloat(oldval, num);
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0;
+    } else if (from == TY_REAL) {
+      xquad(&oldval, num);
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0;
+    } else if (from == TY_QUAD) {
+      num[0] = oldval;
+      num[1] = stb.quad0;
+    } else if (from == TY_CMPLX) {
+      xquad(&oldval, num1);
+      num[0] = getcon(num1, DT_QUAD);
+      xquad(&oldval, num1);
+      num[1] = getcon(num1, DT_QUAD);
+    } else if (from == TY_DCMPLX) {
+      xquad(&oldval, num1);
+      num[0] = getcon(num1, DT_QUAD);
+      xquad(&oldval, num1);
+      num[1] = getcon(num1, DT_QUAD);
+    } else if (from == TY_HOLL || from == TY_CHAR) {
+      if (flg.standard && from == TY_CHAR)
+        ERR170("conversion of CHARACTER constant to numeric");
+      cp = stb.n_base + CONVAL1G(oldval);
+      holtonum(cp, num1, 16);
+      if (flg.endian == 0) {
+        /* for little endian, need to swap words in each double word
+         * quantity.  Order of bytes in a word is okay, but not the
+         * order of words.
+         */
+        swap = num1[0];
+        num1[0] = num1[1];
+        num1[1] = swap;
+        swap = num1[2];
+        num1[2] = num1[3];
+        num1[3] = swap;
+      }
+      num[0] = getcon(&num1[0], DT_QUAD);
+      num[1] = getcon(&num1[2], DT_QUAD);
+    } else if (from == TY_QUAD) {
+      // AOCC begin
+        num[0] = CONVAL1G(oldval);
+        num[1] = CONVAL2G(oldval);
+        num[2] = CONVAL3G(oldval);
+        num[3] = CONVAL4G(oldval);
+        xqfix(num, &result);
+        return result;
+      // AOCC end
+    } else {
+      num[0] = 0;
+      num[1] = 0;
+      errsev((error_code_t)91);
+    }
+    return getcon(num, DT_QCMPLX);
+  // AOCC end
 
   case TY_NCHAR:
     if (from == TY_WORD) {

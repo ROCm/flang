@@ -16,6 +16,8 @@
  * Added support for quad precision
  *   Last modified: Feb 2020
  *
+ *   Last modified: Jun 2020
+ *
  */
 
 /**
@@ -6462,7 +6464,7 @@ state1: /* digits  */
         goto return_integer; /* digits .eq */
       goto state2;           /* digits .e */
     }
-    if (isdig(cp[1]) || cp[1] == 'd')
+    if (isdig(cp[1]) || cp[1] == 'd' || cp == 'q')
       goto state2; /* digits . digits|d */
     if (islower(cp[1]))
       goto return_integer; /* digits . <lowercase letter> */
@@ -7163,6 +7165,12 @@ check_ccon(void)
       tkntyp = TK_DCCON;
       tknval = getcon(val, DT_CMPLX16);
       break;
+    // AOCC begin
+    case TK_QCON:
+      tkntyp = TK_QCCON;
+      tknval = getcon(val, DT_CMPLX32);
+      break;
+    // AOCC end
     }
   } else {
     if (tok1 == TK_DCON) {
@@ -7170,6 +7178,13 @@ check_ccon(void)
         xdble(num[1], val);
         num[1] = getcon(val, DT_DBLE);
       }
+    // AOCC begin
+    } else if (tok1 == TK_QCON) {
+      if (tkntyp == TK_RCON) { /* (quad, real)  */
+        xquad(num[1], val);
+        num[1] = getcon(val, DT_QUAD);
+      }
+    // AOCC end
     } else if (tkntyp == TK_RCON) { /* (real, real)  */
       tkntyp = TK_CCON;
       tknval = getcon(num, DT_CMPLX);
@@ -7177,11 +7192,26 @@ check_ccon(void)
       NMPTRP(tknval, putsname(save_currc - 1, currc - save_currc + 1));
       return;
     } else { /* (real, double)  */
-      xdble(num[0], val);
-      num[0] = getcon(val, DT_DBLE);
+        if (tkntyp == TK_DCON) {
+          xdble(num[0], val);
+          num[0] = getcon(val, DT_DBLE);
+        } // AOCC begin
+        else if (tkntyp == TK_QCON) { /* (real, quad) */
+          xquad(num[0], val);
+          num[0] = getcon(val,DT_QUAD);
+        }
+         // AOCC end
     }
-    tkntyp = TK_DCCON;
-    tknval = getcon(num, DT_CMPLX16);
+    if (tkntyp == TK_DCON || tok1 == TK_DCON) {
+      tkntyp = TK_DCCON;
+      tknval = getcon(num, DT_CMPLX16);
+    }
+    // AOCC begin
+    if (tkntyp == TK_QCON || tok1 == TK_QCON) {
+      tkntyp = TK_QCCON;
+      tknval = getcon(num, DT_CMPLX32);
+    }
+    // AOCC end
   }
   return;
 

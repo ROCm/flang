@@ -2549,6 +2549,7 @@ ll_write_module(FILE *out, LL_Module *module, int generate_no_return_variants, c
       case LL_I64:
       case LL_FLOAT:
       case LL_DOUBLE:
+      case LL_FP128:     // AOCC
       case LL_PTR:
         if (module->module_vars.values[i]->flags & VAL_IS_TEXTURE)
           linkage_string = "";

@@ -1418,8 +1418,10 @@ select_gsame(int gnr)
     if (ARGTYPG(spec) == DT_REAL)
       spec = GDBLEG(gnr);
     // AOCC begin
-    if (ARGTYPG(spec) == DT_QUAD)
+    else if (ARGTYPG(spec) == DT_QUAD)
       spec = GQUADG(gnr);
+    else if (ARGTYPG(spec) == DT_QCMPLX)
+      spec = GQCMPLXG(gnr);
     // AOCC end
     else if (ARGTYPG(spec) == DT_CMPLX)
       spec = GDCMPLXG(gnr);

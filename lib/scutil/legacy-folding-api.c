@@ -2637,6 +2637,30 @@ xqnearest(IEEE128 q1, IEEE128 q2, IEEE128 r)
   check(fold_real128_nearest(&x, &y, &z));
   wrap_q(r, &x);
 }
+
+int
+xqisint(IEEE128 q, int *i)
+{
+  __float128 x, y;
+  int64_t k;
+  unwrap_q(&x, q);
+  check(fold_int32_from_real128(i, &x));
+  k = *i;
+  check(fold_real128_from_int64(&y, &k));
+  return fold_real128_compare(&x, &y) == FOLD_EQ;
+}
+
+void
+xqtomq(IEEE128 q, __float128 *mq)
+{
+  unwrap_q(mq, q);
+}
+
+void
+xmqtoq(__float128 mq, IEEE128 q)
+{
+  wrap_q(q, &mq);
+}
 // AOCC end
 #endif
 

@@ -12,6 +12,7 @@
  *
  * Added support for quad precision
  * Last modified: Feb 2020
+ * Last modified: Jun 2020
  *
  */
 
@@ -104,8 +105,10 @@ sym_init(void)
       DT_DBLE = DT_REAL8;
       DT_DCMPLX = DT_CMPLX16;
     } else {
-      DT_DBLE = DT_QUAD;
-      DT_DCMPLX = DT_QCMPLX;
+      // AOCC begin
+      //DT_REAL = DT_QUAD;
+      DT_QCMPLX = DT_CMPLX32;
+      // AOCC end
     }
   }
   if (XBIT(49, 0x80000000)) {
@@ -175,11 +178,11 @@ sym_init(void)
         if (INTTYPG(i) == DT_QUAD)
           INTTYPP(i, DT_REAL8);
         else if (INTTYPG(i) == DT_QCMPLX)
-          INTTYPP(i, DT_CMPLX16);
+          INTTYPP(i, DT_CMPLX32);
         if (ARGTYPG(i) == DT_QUAD)
           ARGTYPP(i, DT_REAL8);
         else if (ARGTYPG(i) == DT_QCMPLX)
-          ARGTYPP(i, DT_CMPLX16);
+          ARGTYPP(i, DT_CMPLX32);
       }
 
   /*
@@ -1065,6 +1068,23 @@ getprint(int sptr)
     num[1] = CONVAL2G(CONVAL2G(sptr));
     cprintf(&b[26], "%24.17le", num);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    num[0] = CONVAL1G(CONVAL1G(sptr));
+    num[1] = CONVAL2G(CONVAL1G(sptr));
+    num[2] = CONVAL3G(CONVAL1G(sptr));
+    num[3] = CONVAL4G(CONVAL1G(sptr));
+    cprintf(b, "%44.37Lf", num);
+    b[44] = ',';
+    b[45] = ' ';
+    num[0] = CONVAL1G(CONVAL2G(sptr));
+    num[1] = CONVAL2G(CONVAL2G(sptr));
+    num[2] = CONVAL3G(CONVAL2G(sptr));
+    num[3] = CONVAL4G(CONVAL2G(sptr));
+    cprintf(&b[46], "%44.37Lf", num);
+    break;
+  // AOCC end
 
   case TY_NCHAR:
     sptr = CONVAL1G(sptr); /* sptr to char string constant */

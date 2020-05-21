@@ -21,8 +21,7 @@
  * Complex datatype support for atan2 under flag f2008
  *  Modified on 13th March 2020
  *
- * Support for ifort's mm_prefetch intrinsic
- * Last modified: Jun 2020
+ * Last Modified : Jun 2020
  *
  */
 
@@ -369,6 +368,26 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     }
     tmp = exp_mac(opc, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_QREAL:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      ilix = ad1ili(IL_QCMPLX2REAL, op1);
+      ILM_RESULT(curilm) = ilix;
+      return;
+    }
+    tmp = exp_mac(opc, ilmp, curilm);
+    return;
+  case IM_QIMAG:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      ilix = ad1ili(IL_QCMPLX2IMAG, op1);
+      ILM_RESULT(curilm) = ilix;
+      return;
+    }
+    tmp = exp_mac(opc, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_DIMAG:
     if (XBIT(70, 0x40000000)) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -412,6 +431,23 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
     return;
+  // AOCC begin
+  case IM_QCMPLX:
+    ilixr = ILI_OF(ILM_OPND(ilmp, 1)); /* real part */
+    ilixi = ILI_OF(ILM_OPND(ilmp, 2)); /* imag part */
+    if (XBIT(70, 0x40000000)) {
+      if (ILI_OPC(ilixi) == IL_QCON && ILI_OPND(ilixi, 1) == stb.quad0)
+        ilix = ad1ili(IL_QPQP2QCMPLXI0, ilixr);
+      else
+        ilix = ad2ili(IL_QPQP2QCMPLX, ilixr, ilixi);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      ILM_RRESULT(curilm) = ilixr;
+      ILM_IRESULT(curilm) = ilixi;
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
+    return;
+  // AOCC end
   case IM_ITOSC:
     val[1] = size_of(DT_BINT);
     goto sconv_shared;
@@ -520,6 +556,48 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     }
     exp_qjsr("__mth_i_cdpowcd", DT_DCMPLX, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_CQABS:
+    if (XBIT(70, 0x40000000)) {
+      int r = ILM_RESULT(ILM_OPND(ilmp, 1));
+      op1 = ad1ili(IL_QCMPLX2IMAG, r);
+      op2 = ad1ili(IL_QCMPLX2REAL, r);
+      tmp = ad1ili(IL_NULL, 0);
+      tmp = ad3ili(IL_DAQP, op1, QP(0), tmp);
+      tmp = ad3ili(IL_DAQP, op2, QP(1), tmp);
+      op3 = mk_prototype("cqabs", "pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
+      tmp = ad2ili(IL_QJSR, op3, tmp);
+      ILM_RESULT(curilm) = ad2ili(IL_DFRQP, tmp, QP_RETVAL);
+    } else
+      tmp = exp_mac(IM_CQABS, ilmp, curilm);
+    return;
+  case IM_CQTOI:
+    if (XBIT(70, 0x40000000) && XBIT_NEW_MATH_NAMES_CMPLX) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXPOWI, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+      return;
+    }
+    exp_qjsr("__mth_i_cqpowk", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQTOCQ:
+    if (XBIT(70, 0x40000000) && XBIT_NEW_MATH_NAMES_CMPLX) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXPOW, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+      return;
+    }
+    exp_qjsr("cqpow", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQSQRT:
+    exp_qjsr("cqsqrt", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_QCONJG:
+    exp_qjsr("cqconj", DT_QCMPLX, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_CSQRT:
     exp_qjsr("__mth_i_csqrt", DT_CMPLX, ilmp, curilm);
     return;
@@ -613,6 +691,57 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     exp_qjsr("__mth_i_cdexp", DT_DCMPLX, ilmp, curilm);
 #endif
     return;
+  // AOCC begin
+  case IM_CQEXP:
+    /*
+     *  exp(cmplx(0.0, a)) ->  cmplx(cos(a), sin(a))
+     */
+    ilixr = ILM_RESULT(ILM_OPND(ilmp, 1)); /* real part */
+    if (ILI_OPC(ilixr) == IL_QCON &&
+        is_quad0(ILI_SymOPND(ilixr, 1))) {
+      ilixi = ILM_IRESULT(ILM_OPND(ilmp, 1)); /* imag part */
+      ilixr = ad1ili(IL_QCOS, ilixi);
+      ilixi = ad1ili(IL_QSIN, ilixi);
+      ILM_RRESULT(curilm) = ilixr;
+      ILM_IRESULT(curilm) = ilixi;
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+      return;
+    } else if (XBIT(70, 0x40000000)) {
+      if (ILI_OPC(ilixr) == IL_QCMPLXCON) {
+        SPTR stmp = ILI_SymOPND(ilixr, 1);
+        tmp = stmp;
+        if (is_quad0(SymConval1(stmp))) {
+          ilixi = ad1ili(IL_QCON, CONVAL2G(stmp));
+          ilixr = ad1ili(IL_QCOS, ilixi);
+          ilixi = ad1ili(IL_QSIN, ilixi);
+          ilix = ad2ili(IL_QPQP2QCMPLX, ilixr, ilixi);
+          ILM_RESULT(curilm) = ilix;
+          return;
+        }
+      } else if (ILI_OPC(ilixr) == IL_QPQP2QCMPLX) {
+        ilixi = ILI_OPND(ilixr, 2);
+        ilixr = ILI_OPND(ilixr, 1);
+        if (ILI_OPC(ilixr) == IL_QCON &&
+            is_quad0(ILI_SymOPND(ilixr, 1))) {
+          ilixr = ad1ili(IL_QCOS, ilixi);
+          ilixi = ad1ili(IL_QSIN, ilixi);
+          ilix = ad2ili(IL_QPQP2QCMPLX, ilixr, ilixi);
+          ILM_RESULT(curilm) = ilix;
+          return;
+        }
+      }
+    }
+#if defined(TARGET_X8664)
+    exp_qjsr(relaxed_math("exp", 's', 'z', "cqexp"), DT_QCMPLX, ilmp,
+             curilm);
+#else
+    exp_qjsr("cqexp", DT_QCMPLX, ilmp, curilm);
+#endif
+    return;
+  case IM_CQLOG:
+    exp_qjsr("cqlog", DT_QCMPLX, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_CLOG:
     exp_qjsr("__mth_i_clog", DT_CMPLX, ilmp, curilm);
     return;
@@ -625,12 +754,22 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDSIN:
     exp_qjsr("__mth_i_cdsin", DT_DCMPLX, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_CQSIN:
+    exp_qjsr("cqsin", DT_QCMPLX, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_CCOS:
     exp_qjsr("__mth_i_ccos", DT_CMPLX, ilmp, curilm);
     return;
   case IM_CDCOS:
     exp_qjsr("__mth_i_cdcos", DT_DCMPLX, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_CQCOS:
+    exp_qjsr("cqcos", DT_QCMPLX, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_CASIN:
     exp_qjsr("__mth_i_casin", DT_CMPLX, ilmp, curilm);
     return;
@@ -662,12 +801,22 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDCOSH:
     exp_qjsr("__mth_i_cdcosh", DT_DCMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CQCOSH:
+    exp_qjsr("cqcosh", DT_QCMPLX, ilmp, curilm);
+    return;
+  //AOCC begin
   case IM_CSINH:
     exp_qjsr("__mth_i_csinh", DT_CMPLX, ilmp, curilm);
     return;
   case IM_CDSINH:
     exp_qjsr("__mth_i_cdsinh", DT_DCMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CQSINH:
+    exp_qjsr("cqsinh", DT_QCMPLX, ilmp, curilm);
+    return;
+  //AOCC begin
   case IM_CTANH:
     exp_qjsr("__mth_i_ctanh", DT_CMPLX, ilmp, curilm);
     return;
@@ -680,7 +829,13 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDTAN:
     exp_qjsr("__mth_i_cdtan", DT_DCMPLX, ilmp, curilm);
     return;
-  //AOCC begin
+  // AOCC begin
+  case IM_CQTANH:
+    exp_qjsr("cqtanh", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQTAN:
+    exp_qjsr("cqtan", DT_QCMPLX, ilmp, curilm);
+    return;
   case IM_CACOSH:
     exp_qjsr("__mth_i_cacosh", DT_CMPLX, ilmp, curilm);
     return;
@@ -690,7 +845,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CATANH:
     exp_qjsr("__mth_i_catanh", DT_CMPLX, ilmp, curilm);
     return;
-  //AOCC end 
+  //AOCC end
   case IM_CDIV:
     {
       if (XBIT(70, 0x40000000)) {
@@ -731,6 +886,28 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       }
     }
     return;
+  // AOCC begin
+  case IM_CQDIV:
+    {
+      if (XBIT(70, 0x40000000)) {
+        exp_qjsr("__mth_i_cqdiv", DT_QCMPLX, ilmp, curilm);
+        return;
+      } else {
+        tmp = ILM_OPND(ilmp, 2);
+        ilix = ILM_IRESULT(tmp);
+        if (!flg.ieee && !XBIT(70, 0x40000000) && ILI_OPC(ilix) == IL_QCON &&
+            is_quad0(ILI_SymOPND(ilix, 1)) && (ILM_RRESULT(tmp) != ilix)) {
+          SetILM_OPC(ilmp, IM_CQDIVQ);
+          ILM_RESULT(tmp) = ILM_RRESULT(tmp);
+          ILM_RESTYPE(tmp) = 0; /* quad result */
+          tmp = exp_mac(ILM_OPC(ilmp), ilmp, curilm);
+          return;
+        }
+        exp_qjsr("cdivq", DT_QCMPLX, ilmp, curilm);
+      }
+    }
+    return;
+  // AOCC end
   case IM_CADD:
     if (XBIT(70, 0x40000000)) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -751,6 +928,18 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       tmp = exp_mac(IM_CDADD, ilmp, curilm);
     }
     return;
+  // AOCC begin
+  case IM_CQADD:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXADD, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      tmp = exp_mac(IM_CQADD, ilmp, curilm);
+    }
+    return;
+  // AOCC end
   case IM_CSUB:
     if (XBIT(70, 0x40000000)) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -771,6 +960,18 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       tmp = exp_mac(IM_CDSUB, ilmp, curilm);
     }
     return;
+  // AOCC begin
+  case IM_CQSUB:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXSUB, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      tmp = exp_mac(IM_CQSUB, ilmp, curilm);
+    }
+    return;
+  // AOCC end
   case IM_CMUL:
     if (XBIT(70, 0x40000000)) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -791,6 +992,28 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       tmp = exp_mac(IM_CDMUL, ilmp, curilm);
     }
     return;
+  // AOCC begin
+  case IM_CQMUL:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXMUL, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      tmp = exp_mac(IM_CQMUL, ilmp, curilm);
+    }
+    return;
+  case IM_CQNEG:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad1ili(IL_QCMPLXNEG, op1);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      tmp = exp_mac(opc, ilmp, curilm);
+    }
+    return;
+  // AOCC end
   case IM_CNEG:
     if (XBIT(70, 0x40000000)) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -830,6 +1053,17 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       tmp = exp_mac(opc, ilmp, curilm);
     }
     return;
+  // AOCC begin
+  /*case IM_QCONJG:
+    if (XBIT(70, 0x40000000)) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      ilix = ad1ili(IL_QCMPLXCONJG, op1);
+      ILM_RESULT(curilm) = ilix;
+    } else {
+      tmp = exp_mac(opc, ilmp, curilm);
+    }
+    return;*/
+  // AOCC end
 
     /* special handling of 64 bit precision integer ilms */
     /* -- type -- arithmetic */
@@ -1112,6 +1346,18 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     }
     exp_qjsr("__mth_i_cdpowk", DT_DCMPLX, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_CQTOK:
+    if (XBIT(70, 0x40000000) && XBIT_NEW_MATH_NAMES_CMPLX) {
+      op1 = ILI_OF(ILM_OPND(ilmp, 1));
+      op2 = ILI_OF(ILM_OPND(ilmp, 2));
+      ilix = ad2ili(IL_QCMPLXPOWK, op1, op2);
+      ILM_RESULT(curilm) = ilix;
+      return;
+    }
+    exp_qjsr("__mth_i_cqpowk", DT_QCMPLX, ilmp, curilm);
+    return;
+  // AOCC end
   case IM_KDIM:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     op2 = ILI_OF(ILM_OPND(ilmp, 2));
@@ -1197,6 +1443,29 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
     break;
+  // AOCC begin
+  case IM_CQCON:
+    if (XBIT(70, 0x40000000)) {
+      tmp = ILM_OPND(ilmp, 1);
+      ILM_RESULT(curilm) = ad1ili(IL_QCMPLXCON, tmp);
+    } else {
+      /* complex quad constant; create 2 dcons */
+      tmp = ILM_OPND(ilmp, 1);
+      val[0] = CONVAL1G(CONVAL1G(tmp));
+      val[1] = CONVAL2G(CONVAL1G(tmp));
+      val[2] = CONVAL3G(CONVAL1G(tmp));
+      val[3] = CONVAL4G(CONVAL1G(tmp));
+      ILM_RRESULT(curilm) = ad1ili(IL_QCON, getcon(val, DT_QUAD));
+      val[0] = CONVAL1G(CONVAL2G(tmp));
+      val[1] = CONVAL2G(CONVAL2G(tmp));
+      val[2] = CONVAL3G(CONVAL2G(tmp));
+      val[3] = CONVAL4G(CONVAL2G(tmp));
+      ILM_IRESULT(curilm) = ad1ili(IL_QCON, getcon(val, DT_QUAD));
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
+    break;
+
+  // AOCC end
 
   case IM_LOC:
     /* merely copy up results, move from AR to DR */
@@ -1331,6 +1600,16 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     ILM_RESTYPE(curilm) = ILM_ISCMPLX;
     ILM_NME(curilm) = IL_DCMP;
     return;
+  // AOCC begin
+  case IM_CQCMP:
+    if (XBIT(70, 0x40000000)) {
+      ILM_NME(curilm) = IL_QCMP;
+      return;
+    }
+    ILM_RESTYPE(curilm) = ILM_ISCMPLX;
+    ILM_NME(curilm) = IL_QCMP;
+    return;
+  // AOCC end
 
   /*
    * For a relational, pick up the ILI opcode to be used from the names
@@ -1393,8 +1672,8 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       if (XBIT(124, 0x400) && opc >= IM_EQ8 && opc <= IM_GT8)
         ILM_RESULT(curilm) = ad1ili(IL_IKMV, ILM_RESULT(curilm));
       return;
-    } else if ((ILM_OPC(ilmpx) == IM_CCMP || ILM_OPC(ilmpx) == IM_CDCMP) &&
-               XBIT(70, 0x40000000)) {
+    } else if ((ILM_OPC(ilmpx) == IM_CCMP || ILM_OPC(ilmpx) == IM_CDCMP ||
+                ILM_OPC(ilmpx) == IM_CQCMP) && XBIT(70, 0x40000000)) {
       int il1, il2;
       ILI_OP opci, opcr;
       int ilm1 = ILM_OPND(ilmpx, 1); // ILM index of first operand of compare
@@ -1403,9 +1682,12 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       if (ILM_OPC(ilmpx) == IM_CCMP) {
         opcr = IL_SCMPLX2REAL;
         opci = IL_SCMPLX2IMAG;
-      } else {
+      } else if (ILM_OPC(ilmpx) == IM_CDCMP) {
         opcr = IL_DCMPLX2REAL;
         opci = IL_DCMPLX2IMAG;
+      } else if (ILM_OPC(ilmpx) == IM_CQCMP) {
+        opcr = IL_QCMPLX2REAL;
+        opci = IL_QCMPLX2IMAG;
       }
       il1 = ad3ili(opcx, ad1ili(opcr, ILM_RESULT(ilm1)),
                    ad1ili(opcr, ILM_RESULT(ilm2)), tmp);

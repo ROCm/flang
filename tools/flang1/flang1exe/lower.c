@@ -787,6 +787,13 @@ trav_struct(int dtype, int off)
     regclass[0] = CLASS_SSEDP;
     regclass[1] = CLASS_SSEDP;
     return;
+  // AOCC begin
+  case TY_QCMPLX:
+    assert(regi == 0, "trav_struct - bad offset for QCMPLX", off, 3);
+    regclass[0] = CLASS_SSEQP;
+    regclass[1] = CLASS_SSEQP;
+    return;
+  // AOCC end
   case TY_STRUCT:
   case TY_DERIVED:
     /* regclass will be the sum of the members in its eightbyte */

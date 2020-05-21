@@ -127,11 +127,13 @@ fold_real64_compare(const float64_t *x, const float64_t *y)
   COMPARE_BODY
 }
 
+#ifdef FOLD_LDBL_128BIT
 enum fold_relation
 fold_real128_compare(const float128_t *x, const float128_t *y)
 {
   COMPARE_BODY
 }
+#endif
 
 /*
  *  Set up the floating-point environment so that exceptional conditions
@@ -762,7 +764,7 @@ fold_real128_from_real64(float128_t *res, const float64_t *arg)
 }
 
 enum fold_status
-fold_real128_negate(__float128 *res, const __float128 *arg)
+fold_real128_negate(float128_t *res, const float128_t *arg)
 {
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
@@ -935,6 +937,12 @@ fold_real128_log10(float128_t *res, const float128_t *arg)
 // AOCC begin
 // To support quad precision REAL128 type
 #else
+enum fold_relation
+fold_real128_compare(const __float128 *x, const __float128 *y)
+{
+  COMPARE_BODY
+}
+
 enum fold_status
 fold_int32_from_real128(int32_t *res, const __float128 *arg)
 {

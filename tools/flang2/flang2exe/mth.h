@@ -193,6 +193,7 @@ typedef enum MTH_FN {
 #define FMTH_I_DTAN "__fmth_i_dtan"
 #define FMTH_I_CSDIV "__fsc_div"
 #define FMTH_I_CDDIV "__fsz_div"
+#define FMTH_I_CQDIV "__fsq_div"       // AOCC
 
 #define MTH_I_ACOS "__mth_i_acos"
 #define MTH_I_ASIN "__mth_i_asin"
@@ -211,6 +212,7 @@ typedef enum MTH_FN {
 #define MTH_I_DFLOAT "__mth_i_dfloat"
 #define MTH_I_DFLOATK "__mth_i_dfloatk"
 #define MTH_I_DFLOATUK "__mth_i_dfloatuk"
+#define MTH_I_QDIV "__mth_i_qdiv"
 #define MTH_I_QFLOAT "__mth_i_qfloat"       // AOCC
 #define MTH_I_QFLOATK "__mth_i_qfloatk"     // AOCC
 #define MTH_I_DMUL "__mth_i_dmul"

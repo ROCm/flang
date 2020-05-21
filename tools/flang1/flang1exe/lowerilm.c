@@ -315,6 +315,8 @@ plower(char *fmt, ...)
       fprintf(lower_ilm_file, " l%d", d);
       ++pcount;
       break;
+    case 'q':
+    case 'Q':
     case 'd':
     case 'D':
       if (d < 0) {
@@ -3827,6 +3829,11 @@ lower_stmt(int std, int ast, int lineno, int label)
     case TY_DCMPLX:
       plower("oii", "CDST", lilm, rilm);
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      plower("oii", "CQST", lilm, rilm);
+      break;
+    // AOCC end
     case TY_CHAR:
       plower("oii", "SST", lilm, rilm);
       break;
@@ -4679,6 +4686,7 @@ lower_stmt(int std, int ast, int lineno, int label)
       case TY_QUAD:
       case TY_CMPLX:
       case TY_DCMPLX:
+      case TY_QCMPLX:    // AOCC
       case TY_BLOG:
       case TY_SLOG:
       case TY_LOG:
@@ -5995,6 +6003,11 @@ lower_typeload(int dtype, int base)
   case TY_DCMPLX:
     ilm = plower("oi", "CDLD", base);
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    ilm = plower("oi", "CQLD", base);
+    break;
+  // AOCC end
   case TY_PTR:
     if (!XBIT(49, 0x20000000)) {
       ilm = plower("oir", "PLD", base, 0);
@@ -6064,6 +6077,11 @@ lower_typestore(int dtype, int base, int rhs)
   case TY_DCMPLX:
     ilm = plower("oii", "CDST", base, rhs);
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    ilm = plower("oii", "CQST", base, rhs);
+    break;
+  // AOCC end
   case TY_PTR:
     if (!XBIT(49, 0x20000000)) {
       ilm = plower("oii", "PST", base, rhs);

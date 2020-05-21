@@ -1264,6 +1264,7 @@ lower_init_sym(void)
   lowersym.intone = lower_getintcon(1);
   lowersym.realzero = stb.flt0;
   lowersym.dblezero = stb.dbl0;
+  lowersym.quadzero = stb.quad0;
   lowersym.ptrnull = lower_getnull();
   if (XBIT(68, 0x1)) {
     lowersym.bnd.zero = stb.k0;
@@ -2565,7 +2566,7 @@ lower_put_datatype(int dtype, int usage)
     putwhich("Complex16", "C16");
     break;
   case TY_QCMPLX:
-    putwhich("Complex16", "C16");
+    putwhich("Complex32", "C32");  // AOCC
     break;
 
   case TY_BLOG:
@@ -3883,10 +3884,17 @@ lower_symbol(int sptr)
       puthex(CONVAL2G(sptr));
       break;
     case TY_DCMPLX:
-    case TY_QCMPLX:
       putsym("sym", CONVAL1G(sptr));
       putsym("sym", CONVAL2G(sptr));
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      putsym("sym", CONVAL1G(sptr));
+      putsym("sym", CONVAL2G(sptr));
+      putsym("sym", CONVAL3G(sptr));
+      putsym("sym", CONVAL4G(sptr));
+      break;
+    // AOCC end
     case TY_QUAD:
       puthex(CONVAL1G(sptr));
       puthex(CONVAL2G(sptr));
@@ -4106,6 +4114,7 @@ lower_symbol(int sptr)
                             retdesc == CLASS_PTR)) {
       switch (DTY(dtype)) {
       case TY_CMPLX:
+      case TY_QCMPLX:   // AOCC
       case TY_DCMPLX:
         if (!CMPLXFUNC_C && FVALG(sptr))
           fvallast = 1;

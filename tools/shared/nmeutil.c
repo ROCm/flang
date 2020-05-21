@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: Jun 2020
+ *
+ */
 
 /** \file
  *  \brief names table utility module
@@ -554,7 +561,11 @@ dt_nme(int nm)
 
   case NT_MEM:
     if (NME_SYM(nm) == 0 || NME_SYM(nm) == 1) {
-      if (dt_nme((int)NME_NM(nm)) == DT_DCMPLX) {
+      // AOCC begin
+      if (dt_nme((int)NME_NM(nm)) == DT_QCMPLX) {
+        return DT_QUAD;
+      // AOCC end
+      } else if (dt_nme((int)NME_NM(nm)) == DT_DCMPLX) {
         return DT_DBLE;
       } else {
         return DT_REAL;

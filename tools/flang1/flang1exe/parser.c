@@ -497,6 +497,9 @@ prettytoken(int tkntyp, INT tknval)
   case TK_DCCON:
     sprintf(symbuf, "doublecomplex constant %s", getprint((int)tknval));
     break;
+  case TK_QCCON:  // AOCC
+    sprintf(symbuf, "quadcomplex constant %s", getprint((int)tknval));
+    break;
   case TK_HOLLERITH:
     sprintf(symbuf, "hollerith constant %10.10s",
             stb.n_base + CONVAL1G(tknval));

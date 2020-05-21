@@ -213,7 +213,10 @@ set(MTH_CMPLX_SRCS
   csinh.c
   csqrt.c
   ctan.c
-  ctanh.c)
+  ctanh.c
+  cqdiv.c
+  cqpowi.c
+  cqpowk.c)
 
 set(SRCS
   ${SRCS}

@@ -354,7 +354,8 @@ getcon(INT *value, DTYPE dtype)
   if (hashval < 0)
     hashval = -hashval;
   for (sptr = stb.hashtb[hashval]; sptr != 0; sptr = HASHLKG(sptr)) {
-    if (DTY(dtype) == TY_128 || DTY(dtype) == TY_QUAD) {
+    if (DTY(dtype) == TY_128 || DTY(dtype) == TY_QUAD ||
+        DTY(dtype) == TY_QCMPLX) {
       if (DTYPEG(sptr) != dtype || STYPEG(sptr) != ST_CONST ||
           CONVAL1G(sptr) != value[0] || CONVAL2G(sptr) != value[1] ||
           CONVAL3G(sptr) != value[2] || CONVAL4G(sptr) != value[3])
@@ -972,6 +973,23 @@ getprint(int sptr)
     num[1] = CONVAL2G(CONVAL2G(sptr));
     cprintf(&b[26], "%24.17le", num);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    num[0] = CONVAL1G(CONVAL1G(sptr));
+    num[1] = CONVAL2G(CONVAL1G(sptr));
+    num[2] = CONVAL3G(CONVAL1G(sptr));
+    num[3] = CONVAL4G(CONVAL1G(sptr));
+    cprintf(b, "%44.37Lf", num);
+    b[44] = ',';
+    b[45] = ' ';
+    num[0] = CONVAL1G(CONVAL2G(sptr));
+    num[1] = CONVAL2G(CONVAL2G(sptr));
+    num[2] = CONVAL3G(CONVAL2G(sptr));
+    num[3] = CONVAL4G(CONVAL2G(sptr));
+    cprintf(&b[46], "%44.37Lf", num);
+    break;
+  // AOCC end
 
   case TY_NCHAR:
     sptr = CONVAL1G(sptr); /* sptr to char string constant */

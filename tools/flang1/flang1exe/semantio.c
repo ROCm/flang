@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last modified: Jun 2020
+ *
  */
 /* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
@@ -1180,7 +1185,7 @@ semantio(int rednum, SST *top)
                     dtype == DT_BINT || dtype == DT_LOG8 || dtype == DT_LOG ||
                     dtype == DT_SLOG || dtype == DT_BLOG || dtype == DT_REAL4 ||
                     dtype == DT_REAL8 || dtype == DT_QUAD || dtype == DT_CMPLX8 ||
-                    dtype == DT_CMPLX16 ||
+                    dtype == DT_CMPLX16 || dtype == DT_CMPLX32 ||
                     (DTY(dtype) == TY_CHAR && fmttyp == FT_LIST_DIRECTED))) {
 
           i = sym_mkfunc_nodesc(mkRteRtnNm(getWriteByDtypeRtn(dtype, fmttyp)),
@@ -6180,6 +6185,10 @@ getWriteByDtypeRtn(int dtype, FormatType fmttyp)
   case DT_CMPLX16:
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_cd_ldw
                                           : RTE_f90io_sc_cd_fmt_write;
+    break;
+  case DT_CMPLX32:
+    rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_cq_ldw
+                                          : RTE_f90io_sc_cq_fmt_write;
     break;
   default:
     if (DTY(dtype) == TY_CHAR) {

@@ -10,6 +10,7 @@
  *
  * Added support for quad precision
  *   Last modified: Feb 2020
+ * Last Modified: Jun 2020
  *
  */
 
@@ -220,8 +221,10 @@ typedef struct {
   DTYPE dt_cmplx;  /* default cmplx   - DT_CMPLX */
   DTYPE dt_log;    /* default logical - DT_LOG   */
   DTYPE dt_dble;   /* default double precision - DT_DBLE */
-  // AOCC
+  // AOCC begin
   DTYPE dt_quad;   /* default quad precision - DT_QUAD */
+  DTYPE dt_qcmplx; /* default quad cmplx - DT_QCMPLX */
+  // AOCC begin
   DTYPE dt_dcmplx; /* default double cmplx - DT_DCMPLX */
   DTYPE dt_ptr;    /* default pointer integer - DT_PTR */
   /* The following members are the default integer, real, complex, and

@@ -205,16 +205,16 @@ __fortio_default_convert(char *item, int type,
     *p++ = '(';
     width = REAL16_W;
     (void)
-        __fortio_fmt_g((__BIGREAL_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
-                      1, __REAL16, plus_flag, TRUE, dc_flag, round);
+        __fortio_fmt_e((__BIGREAL16Q_T)PP_REAL16Q(item), width, REAL16_D, REAL16_E,
+                      1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     if (dc_flag == TRUE)
       *p++ = ';';
     else
       *p++ = ',';
     (void)
-        __fortio_fmt_g((__BIGREAL_T)PP_REAL16(item + 16), width, REAL16_D,
-                      REAL16_E, 1, __REAL16, plus_flag, TRUE, dc_flag, round);
+        __fortio_fmt_e((__BIGREAL16Q_T)PP_REAL16Q(item + 16), width, REAL16_D,
+                      REAL16_E, 1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     *p++ = ')';
     *p++ = '\0';
