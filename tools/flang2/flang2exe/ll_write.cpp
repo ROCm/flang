@@ -21,7 +21,8 @@
  *
  *
  * Changes to DISubrange metadata for representing assumed shape arrays.
- * Date of Modification: May 2020
+ * Changes to DIModule metadata for representing Fortran modules.
+ * Date of Modification: July 2020
  */
 
 #include "gbldefs.h"
@@ -1108,6 +1109,18 @@ static const MDTemplate Tmpl_DIModule[] = {
   //{ "isysroot",               StringField, FlgOptional }
 };
 
+static const MDTemplate Tmpl_DIModule_11[] = {
+  { "DIModule", TF, 5 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "scope",                    NodeField },
+  { "name",                     StringField },
+  { "file",                     NodeField },
+  { "line",                     UnsignedField }
+  //,{ "configMacros",          StringField, FlgOptional },
+  //{ "includePath",            StringField, FlgOptional },
+  //{ "isysroot",               StringField, FlgOptional }
+};
+
 static const MDTemplate Tmpl_DISubprogram[] = {
   { "DISubprogram", TF, 20 },
   { "tag",                      DWTagField, FlgHidden },
@@ -2103,6 +2116,10 @@ emitDINamespace(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
 static void
 emitDIModule(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnd, unsigned mdi)
 {
+  if (11 == get_flang_major_version()) {
+    emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule_11);
+    return;
+  }
   emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule);
 }
 
