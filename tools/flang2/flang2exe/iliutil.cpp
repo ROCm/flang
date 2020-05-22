@@ -45,6 +45,9 @@
  * Added code to support SHIFTA intrinsic 
  * Last modified: April 2020
  *
+ * Using i64 shift for pow(2) expansion
+ * Last modified : 23rd May 2020
+ *
  */
 
 /**
@@ -6940,7 +6943,10 @@ addarth(ILI *ilip)
     }
     if (ncons == 1 && con1v2 == 2) {
       tmp1 = ad_icon(1);
-      tmp1 = ad2ili(IL_LSHIFT, tmp1, op2);
+      // AOCC Modification : Using 64 bit shl to be safe. Because 2**32
+      //                     expands to (i32) 1 << 32 which is invalid.
+      //                     So using (i64) 1 << 32
+      tmp1 = ad2ili(IL_KLSHIFT, tmp1, op2);
       /*  generate ili which computes (((1)<<i) & ~((i)>>31)) */
       tmp = ad_icon(31);
       tmp = ad2ili(IL_ARSHIFT, op2, tmp);
