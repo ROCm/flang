@@ -394,7 +394,6 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       E155("Empty generic procedure -", SYMNAME(sptr));
     }
 
-    bool renamed = true;
     for (gndsc = GNDSCG(sptrgen); gndsc; gndsc = SYMI_NEXT(gndsc)) {
       func = SYMI_SPTR(gndsc);
       func_sptrgen = sptrgen;
@@ -443,7 +442,6 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       }
       // AOCC Begin
       if (STYPEG(func) == ST_ALIAS) {
-        renamed = true;
         func = SYMLKG(func);
       }
       // AOCC End
@@ -455,7 +453,8 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
                                  try_device == 1);
       }
       if (found && func && found != func && *min_argdistance != INF_DISTANCE &&
-          (!renamed && !is_conflicted_generic(func_sptrgen, found_sptrgen)) && // AOCC
+          (!PRIVATEG(SCOPEG(func))) && // AOCC
+          (!is_conflicted_generic(func_sptrgen, found_sptrgen)) &&
           cmp_arg_score(argdistance, min_argdistance, distance_sz) == 0) {
         int len;
         char *name, *name_cpy;
