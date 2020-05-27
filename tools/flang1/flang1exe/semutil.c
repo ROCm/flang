@@ -3430,7 +3430,7 @@ assign(SST *newtop, SST *stktop)
        if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
 	  SPTR lhs_sptr;
 	  lhs_sptr = SST_SYMG(newtop);
-	  if(!ALLOCATTRG(lhs_sptr)) {
+	  if(!ALLOCATTRG(lhs_sptr) && !POINTERG(lhs_sptr)) {
             aclp = SST_ACLG(stktop);
             // if the temporary created is considered to have deferred shape
             if(AD_DEFER(AD_DPTR( aclp->dtype)) )
