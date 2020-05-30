@@ -1,5 +1,11 @@
 # Returns the host triple.
 # Invokes config.guess
+# 
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
+#
+# Last Modified: May 2020
+#
 
 function( get_host_triple var )
   if( MSVC )
