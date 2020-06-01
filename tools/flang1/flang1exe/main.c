@@ -17,6 +17,10 @@
  *
  * Modified for compiler_options()
  * Date of modification: 21st May 2020
+ *
+ * Disabling inliner for Offloading compilation
+ * Date of modification : 01st June 2020
+ *
  */
 
 /** \file main.c
@@ -165,11 +169,10 @@ main(int argc, char *argv[])
   init(argc, argv); /* initialize */
   if (gbl.fn == NULL)
     gbl.fn = gbl.src_file;
-   // AOCC. Forceful inlining of module procedures when
-   // offloading to omp targets. This can be extended
-   // as general optimization, but it will increase
-   // the code size and need to be tested
-   if (flg.omptarget) flg.inliner = true;   // AOCC
+
+  // Disable inlining while offloading, or else it will conflict with
+  // declare target implementation
+  if (flg.omptarget) flg.inliner = false;   // AOCC
 #if DEBUG
   if (debugfunconly > 0)
     dodebug = 0;
