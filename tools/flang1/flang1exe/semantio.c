@@ -2719,6 +2719,7 @@ semantio(int rednum, SST *top)
               IOERR2(201, PTNAME(PT_DELIM));
             PT_CHECK(PT_DECIMAL, astb.ptr0c);
             PT_CHECK(PT_SIGN, astb.ptr0c);
+            PT_CHECK(PT_ROUND, astb.ptr0c);
             sptr = mk_iofunc(rtlRtn, DT_INT, 0);
             (void)begin_io_call(A_FUNC, sptr, 4);
             (void)add_io_arg(A_DESTG(ast));
