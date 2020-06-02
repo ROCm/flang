@@ -9,6 +9,12 @@
    \file
    \brief Main module to generate LLVM debug informations using metadata
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * last modified : May 2020
+ */
 
 #include "lldebug.h"
 #include "dtypeutl.h"
@@ -263,7 +269,7 @@ get_filedesc_mdnode(LL_DebugInfo *db, int index)
 static LL_MDRef
 lldbg_create_compile_unit_mdnode(LL_DebugInfo *db, int lang_tag, char *filename,
                                  char *sourcedir, char *producer, int main,
-                                 int optimized, char *compflags, int vruntime,
+                                 bool optimized, char *compflags, int vruntime,
                                  LL_MDRef *enum_types_list,
                                  LL_MDRef *retained_types_list,
                                  LL_MDRef *subprograms_list, LL_MDRef *gv_list,
@@ -424,7 +430,7 @@ lldbg_create_subprogram_mdnode(
     LL_DebugInfo *db, LL_MDRef context, const char *routine,
     const char *mips_linkage_name, LL_MDRef def_context, int line,
     LL_MDRef type_mdnode, int is_local, int is_definition, int virtuality,
-    int vindex, int spFlags, int flags, int is_optimized,
+    int vindex, int spFlags, int flags, bool is_optimized,
     LL_MDRef template_param_mdnode, LL_MDRef decl_desc_mdnode,
     LL_MDRef lv_list_mdnode, int scope)
 {
@@ -1345,20 +1351,23 @@ lldbg_create_local_variable_mdnode(LL_DebugInfo *db, int dw_tag,
   llmd_add_i32(mdb, 0);
 
   // AOCC begin
-  if (sptr) {
-
-    if (DTY(DTYPEG(sptr)) == TY_STRUCT) {
+  if (sptr && (flags & DIFLAG_ARTIFICIAL)) {
       /*
-       * Flang currently emits separate local variables in the case of
-       * separate asssignment of elements in an array of derived-type in a
-       * straight-line fashion. ie. (struct(i) = ...; struct(i+1) = ...; ...),
-       * although flang doesn't attempt to do so if you were to, say, do the
-       * assignment iteratively in a loop. We force DILocalVariable to be
-       * distinct here so that SROA (if it kicks in) on emitting
-       * DW_OP_LLVM_fragment won't choke the asm-printer of LLVM.
+       * Mark every anonymous DILocalVariable metadata as distinct 
+       * to avoid merging of metadata nodes having similar contents for
+       * a local/compiler generated variable. So that even if
+       * SROA happens on these variables later, they still have a 
+       * unique metadata node. Avoiding "Overlapping fragments".
+       *
+       * Incorrect case: Overlapping fragments:
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
+       *
+       * Corected case: No-Overlapping fragments:
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !20, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
        * */
       llmd_set_distinct(mdb);
-    }
   }
   // AOCC end
 
@@ -1576,7 +1585,8 @@ lldbg_emit_compile_unit(LL_DebugInfo *db)
   if (LL_MDREF_IS_NULL(db->comp_unit_mdnode)) {
     lang_tag = DW_LANG_Fortran90;
     db->comp_unit_mdnode = lldbg_create_compile_unit_mdnode(
-        db, lang_tag, get_filename(1), get_currentdir(), db->producer, 1, 0, "",
+        db, lang_tag, get_filename(1), get_currentdir(), db->producer, 1,
+        flg.opt >= 1, "",
         0, &db->llvm_dbg_enum, &db->llvm_dbg_retained, &db->llvm_dbg_sp,
         &db->llvm_dbg_gv, &db->llvm_dbg_imported);
   }
@@ -2118,7 +2128,7 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
   int vindex = 0;
   int spFlags = 0;
   int flags = 0;
-  int is_optimized = 0;
+  bool is_optimized = flg.opt >= 1;
   int sc = SCG(sptr);
   int is_def;
   int is_local = (sc == SC_STATIC);
@@ -2631,13 +2641,16 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
       offset[0] = 0;
       offset[1] = 0;
       cu_mdnode = ll_get_md_null();
-#if defined(FLANG_LLVM_EXTENSIONS)
+      /*
+       * In case of character metadata node with tag DW_TAG_string_type
+       * should always be generated, it helps debuggers to differentiate
+       * fortran character type over fortran integer(kind=1) type.
+       */
       if (ll_feature_from_global_to_md(&db->module->ir) &&
           (DTY(dtype) == TY_CHAR))
         type_mdnode = lldbg_create_string_type_mdnode(
             db, sz, align, stb.tynames[DTY(dtype)], dwarf_encoding(dtype));
       else
-#endif
         type_mdnode = lldbg_create_basic_type_mdnode(
             db, cu_mdnode, stb.tynames[DTY(dtype)], ll_get_md_null(), 0, sz,
             align, offset, 0, dwarf_encoding(dtype));
@@ -3076,7 +3089,16 @@ set_dilocalvariable_flags(int sptr)
     return DIFLAG_ARTIFICIAL;
   }
 #endif
-  return CCSYMG(sptr) ? DIFLAG_ARTIFICIAL : 0;
+  /* Mark the variable as artificial if (Compiler Created Symbol)
+   * flag is set except in the case of function result variable.
+   * This is done because Function result variable is available
+   * in source. So user expect it to be visible in debugger.
+   */
+  if (CCSYMG(sptr) && (FVALG(GBL_CURRFUNC) != sptr)) {
+    return DIFLAG_ARTIFICIAL;
+  } else {
+    return 0;
+  }
 }
 
 LL_MDRef
