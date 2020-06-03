@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ */
 
 /* clang-format off */
 
@@ -1154,7 +1160,7 @@ ENTF90IO(OPEN03A, open03a)(
       Fcb->sign = FIO_PLUS;
     else if (__fortio_eq_str(CADR(sign), CLEN(sign), "SUPPRESS"))
       Fcb->sign = FIO_SUPPRESS;
-    else if (__fortio_eq_str(CADR(sign), CLEN(sign), "PROCESOR_DEFINED"))
+    else if (__fortio_eq_str(CADR(sign), CLEN(sign), "PROCESSOR_DEFINED"))
       Fcb->sign = FIO_PROCESSOR_DEFINED;
     else
       return __fortio_error(FIO_ESPEC);
