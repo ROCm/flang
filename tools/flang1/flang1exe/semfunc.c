@@ -11372,6 +11372,15 @@ ref_pd(SST *stktop, ITEM *list)
     if (get_kwd_args(list, 1, KWDARGSTR(pdsym)))
       goto exit_;
 
+    // AOCC begin
+    if (STYPEG(SST_SYMG(ARG_STK(0))) == ST_PROC ||
+        is_procedure_ptr(SST_SYMG(ARG_STK(0)))) {
+      error(4, 3, gbl.lineno,
+            "Procedure unexpected as argument", NULL);
+      goto exit_;
+    }
+    // AOCC end
+
     (void)mkarg(ARG_STK(0), &dum);
     XFR_ARGAST(0);
     ast = ARG_AST(0);
