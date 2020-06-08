@@ -21,6 +21,8 @@
  * Complex datatype support for atan2 under flag f2008
  *  Modified on 13th March 2020
  *
+ * Support for ifort's mm_prefetch intrinsic
+ * Last modified: Jun 2020
  *
  */
 
@@ -4050,6 +4052,32 @@ exp_misc(ILM_OP opc, ILM *ilmp, int curilm)
     /* defer to exp_rte */
     break;
 #endif
+
+  // AOCC begin
+  case IM_MM_PREFETCH:
+  {
+    sym = mk_prototype("llvm.prefetch", "f pure", DT_NONE, 4, DT_ADDR, DT_INT,
+        DT_INT, DT_INT);
+
+    int addr_ili = ILI_OF(ILM_OPND(ilmp, 1));
+    int hint_ili = ILI_OF(ILM_OPND(ilmp, 2));
+
+    // type = 1 for data
+    int type_garg = ad4ili(IL_GARG, ad_icon(1), ad1ili(IL_NULL, 0), DT_INT, 0);
+
+    int hint_garg = ad4ili(IL_GARG, hint_ili, type_garg, DT_INT, 0);
+
+    // rw = 0 for read
+    int rw_garg = ad4ili(IL_GARG, ad_icon(0), hint_garg, DT_INT, 0);
+
+    int addr_garg = ad4ili(IL_GARG, addr_ili, rw_garg, DT_ADDR, 0);
+
+    ilix = ad2ili(IL_JSR, sym, addr_garg);
+    iltb.callfg = 1;
+    chk_block(ilix);
+    break;
+  }
+  // AOCC end
 
   case IM_PREFETCH:
     ilix = ILI_OF(ILM_OPND(ilmp, 1)); /* address */

@@ -74,6 +74,8 @@ stc3 - number of words for this ILM block (including the BOS).
 .AT spec trm
 .IL DISNAN arth lnk
 .AT spec trm
+.IL MM_PREFETCH misc lnk lnk
+.AT spec trm
 \" AOCC END
 .IL FLOAT arth lnk
 Convert integer to real number (REAL and FLOAT intrinsics).

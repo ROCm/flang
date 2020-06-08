@@ -66,6 +66,9 @@
  *
  * Modified to omit source file name in compiler_options()
  * Date of modification:21st May 2020
+ *
+ * Support for ifort's mm_prefetch intrinsic
+ * Last modified: Jun 2020
  */
 
 /** \file
@@ -12452,6 +12455,50 @@ ref_pd_subr(SST *stktop, ITEM *list)
     }
     argt_count = 3;
     break;
+
+  /* AOCC begin */
+  case PD_mm_prefetch:
+    if (!count || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (address) */
+
+    if (is_sst_const(ARG_STK(0))) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    if (count == 1) { /* if no hint */
+      argt_count = count;
+      break;
+    }
+
+    dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (hint) */
+
+    if (!is_sst_const(ARG_STK(1))) {
+      E74_ARG(pdsym, 1, NULL);
+      goto call_e74_arg;
+    }
+
+    switch (DTY(dtype2)) {
+    case TY_WORD:
+    case TY_DWORD:
+    case TY_BINT:
+    case TY_SINT:
+    case TY_INT:
+      break;
+    default:
+      E74_ARG(pdsym, 1, NULL);
+      goto call_e74_arg;
+    }
+    argt_count = count;
+    break;
+    /* AOCC end */
 
   case PD_get_environment_variable:
     if (count < 1 || count > 5) {

@@ -469,6 +469,9 @@ PLUFUNCA/PLFUNCA	num	num	sym	ilm	args
 LUVFUNCA/LVFUNCA	num	num	sym	ilm	sym	args
 MASTER	sym
 MEMBER	ilm	sym
+# AOCC begin
+MM_PREFETCH	ilm	ilm
+# AOCC end
 MOD	ilm	ilm
 MPBORDERED
 MPEORDERED

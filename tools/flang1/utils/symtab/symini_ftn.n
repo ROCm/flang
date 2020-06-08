@@ -1189,6 +1189,8 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT elemental x
 .PD EXECUTE_COMMAND_LINE - -
 .AT subroutine command *wait *exitstat *cmdstat *cmdmsg
+.PD MM_PREFETCH - -
+.AT subroutine address *hint
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -

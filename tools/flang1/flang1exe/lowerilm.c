@@ -19,6 +19,9 @@
  * Added support for quad precision
  *   Last modified: Feb 2020
  *
+ * Support for ifort's mm_prefetch intrinsic
+ * Last modified: Jun 2020
+ *
  */
 
 /**
@@ -4349,6 +4352,75 @@ lower_stmt(int std, int ast, int lineno, int label)
       add_nullify(lop);
       lower_end_stmt(std);
       return;
+
+    /* AOCC begin */
+    case I_MM_PREFETCH:
+    {
+      lower_start_stmt(lineno, label, TRUE, std);
+      args = A_ARGSG(ast);
+
+      lop = ARGT_ARG(args, 0);
+      rop = ARGT_ARG(args, 1);
+
+      if (A_ARGCNTG(ast) == 1) {
+        /* if no hint is passed, then we pass default to prefetch_t0 */
+        rop = mk_cval(3, DT_INT);
+      }
+
+      /*
+       * ifort's documentation on mm_prefetch *doesn't* discourage the usage of
+       * literal integer values for hint. This is bad for portability!
+       * FOR_K_PREFETCH_XXX constants should only be encouraged. Due to this, we
+       * have to solve a mess which are as follows:
+       *
+       * In intel compilers:
+       * hint = 0 lowers to prefetch_t0
+       * hint = 1 lowers to prefetch_t1
+       * hint = 2 lowers to prefetch_t2
+       * hint = 3 lowers to prefetch_nta
+       *
+       * while in clang (via __builtin_prefetch, which gets lowered to
+       * llvm.prefetch intrinsic) and gcc
+       * hint = 0 lowers to prefetch_nta
+       * hint = 1 lowers to prefetch_t2
+       * hint = 2 lowers to prefetch_t1
+       * hint = 3 lowers to prefetch_t0
+       *
+       * We stick to intel's behaviour by rewriting the hint constant values
+       * since mm_prefetch in Fortran is, AFAIK, an ifort specific intrinsic.
+       */
+
+      int hint = CONVAL2G(A_SPTRG(rop));
+      switch (hint) {
+      case 0:
+        rop = mk_cval(3, DT_INT);
+        break;
+      case 1:
+        rop = mk_cval(2, DT_INT);
+        break;
+      case 2:
+        rop = mk_cval(1, DT_INT);
+        break;
+      case 3:
+        rop = mk_cval(0, DT_INT);
+        break;
+      }
+
+      /*
+       * The first argument is an "address" (lop here). It can be a scalar,
+       * array access etc. We explicitly emit a LOC() intrinsic here.
+       */
+      lop = ast_intr(I_LOC, DT_PTR, 1, lop);
+      lower_expression(lop);
+      lower_expression(rop);
+
+      plower("oii", "MM_PREFETCH", lower_ilm(lop), lower_ilm(rop));
+      A_ILMP(ast, ilm);
+      lower_end_stmt(std);
+      return;
+    }
+    /* AOCC end */
+
     case I_COPYIN:
       symfunc = lower_makefunc(mkRteRtnNm(RTE_qopy_in), DT_NONE, FALSE);
       lower_start_stmt(lineno, label, TRUE, std);

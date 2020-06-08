@@ -1886,6 +1886,10 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       return -1;
     case I_NULLIFY:
       return -1;
+    /* AOCC begin */
+    case I_MM_PREFETCH:
+      return -1;
+    /* AOCC end */
 #ifdef I_C_F_POINTER
     case I_C_F_POINTER:
       transform_c_f_pointer(func_ast, func_args);
