@@ -359,7 +359,7 @@ process_input(char *argv0, bool *need_cuda_constructor)
           gbl.ompaccel_isdevice = true;
           schedule();
           gbl.ompaccel_isdevice = orig;
-          if (flg.omptarget && !gbl.ompaccel_isdevice)
+          if (flg.amdgcn_target)
             schedule();
         } else {
           schedule();
