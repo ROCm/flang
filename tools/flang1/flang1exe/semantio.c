@@ -9,6 +9,9 @@
  * Notified per clause 4(b) of the license.
  *
  * Last Modified: May 2020
+ *
+ * Support to revert to the old value when newunit has errors.
+ * Date of Modification: 15th June 2020
  */
 
 /** \file
@@ -724,11 +727,13 @@ semantio(int rednum, SST *top)
       TYPDP(sptr, 1);
       INTERNALP(sptr, 0);
 
-      ast = mk_func_node(A_FUNC, mk_id(sptr), 0, 0);
-      ast = mk_assn_stmt(PTV(PT_NEWUNIT), ast, A_DTYPEG(PTV(PT_NEWUNIT)));
+      ast = begin_io_call(A_FUNC, sptr, 1);           //AOCC
+      (void)add_io_arg(PTARG(PT_UNIT));               //AOCC
+      ast = mk_assn_stmt(PTV(PT_UNIT), ast, A_DTYPEG(PTV(PT_NEWUNIT)));    //AOCC
       add_stmt_after(ast, io_call.std);
-      if (A_DTYPEG(PTV(PT_NEWUNIT)) != DT_INT) {
-        PTV(PT_UNIT) = mk_convert(PTV(PT_NEWUNIT), DT_INT);
+
+     if (A_DTYPEG(PTV(PT_NEWUNIT)) != DT_INT) {
+        PTV(PT_UNIT) = mk_convert(PTV(PT_UNIT), DT_INT);
       }
     }
 
@@ -5048,6 +5053,7 @@ ast_ioret(void)
 /* ast_type - A_FUNC or A_CALL */
 /* count    - number of arguments */
 /* func     - sptr of function to invoke */
+/* return ast to function call */
 static int
 begin_io_call(int ast_type, int func, int count)
 {
