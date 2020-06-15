@@ -11,6 +11,11 @@
  *
  * Fixed issues related to type bound procedures with and without nopass clause
  *   Date of Modification: December 2019
+ *
+ * Support for assumed size array as parameter
+ *   Date of modification 9th June 2020
+
+ *
 */
 
 /**
@@ -48,6 +53,9 @@ static void form_cmplx_const(SST *, SST *, SST *);
 static int reassoc_add(int, int, int);
 static int get_mem_sptr_by_name(char *name, int dtype);
 static ITEM *mkitem(SST *stkp);
+
+int asz_count; // AOCC
+
 
 /**
    \brief semantic actions - part 2.
@@ -257,6 +265,7 @@ semant2(int rednum, SST *top)
    */
   case AC_END1:
     sem.in_array_const = false;
+    asz_count = 0; // AOCC: for assumed size array expressions reset the number of rhs elements
     break;
 
   /* ------------------------------------------------------------------ */
@@ -1853,6 +1862,8 @@ semant2(int rednum, SST *top)
       /* value set by scan */
       ast_conval(top);
     }
+    // AOCC: Change the number of array elements for assumed size arrays
+    if (sem.in_array_const == true) asz_count += 1;
     break;
   /*
    *      <constant> ::= <int kind const> |
@@ -2023,6 +2034,8 @@ semant2(int rednum, SST *top)
     SST_DTYPEP(LHS, DTYPEG(sptr));
     /* value set by scan */
     ast_cnst(top);
+    // AOCC:  Change the number of array elements for assumed size arrays
+    if (sem.in_array_const == true) asz_count += 1;
     break;
   /*
    *	<char literal> ::= <id> <underscore> <quoted string> |
