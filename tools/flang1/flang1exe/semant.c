@@ -21,6 +21,9 @@
  *   Date of modification 04th April 2020
  *   Date of modification 10th April 2020
  *
+ * Support for assumed size array as parameter
+ *   Date of modification 9th June 2020
+ *
  */
 
 /**
@@ -440,6 +443,13 @@ static void _do_iface(int, int);
 static void fix_iface(int);
 static void fix_iface0();
 
+//AOCC begin
+// variables used in assumed size expression computation
+extern int asz_count;    /* number of rhs elements */
+int asz_status = 0;      /* lhs is assumed size expression */
+int asz_arrdsc;          /* array descriptor of assumed size lhs expression */
+//AOCC end
+
 /** \brief Initialize semantic analyzer for new user subprogram unit.
  */
 void
@@ -803,8 +813,8 @@ static int restored = 0;
 void
 semant1(int rednum, SST *top)
 {
-  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab;
-  int dtype, dtypeset, ss, numss;
+  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab, sptras;
+  int dtype, dtypeset, ss, numss, dtypeas;
   int stype, stype1, i;
   int begin, end, count;
   int opc;
@@ -817,6 +827,7 @@ semant1(int rednum, SST *top)
   int doif;
   int evp;
   ADSC *ad;
+  ADSC *adas;
   char *np, *np2; /* char ptrs to symbol names area */
   int name_prefix_char;
   char *nmptr;
@@ -854,6 +865,13 @@ semant1(int rednum, SST *top)
   int newshapeid;
   int idptemp, newsubidx;
   int symi;
+
+  //AOCC begin
+  SST *asz_sst;
+  SST *asz_rhssst;
+  asz_sst = (SST *)getitem(sem.ssa_area, sizeof(SST));
+  asz_rhssst = (SST *)getitem(sem.ssa_area, sizeof(SST));
+  //AOCC end
 
   switch (rednum) {
 
@@ -6124,6 +6142,13 @@ semant1(int rednum, SST *top)
   case DIM_SPEC3:
     rhstop = 1;
     SST_IDP(RHS(1), S_STAR);
+    //AOCC begin
+    // For Assumed size arrays save the lhs and rhs sst
+     *asz_sst = *top;
+     *asz_rhssst = *RHS(1);
+     asz_arrdsc = aux.arrdsc_avl;
+    //AOCC end
+
   dim_spec:
     if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
@@ -8533,9 +8558,53 @@ semant1(int rednum, SST *top)
         break;
       SST_SYMP(LHS, sptr);
     }
+
+    //AOCC begin
+    //assumed size arrays. modify the saved lhs SST using the rhs sst
+    sptras = SST_SYMG(top);
+    dtypeas = DTYPEG(sptras);
+    adas = AD_DPTR(dtypeas);
+    if (entity_attr.exist & ET_B(ET_PARAMETER)) {
+    // check if array is a parameter
+      if (AD_ASSUMSZ(adas)) {
+    // check if array is an assumed size array
+        sptras = SST_SYMG(asz_sst);
+        SST_LSYMP(asz_sst, 0);
+        SST_DTYPEP(asz_sst, DT_INT);
+        SST_ACLP(asz_sst, 0);
+        SST_CVALP(asz_sst, asz_count);
+        SST_ASTP(asz_sst, mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst)));
+        SST_SHAPEP(asz_sst, 0);
+        SST_IDP(asz_rhssst, S_CONST);
+        SST_PARENP(LHS, 0);
+
+        arraysize = 0;
+        if (SST_IDG(asz_rhssst) == S_CONST) {
+          sem.bounds[sem.arrdim.ndim].uptype = S_CONST;
+          if (flg.standard) {
+            int uptyp;
+            uptyp = SST_DTYPEG(asz_rhssst);
+            if (!DT_ISINT(uptyp)) {
+              error(170, 2, gbl.lineno, "array upper bound", "is not integer");
+             }
+            // assign the lhs using the size of array computed from the rhs
+           arraysize = sem.bounds[sem.arrdim.ndim].upb =
+            chkcon_to_isz(asz_rhssst, FALSE);
+           sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+          }
+          asz_status = 1;
+          dtypeas = mk_arrdsc();
+	  // update the lhs array descriptor
+          SST_DTYPEP(asz_sst, dtypeas);
+        }
+      }
+    }
+    //AOCC end
+
     inited = TRUE;
     sem.dinit_data = FALSE;
     goto entity_decl_shared;
+    asz_status = 0; // AOCC: reset the assumed size computation  status
   /*
    *	<entity decl> ::= <entity id> '=>' <id> ( )
    */
