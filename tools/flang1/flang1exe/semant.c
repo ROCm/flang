@@ -448,6 +448,7 @@ static void fix_iface0();
 extern int asz_count;    /* number of rhs elements */
 int asz_status = 0;      /* lhs is assumed size expression */
 int asz_arrdsc;          /* array descriptor of assumed size lhs expression */
+int asz_string = 0;          /* indicator to indicate assumed length string
 //AOCC end
 
 /** \brief Initialize semantic analyzer for new user subprogram unit.
@@ -5237,6 +5238,7 @@ semant1(int rednum, SST *top)
    */
   case TPV2:
     /* flag that a '*' was seen: id field is 1, sym field is zero. */
+    asz_string = 1;
     SST_IDP(LHS, 1);
     SST_SYMP(LHS, 0);
     SST_ASTP(LHS, 0); /* not expression */
@@ -8566,7 +8568,7 @@ semant1(int rednum, SST *top)
     adas = AD_DPTR(dtypeas);
     if (entity_attr.exist & ET_B(ET_PARAMETER)) {
     // check if array is a parameter
-      if (AD_ASSUMSZ(adas)) {
+      if (AD_ASSUMSZ(adas) && (asz_string == 0)) {
     // check if array is an assumed size array
         sptras = SST_SYMG(asz_sst);
         SST_LSYMP(asz_sst, 0);
@@ -8605,6 +8607,7 @@ semant1(int rednum, SST *top)
     sem.dinit_data = FALSE;
     goto entity_decl_shared;
     asz_status = 0; // AOCC: reset the assumed size computation  status
+    asz_string = 0;
   /*
    *	<entity decl> ::= <entity id> '=>' <id> ( )
    */
