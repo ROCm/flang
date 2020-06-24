@@ -448,10 +448,10 @@ static void fix_iface0();
 extern int asz_count;    /* number of rhs elements */
 int asz_status = 0;      /* lhs is assumed size expression */
 int asz_arrdsc;          /* array descriptor of assumed size lhs expression */
-int asz_string = 0;          /* indicator to indicate assumed length string
+int asz_parameter = 0;   /* indicator to indicate assumed size arrays
 //AOCC end
 
-/** \brief Initialize semantic analyzer for new user subprogram unit.
+/*  \brief Initialize semantic analyzer for new user subprogram unit/.
  */
 void
 semant_init(int noparse)
@@ -5238,7 +5238,6 @@ semant1(int rednum, SST *top)
    */
   case TPV2:
     /* flag that a '*' was seen: id field is 1, sym field is zero. */
-    asz_string = 1;
     SST_IDP(LHS, 1);
     SST_SYMP(LHS, 0);
     SST_ASTP(LHS, 0); /* not expression */
@@ -6112,6 +6111,9 @@ semant1(int rednum, SST *top)
     sem.in_dim = 0;
     dtype = mk_arrdsc(); /* semutil2.c */
     SST_DTYPEP(LHS, dtype);
+    if (asz_parameter != 0) {
+      asz_parameter++;
+    }
     break;
   /* ------------------------------------------------------------------ */
   /*
@@ -6145,6 +6147,7 @@ semant1(int rednum, SST *top)
     rhstop = 1;
     SST_IDP(RHS(1), S_STAR);
     //AOCC begin
+     asz_parameter = 1;    
     // For Assumed size arrays save the lhs and rhs sst
      *asz_sst = *top;
      *asz_rhssst = *RHS(1);
@@ -8560,7 +8563,6 @@ semant1(int rednum, SST *top)
         break;
       SST_SYMP(LHS, sptr);
     }
-
     //AOCC begin
     //assumed size arrays. modify the saved lhs SST using the rhs sst
     sptras = SST_SYMG(top);
@@ -8568,7 +8570,7 @@ semant1(int rednum, SST *top)
     adas = AD_DPTR(dtypeas);
     if (entity_attr.exist & ET_B(ET_PARAMETER)) {
     // check if array is a parameter
-      if (AD_ASSUMSZ(adas) && (asz_string == 0)) {
+      if (AD_ASSUMSZ(adas) && (asz_parameter == 2)) {
     // check if array is an assumed size array
         sptras = SST_SYMG(asz_sst);
         SST_LSYMP(asz_sst, 0);
@@ -8606,8 +8608,11 @@ semant1(int rednum, SST *top)
     inited = TRUE;
     sem.dinit_data = FALSE;
     goto entity_decl_shared;
+    sptras = SST_SYMG(top);
+    dtypeas = DTYPEG(sptras);
+    adas = AD_DPTR(dtypeas);
     asz_status = 0; // AOCC: reset the assumed size computation  status
-    asz_string = 0;
+    asz_parameter = 0; // AOCC: reset the assumed size array indicator
   /*
    *	<entity decl> ::= <entity id> '=>' <id> ( )
    */
