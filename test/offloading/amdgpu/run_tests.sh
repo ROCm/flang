@@ -17,7 +17,7 @@ DEVICE_FLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn
 MARCH="-march=gfx900"
 #XFLAGS="-Mx,232,0x40"
 XFLAGS=""
-FFLAGS="$TARGET_FLAGS $DEVICE_FLAGS $MARCH $XFLAGS -fuse-ld=ld"
+FFLAGS="$TARGET_FLAGS $DEVICE_FLAGS $MARCH $XFLAGS -fuse-ld=ld --rocm-path=/home/amd/rocm/aomp"
 total=0
 passed=0
 failed=0
