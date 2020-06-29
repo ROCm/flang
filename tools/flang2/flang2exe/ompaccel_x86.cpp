@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/* 
+/*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  *
  * Support for x86-64 OpenMP offloading
- * Last Modified: May 2020
+ * Last Modified: Jun 2020
  */
 #ifdef OMP_OFFLOAD_LLVM
 
@@ -181,6 +181,10 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
     if (!ompaccel_sym)
       continue;
     SPTR device_sym = ompaccel_sym->device_sym;
+
+    if (PASSBYVALG(device_sym))
+      continue;
+
     reduc_syms.insert(device_sym);
   }
 
