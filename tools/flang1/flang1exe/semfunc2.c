@@ -13,6 +13,9 @@
  *
  * Added support for F2008 feature complex type arguments for atan2
  *   Date of modification : March 2020
+ *
+ * Fixed flang throws unexpected CE 'Illegal number or type of arguments' for ST_IDENT
+ * Date of modification : 29th June 2020
  */
 
 /** \file
@@ -2129,7 +2132,8 @@ compat_arg_lists(int formal, int actual)
     aarg = *(aux.dpdsc_base + adscptr);
     if (STYPEG(farg) == ST_PROC) {
       if (STYPEG(aarg) != ST_PROC && STYPEG(aarg) != ST_ENTRY &&
-          STYPEG(aarg) != ST_INTRIN && STYPEG(aarg) != ST_GENERIC)
+          STYPEG(aarg) != ST_INTRIN && STYPEG(aarg) != ST_GENERIC &&
+          STYPEG(aarg) != ST_IDENT)         //AOCC
         return FALSE;
       if (!compat_arg_lists(farg, aarg))
         return FALSE;
