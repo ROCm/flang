@@ -54,6 +54,10 @@
  * Added code to support Assumed length string type
  * CPUPC-2487 flang changes.
  * Last modified: June 2020
+ *
+ * Emitting correct name for static variables in target module
+ * Date of modification : 22nd June 2020
+ *
  */
 
 /**
@@ -11009,6 +11013,25 @@ dtype_struct_name(DTYPE dtype)
   return dtype_str;
 }
 
+// AOCC Begin
+static bool is_device_arg(int sptr) {
+  if (!ISNVVMCODEGEN)
+    return false;
+  if (!flg.amdgcn_target)
+    return false;
+  const int stype = STYPEG(sptr);
+  if (stype == ST_ENTRY || stype == ST_PROC)
+    return false;
+  if (stype == ST_CONST)
+    return false;
+  if (DESCARRAYG(sptr) && CLASSG(sptr))
+    return false;
+  if (SCG(sptr) == SC_STATIC)
+    return true;
+  return false;
+}
+// AOCC End
+
 /* Set the LLVM name of a global sptr to '@' + name.
  *
  * This is appropriate for external identifiers and internal identifiers with a
@@ -11019,7 +11042,12 @@ set_global_sname(int sptr, const char *name)
 {
   name = map_to_llvm_name(name);
   SNAME(sptr) = (char *)getitem(LLVM_LONGTERM_AREA, strlen(name) + 2);
-  sprintf(SNAME(sptr), "@%s", name);
+  // AOCC Begin
+  if (flg.amdgcn_target && is_device_arg(sptr))
+    sprintf(SNAME(sptr), "%%%s", name);
+  // AOCC End
+  else
+    sprintf(SNAME(sptr), "@%s", name);
   return SNAME(sptr);
 }
 

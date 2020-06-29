@@ -9,7 +9,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading
- * Last modified: 11th May 2020
+ * Last modified: 22nd June 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Sept 2019
@@ -1048,6 +1048,9 @@ init_tgt_register_syms()
 
   // tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin"); // AOCC
   tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   DTYPEP(tptr1, tgt_offload_entry_type);
   /* SCP(tptr1, SC_EXTERN); */ SCP(tptr1, SC_PRIVATE); // AOCC
   DCLDP(tptr1, 1);
@@ -1109,6 +1112,9 @@ ll_make_tgt_register_lib()
   SPTR sptr;
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
@@ -1134,6 +1140,9 @@ ll_make_tgt_register_requires()
   SPTR sptr;
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
@@ -1184,8 +1193,7 @@ ll_make_tgt_register_lib2()
          "OpenMP Offload structures are not found.", 0, ERR_Fatal);
   // AOCC end
 
-  dtype_entry =
-      tgt_offload_entry_type; // ll_make_tgt_offload_entry("__tgt_offload_entry");
+  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry"); //AOCC
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
       ll_make_tgt_bin_descriptor("__tgt_bin_desc", dtype_entry, dtype_devimage);
