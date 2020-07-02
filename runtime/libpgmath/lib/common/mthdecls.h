@@ -374,7 +374,7 @@ static inline __attribute__((always_inline)) quad_complex_t  pgmath_cmplxq(__flo
   *(dcmplx_t *)&_zr = *dcmplx; }
 #define QMPLX_CALL_QR_Q_Q(_f,_qr,_q1,_q2) \
 { _f(qcmplx, crealq(_q1), cimagq(_q1), crealq(_q2), cimagq(_q2)); \
-  *(qcmplx_t *)&_qr = *qcmplx; }
+  __real__ _qr = qcmplx->real; __imag__ _qr = qcmplx->imag; }
 
 #else		/* #ifdef MTH_CMPLX_C99_ABI */
 
