@@ -657,7 +657,7 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
     //AOCC Begin
-  case 350:
+  case 359:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
     // AOCC End
   default:
@@ -2795,7 +2795,7 @@ exp_ompaccel_etarget(ILM *ilmp, int curilm, SPTR targetfunc_sptr,
 static void emit_array_reduction(SPTR sptrReduceData) {
 
   int ili, bili, nmeReduceData, sizeRed = 0;
-  SPTR lAssignReduction, sptrReductionItem;
+  SPTR lAssignReduction = (SPTR)0, sptrReductionItem;
   DTYPE dtypeReductionItem;
 
   sptrReductionItem =
@@ -2983,7 +2983,7 @@ void
 exp_ompaccel_reduction(ILM *ilmp, int curilm)
 {
   int ili, bili, nmeReduceData, sizeRed = 0;
-  SPTR lAssignReduction, sptrReduceData, sptrReductionItem;
+  SPTR lAssignReduction = (SPTR)0, sptrReduceData, sptrReductionItem;
   DTYPE dtypeReduceData, dtypeReductionItem;
   dtypeReduceData = mk_ompaccel_array_dtype(
       get_type(2, TY_PTR, DT_ANY),
@@ -3078,7 +3078,7 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 350:
+      case 359:
         ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
@@ -3099,7 +3099,8 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
   exp_ompaccel_ereduction(ilmp, curilm);
   wr_block();
   cr_block();
-  exp_label(lAssignReduction);
+  if (lAssignReduction)
+    exp_label(lAssignReduction);
 }
 
 void
