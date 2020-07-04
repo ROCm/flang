@@ -8561,6 +8561,7 @@ semant1(int rednum, SST *top)
       SST_SYMP(LHS, sptr);
     }
 
+#if 0
     //AOCC begin
     //assumed size arrays. modify the saved lhs SST using the rhs sst
     sptras = SST_SYMG(top);
@@ -8602,6 +8603,7 @@ semant1(int rednum, SST *top)
       }
     }
     //AOCC end
+#endif
 
     inited = TRUE;
     sem.dinit_data = FALSE;
