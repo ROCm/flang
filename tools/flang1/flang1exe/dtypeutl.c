@@ -41,11 +41,6 @@ static int ic_strcmp(char *str, char *pattern);
 
 static int size_sym = 0;
 
-//AOCC begin
-extern int asz_arrdsc; /* rhs array descriptor */
-extern int asz_status; /* assumed size processing status */
-//AOCC end
-
 char *
 target_name(DTYPE dtype)
 {
@@ -3124,13 +3119,6 @@ void
 get_aux_arrdsc(DTYPE dtype, int numdim)
 {
   ADSC *ad;
-
-  //AOCC begin
-  // if we are processing assumed size expression use the rhs array descriptor
-  if (asz_status == 1) {
-    aux.arrdsc_avl = asz_arrdsc;
-  }
-  //AOCC end
 
   DTY(dtype + 2) = aux.arrdsc_avl;
   aux.arrdsc_avl += (_FP + 1) + (_VP * numdim);

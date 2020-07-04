@@ -6149,6 +6149,7 @@ semant1(int rednum, SST *top)
      *asz_sst = *top;
      *asz_rhssst = *RHS(1);
      asz_arrdsc = aux.arrdsc_avl;
+     asz_status = 1;
     //AOCC end
 
   dim_spec:
@@ -8561,49 +8562,52 @@ semant1(int rednum, SST *top)
       SST_SYMP(LHS, sptr);
     }
 
-#if 0
     //AOCC begin
     //assumed size arrays. modify the saved lhs SST using the rhs sst
-    sptras = SST_SYMG(top);
-    dtypeas = DTYPEG(sptras);
-    adas = AD_DPTR(dtypeas);
-    if (entity_attr.exist & ET_B(ET_PARAMETER)) {
-    // check if array is a parameter
-      if (AD_ASSUMSZ(adas) && (asz_string == 0)) {
-    // check if array is an assumed size array
-        sptras = SST_SYMG(asz_sst);
-        SST_LSYMP(asz_sst, 0);
-        SST_DTYPEP(asz_sst, DT_INT);
-        SST_ACLP(asz_sst, 0);
-        SST_CVALP(asz_sst, asz_count);
-        SST_ASTP(asz_sst, mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst)));
-        SST_SHAPEP(asz_sst, 0);
-        SST_IDP(asz_rhssst, S_CONST);
-        SST_PARENP(LHS, 0);
+    if (asz_status) {
+      sptras = SST_SYMG(top);
+      dtypeas = DTYPEG(sptras);
+      adas = AD_DPTR(dtypeas);
+      if (entity_attr.exist & ET_B(ET_PARAMETER)) {
+      // check if array is a parameter
+        if (AD_ASSUMSZ(adas)) {
+      // check if array is an assumed size array
+          sptras = SST_SYMG(asz_sst);
+          SST_LSYMP(asz_sst, 0);
+          SST_DTYPEP(asz_sst, DT_INT);
+          SST_ACLP(asz_sst, 0);
+          SST_CVALP(asz_sst, asz_count);
+          SST_ASTP(asz_sst, mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst)));
+          SST_SHAPEP(asz_sst, 0);
+          SST_IDP(asz_rhssst, S_CONST);
+          SST_PARENP(LHS, 0);
 
-        arraysize = 0;
-        if (SST_IDG(asz_rhssst) == S_CONST) {
-          sem.bounds[sem.arrdim.ndim].uptype = S_CONST;
-          if (flg.standard) {
-            int uptyp;
-            uptyp = SST_DTYPEG(asz_rhssst);
-            if (!DT_ISINT(uptyp)) {
-              error(170, 2, gbl.lineno, "array upper bound", "is not integer");
-             }
-            // assign the lhs using the size of array computed from the rhs
-           arraysize = sem.bounds[sem.arrdim.ndim].upb =
-            chkcon_to_isz(asz_rhssst, FALSE);
-           sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+          arraysize = 0;
+          if (SST_IDG(asz_rhssst) == S_CONST) {
+            sem.bounds[sem.arrdim.ndim].uptype = S_CONST;
+            if (flg.standard) {
+              int uptyp;
+              uptyp = SST_DTYPEG(asz_rhssst);
+              if (!DT_ISINT(uptyp)) {
+                error(170, 2, gbl.lineno, "array upper bound", "is not integer");
+              }
+              // assign the lhs using the size of array computed from the rhs
+              arraysize = sem.bounds[sem.arrdim.ndim].upb =
+              chkcon_to_isz(asz_rhssst, FALSE);
+              sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+            }
+	    int savedsc_val = aux.arrdsc_avl;
+            if (asz_status) aux.arrdsc_avl = asz_arrdsc ;
+            dtypeas = mk_arrdsc();
+	    // update the lhs array descriptor
+            SST_DTYPEP(asz_sst, dtypeas);
+	    aux.arrdsc_avl = savedsc_val;
           }
-          asz_status = 1;
-          dtypeas = mk_arrdsc();
-	  // update the lhs array descriptor
-          SST_DTYPEP(asz_sst, dtypeas);
         }
       }
+      asz_status = 0;
     }
     //AOCC end
-#endif
 
     inited = TRUE;
     sem.dinit_data = FALSE;
