@@ -340,6 +340,11 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DDIV:
     tmp = exp_mac(IM_DDIV, ilmp, curilm);
     return;
+  // AOCC begin
+  case IM_QDIV:
+    tmp = exp_mac(IM_QDIV, ilmp, curilm);
+    return;
+  // AOCC end
 
   case IM_REAL:
     if (XBIT(70, 0x40000000)) {
@@ -903,7 +908,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
           tmp = exp_mac(ILM_OPC(ilmp), ilmp, curilm);
           return;
         }
-        exp_qjsr("cdivq", DT_QCMPLX, ilmp, curilm);
+        exp_qjsr("__mth_i_cqdiv", DT_QCMPLX, ilmp, curilm);
       }
     }
     return;

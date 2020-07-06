@@ -12,6 +12,7 @@
 .\" * Added code to support SHIFTA intrinsic
 .\" * Last modified: April 2020
 .\" *
+.\" * Last modified: July 2020
 .\" */
 .NS 24 "Target Machine" "Appendix III - "
 .de DN
@@ -69,6 +70,7 @@ lw(1n) lfCW | l | c.
 %TM_IDIV2%divide by power of 2 instruction%no
 %TM_FDIV%single precision divide instruction%yes
 %TM_DDIV%double precision divide instruction%yes
+%TM_QDIV%quad precision divide instruction%yes
 %TM_UICMP%unsigned integer compare instruction%yes
 %TM_SQRT%square root instruction%yes
 %TM_FIELD_INST%bit field support instructions%no

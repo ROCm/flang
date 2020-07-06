@@ -75,7 +75,7 @@ short ilm_opcode[NOPC][2][NTYPE + 1] = {
      /* VMUL */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* DIV */ {0, IM_IDIV, 0, 0, IM_IDIV, IM_IDIV, IM_IDIV, IM_KDIV, IM_RDIV, IM_RDIV,
                 IM_DDIV, IM_QDIV, IM_CDIV, IM_CDIV, IM_CDDIV, IM_IDIV, IM_IDIV, IM_IDIV,
-                IM_KDIV, 0, 0},
+                IM_KDIV, IM_CQDIV, 0},
      /* VDIV */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* xTOI */ {0, IM_ITOI, 0, 0, IM_ITOI, IM_ITOI, IM_ITOI, IM_KTOI, IM_RTOI, IM_RTOI,
                  IM_DTOI, 0, IM_CTOI, IM_CTOI, IM_CDTOI, IM_ITOI, IM_ITOI, IM_ITOI,
