@@ -3342,7 +3342,7 @@ addarth(ILI *ilip)
   case IL_QNEG:
     if (ncons == 1) {
       GETVAL128(num2, cons1);
-      xdneg(num2.numq, res.numq);
+      xqneg(num2.numq, res.numq);
       goto add_qcon;
     }
     if (!flg.ieee && ILI_OPC(op1) == IL_QSUB) {
@@ -3774,7 +3774,7 @@ addarth(ILI *ilip)
       int qcon_one = ad1ili(IL_QCON, stb.quad1);
 
       (void)mk_prototype("llvm.copysign.f128", "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
-      ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.copysign.f128", 2, qcon_one, op1);
+      ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.copysign.f128", 2, qcon_one, op1);
 
       int qcon_zero = ad1ili(IL_QCON, stb.quad0);
       return ad3ili(IL_QCMP, ad2altili(opc, qcon_one, op1, ilix), qcon_zero, op2);
@@ -5234,7 +5234,7 @@ addarth(ILI *ilip)
       op1 = ad3ili(IL_DAQP, op1, QP(0), ad1ili(IL_NULL, 0));
       op2 = ad3ili(IL_DAQP, op2, QP(1), op1);
       ilix = ad2ili(IL_QJSR, _mkfunc(MTH_I_QDIV), op2);
-      ilix = ad2ili(IL_DFRQP, ilix, DP(0));
+      ilix = ad2ili(IL_DFRQP, ilix, QP(0));
       return ilix;
     }
     tmp1 = ad1ili(IL_QCON, stb.quad2);
@@ -5478,11 +5478,11 @@ addarth(ILI *ilip)
   case IL_QMOD:
     if (!flg.ieee) {
 #ifdef TARGET_X8664
-      (void)mk_prototype(fast_math("mod", 's', 'q', FMTH_I_DMOD), "f pure",
+      (void)mk_prototype(fast_math("mod", 's', 'q', FMTH_I_QMOD), "f pure",
                          DT_QUAD, 2, DT_QUAD, DT_QUAD);
 #else
-      (void)mk_prototype(MTH_I_DMOD, "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
-      ilix = ad_func(IL_DFRQP, IL_QJSR, MTH_I_DMOD, 2, op1, op2);
+      (void)mk_prototype(MTH_I_QMOD, "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
+      ilix = ad_func(IL_DFRQP, IL_QJSR, MTH_I_QMOD, 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
       return ilix;
 #endif
