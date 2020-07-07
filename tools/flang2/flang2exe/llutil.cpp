@@ -4558,3 +4558,34 @@ ll_coercion_type(LL_Module *module, DTYPE dtype, ISZ_T size, ISZ_T reg_size)
   return parts[0] ? parts[0] : parts[1];
 }
 
+// AOCC Begin
+char *get_flang_version()
+{
+#if defined(FLANG_VERSION)
+    return FLANG_VERSION;
+#else
+    return "INVALID\.VERSION";
+#endif
+}
+
+size_t 
+get_flang_major_version()
+{
+#if defined(FLANG_VERSION_MAJOR)
+    return atoi(FLANG_VERSION_MAJOR);
+#else
+    return 10;  // default llvm version
+#endif    
+}
+
+size_t 
+get_flang_minor_version()
+{
+#if defined(FLANG_VERSION_MINOR)
+    return atoi(FLANG_VERSION_MINOR);
+#else
+    return 0;  // default llvm version
+#endif    
+}
+// AOCC End
+

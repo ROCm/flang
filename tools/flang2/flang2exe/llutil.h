@@ -1634,4 +1634,7 @@ void set_llasm_output_file(FILE *file);
 #endif // OMP_OFFLOAD_AMD
 // AOCC End
 #endif // OMP_OFFLOAD_LLVM
+char* get_flang_version() ; 
+size_t get_flang_major_version();  
+size_t get_flang_minor_version(); 
 #endif
