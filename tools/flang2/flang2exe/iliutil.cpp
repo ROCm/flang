@@ -5899,17 +5899,17 @@ addarth(ILI *ilip)
   case IL_QCMP:
     newili.opnd[2] = ilip->opnd[2];
 #ifdef TM_QCMPZ
-    if (ncons == 2 && isquad0(cons2))
-      return ad2ili(IL_QCMPZ, op1, (int)ilip->opnd[2]);
-    if (ncons == 1 && is_quad0(cons1))
-      return ad2ili(IL_QCMPZ, op2, commute_cc(ilip->opnd[2]));
+  if (ncons == 2 && is_quad0(cons2))
+    return ad2ili(IL_QCMPZ, op1, (int)ilip->opnd[2]);
+  if (ncons == 1 && is_quad0(cons1))
+    return ad2ili(IL_QCMPZ, op2, commute_cc(ilip->opnd[2]));
 #else
     if (ncons == 1 && is_quad0(cons1))
       return ad3ili(IL_QCMP, op2, op1,
                     commute_cc(CCRelationILIOpnd(ilip, 2)));
 #endif
     if (ncons == 2 && ILI_OPC(op1) == IL_QUAD) {
-      ilix = DblIsSingle(cons2);
+      ilix = QuadIsSingle(cons2);
       if (ilix) {
         return ad3ili(IL_FCMP, ILI_OPND(op1, 1), ilix, ilip->opnd[2]);
       }
