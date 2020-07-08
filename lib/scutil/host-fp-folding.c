@@ -262,15 +262,6 @@ fold_real32_from_real64(float32_t *res, const float64_t *arg)
 }
 
 enum fold_status
-fold_real32_from_real128(float32_t *res, const float128_t *arg)
-{
-  fenv_t saved_fenv;
-  set_up_floating_point_environment(&saved_fenv);
-  *res = *arg;
-  return check_and_restore_floating_point_environment(&saved_fenv);
-}
-
-enum fold_status
 fold_real32_negate(float32_t *res, const float32_t *arg)
 {
   fenv_t saved_fenv;
@@ -499,15 +490,6 @@ fold_real64_from_uint64(float64_t *res, const uint64_t *arg)
 
 enum fold_status
 fold_real64_from_real32(float64_t *res, const float32_t *arg)
-{
-  fenv_t saved_fenv;
-  set_up_floating_point_environment(&saved_fenv);
-  *res = *arg;
-  return check_and_restore_floating_point_environment(&saved_fenv);
-}
-
-enum fold_status
-fold_real64_from_real128(float64_t *res, const float128_t *arg)
 {
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
@@ -934,6 +916,25 @@ fold_real128_log10(float128_t *res, const float128_t *arg)
   *res = log10l(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+
+enum fold_status
+fold_real32_from_real128(float32_t *res, const float128_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real64_from_real128(float64_t *res, const float128_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
 // AOCC begin
 // To support quad precision REAL128 type
 #else
@@ -1186,6 +1187,25 @@ fold_real128_log10(__float128 *res, const __float128 *arg)
   *res = log10l(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
+
+enum fold_status
+fold_real32_from_real128(float32_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real64_from_real128(float64_t *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = *arg;
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
 
 // AOCC end
 #endif

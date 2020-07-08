@@ -1252,6 +1252,13 @@ conv_cmplx_ilm(int ast, int ilm, int dtype)
     ilmimag = plower("oS", "RCON", lowersym.realzero);
     ilm = plower("oii", "CMPLX", ilm, ilmimag);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ilm = plower("oi", "SNGL", ilm);
+    ilmimag = plower("oS", "RCON", lowersym.realzero);
+    ilm = plower("oii", "CMPLX", ilm, ilmimag);
+    break;
+  // AOCC end
   case TY_CMPLX:
     break;
   case TY_DCMPLX:

@@ -10,7 +10,7 @@
         integer, parameter :: N = 2
         REAL (16), dimension(N) :: rslts
         COMPLEX (16) :: ca = (1.0q0, 2.0q0)
-        REAL (kind = 16), dimension(N) :: expect = (/ 1.0000000000000000000000000000000000E+0000, 2.0000000000000000000000000000000000E+0000/)
+        REAL (kind = 16), dimension(N) :: expect = (/ 1.0q0, 2.0q0/)
         rslts(1) = REAL (ca)
         PRINT *, rslts(1)
         rslts(2) = QIMAG (ca)
