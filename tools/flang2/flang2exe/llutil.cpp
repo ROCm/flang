@@ -18,6 +18,9 @@
  *  Date of Modification : 24 Feb 2020
  *
  *  Last modified: June 2020
+ *
+ * Support for comparing quad complex
+ * Date of Modification : 10 July 2020
  */
 
 /**
@@ -2113,27 +2116,15 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conv
         fprintf(LLVMFIL, ", %s ", ctype);
         write_constant_value(0, float_type, CONVAL2G(sptr), 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
-      } else if (DTY(DTYPEG(sptr)) == TY_DCMPLX) {
+      } else if (DTY(DTYPEG(sptr)) == TY_DCMPLX ||
+                 DTY(DTYPEG(sptr)) == TY_QCMPLX) {        //AOCC
         ctype = llvm_fc_type(DTYPEG(CONVAL1G(sptr)));
         fprintf(LLVMFIL, "<{ %s ", ctype);
         write_constant_value(CONVAL1G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, ", %s ", ctype);
         write_constant_value(CONVAL2G(sptr), 0, 0, 0,0,0, uns);
-        fprintf(LLVMFIL, "}>");
-      // AOCC begin
-      } else {
-        ctype = llvm_fc_type(DTYPEG(CONVAL1G(sptr)));
-        fprintf(LLVMFIL, "<{ %s ", ctype);
-        write_constant_value(CONVAL1G(sptr), 0, 0, 0,0,0, uns);
-        fprintf(LLVMFIL, ", %s ", ctype);
-        write_constant_value(CONVAL2G(sptr), 0, 0, 0,0,0, uns);
-        fprintf(LLVMFIL, "<{ %s ", ctype);
-        write_constant_value(CONVAL3G(sptr), 0, 0, 0,0,0, uns);
-        fprintf(LLVMFIL, ", %s ", ctype);
-        write_constant_value(CONVAL4G(sptr), 0, 0, 0,0,0, uns);
         fprintf(LLVMFIL, "}>");
       }
-      // AOCC end
     } else {
       assert(conval0 == 0 && conval1 == 0,
              "write_constant_value(): non zero struct", 0, ERR_Fatal);
