@@ -14099,6 +14099,7 @@ exprjump(ILI_OP opc)
   case IL_ICJMP:
   case IL_FCJMP:
   case IL_DCJMP:
+  case IL_QCJMP:
   case IL_ACJMP:
   case IL_UICJMP:
     return true;
