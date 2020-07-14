@@ -1216,21 +1216,8 @@ is_intrinsic_opr(int val, SST *stktop, SST *lop, SST *rop, int tkn_alias)
       list = make_list(lop, rop);
       mkident(stktop);
       SST_SYMP(stktop, -func);
-      if (val == OP_ST){
-        //AOCC Begin
-        /*Standard requires copy of rhs taken before call*/
-        if (rop != NULL) {
-          copy = sym_get_scalar("copy","copy_rhs",SST_DTYPEG(rop));
-          copy_rhs = (SST *)getitem(0, sizeof(SST));
-          mkident(copy_rhs);
-          SST_SYMP(copy_rhs,copy);
-          copy_ast = assign(copy_rhs,rop);
-          add_stmt(copy_ast);
-          list = make_list(lop, copy_rhs);
-        }
-        //AOCC End
+      if (val == OP_ST)
         subr_call2(stktop, list, 1);
-      }
       else {
         SST_ASTP(stktop, mk_id(func));
         SST_DTYPEP(stktop, DTYPEG(func));
