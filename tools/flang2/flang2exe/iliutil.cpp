@@ -5497,6 +5497,13 @@ addarth(ILI *ilip)
     // AOCC end
 
   case IL_FSINH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("sinhf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "sinhf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_sinh, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -5524,6 +5531,13 @@ addarth(ILI *ilip)
     return ilix;
 
   case IL_DSINH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+      (void)mk_prototype("sinh", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "sinh", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_sinh, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
@@ -5550,6 +5564,13 @@ addarth(ILI *ilip)
     return ilix;
 
   case IL_FCOSH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("coshf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "coshf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_cosh, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -5576,6 +5597,13 @@ addarth(ILI *ilip)
     return ilix;
 
   case IL_DCOSH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+      (void)mk_prototype("cosh", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "cosh", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_cosh, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
@@ -5620,7 +5648,7 @@ addarth(ILI *ilip)
     break;
   //AOCC End
 
-	//AOCC Begin
+  //AOCC Begin
   case IL_QACOSH:
     (void)mk_prototype("acoshq", "f pure", DT_QUAD, 1, DT_QUAD);
     ilix = ad_func(IL_DFRQP, IL_QJSR, "acoshq", 1, op1);
@@ -5638,6 +5666,13 @@ addarth(ILI *ilip)
     break;
 	//AOCC End
   case IL_FTANH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("tanhf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "tanhf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tanh, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -5650,6 +5685,13 @@ addarth(ILI *ilip)
     return ilix;
 
   case IL_DTANH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+      (void)mk_prototype("tanh", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "tanh", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tanh, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
@@ -6749,6 +6791,13 @@ addarth(ILI *ilip)
       return ad1altili(opc, op1, ilix);
   //AOCC End
   case IL_FATAN:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("atanf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atanf", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (ncons == 1) {
       xfatan(con1v2, &res.numi[1]);
       goto add_rcon;
@@ -6787,6 +6836,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_DATAN:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("atan", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (ncons == 1) {
       GETVAL64(num1, cons1);
       xdatan(num1.numd, res.numd);
@@ -6827,6 +6883,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_FACOS:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("acosf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "acosf", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_acos, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -6839,6 +6902,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_FASIN:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("asinf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "asinf", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_asin, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -6851,6 +6921,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_FATAN2:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("atan2f", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2f", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_atan2, &funcsptr, 1, false, DT_FLOAT, 2, DT_FLOAT,
                         DT_FLOAT);
@@ -6864,6 +6941,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_DACOS:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("acos", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "acos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_acos, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
@@ -6876,6 +6960,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_DASIN:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("asin", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "asin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_asin, &funcsptr, 1, false, DT_DBLE, 2, DT_DBLE,
                         DT_DBLE);
@@ -6889,6 +6980,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_DATAN2:
+ #ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("atan2", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_atan2, &funcsptr, 1, false, DT_DBLE, 2, DT_DBLE,
                         DT_DBLE);
