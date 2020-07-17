@@ -9695,27 +9695,35 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
     *insert = '\0';
     int temp_idlen = curr_token - cp;
     intrinsic_type = keyword(look_ahead, &normalkw, &temp_idlen, sig_blanks);
-    if(intrinsic_type){
-      *tkntyp = intrinsic_type;
-      if(*curr_token == ')'){
-        *idlen = index + 5;
-      }
-      else if (*(curr_token - 1) == ')'){
-        *idlen = index + 4;
-      }
-      else if (*(curr_token - 1) == '(' || *curr_token == '('){
-        while(index != strlen(cp)){
-          if(*curr_token == ')')
-            paran_count++;
-          index++;
-          if(paran_count == 2)
-            break;
-          *curr_token++;
+    switch(intrinsic_type){
+      case TK_INTEGER:
+      case TK_REAL:
+      case TK_CHARACTER:
+      case TK_LOGICAL:
+      case TK_COMPLEX:
+        *tkntyp = intrinsic_type;
+        if(*curr_token == ')'){
+          *idlen = index + 5;
         }
-        if(paran_count == 2)
-          currc[index + 3] = ' ';
-          *idlen = space+strlen(look_ahead)+5;
-      }
+        else if (*(curr_token - 1) == ')'){
+          *idlen = index + 4;
+        }
+        else if (*(curr_token - 1) == '(' || *curr_token == '('){
+          while(index != strlen(cp)){
+            if(*curr_token == ')')
+              paran_count++;
+            index++;
+            if(paran_count == 2)
+              break;
+            *curr_token++;
+          }
+          if(paran_count == 2)
+            currc[index + 3] = ' ';
+            *idlen = space+strlen(look_ahead)+5;
+        }
+        break;
+      default:
+        return;
     }
   }
 }
