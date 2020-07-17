@@ -11,18 +11,13 @@
  *
  *
  * Changes to DISubrange metadata for representing assumed shape arrays.
- * Date of Modification: May 2020
+ * Changes to DIModule metadata for representing Fortran modules.
+ * Date of Modification: July 2020
  */
 
 /**
    \file
    \brief Main module to generate LLVM debug informations using metadata
- */
-/* 
- * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
- * Notified per clause 4(b) of the license.
- *
- * Last modified : June 2020
  */
 
 #include "lldebug.h"
@@ -349,7 +344,7 @@ lldbg_create_compile_unit_mdnode(LL_DebugInfo *db, int lang_tag, char *filename,
 
 static LL_MDRef
 lldbg_create_module_mdnode(LL_DebugInfo *db, LL_MDRef _, char *name,
-                           LL_MDRef scope, int lineno)
+                           LL_MDRef scope, LL_MDRef file, int lineno)
 {
   LLMD_Builder mdb;
   char *module_name, *pname, *pmname;
@@ -376,6 +371,10 @@ lldbg_create_module_mdnode(LL_DebugInfo *db, LL_MDRef _, char *name,
     llmd_add_i32(mdb, make_dwtag(db, DW_TAG_module)); // tag
     llmd_add_md(mdb, scope);                          // scope
     llmd_add_string(mdb, module_name);                // name
+    if (ll_feature_debug_info_ver11(&db->module->ir)) {
+      llmd_add_md(mdb, file);                         // file
+      llmd_add_i32(mdb, lineno);                      // lineno
+    }
   } else {
     llmd_set_class(mdb, LL_DINamespace);
     llmd_add_i32(mdb, make_dwtag(db, tag));
@@ -1727,7 +1726,8 @@ lldbg_emit_file(LL_DebugInfo *db, int findex)
     lldbg_create_file_mdnode(db, get_filename(findex), get_currentdir(),
                              cu_mnode, findex);
   }
-  return get_file_mdnode(db, findex);
+  return ll_feature_debug_info_need_file_descriptions(&db->module->ir)
+	  ? get_filedesc_mdnode(db, 1) : get_file_mdnode(db, findex);
 }
 
 static LL_MDRef
@@ -2231,13 +2231,18 @@ lldbg_emit_module_mdnode(LL_DebugInfo *db, int sptr)
 {
   LL_MDRef module_mdnode;
 
-  lldbg_emit_file(db, 1);
+  LL_MDRef file_mdnode = lldbg_emit_file(db, 1);
   module_mdnode =
       ll_get_module_debug(db->module->module_debug_map, SYMNAME(sptr));
   if (!LL_MDREF_IS_NULL(module_mdnode))
     return module_mdnode;
+  // Do not create mdnode if line number is not present.
+  if (!FUNCLINEG(sptr))
+    return ll_get_md_null();
+
   return lldbg_create_module_mdnode(db, ll_get_md_null(), SYMNAME(sptr),
-                                    lldbg_emit_compile_unit(db), 1);
+                                    lldbg_emit_compile_unit(db),
+				    file_mdnode, FUNCLINEG(sptr));
 }
 
 void

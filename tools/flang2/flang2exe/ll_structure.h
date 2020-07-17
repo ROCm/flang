@@ -11,7 +11,8 @@
  *
  *
  * Changes to DISubrange metadata for representing assumed shape arrays.
- * Date of Modification: May 2020
+ * Changes to DIModule metadata for representing Fortran modules.
+ * Date of Modification: July 2020
  */
 
 #ifndef LL_STRUCTURE_H_
@@ -155,6 +156,7 @@ typedef enum LL_IRVersion {
   LL_Version_7_0 = 70,
   LL_Version_8_0 = 80,
   LL_Version_9_0 = 90,
+  LL_Version_10_0 = 100,
   LL_Version_11_0 = 110,
   LL_Version_trunk = 1023
 } LL_IRVersion;
