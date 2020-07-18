@@ -39,6 +39,9 @@
  *
  * Last modified: May 2020
  *
+ * Support for nearestq and scaleq instrinsic
+ * Date of modification: 18th July 2020
+ *
  */
 
 /**
@@ -4646,18 +4649,26 @@ lower_intrinsic(int ast)
   case I_NEAREST:
     if (DTY(DDTG(A_NDTYPEG(ast))) == TY_REAL) {
       ilm = f90_value_function(mkRteRtnNm(RTE_nearestx), DT_REAL4, args, nargs);
-    } else {
+    } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_DBLE){
       ilm =
           f90_value_function(mkRteRtnNm(RTE_nearestdx), DT_REAL8, args, nargs);
     }
+    else
+      //AOCC
+      ilm = f90_value_function(mkRteRtnNm(RTE_nearestqx), DT_QUAD, args, nargs);
     break;
   case I_SCALE:
     if (DTY(DDTG(A_NDTYPEG(ast))) == TY_REAL) {
       ilm =
           f90_value_function_I2(mkRteRtnNm(RTE_scalex), DT_REAL4, args, nargs);
-    } else {
+    } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_DBLE){
       ilm =
           f90_value_function_I2(mkRteRtnNm(RTE_scaledx), DT_REAL8, args, nargs);
+    }
+    else {
+      //AOCC
+      ilm =
+        f90_value_function_I2(mkRteRtnNm(RTE_scaleqx), DT_QUAD, args, nargs);
     }
     break;
   case I_SET_EXPONENT:

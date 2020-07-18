@@ -69,6 +69,9 @@
  *
  * Last modified: Jun 2020
  *
+ * Support for Nearestq and scaleq intrinsic
+ * Date of Modification: 18th July 2020
+ *
  */
 
 /** \file
@@ -9948,13 +9951,17 @@ ref_pd(SST *stktop, ITEM *list)
       dtyper = DT_LOG;
     if (DTY(dtype2) == TY_REAL)
       ast = mk_binop(OP_GE, ast, mk_cnst(stb.flt0), dtyper);
-    else
+    else if (DTY(dtype2) == TY_DBLE)
       ast = mk_binop(OP_GE, ast, mk_cnst(stb.dbl0), dtyper);
+    else
+      ast = mk_binop(OP_GE, ast, mk_cnst(stb.quad0), dtyper);
     ARG_AST(1) = ast;
     if (DTY(dtype1) == TY_REAL)
       rtlRtn = RTE_nearest;
-    else /* TY_DBLE */
+    else if(DTY(dtype1) == TY_DBLE)/* TY_DBLE */
       rtlRtn = RTE_nearestd;
+    else
+      rtlRtn = RTE_nearestq;        //AOCC
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
     dtyper = SST_DTYPEG(stkp);
     if (shaper && DTY(dtyper) != TY_ARRAY)
@@ -10097,12 +10104,18 @@ ref_pd(SST *stktop, ITEM *list)
         rtlRtn = RTE_scale;
       else
         rtlRtn = RTE_setexp;
-    } else { /* TY_DBLE */
+    } else if (DTY(dtype1) == TY_DBLE){ /* TY_DBLE */
       if (pdtype == PD_scale)
         rtlRtn = RTE_scaled;
       else
         rtlRtn = RTE_setexpd;
     }
+    //AOCC Begin
+    else {
+      if (pdtype == PD_scale)
+        rtlRtn = RTE_scaleq;
+    }
+    //AOCC End
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
     break;
 

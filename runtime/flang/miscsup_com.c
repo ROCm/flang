@@ -11,6 +11,9 @@
  *
  * Support for TRAILZ intrinsic.
  *  Month of Modification: July 2019
+ *
+ * Support for NEARESTQ and SCALEQ intrinsic
+ * Date of Modification: 18th July 2020
  */
 
 
@@ -4615,7 +4618,32 @@ ENTF90(NEARESTD, nearestd)(__REAL8_T *d, __LOG_T *sign)
 {
   return ENTF90(NEARESTDX, nearestdx)(*d, *sign);
 }
+//AOCC Begin
+__REAL16Q_T
+ENTF90(NEARESTQX, nearestqx)(__REAL16Q_T q, __LOG_T sign)
+{
+  __REAL16Q_SPLIT x;
 
+  x.q = q;
+  if (x.q == 0.0) {
+    x.i.h = (sign & 1) ? 0x00100000000000000000000000000000 : 0x00800000000000003fff000000000000;
+    x.i.l = 0;
+  } else {
+    if ((x.ll.h >> 52 & 0x7FF) != 0x7FF) { /* not nan or inf */
+      if ((x.q < 0) ^ (sign & GET_DIST_MASK_LOG))
+        ++x.ll.h;
+      else
+        --x.ll.h;
+    }
+  }
+  return x.q;
+}
+__REAL16Q_T
+ENTF90(NEARESTQ, nearestq)(__REAL16Q_T *q, __LOG_T *sign)
+{
+  return ENTF90(NEARESTQX, nearestqx)(*q, *sign);
+}
+//AOCC End
 __REAL4_T
 ENTF90(RRSPACINGX, rrspacingx)(__REAL4_T f)
 {
@@ -4735,6 +4763,40 @@ ENTF90(SCALED, scaled)(__REAL8_T *d, void *i, __INT_T *size)
   return *d * x.d;
 }
 
+//AOCC Begin
+__REAL16Q_T
+ENTF90(SCALEQX, scaleqx)(__REAL16Q_T q, __INT_T i)
+{
+  int e;
+  __REAL8_SPLIT x;
+
+  e = 1024 + i;
+  if (e < 0)
+    e = 0;
+  else if (e > 2047)
+    e = 2047;
+  x.i.h = e << 20;
+  x.i.l = 0;
+  return q * (x.d/2);
+}
+
+__REAL16Q_T
+ENTF90(SCALEQ, scaleq)(__REAL16Q_T *q, void *i, __INT_T *size)
+{
+  int e;
+  __REAL8_SPLIT x;
+
+  e =  + I8(__fort_varying_int)(i, size);
+  if (e < 0)
+    e = 0;
+  else if (e > 2047)
+    e = 2047;
+  x.i.h = e << 20;
+  x.i.l = 0;
+  return *q * (x.d/2);
+}
+//AOCC End
+
 __REAL4_T
 ENTF90(SETEXPX, setexpx)(__REAL4_T f, __INT_T i)
 {
@@ -4822,7 +4884,6 @@ ENTF90(SETEXPD, setexpd)(__REAL8_T *d, void *i, __INT_T *size)
   x.i.l = 0;
   return x.d * y.d;
 }
-
 __REAL4_T
 ENTF90(SPACINGX, spacingx)(__REAL4_T f)
 {

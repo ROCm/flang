@@ -15,6 +15,9 @@
  * Last modified: Feb 2020
  * Last Modified: Jun 2020
  *
+ * 
+ * Added IM_QFUNC
+ * Date of modification: 18th July 2020
  */
 
 /**
@@ -3403,6 +3406,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_IFUNC:
   case IM_RFUNC:
   case IM_DFUNC:
+  case IM_QFUNC:        //AOCC
   case IM_CFUNC:
   case IM_CDFUNC:
   case IM_PFUNC:
@@ -4516,6 +4520,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DVFUNCA:
     ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
     break;
+  //AOCC Begin
+  case IM_QFUNC:
+    ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
+    break;
+  //AOCC End
   case IM_CFUNC:
   case IM_CFUNCA:
   case IM_PCFUNCA:

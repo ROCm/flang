@@ -17,6 +17,9 @@
  *   Month of Modification: July 2019
  * Added support for quad precision
  *   Last modified: Feb 2020
+ *
+ * Support for NEARESTQ and SCALEQ INTRINSIC
+ * Date of modification: !8th July 2020
  */
 
 /**
@@ -1007,14 +1010,18 @@ print_ast(int ast)
     case I_NEAREST:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_nearest;
-      else
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_DBLE)
         rtlRtn = RTE_nearestd;
+      else
+        rtlRtn = RTE_nearestq;        //AOCC
       goto make_func_name;
     case I_SCALE:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_scale;
-      else
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_DBLE)
         rtlRtn = RTE_scaled;
+      else
+        rtlRtn = RTE_scaleq;          //AOCC
       goto make_func_name;
     case I_SET_EXPONENT:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)

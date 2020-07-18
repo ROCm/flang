@@ -29,6 +29,9 @@
  *
  * Support for TRAILZ intrinsic.
  *  Month of Modification: July 2019
+ *
+ * Support for Nearestq and scaleq
+ * Date of modification: 18th July 2020
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -288,6 +291,10 @@ typedef enum {
   RTE_nearestd,
   RTE_nearestdx,
   RTE_nearestx,
+  //AOCC Begin
+  RTE_nearestq,
+  RTE_nearestqx,
+  //AOCC End
   RTE_nlena,
   RTE_nlentrim,
   // AOCC Begin
@@ -354,6 +361,10 @@ typedef enum {
   RTE_scale,
   RTE_scaled,
   RTE_scaledx,
+  //AOCC Begin
+  RTE_scaleq,
+  RTE_scaleqx,
+  //AOCC End
   RTE_scalex,
   RTE_scana,
   RTE_sect,
