@@ -2224,12 +2224,11 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conv
     return;
 #endif
   case LL_FP128:
-#if 0
     if (sptr) {
       num[0] = CONVAL1G(sptr);
       num[1] = CONVAL2G(sptr);
-      num[0] = CONVAL1G(sptr);
-      num[1] = CONVAL2G(sptr);
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
     } else {
       num[0] = conval0;
       num[1] = conval1;
@@ -2244,11 +2243,10 @@ write_constant_value(int sptr, LL_Type *type, INT conval0, INT conval1, INT conv
     /* also check for -0 */
     else if (num[0] == 0x80000000 && num[1] == 0x00000000)
       sprintf(d, "-0.00000000e+00");
-    /* remember to make room for /0 */
-    fprintf(LLVMFIL, "%s", d);
+    fprintf(LLVMFIL, "0xL%08x%08x%08x%08x", CONVAL3G(sptr), CONVAL4G(sptr),
+                    CONVAL1G(sptr), CONVAL2G(sptr));
     return;
-#endif
-#if 1
+#if 0
     assert(sptr, "write_constant_value(): fp128 constant without sptr", 0, ERR_Fatal);
     fprintf(LLVMFIL, "0xL%08x%08x%08x%08x", CONVAL3G(sptr), CONVAL4G(sptr),
             CONVAL1G(sptr), CONVAL2G(sptr));
