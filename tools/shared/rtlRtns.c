@@ -30,6 +30,8 @@
  * Added support for quad precision
  *  Last modified: Feb 2020
  *
+ * Support for nearestq and scaleq
+ * Date of Modification: 18th July 2020
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -284,6 +286,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"nearestd", "", false, ""},
     {"nearestdx", "", false, ""},
     {"nearestx", "", false, ""},
+    //AOCC Begin
+    {"nearestq", "", false, ""},
+    {"nearestqx", "", false, ""},
+    //AOCC End
     {"nlena", "", true, ""},
     {"nlentrim", "", false, ""},
     // AOCC Begin
@@ -350,6 +356,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"scale", "", false, ""},
     {"scaled", "", false, ""},
     {"scaledx", "", false, ""},
+    //AOCC Begin
+    {"scaleq", "", false, ""},
+    {"scaleqx", "", false, ""},
+    //AOCC End
     {"scalex", "", false, ""},
     {"scana", "", false, "k"},
     {"sect", "", true, ""},

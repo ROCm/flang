@@ -10,6 +10,8 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Added __REAL16Q_SPLIT
+ * Date of Modification: 18th July 2020 
  */
 
 /**
@@ -208,6 +210,18 @@ typedef union {
     __INT4_T l, k, j, h;
   } i;
 } __REAL16_SPLIT;
+
+//AOCC Begin
+typedef union {
+  __REAL16Q_T q;
+  struct {
+    __INT8_T l, h;
+  } ll;
+  struct {
+    __INT4_T l, k, j, h;
+  } i;
+} __REAL16Q_SPLIT;
+//AOCC End
 
 /* default fortran types (type you get if you just say integer, real,
    etc.  */
