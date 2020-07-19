@@ -569,6 +569,7 @@ static int distchunk;
 static int mp_iftype;
 static ISZ_T kernel_do_nest;
 static LOGICAL has_team = FALSE;
+LOGICAL has_target = FALSE;
 
 
 static LOGICAL any_pflsr_private = FALSE;
@@ -8909,6 +8910,7 @@ begin_combine_constructs(BIGINT64 construct)
   LOGICAL do_enter = FALSE;
 
   has_team = FALSE;
+  has_target = FALSE;
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   combinedMode = get_omp_combined_mode(construct);
   if (flg.omptarget) {
@@ -9025,6 +9027,9 @@ begin_combine_constructs(BIGINT64 construct)
     DI_BPAR(doif) = emit_bpar();
     par_push_scope(FALSE);
     begin_parallel_clause(sem.doif_depth);
+    if (BT_TARGET & construct && !has_team) {
+      has_target = TRUE;
+    }
   }
   if (BT_PAR & construct) {
     if (do_enter) {
