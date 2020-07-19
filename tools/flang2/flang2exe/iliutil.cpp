@@ -6704,6 +6704,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_FTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("tanf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "tanf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tan, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -6738,6 +6745,13 @@ addarth(ILI *ilip)
 #endif
 
   case IL_DTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("tan", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "tan", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tan, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);

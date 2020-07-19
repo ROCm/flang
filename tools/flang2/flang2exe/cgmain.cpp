@@ -13314,16 +13314,18 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "sqrt", 4) == 0) ||
          (strncmp(fn_name, "sin", 3) == 0) ||
          (strncmp(fn_name, "cos", 3) == 0) ||
+         (strncmp(fn_name, "tanf", 4) == 0) ||
+         (strncmp(fn_name, "tan", 3) == 0) ||
          (strncmp(fn_name, "pow", 3) == 0) ||
          (strncmp(fn_name, "exp", 3) == 0) ||
          (strncmp(fn_name, "log", 3) == 0) ||
          (strncmp(fn_name, "log10", 5) == 0) ||
          (strncmp(fn_name, "sinhf", 5) == 0) ||
-         (strncmp(fn_name, "sinh", 5) == 0) ||
+         (strncmp(fn_name, "sinh", 4) == 0) ||
          (strncmp(fn_name, "coshf", 5) == 0) ||
-         (strncmp(fn_name, "cosh", 5) == 0) ||
+         (strncmp(fn_name, "cosh", 4) == 0) ||
          (strncmp(fn_name, "tanhf", 5) == 0) ||
-         (strncmp(fn_name, "tanh", 5) == 0) ||
+         (strncmp(fn_name, "tanh", 4) == 0) ||
          (strncmp(fn_name, "atanf", 5) == 0) ||
          (strncmp(fn_name, "atan", 4) == 0) ||
          (strncmp(fn_name, "acosf", 5) == 0) ||
