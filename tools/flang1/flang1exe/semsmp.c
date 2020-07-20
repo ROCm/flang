@@ -10,7 +10,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Last Modified: April 2020
+ * Last Modified: July 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -10757,6 +10757,11 @@ static LOGICAL use_atomic_for_reduction(int d)
 {
 #ifdef OMP_OFFLOAD_LLVM
   if(flg.omptarget && DI_IN_NEST(d, DI_TARGET) ) {
+    // AOCC Begin
+    if (DI_IN_NEST(d, DI_PARDO) && !teams_ast) {
+      return TRUE;
+    }
+    // AOCC End
     if(DI_IN_NEST(d, DI_PARDO) ||
         DI_IN_NEST(d, DI_TARGTEAMSDISTPARDO))
       return OPT_OMP_ATOMIC;
