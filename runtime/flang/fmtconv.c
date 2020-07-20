@@ -66,7 +66,6 @@ static char *__fortio_fmt_z(unsigned int);
 #define PP_REAL4(i) (__fortio_chk_f((__REAL4_T *)(i)))
 #define PP_REAL8(i) (*(__REAL8_T *)(i))
 #define PP_REAL16(i) (*(__REAL16_T *)(i))
-#define PP_REAL16Q(i) (*(__REAL16Q_T *)(i))         // AOCC
 
 static int field_overflow;
 
@@ -152,14 +151,8 @@ __fortio_default_convert(char *item, int type,
   case __REAL16:
     width = REAL16_W;
     (void)
-       #ifdef LONG_DOUBLE_FLOAT128
         __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
                       1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
-       #endif
-       // AOCC begin
-        __fortio_fmt_e((__BIGREAL16Q_T)PP_REAL16Q(item), width, REAL16_D, REAL16_E,
-                      1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
-       // AOCC end
     break;
   case __WORD16:
     assert(0);
@@ -205,7 +198,7 @@ __fortio_default_convert(char *item, int type,
     *p++ = '(';
     width = REAL16_W;
     (void)
-        __fortio_fmt_e((__BIGREAL16Q_T)PP_REAL16Q(item), width, REAL16_D, REAL16_E,
+        __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
                       1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     if (dc_flag == TRUE)
@@ -213,7 +206,7 @@ __fortio_default_convert(char *item, int type,
     else
       *p++ = ',';
     (void)
-        __fortio_fmt_e((__BIGREAL16Q_T)PP_REAL16Q(item + 16), width, REAL16_D,
+        __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item + 16), width, REAL16_D,
                       REAL16_E, 1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     *p++ = ')';
@@ -697,14 +690,8 @@ __fortio_fmt_g(__BIGREAL_T val, int w, int d, int e, int sf, int type,
   return conv_bufp;
 }
 
-#ifdef LONG_DOUBLE_FLOAT128
 extern char *
 __fortio_fmt_e(__BIGREAL16_T val, int w, int d, int e, int sf, int type,
-              bool plus_flag, bool e_flag, bool dc_flag, int code, int round)
-#endif
-// AOCC parameter: __BIGREAL16Q_T
-extern char *
-__fortio_fmt_e(__BIGREAL16Q_T val, int w, int d, int e, int sf, int type,
               bool plus_flag, bool e_flag, bool dc_flag, int code, int round)
 {
   int sign_char;
@@ -733,9 +720,10 @@ __fortio_fmt_e(__BIGREAL16Q_T val, int w, int d, int e, int sf, int type,
   }
 #ifdef LONG_DOUBLE_FLOAT128
   fpdat.cvtp = __io_ecvt(val, newd, &fpdat.exp, &fpdat.sign, newrnd);
-#endif
+#else
   // AOCC
   fpdat.cvtp = __io_qcvt(val, newd, &fpdat.exp, &fpdat.sign, newrnd);
+#endif
   fpdat.ndigits = strlen(fpdat.cvtp);
   fpdat.curp = fpdat.buf;
 

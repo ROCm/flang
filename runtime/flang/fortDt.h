@@ -157,10 +157,11 @@ typedef unsigned short __REAL2_T; /* 45 __REAL2      real*2 */
 typedef float __REAL4_T; /* 27 __REAL4      real*4 */
 
 typedef double __REAL8_T; /* 28 __REAL8      real*8 */
-
+#ifdef LONG_DOUBLE_FLOAT128
 typedef double __REAL16_T; /* 29 __REAL16     real*16 */
-
-typedef __float128 __REAL16Q_T; /* AOCC: 29 __REAL16     real*16 */
+#else
+typedef __float128  __REAL16_T; /* 29 __REAL16     real*16 */
+#endif
 
 typedef struct {
   __REAL4_T r, i;
@@ -283,7 +284,7 @@ typedef __LOG4_T __BIGLOG_T;
 #define __BIGREAL __REAL8
 #define __BIGCPLX __CPLX16
 typedef __REAL8_T __BIGREAL_T;
-typedef __REAL16Q_T __BIGREAL16Q_T;    // AOCC
+typedef __REAL16_T __BIGREAL16_T;    // AOCC
 typedef __CPLX16_T __BIGCPLX_T;
 #define BIGREAL_IS_LONGDOUBLE 0
 

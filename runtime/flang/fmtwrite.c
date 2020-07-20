@@ -1765,7 +1765,7 @@ fw_writenum(int code, char *item, int type)
 {
   __BIGINT_T ival;
   __BIGREAL_T dval;
-  __BIGREAL16Q_T qval;    // AOCC
+  __BIGREAL16_T qval;    // AOCC
 #undef IS_INT
   DBLINT64 i8val;
 #define IS_INT(t) (t == __BIGINT || t == __INT8)
@@ -1863,10 +1863,8 @@ fw_writenum(int code, char *item, int type)
     }
     break;
   case __REAL16:
-#ifdef LONG_DOUBLE_FLOAT128
     qval = *(__REAL16_T *)item;
-#endif
-    qval = *(__REAL16Q_T *)item;   // AOCC
+    dval = qval;
     ty = __REAL16;
     w = REAL16_W;
     d = REAL16_D;

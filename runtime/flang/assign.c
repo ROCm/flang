@@ -32,7 +32,6 @@
 #define PP_REAL4(i) (*(__REAL4_T *)(i))
 #define PP_REAL8(i) (*(__REAL8_T *)(i))
 #define PP_REAL16(i) (*(__REAL16_T *)(i))
-#define PP_REAL16Q(i) (*(__REAL16Q_T *)(i))   // AOCC
 
 static __BIGINT_T to_bigint(AVAL *);
 static __BIGREAL_T to_bigreal(AVAL *);
