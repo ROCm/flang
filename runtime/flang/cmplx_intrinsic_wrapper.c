@@ -133,3 +133,14 @@ __complex128 cqconj(__complex128 res, __float128 real, __float128 imag)
   return res;
 }
 
+__complex128 cqabs(__complex128 res, __float128 real, __float128 imag)
+{
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = cabsq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
