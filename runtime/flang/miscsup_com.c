@@ -4619,10 +4619,10 @@ ENTF90(NEARESTD, nearestd)(__REAL8_T *d, __LOG_T *sign)
   return ENTF90(NEARESTDX, nearestdx)(*d, *sign);
 }
 //AOCC Begin
-__REAL16Q_T
-ENTF90(NEARESTQX, nearestqx)(__REAL16Q_T q, __LOG_T sign)
+__REAL16_T
+ENTF90(NEARESTQX, nearestqx)(__REAL16_T q, __LOG_T sign)
 {
-  __REAL16Q_SPLIT x;
+  __REAL16_SPLIT x;
 
   x.q = q;
   if (x.q == 0.0) {
@@ -4638,8 +4638,8 @@ ENTF90(NEARESTQX, nearestqx)(__REAL16Q_T q, __LOG_T sign)
   }
   return x.q;
 }
-__REAL16Q_T
-ENTF90(NEARESTQ, nearestq)(__REAL16Q_T *q, __LOG_T *sign)
+__REAL16_T
+ENTF90(NEARESTQ, nearestq)(__REAL16_T *q, __LOG_T *sign)
 {
   return ENTF90(NEARESTQX, nearestqx)(*q, *sign);
 }
@@ -4764,8 +4764,8 @@ ENTF90(SCALED, scaled)(__REAL8_T *d, void *i, __INT_T *size)
 }
 
 //AOCC Begin
-__REAL16Q_T
-ENTF90(SCALEQX, scaleqx)(__REAL16Q_T q, __INT_T i)
+__REAL16_T
+ENTF90(SCALEQX, scaleqx)(__REAL16_T q, __INT_T i)
 {
   int e;
   __REAL8_SPLIT x;
@@ -4780,8 +4780,8 @@ ENTF90(SCALEQX, scaleqx)(__REAL16Q_T q, __INT_T i)
   return q * (x.d/2);
 }
 
-__REAL16Q_T
-ENTF90(SCALEQ, scaleq)(__REAL16Q_T *q, void *i, __INT_T *size)
+__REAL16_T
+ENTF90(SCALEQ, scaleq)(__REAL16_T *q, void *i, __INT_T *size)
 {
   int e;
   __REAL8_SPLIT x;
