@@ -4647,9 +4647,9 @@ lower_intrinsic(int ast)
     }
     break;
   case I_NEAREST:
-    if (DTY(DDTG(A_NDTYPEG(ast))) == TY_REAL) {
+    if (DTY(DDTG(A_NDTYPEG(ARGT_ARG(args, 0)))) == TY_REAL) {
       ilm = f90_value_function(mkRteRtnNm(RTE_nearestx), DT_REAL4, args, nargs);
-    } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_DBLE){
+    } else if (DTY(DDTG(A_NDTYPEG(ARGT_ARG(args, 0)))) == TY_DBLE){
       ilm =
           f90_value_function(mkRteRtnNm(RTE_nearestdx), DT_REAL8, args, nargs);
     }
