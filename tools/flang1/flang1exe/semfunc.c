@@ -69,7 +69,7 @@
  *
  * Last modified: Jun 2020
  *
- * Support for Nearestq and scaleq intrinsic
+ * Support for real*16 intrinsics
  * Date of Modification: 18th July 2020
  *
  */
@@ -9090,7 +9090,7 @@ ref_pd(SST *stktop, ITEM *list)
       default:
         interr("PD_spacing, pdtype", pdtype, 3);
       }
-    } else { /* TY_DBLE */
+    } else if (DTY(dtype1) == TY_DBLE) { /* TY_DBLE */
       switch (pdtype) {
       case PD_fraction:
         rtlRtn = RTE_fracd;
@@ -9103,6 +9103,20 @@ ref_pd(SST *stktop, ITEM *list)
         break;
       default:
         interr("PD_spacingd, pdtype", pdtype, 3);
+      }
+    } else {
+      switch (pdtype) {
+      case PD_fraction:
+        rtlRtn = RTE_fracq;
+        break;
+      case PD_rrspacing:
+        rtlRtn = RTE_rrspacingq;
+        break;
+      case PD_spacing:
+        rtlRtn = RTE_spacingq;
+        break;
+      default:
+        interr("PD_spacingq, pdtype", pdtype, 3);
       }
     }
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
@@ -10108,6 +10122,8 @@ ref_pd(SST *stktop, ITEM *list)
     else {
       if (pdtype == PD_scale)
         rtlRtn = RTE_scaleq;
+      else
+        rtlRtn = RTE_setexpq;
     }
     //AOCC End
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);

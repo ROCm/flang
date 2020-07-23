@@ -7407,8 +7407,10 @@ _huge(DTYPE dtype)
       atoxq(C90_HUGE, &val[0], strlen(C90_HUGE)); /* 7777777777777776 */
     } else {
       /* 1.189731495357231765085759326628007016E+4932 */
-      val[0] = 0x7ffeffffffffffff;
-      val[1] = 0xffffffffffffffff;
+      val[0] = 0x7ffeffff;
+      val[1] = 0xffffffff;
+      val[2] = 0xffffffff;
+      val[3] = 0xffffffff;
     }
     goto const_quad_val;
 // AOCC end

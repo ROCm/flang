@@ -12,7 +12,7 @@
  * Support for TRAILZ intrinsic.
  *  Month of Modification: July 2019
  *
- * Support for NEARESTQ and SCALEQ intrinsic
+ * Support for REAL*16 intrinsics
  * Date of Modification: 18th July 2020
  */
 
@@ -4561,6 +4561,24 @@ ENTF90(FRACDX, fracdx)(__REAL8_T d)
 __REAL8_T
 ENTF90(FRACD, fracd)(__REAL8_T *d) { return ENTF90(FRACDX, fracdx)(*d); }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(FRACQX, fracqx)(__REAL16_T q)
+{
+  __REAL16_SPLIT x;
+
+  x.q = q;
+  if (x.q != 0.0) {
+    x.i.h &= ~0x7FFD0000;
+    x.i.h |= 0x3FFE0000;
+  }
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(FRACQ, fracq)(__REAL16_T *q) { return ENTF90(FRACQX, fracqx)(*q); }
+//AOCC End
+
 /** \brief NEAREST(X,S) has a value equal to the machine representable number
  * distinct from X and nearest to it in the direction of the infinity
  * with the same sign as S.
@@ -4695,6 +4713,34 @@ ENTF90(RRSPACINGD, rrspacingd)(__REAL8_T *d)
   return ENTF90(RRSPACINGDX, rrspacingdx)(*d);
 }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(RRSPACINGQX, rrspacingqx)(__REAL16_T q)
+{
+  __REAL16_SPLIT x, y;
+  int e;
+
+  x.q = q;
+  if (x.q == 0)
+    return 0;
+  y.i.h = (x.i.h & 0x7FFF << 20) ^ 0x7FFF << 20;
+  y.i.l = 0;
+  x.q *= y.q;
+  if (x.q < 0)
+    x.q = -x.q;
+  e = 111 + 16383;
+  y.i.h = e << 80;
+  y.i.l = 0;
+  x.q *= y.q;
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(RRSPACINGQ, rrspacingq)(__REAL16_T *q)
+{
+  return ENTF90(RRSPACINGQX, rrspacingqx)(*q);
+}
+//AOCC End
 __REAL4_T
 ENTF90(SCALEX, scalex)(__REAL4_T f, __INT_T i)
 {
@@ -4777,6 +4823,8 @@ ENTF90(SCALEQX, scaleqx)(__REAL16_T q, __INT_T i)
     e = 32767;
   x.i.h = e << 80;
   x.i.l = 0;
+  x.i.j = 0;
+  x.i.k = 0;
   return q * x.q;
 }
 
@@ -4793,6 +4841,8 @@ ENTF90(SCALEQ, scaleq)(__REAL16_T *q, void *i, __INT_T *size)
     e = 32767;
   x.i.h = e << 80;
   x.i.l = 0;
+  x.i.j = 0;
+  x.i.k = 0;
   return *q * x.q;
 }
 //AOCC End
@@ -4884,6 +4934,56 @@ ENTF90(SETEXPD, setexpd)(__REAL8_T *d, void *i, __INT_T *size)
   x.i.l = 0;
   return x.d * y.d;
 }
+
+//AOCC Begin
+__REAL16_T
+ENTF90(SETEXPQX, setexpqx)(__REAL16_T q, __INT_T i)
+{
+  int e;
+  __REAL16_SPLIT x, y;
+
+  y.q = q;
+  if (y.q == 0.0)
+    return y.q;
+  y.i.h &= ~0x7FFF0000;
+  y.i.h |= 0x3FFF0000;
+  y.i.k = 0;
+  y.i.j = 0;
+  y.i.l = 0;
+  e = 16382 + i;
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 80;
+  x.i.l = 0;
+  x.i.k = 0;
+  x.i.j = 0;
+  return x.q * y.q;
+}
+
+__REAL16_T
+ENTF90(SETEXPQ, setexpq)(__REAL16_T *q, void *i, __INT_T *size)
+{
+  int e;
+  __REAL16_SPLIT x, y;
+
+  y.q = *q;
+  if (y.q == 0.0)
+    return y.q;
+  y.i.h &= ~0x7FFF0000;
+  y.i.h |= 0x3FFF0000;
+  e = 16382 + I8(__fort_varying_int)(i, size);
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 80;
+  x.i.l = 0;
+  return x.q * y.q;
+}
+//AOCC End
+
 __REAL4_T
 ENTF90(SPACINGX, spacingx)(__REAL4_T f)
 {
@@ -4927,6 +5027,29 @@ ENTF90(SPACINGD, spacingd)(__REAL8_T *d)
 {
   return ENTF90(SPACINGDX, spacingdx)(*d);
 }
+
+//AOCC Begin
+__REAL16_T
+ENTF90(SPACINGQX, spacingqx)(__REAL16_T q)
+{
+  int e;
+  __REAL16_SPLIT x;
+
+  x.q = q;
+  e = ((x.i.h >> 80) & 0x7FFF) - 112;
+  if (e < 1)
+    e = 1;
+  x.i.h = e << 80;
+  x.i.l = 0;
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(SPACINGQ, spacingq)(__REAL16_T *q)
+{
+  return ENTF90(SPACINGQX, spacingqx)(*q);
+}
+//AOCC End
 
 #ifndef DESC_I8
 
