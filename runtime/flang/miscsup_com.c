@@ -4629,7 +4629,7 @@ ENTF90(NEARESTQX, nearestqx)(__REAL16_T q, __LOG_T sign)
     x.i.h = (sign & 1) ? 0x00100000000000000000000000000000 : 0x00800000000000003fff000000000000;
     x.i.l = 0;
   } else {
-    if ((x.ll.h >> 52 & 0x7FF) != 0x7FF) { /* not nan or inf */
+    if ((x.ll.h >> 112 & 0x7FFF) != 0x7FFF) { /* not nan or inf */
       if ((x.q < 0) ^ (sign & GET_DIST_MASK_LOG))
         ++x.ll.h;
       else
@@ -4768,32 +4768,32 @@ __REAL16_T
 ENTF90(SCALEQX, scaleqx)(__REAL16_T q, __INT_T i)
 {
   int e;
-  __REAL8_SPLIT x;
+  __REAL16_SPLIT x;
 
-  e = 1024 + i;
+  e = 16383 + i;
   if (e < 0)
     e = 0;
-  else if (e > 2047)
-    e = 2047;
-  x.i.h = e << 20;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 80;
   x.i.l = 0;
-  return q * (x.d/2);
+  return q * x.q;
 }
 
 __REAL16_T
 ENTF90(SCALEQ, scaleq)(__REAL16_T *q, void *i, __INT_T *size)
 {
   int e;
-  __REAL8_SPLIT x;
+  __REAL16_SPLIT x;
 
-  e =  + I8(__fort_varying_int)(i, size);
+  e = 16383 + I8(__fort_varying_int)(i, size);
   if (e < 0)
     e = 0;
-  else if (e > 2047)
-    e = 2047;
-  x.i.h = e << 20;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 80;
   x.i.l = 0;
-  return *q * (x.d/2);
+  return *q * x.q;
 }
 //AOCC End
 
