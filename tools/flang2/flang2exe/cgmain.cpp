@@ -3070,6 +3070,17 @@ write_verbose_type(LL_Type *ll_type)
   print_token(ll_type->str);
 }
 
+/* whether it is llvm debug intrinsic */
+static bool is_llvm_debug_instrinsic(const char *fun_name) {
+  if (!fun_name)
+    return false;
+
+  return (
+      !strncmp(fun_name, "@llvm.dbg.value", strlen("@llvm.dbg.value")) ||
+      !strncmp(fun_name, "@llvm.dbg.declare", strlen("@llvm.dbg.declare")) ||
+      !strncmp(fun_name, "@llvm.dbg.addr", strlen("@llvm.dbg.addr")));
+}
+
 /**
    \brief Write the instruction list to the LLVM IR output file
  */
@@ -3604,8 +3615,18 @@ write_instructions(LL_Module *module)
                ERR_Fatal);
       }
     }
-    if (!ISNVVMCODEGEN &&
-        (!LL_MDREF_IS_NULL(instrs->dbg_line_op) && !dbg_line_op_written)) {
+    /*
+     *  Do not dump debug location here if
+     *  - it is NULL
+     *  - it is already written (dbg_line_op_written) or
+     *  - it is a (non debug intrinsic) prolog instruction (debug location same
+     * as Subprogram's)
+     */
+    if (!(ISNVVMCODEGEN || LL_MDREF_IS_NULL(instrs->dbg_line_op) ||
+          dbg_line_op_written ||
+          ((instrs->dbg_line_op ==
+            lldbg_get_subprogram_line(module->debug_info)) &&
+           !is_llvm_debug_instrinsic(instrs->operands[0].string)))) {
       print_dbg_line(instrs->dbg_line_op);
     }
 #if DEBUG
