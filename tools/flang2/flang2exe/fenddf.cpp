@@ -86,7 +86,7 @@ short ilm_opcode[NOPC][2][NTYPE + 1] = {
                  IM_KTOK, 0, 0},
      /* VxTOI */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* xTOx */ {0, IM_ITOI, 0, 0, IM_ITOI, IM_ITOI, IM_ITOI, IM_KTOK, IM_RTOR, IM_RTOR,
-                 IM_DTOD, 0, IM_CTOC, IM_CTOC, IM_CDTOCD, IM_ITOI, IM_ITOI, IM_ITOI,
+                 IM_DTOD, IM_QTOQ, IM_CTOC, IM_CTOC, IM_CDTOCD, IM_ITOI, IM_ITOI, IM_ITOI,
                  IM_KTOK, IM_CQTOCQ, 0},
      /* VxTOx */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {/* CMP */ {0, IM_UICMP, IM_UDICMP, 0, IM_ICMP, IM_ICMP, IM_ICMP, IM_KCMP, IM_RCMP,

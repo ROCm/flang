@@ -584,7 +584,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
       ILM_RESULT(curilm) = ilix;
       return;
     }
-    exp_qjsr("__mth_i_cqpowk", DT_QCMPLX, ilmp, curilm);
+    exp_qjsr("__mth_i_cqpowi", DT_QCMPLX, ilmp, curilm);
     return;
   case IM_CQTOCQ:
     if (XBIT(70, 0x40000000) && XBIT_NEW_MATH_NAMES_CMPLX) {

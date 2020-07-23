@@ -9454,6 +9454,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_UKNEG:
     operand = gen_binary_expr(ilix, I_SUB);
     break;
+  case IL_QNEG:           // AOCC
   case IL_DNEG:
   case IL_FNEG:
 #ifdef LONG_DOUBLE_FLOAT128
@@ -10031,6 +10032,13 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         "expq",
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
         make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  case IL_QPOWQ:
+    operand = gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD));
+    operand->next =
+        gen_llvm_expr(ILI_OPND(ilix, 2), make_lltype_from_dtype(DT_QUAD));
+    operand = gen_call_pgocl_intrinsic(
+        "pow_q", operand, make_lltype_from_dtype(DT_QUAD), NULL, I_CALL);
     break;
   // AOCC end
   case IL_FAND: {

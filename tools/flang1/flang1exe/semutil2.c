@@ -8897,6 +8897,7 @@ cmp_acl(DTYPE dtype, ACL *x, ACL *y, bool want_max, bool back)
     break;
   case TY_INT8:
   case TY_DBLE:
+  case TY_QUAD:   // AOCC
     cmp = const_fold(OP_CMP, x->conval, y->conval, dtype);
     break;
   default:

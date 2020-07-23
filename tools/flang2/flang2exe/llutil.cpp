@@ -2318,6 +2318,7 @@ bool should_preserve_param(const DTYPE dtype) {
   case TY_QUAD:
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:
   case TY_CHAR:
     return true;
   // unsupported cases
@@ -2357,8 +2358,13 @@ OPERAND *make_param_op(SPTR sptr) {
                             CONVAL1G(CONVAL1G(sptr)), CONVAL2G(CONVAL1G(sptr)));
     break;
   case TY_QUAD:
+    oper = make_constval_opL(make_lltype_from_dtype(dtype),
+                            CONVAL1G(CONVAL1G(sptr)), CONVAL2G(CONVAL1G(sptr)),
+                            CONVAL3G(CONVAL1G(sptr)), CONVAL4G(CONVAL1G(sptr)));
+    break;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:   // AOCC
     oper = make_constsptr_op((SPTR)CONVAL1G(sptr));
     break;
   case TY_CHAR:

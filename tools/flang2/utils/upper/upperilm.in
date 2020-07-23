@@ -193,7 +193,7 @@ CQSQRT	ilm
 CQST	ilm	ilm
 CQSUB	ilm	ilm
 CQTOCQ	ilm	ilm
-#CQTOI	ilm	ilm
+CQTOI	ilm	ilm
 #CQTOK	ilm	ilm
 #CQTOUDI	ilm
 #CQUFUNC/CQFUNC	num	sym	args
@@ -632,7 +632,7 @@ QCMPLX	ilm	ilm
 QIMAG	ilm
 #QTAND	ilm
 #QTANH	ilm
-#QTOD	ilm	ilm
+QTOQ	ilm	ilm
 #QTOI	ilm	ilm
 #QTOK	ilm	ilm
 QTOUDI	ilm

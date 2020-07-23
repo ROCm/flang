@@ -1869,6 +1869,8 @@ convert_cnst(int cnst, int newtyp)
     } else if (from == TY_INT8 || from == TY_LOG8) {
       num1[0] = CONVAL1G(sptr);
       num1[1] = CONVAL2G(sptr);
+      num1[2] = CONVAL3G(sptr);
+      num1[3] = CONVAL4G(sptr);
       xqflt64(num1, num);
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
@@ -1876,6 +1878,8 @@ convert_cnst(int cnst, int newtyp)
       xqfloat(CONVAL2G(sptr), num);
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
+      num[2] = stb.quad1;
+      num[3] = stb.quad2;
     } else {
       switch (from) {
       case TY_REAL:
@@ -9252,6 +9256,7 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         break;
       // AOCC begin
       case TY_QUAD:
+        xdble(oldval, num);
         num1[0] = oldval;
         num1[1] = stb.dbl0;
         break;
@@ -9317,13 +9322,17 @@ cngcon(INT oldval, int oldtyp, int newtyp)
     } else if (from == TY_INT8 || from == TY_LOG8) {
       num1[0] = CONVAL1G(oldval);
       num1[1] = CONVAL2G(oldval);
-      xdflt64(num1, num);
-      num[0] = getcon(num, DT_REAL8);
+      xqflt64(num1, num);
+      num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
+      num[2] = stb.quad1;
+      num[3] = stb.quad2;
     } else if (TY_ISINT(from)) {
-      xdfloat(oldval, num);
-      num[0] = getcon(num, DT_REAL8);
+      xqfloat(oldval, num);
+      num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
+      num[2] = stb.quad1;
+      num[3] = stb.quad2;
     } else {
       switch (from) {
       case TY_REAL:
@@ -9332,6 +9341,7 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         num[1] = stb.quad0;
         break;
       case TY_DBLE:
+        xquad(oldval, num);
         num[0] = oldval;
         num[1] = stb.quad0;
         break;

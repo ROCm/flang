@@ -2592,6 +2592,11 @@ Double precision compare with result of true or false.
 .SI vector fadd lat(5:4)
 
 .\" AOCC begin
+.IL QPOWQ qplnk qplnk
+Quad raised to a quad power.
+.AT arth null qp cse
+.CG notCG
+
 .IL QCMP qplnk qplnk stc
 Quad precision compare with result of true or false.
 .AT arth null ir cse

@@ -4671,7 +4671,8 @@ ref_intrin(SST *stktop, ITEM *list)
        * real/dble
        */
 
-      dtype = dtype == DT_CMPLX ? stb.user.dt_real : DT_DBLE;
+      dtype = dtype == DT_CMPLX ? stb.user.dt_real : dtype == DT_DCMPLX
+                                ? DT_DBLE : DT_QUAD;
 
     else /* treat like typical type conversion intrinsic */
       paramct = 1;
@@ -4797,8 +4798,10 @@ ref_intrin(SST *stktop, ITEM *list)
 
         if (DTY(dtype) == TY_REAL)
           conval = getcon(num1, DT_CMPLX);
-        else
+        if (DTY(dtype) == TY_DBLE)
           conval = getcon(num1, DT_DCMPLX);
+        else
+          conval = getcon(num1, DT_QCMPLX);
 
         goto const_return;
       }
@@ -7376,6 +7379,11 @@ ref_pd(SST *stktop, ITEM *list)
     } else if (dtype1 == DT_DBLE) {
       (void)mkexpr(ARG_STK(0));
       dtyper = DT_DBLE;
+    // AOCC begin
+    } else if (dtype1 == DT_QUAD) {
+      (void)mkexpr(ARG_STK(0));
+      dtyper = DT_QUAD;
+    // AOCC end
     } else {
       goto bad_args;
     }

@@ -2696,6 +2696,13 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.pow.f64", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
       return ilix;
+      // AOCC Begin
+    case IL_QPOWQ:
+      (void)mk_prototype("powq", "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
+      ilix = ad_func(IL_qpfunc, IL_QJSR, "powq", 2, op1, op2);
+      ilix = ad2altili(opc, op1, op2, ilix);
+      return ilix;
+      // AOCC End
     case IL_FPOWF:
       (void)mk_prototype("llvm.pow.f32", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.pow.f32", 2, op1, op2);
@@ -12287,6 +12294,7 @@ prilitree(int i)
 #ifdef IL_KPOWK
   case IL_KPOWK:
 #endif
+  case IL_QPOWQ:
   case IL_DPOWK:
   case IL_DPOWD:
   case IL_DPOWI:

@@ -4149,7 +4149,6 @@ lower_intrinsic(int ast)
   case I_DSQRT:
   case I_CSQRT:
   case I_CDSQRT:
-  //case I_CQSQRT:
     ilm = intrin_name("SQRT", ast, in_r_D_C_CD);
     break;
 

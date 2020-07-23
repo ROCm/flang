@@ -255,6 +255,8 @@ Returns double precision real part of a double complex value.
 .AT spec
 .OP MVDP r rp1 iv-1
 .\" AOCC begin
+.IL QTOQ arth lnk lnk
+.OP QPOWQ r p1 p2
 .IL CQTOCQ arth lnk lnk
 .AT spec dcmplx
 .IL QREAL arth lnk
