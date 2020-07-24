@@ -4647,28 +4647,24 @@ lower_intrinsic(int ast)
     }
     break;
   case I_NEAREST:
-    if (DTY(DDTG(A_NDTYPEG(ARGT_ARG(args, 0)))) == TY_REAL) {
+    if (DTY(DDTG(A_NDTYPEG(ast))) == TY_REAL) {
       ilm = f90_value_function(mkRteRtnNm(RTE_nearestx), DT_REAL4, args, nargs);
-    } else if (DTY(DDTG(A_NDTYPEG(ARGT_ARG(args, 0)))) == TY_DBLE){
-      ilm =
-          f90_value_function(mkRteRtnNm(RTE_nearestdx), DT_REAL8, args, nargs);
-    }
-    else
-      //AOCC
+    } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_QUAD) {
       ilm = f90_value_function(mkRteRtnNm(RTE_nearestqx), DT_QUAD, args, nargs);
+    } else {
+      ilm = f90_value_function(mkRteRtnNm(RTE_nearestdx), DT_REAL8, args, nargs);
+    }
     break;
   case I_SCALE:
     if (DTY(DDTG(A_NDTYPEG(ast))) == TY_REAL) {
       ilm =
           f90_value_function_I2(mkRteRtnNm(RTE_scalex), DT_REAL4, args, nargs);
+    } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_QUAD){
+      ilm =
+        f90_value_function_I2(mkRteRtnNm(RTE_scaleqx), DT_QUAD, args, nargs);
     } else if (DTY(DDTG(A_NDTYPEG(ast))) == TY_DBLE){
       ilm =
           f90_value_function_I2(mkRteRtnNm(RTE_scaledx), DT_REAL8, args, nargs);
-    }
-    else {
-      //AOCC
-      ilm =
-        f90_value_function_I2(mkRteRtnNm(RTE_scaleqx), DT_QUAD, args, nargs);
     }
     break;
   case I_SET_EXPONENT:
