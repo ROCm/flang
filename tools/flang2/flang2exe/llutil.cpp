@@ -4033,6 +4033,11 @@ get_ftn_static_lltype(SPTR sptr)
   if (DESCARRAYG(sptr) && CLASSG(sptr))
     return make_ptr_lltype(get_ftn_typedesc_lltype(sptr));
 
+#ifdef OMP_OFFLOAD_LLVM
+  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
+    return make_lltype_from_dtype(DTYPEG(sptr));
+  }
+#endif
   name = get_llvm_name(sptr);
   sprintf(tname, "struct%s", name);
 

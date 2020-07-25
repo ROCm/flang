@@ -1132,6 +1132,7 @@ ll_make_tgt_register_requires()
   SPTR sptr;
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
@@ -1181,9 +1182,7 @@ ll_make_tgt_register_lib2()
   assert(tptr && tptr2 && tptr3 && tptr4,
          "OpenMP Offload structures are not found.", 0, ERR_Fatal);
   // AOCC end
-
-  dtype_entry =
-      tgt_offload_entry_type; // ll_make_tgt_offload_entry("__tgt_offload_entry");
+  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry");
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
       ll_make_tgt_bin_descriptor("__tgt_bin_desc", dtype_entry, dtype_devimage);
