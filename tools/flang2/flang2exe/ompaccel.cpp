@@ -136,6 +136,10 @@ _long_unsigned(int lilix, int *dt, bool *punsigned, DTYPE dtype)
   } else if (dty == TY_DBLE) {
     *dt = 4;
   // AOCC begin
+  } else if (dty == TY_CMPLX) {
+    *dt = 5;
+  } else if (dty == TY_DCMPLX) {
+    *dt = 6;
   } else if (dty == TY_QUAD) {
     *dt = 7;
   // AOCC end
@@ -193,7 +197,9 @@ mk_ompaccel_ldsptr(SPTR sptr)
         return ad3ili(IL_LDA, ili, nme, MSZ_PTR);
       // AOCC Begin
       } else if (dtype == DT_CMPLX) {
-        return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F8);
+        return ad3ili(IL_LDSCMPLX, ili, nme, MSZ_F8);
+      } else if (dtype == DT_DCMPLX) {
+        return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
       // AOCC End
       } else {
         if (sz == 8)
@@ -279,6 +285,8 @@ mk_ompaccel_store(int ili_value, DTYPE dtype, int nme, int ili_address)
     case DT_CMPLX:
       return ad4ili(IL_STSCMPLX, ili_value, ili_address, nme, MSZ_F8);
     // AOCC End
+    case DT_DCMPLX:
+      return ad4ili(IL_STDCMPLX, ili_value, ili_address, nme, MSZ_F16);
     case DT_REAL:
       return ad4ili(IL_STSP, ili_value, ili_address, nme, MSZ_F4);
       break;

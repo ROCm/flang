@@ -1789,12 +1789,6 @@ ldst_msz(DTYPE dtype, ILI_OP *ld, ILI_OP *st, MSZ *siz)
     *ld = IL_LDDP;
     *st = IL_STDP;
     break;
-    // AOCC begin
-  case MSZ_F16:
-    *ld = IL_LDQP;
-    *st = IL_STQP;
-    break;
-    // AOCC end
   default:
     break;
   }
