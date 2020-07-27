@@ -4582,5 +4582,10 @@ get_flang_minor_version()
     return 0;  // default llvm version
 #endif    
 }
-// AOCC End
 
+size_t
+get_llvm_ir_version()
+{
+  return (10 * get_flang_major_version());
+}
+// AOCC End

@@ -30,6 +30,8 @@
 
 /* clang-format off */
 
+extern size_t get_llvm_ir_version();
+
 typedef enum LL_Op {
   LL_ADD,      LL_FADD,        LL_SUB,      LL_FSUB,         LL_MUL,
   LL_FMUL,     LL_UDIV,        LL_SDIV,     LL_UREM,         LL_SREM,
@@ -401,7 +403,7 @@ ll_feature_debug_info_ver90(const LL_IRFeatures *feature)
    \brief Version 11.0 debug metadata
  */
 INLINE static bool ll_feature_debug_info_ver11(const LL_IRFeatures *feature) {
-  return feature->version >= LL_Version_11_0;
+  return (get_llvm_ir_version() >= LL_Version_11_0);
 }
 
 /**
@@ -503,7 +505,7 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 #define ll_feature_debug_info_ver70(f) ((f)->version >= LL_Version_7_0)
 #define ll_feature_debug_info_ver80(f) ((f)->version >= LL_Version_8_0)
 #define ll_feature_debug_info_ver90(f) ((f)->version >= LL_Version_9_0)
-#define ll_feature_debug_info_ver11(f) ((f)->version >= LL_Version_11_0)
+#define ll_feature_debug_info_ver11(f) (get_llvm_ir_version() >= LL_Version_11_0)
 #define ll_feature_three_argument_ctor_and_dtor(f) \
   ((f)->version >= LL_Version_9_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
