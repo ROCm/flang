@@ -18,7 +18,7 @@
  * Added support for quad precision
  *   Last modified: Feb 2020
  *
- * Support for NEARESTQ and SCALEQ INTRINSIC
+ * Support for real*16 intrinsics
  * Date of modification: !8th July 2020
  */
 
@@ -989,7 +989,9 @@ print_ast(int ast)
     case I_FRACTION:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_frac;
-      else
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_fracq;
+      else                            //AOCC
         rtlRtn = RTE_fracd;
       goto make_func_name;
     case I_IACHAR:
@@ -998,36 +1000,42 @@ print_ast(int ast)
     case I_RRSPACING:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_rrspacing;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_rrspacingq;
       else
-        rtlRtn = RTE_rrspacingd;
+        rtlRtn = RTE_rrspacingd;      //AOCC
       goto make_func_name;
     case I_SPACING:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_spacing;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_spacingq;
       else
-        rtlRtn = RTE_spacingd;
+        rtlRtn = RTE_spacingd;        //AOCC
       goto make_func_name;
     case I_NEAREST:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_nearest;
-      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_DBLE)
-        rtlRtn = RTE_nearestd;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_nearestq;
       else
-        rtlRtn = RTE_nearestq;        //AOCC
+        rtlRtn = RTE_nearestd;        //AOCC
       goto make_func_name;
     case I_SCALE:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_scale;
-      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_DBLE)
-        rtlRtn = RTE_scaled;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_scaleq;
       else
-        rtlRtn = RTE_scaleq;          //AOCC
+        rtlRtn = RTE_scaled;          //AOCC
       goto make_func_name;
     case I_SET_EXPONENT:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_setexp;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_setexpq;
       else
-        rtlRtn = RTE_setexpd;
+        rtlRtn = RTE_setexpd;         //AOCC
       goto make_func_name;
     case I_VERIFY:
       argt = A_ARGSG(ast);

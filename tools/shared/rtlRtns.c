@@ -30,7 +30,7 @@
  * Added support for quad precision
  *  Last modified: Feb 2020
  *
- * Support for nearestq and scaleq
+ * Support for real*16 intrinsics
  * Date of Modification: 18th July 2020
  */
 
@@ -152,6 +152,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"frac", "", false, ""},
     {"fracd", "", false, ""},
     {"fracdx", "", false, ""},
+    {"fracq", "", false, ""},
+    {"fracqx", "", false, ""},
     {"fracx", "", false, ""},
     {"get_cmda", "", false, ""},
     {"get_cmd_arga", "", false, ""},
@@ -349,6 +351,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"rrspacing", "", false, ""},
     {"rrspacingd", "", false, ""},
     {"rrspacingdx", "", false, ""},
+    {"rrspacingq", "", false, ""},
+    {"rrspacingqx", "", false, ""},
     {"rrspacingx", "", false, ""},
     {"rtn_name", "", false, ""},
     {"same_intrin_type_as", "", true, "k"},
@@ -377,6 +381,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"setexp", "", false, ""},
     {"setexpd", "", false, ""},
     {"setexpdx", "", false, ""},
+    {"setexpq", "", false, ""},
+    {"setexpqx", "", false, ""},
     {"setexpx", "", false, ""},
     {"shape", "", true, "k"},
     {"shape1", "", true, ""},
@@ -388,6 +394,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"spacing", "", false, ""},
     {"spacingd", "", false, ""},
     {"spacingdx", "", false, ""},
+    {"spacingq", "", false, ""},
+    {"spacingqx", "", false, ""},
     {"spacingx", "", false, ""},
     {"stopa", "", false, ""},
     {"stop08a", "", false, ""},

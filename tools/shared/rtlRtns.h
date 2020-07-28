@@ -30,7 +30,7 @@
  * Support for TRAILZ intrinsic.
  *  Month of Modification: July 2019
  *
- * Support for Nearestq and scaleq
+ * Support for real*16 intrinsics
  * Date of modification: 18th July 2020
  */
 
@@ -157,6 +157,8 @@ typedef enum {
   RTE_frac,
   RTE_fracd,
   RTE_fracdx,
+  RTE_fracq,
+  RTE_fracqx,
   RTE_fracx,
   RTE_get_cmda,
   RTE_get_cmd_arga,
@@ -354,6 +356,8 @@ typedef enum {
   RTE_rrspacing,
   RTE_rrspacingd,
   RTE_rrspacingdx,
+  RTE_rrspacingq,
+  RTE_rrspacingqx,
   RTE_rrspacingx,
   RTE_rtn_name,
   RTE_same_intrin_type_as,
@@ -382,6 +386,8 @@ typedef enum {
   RTE_setexp,
   RTE_setexpd,
   RTE_setexpdx,
+  RTE_setexpq,
+  RTE_setexpqx,
   RTE_setexpx,
   RTE_shape,
   RTE_shape1,
@@ -393,6 +399,8 @@ typedef enum {
   RTE_spacing,
   RTE_spacingd,
   RTE_spacingdx,
+  RTE_spacingq,
+  RTE_spacingqx,
   RTE_spacingx,
   RTE_stopa,
   RTE_stop08a,

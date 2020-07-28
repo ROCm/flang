@@ -756,7 +756,12 @@ __fortio_fmt_e(__BIGREAL16_T val, int w, int d, int e, int sf, int type,
       conv_e(d, e, sf, e_flag);
   #endif
       // AOCC
-      conv_e(d, e, fpdat.exp, e_flag);
+      if(fpdat.exp > 0 && fpdat.exp >= d+e)
+        conv_e(d, e, sf, e_flag);
+      else if(fpdat.exp < 0 && (fpdat.exp >= -d-e || fpdat.exp <= -d))
+        conv_e(d, e, sf, e_flag);
+      else
+        conv_e(d, e, fpdat.exp, e_flag);
     }
     if (fpdat.sign) /* must check after conv_e */
       sign_char = '-';
