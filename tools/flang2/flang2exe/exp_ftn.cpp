@@ -562,20 +562,6 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     exp_qjsr("__mth_i_cdpowcd", DT_DCMPLX, ilmp, curilm);
     return;
   // AOCC begin
-  case IM_CQABS:
-    if (XBIT(70, 0x40000000)) {
-      int r = ILM_RESULT(ILM_OPND(ilmp, 1));
-      op1 = ad1ili(IL_QCMPLX2IMAG, r);
-      op2 = ad1ili(IL_QCMPLX2REAL, r);
-      tmp = ad1ili(IL_NULL, 0);
-      tmp = ad3ili(IL_DAQP, op1, QP(0), tmp);
-      tmp = ad3ili(IL_DAQP, op2, QP(1), tmp);
-      op3 = mk_prototype("cqabs", "pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
-      tmp = ad2ili(IL_QJSR, op3, tmp);
-      ILM_RESULT(curilm) = ad2ili(IL_DFRQP, tmp, QP_RETVAL);
-    } else
-      tmp = exp_mac(IM_CQABS, ilmp, curilm);
-    return;
   case IM_CQTOI:
     if (XBIT(70, 0x40000000) && XBIT_NEW_MATH_NAMES_CMPLX) {
       op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -601,6 +587,9 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     return;
   case IM_QCONJG:
     exp_qjsr("cqconj", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQABS:
+    exp_qjsr("cqabs", DT_QCMPLX, ilmp, curilm);
     return;
   // AOCC end
   case IM_CSQRT:
