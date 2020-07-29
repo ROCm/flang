@@ -7512,6 +7512,15 @@ gen_call_expr(int ilix, DTYPE ret_dtype, INSTR_LIST *call_instr, int call_sptr)
   bool intrinsic_modified = false;
   int throw_label = ili_throw_label(ilix);
 
+  // AOCC Begin
+  if (call_sptr) {
+      // create prototypes for quad print functions. otherwise, it will take
+      // double as first argument
+      if (strcmp(SYMNAME(call_sptr),"f90io_sc_q_ldw") == 0) {
+        mk_prototype_llvm("f90io_sc_q_ldw", "f pure", DT_INT, 2, DT_QUAD,DT_INT);
+      }
+  }
+  // AOCC End
   if (call_instr == NULL)
     call_instr = make_instr((throw_label > 0) ? I_INVOKE : I_CALL);
 

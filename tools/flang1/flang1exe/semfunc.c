@@ -5474,6 +5474,9 @@ no_const_fold:
     case DT_REAL8:
       rtlRtn = RTE_dmodulov;
       break;
+    case DT_QUAD:
+      rtlRtn = RTE_qmodulov;
+      break;
     }
     fsptr = sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), (int)INTTYPG(sptr));
     EXTSYMP(sptr, fsptr);

@@ -674,6 +674,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental a p
 .IN .DMODULO 2 D D none -pgf90_dmodulo V
 .AT elemental a p
+.IN ..QMODULO 2 Q Q none -pgf90_qmodulo V
+.AT elemental a p
 .IN .QMODULO 2 Q Q none -pgf90_qmodulo V
 .AT elemental a p
 
