@@ -137,6 +137,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"dfloorv", "", false, "k"},
     {"dmodulev", "", false, ""},
     {"dmodulov", "", false, ""},
+    {"qmodulov", "", false, ""},
     {"errorstop08a_char", "", false, ""},
     {"errorstop08a_int", "", false, ""},
     {"execcmdline", "", false, ""},

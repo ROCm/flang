@@ -142,6 +142,7 @@ typedef enum {
   RTE_dfloorv,
   RTE_dmodulev,
   RTE_dmodulov,
+  RTE_qmodulov,
   RTE_errorstop08a_char,
   RTE_errorstop08a_int,
   RTE_execcmdline,

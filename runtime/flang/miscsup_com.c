@@ -3969,6 +3969,17 @@ ENTF90(DMODULO, dmodulo)(__DBLE_T *x, __DBLE_T *y)
     d += *y;
   return d;
 }
+// AOCC Begin
+__REAL16_T
+ENTF90(QMODULO, qmodulo)(__REAL16_T *x, __REAL16_T *y)
+{
+  __REAL16_T d;
+  d = fmodq(*x, *y);
+  if (d != 0 && ((*x < 0 && *y > 0) || (*x > 0 && *y < 0)))
+    d += *y;
+  return d;
+}
+// AOCC End
 
 __INT4_T
 ENTF90(MODULOv, modulov)(__INT4_T a, __INT4_T p)
@@ -4028,6 +4039,18 @@ ENTF90(DMODULOv, dmodulov)(__DBLE_T x, __DBLE_T y)
     d += y;
   return d;
 }
+
+// AOCC Begin
+__REAL16_T
+ENTF90(QMODULOv, qmodulov)(__REAL16_T x, __REAL16_T y)
+{
+  __REAL16_T d;
+  d = fmodq(x, y);
+  if (d != 0 && ((x < 0 && y > 0) || (x > 0 && y < 0)))
+    d += y;
+  return d;
+}
+// AOCC End
 
 __INT_T
 ENTF90(CEILING, ceiling)(__REAL_T *r)
