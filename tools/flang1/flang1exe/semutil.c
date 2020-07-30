@@ -89,6 +89,8 @@ static bool is_selector(SPTR sptr);
 //AOCC Begin
 static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
 static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
+extern int distribute_doif;
+extern int distribute_pdo_ast;
 //AOCC End
 
 
@@ -6320,6 +6322,12 @@ do_parbegin(DOINFO *doinfo)
   DOVARP(iv, 1);
 
   ast = mk_stmt(A_MP_PDO, 0 /* SST_ASTG(RHS(1)) BLOCKDO */);
+  /* AOCC begin */
+  if(DI_ID(sem.doif_depth) == DI_DISTRIBUTE) {
+    distribute_pdo_ast = ast;
+  }
+  /* AOCC end */
+
   dovar = mk_id(iv);
   A_DOVARP(ast, dovar);
   A_M1P(ast, doinfo->init_expr);
@@ -6917,6 +6925,8 @@ do_end(DOINFO *doinfo)
     sem.close_pdo = TRUE;
     par_pop_scope();
     ast = mk_stmt(A_MP_ENDDISTRIBUTE, 0);
+    distribute_doif = 0; /* AOCC */
+    distribute_pdo_ast = 0; /* AOCC */
     A_LOPP(DI_BDISTRIBUTE(par_doif), ast);
     A_LOPP(ast, DI_BDISTRIBUTE(par_doif));
     (void)add_stmt(ast);
@@ -6940,6 +6950,8 @@ do_end(DOINFO *doinfo)
     par_pop_scope();
     par_pop_scope();
     ast = mk_stmt(A_MP_ENDDISTRIBUTE, 0);
+    distribute_doif = 0; /* AOCC */
+    distribute_pdo_ast = 0; /* AOCC */
     A_LOPP(DI_BDISTRIBUTE(par_doif), ast);
     A_LOPP(ast, DI_BDISTRIBUTE(par_doif));
     (void)add_stmt(ast);

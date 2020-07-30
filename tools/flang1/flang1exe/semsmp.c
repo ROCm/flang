@@ -147,6 +147,8 @@ int reduction_kernel = 0;
 // AOCC End
 #endif
 int teams_ast = 0; // AOCC
+int distribute_pdo_ast = 0; /* AOCC */
+int distribute_doif = 0; /* AOCC */
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -581,6 +583,21 @@ static void add_pragma(int pragmatype, int pragmascope, int pragmaarg);
 
 static int kernel_argnum;
 
+/* AOCC begin */
+/*
+ * Rewrite distribute's sched correctly if under parallel region given that
+ * they're all enclosed in a target region.
+ */
+static void rewrite_distr_sched() {
+  if (target_ast && distribute_doif) {
+    if (DI_SCHED_TYPE(distribute_doif) == DI_SCH_STATIC) {
+      DI_SCHED_TYPE(distribute_doif) = DI_SCH_DIST_STATIC;
+      A_SCHED_TYPEP(distribute_pdo_ast, DI_SCH_DIST_STATIC);
+    }
+  }
+}
+/* AOCC end */
+
 /**
    \brief Semantic analysis for SMP statements.
    \param rednum   reduction number
@@ -666,6 +683,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::=	<par begin> <opt par list>  |
    */
   case MP_STMT1:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PAR, "OMP PARALLEL");
     mp_create_bscope(0);
     DI_BPAR(sem.doif_depth) = emit_bpar();
@@ -827,6 +845,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <pdo begin> <opt par list>  |
    */
   case MP_STMT7:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PDO, "OMP DO");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -917,6 +936,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <paralleldo begin> <opt par list> |
    */
   case MP_STMT14:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PARDO, "OMP PARALLEL DO");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -1762,6 +1782,13 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <distribute begin> <opt par list> |
    */
   case MP_STMT52:
+    /* AOCC begin */
+    if (target_ast && teams_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+            BT_TARGET | BT_TEAMS | BT_DISTRIBUTE));
+    }
+    /* AOCC end */
+
     clause_errchk(BT_DISTRIBUTE, "OMP DISTRIBUTE");
     doif = SST_CVALG(RHS(1));
     sem.expect_do = TRUE;
@@ -1859,6 +1886,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <pardosimd begin> <opt par list> |
    */
   case MP_STMT60:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk((BT_PARDO | BT_SIMD), "OMP PARALLEL DO SIMD");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -8731,6 +8759,7 @@ do_bdistribute(int doif, LOGICAL chk_collapse)
 
   do_dist_schedule(doif, chk_collapse);
   ast = mk_stmt(A_MP_DISTRIBUTE, 0);
+  distribute_doif = doif; /* AOCC */
   DI_BDISTRIBUTE(doif) = ast;
   add_stmt(ast);
 
