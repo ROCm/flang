@@ -3356,6 +3356,13 @@ lldbg_emit_local_variable(LL_DebugInfo *db, SPTR sptr, int findex,
     file_mdnode = get_filedesc_mdnode(db, findex);
   else
     file_mdnode = lldbg_emit_file(db, findex);
+
+  /* If it's an associate statement, associating another variable
+   * take the type of associated variable.*/
+  if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr)))
+    type_mdnode =
+      lldbg_emit_type(db, DTYPEG(REVMIDLNKG(sptr)), sptr, findex, false, false, false);
+  else
   type_mdnode =
       lldbg_emit_type(db, DTYPEG(sptr), sptr, findex, false, false, false);
 #ifdef THISG

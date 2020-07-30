@@ -4918,18 +4918,23 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
       call_op->next->next->next = exprMDOp;
     } else {
       LL_DebugInfo *di = cpu_llvm_module->debug_info;
+      const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
       LL_MDRef md;
       if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir)) {
-        md = lldbg_emit_empty_expression_mdnode(di);
+       /* For associate statement, we have replaced the type to its associated
+	* variable's type. Add a DW_OP_deref so that debugger can show the value.*/
+        if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr)))
+          md = lldbg_emit_expression_mdnode(di, 1, deref);
+        else
+          md = lldbg_emit_empty_expression_mdnode(di);
       } else {
         /* Handle the Fortran allocatable array cases. Emit expression
          * mdnode with single argument of DW_OP_deref to workaround known
          * gdb bug not able to debug array bounds.
          */
-        if (ftn_array_need_debug_info(sptr)) {
-          const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
+        if (ftn_array_need_debug_info(sptr))
           md = lldbg_emit_expression_mdnode(di, 1, deref);
-        } else
+        else
           md = lldbg_emit_empty_expression_mdnode(di);
       }
       call_op->next->next->next = make_mdref_op(md);
