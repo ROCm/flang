@@ -2118,7 +2118,7 @@ emitDINamespace(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
 static void
 emitDIModule(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnd, unsigned mdi)
 {
-  if (11 == get_flang_major_version()) {
+  if (ll_feature_debug_info_ver11(&mod->ir)) {
     emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule_11);
     return;
   }
