@@ -589,8 +589,14 @@ static int kernel_argnum;
  * they're all enclosed in a target region.
  */
 static void rewrite_distr_sched() {
+  int match_sched;
   if (target_ast && distribute_doif) {
-    if (DI_SCHED_TYPE(distribute_doif) == DI_SCH_STATIC) {
+    if (flg.x86_64_omptarget) {
+      match_sched = MP_SCH_STATIC;
+    } else {
+      match_sched = MP_SCH_TEAMS_DIST;
+    }
+    if (DI_SCHED_TYPE(distribute_doif) == match_sched) {
       DI_SCHED_TYPE(distribute_doif) = DI_SCH_DIST_STATIC;
       A_SCHED_TYPEP(distribute_pdo_ast, DI_SCH_DIST_STATIC);
     }
