@@ -149,6 +149,7 @@ int reduction_kernel = 0;
 int teams_ast = 0; // AOCC
 int distribute_pdo_ast = 0; /* AOCC */
 int distribute_doif = 0; /* AOCC */
+int tgt_distribute_ast = 0; /* AOCC */
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -589,6 +590,7 @@ static int kernel_argnum;
  * they're all enclosed in a target region.
  */
 static void rewrite_distr_sched() {
+#ifdef OMP_OFFLOAD_AMD
   int match_sched;
   if (target_ast && distribute_doif) {
     if (flg.x86_64_omptarget) {
@@ -599,8 +601,10 @@ static void rewrite_distr_sched() {
     if (DI_SCHED_TYPE(distribute_doif) == match_sched) {
       DI_SCHED_TYPE(distribute_doif) = DI_SCH_DIST_STATIC;
       A_SCHED_TYPEP(distribute_pdo_ast, DI_SCH_DIST_STATIC);
+      A_SCHED_TYPEP(tgt_distribute_ast, DI_SCH_DIST_STATIC);
     }
   }
+#endif
 }
 /* AOCC end */
 

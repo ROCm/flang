@@ -14,9 +14,7 @@
  *   Date of Modification: December 2018
  *
  * Changes to support AMD GPU Offloading
- * Added code to avoid allocations for implied do inside target region
- *   Date of Modification: 24th October 2019
- *   Date of Modification: 5th November 2019
+ * Last modified : July 2020
  *
  * Changes to emit proper error message when pointer is associated with 
  * a constant
@@ -91,6 +89,7 @@ static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
 static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
 extern int distribute_doif;
 extern int distribute_pdo_ast;
+extern int tgt_distribute_ast;
 //AOCC End
 
 
@@ -6326,6 +6325,9 @@ do_parbegin(DOINFO *doinfo)
   if(DI_ID(sem.doif_depth) == DI_DISTRIBUTE) {
     distribute_pdo_ast = ast;
   }
+  if(DI_ID(sem.doif_depth) == DI_TARGTEAMSDIST) {
+    tgt_distribute_ast = ast;
+  }
   /* AOCC end */
 
   dovar = mk_id(iv);
@@ -6927,6 +6929,7 @@ do_end(DOINFO *doinfo)
     ast = mk_stmt(A_MP_ENDDISTRIBUTE, 0);
     distribute_doif = 0; /* AOCC */
     distribute_pdo_ast = 0; /* AOCC */
+    tgt_distribute_ast = 0; /* AOCC */
     A_LOPP(DI_BDISTRIBUTE(par_doif), ast);
     A_LOPP(ast, DI_BDISTRIBUTE(par_doif));
     (void)add_stmt(ast);
