@@ -1312,7 +1312,7 @@ finish_routine(void)
   const int currFn = GBL_CURRFUNC;
   /***** "{" so vi matches *****/
   print_line("}");
-  llassem_end_func(cpu_llvm_module->debug_info, currFn);
+  llassem_end_func(current_module->debug_info, currFn);
   if (flg.smp) {
     ll_reset_outlined_func();
   }
@@ -1530,7 +1530,7 @@ static void process_params(void) {
         SPTR new_sptr = (SPTR)CONVAL1G(sptr);
         NMPTRP(new_sptr, NMPTRG(sptr));
       } else {
-        LL_DebugInfo *di = cpu_llvm_module->debug_info;
+        LL_DebugInfo *di = current_module->debug_info;
         int fin = BIH_FINDEX(gbl.entbih);
         LL_Type *type = make_lltype_from_dtype(dtype);
         OPERAND *ld = make_operand();
@@ -1676,18 +1676,18 @@ restartConcur:
 #ifdef OMP_OFFLOAD_LLVM
       if(XBIT(232, 0x8))
         targetNVVM = true;
-      if (!ISNVVMCODEGEN && !TEXTSTARTUPG(func_sptr))
+      if (!TEXTSTARTUPG(func_sptr))
 #endif
       {
-        lldbg_emit_subprogram(current_module->debug_info, func_sptr, funcType,
+        if (current_module->debug_info && (BIH_FINDEX(gbl.entbih) != 0)) {
+          lldbg_emit_subprogram(current_module->debug_info, func_sptr, funcType,
                               BIH_FINDEX(gbl.entbih), targetNVVM);
-        lldbg_set_func_ptr(current_module->debug_info, func_ptr);
+          lldbg_set_func_ptr(current_module->debug_info, func_ptr);
+	}
       }
 
-      if (!ISNVVMCODEGEN) {
-        /* FIXME: should this be done for C, C++? */
-        lldbg_reset_dtype_array(current_module->debug_info, DT_DEFERCHAR + 1);
-      }
+      /* FIXME: should this be done for C, C++? */
+      lldbg_reset_dtype_array(current_module->debug_info, DT_DEFERCHAR + 1);
     }
   }
 
@@ -1889,7 +1889,7 @@ restartConcur:
       }
 #endif
 
-      if (!ISNVVMCODEGEN && (flg.debug || XBIT(120, 0x1000))) {
+      if (flg.debug || XBIT(120, 0x1000)) {
         lldbg_emit_line(current_module->debug_info, ILT_LINENO(ilt));
       }
       ilix = ILT_ILIP(ilt);
@@ -2159,9 +2159,9 @@ restartConcur:
 #endif
 
   clear_prescan_complex_list();
-  if (!ISNVVMCODEGEN && (flg.debug || XBIT(120, 0x1000)))
+  if (flg.debug || XBIT(120, 0x1000))
     lldbg_cleanup_missing_bounds(current_module->debug_info,
-                                 BIH_FINDEX(gbl.entbih));
+		                 BIH_FINDEX(gbl.entbih));
   hashmap_clear(llvm_info.homed_args); /* Don't home entry trampoline parms */
   if (processHostConcur)
     print_entry_subroutine(current_module);
@@ -2725,11 +2725,11 @@ write_I_CALL(INSTR_LIST *curr_instr, bool emit_func_signature_for_call)
   }
   {
     const bool wrDbg = true;
-    if (wrDbg && cpu_llvm_module->debug_info &&
-        ll_feature_subprogram_not_in_cu(&cpu_llvm_module->ir) &&
+    if (wrDbg && current_module->debug_info &&
+        ll_feature_subprogram_not_in_cu(&current_module->ir) &&
         LL_MDREF_IS_NULL(curr_instr->dbg_line_op)) {
       /* we must emit !dbg metadata in this case */
-      emit_dbg_from_module(cpu_llvm_module);
+      emit_dbg_from_module(current_module);
       return true;
     }
   }
@@ -3622,7 +3622,7 @@ write_instructions(LL_Module *module)
      *  - it is a (non debug intrinsic) prolog instruction (debug location same
      * as Subprogram's)
      */
-    if (!(ISNVVMCODEGEN || LL_MDREF_IS_NULL(instrs->dbg_line_op) ||
+    if (!(LL_MDREF_IS_NULL(instrs->dbg_line_op) ||
           dbg_line_op_written ||
           ((instrs->dbg_line_op ==
             lldbg_get_subprogram_line(module->debug_info)) &&
@@ -3790,7 +3790,7 @@ make_instr(LL_InstrName instr_name)
   if (flg.debug || XBIT(120, 0x1000)) {
     switch (instr_name) {
     default:
-      iptr->dbg_line_op = lldbg_get_line(cpu_llvm_module->debug_info);
+      iptr->dbg_line_op = lldbg_get_line(current_module->debug_info);
       break;
     case I_NONE:
     case I_DECL:
@@ -4945,7 +4945,7 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
   Curr_Instr->flags |= CALL_INTRINSIC_FLAG;
   Curr_Instr->operands = call_op = make_operand();
   Curr_Instr->dbg_line_op =
-      lldbg_get_var_line(cpu_llvm_module->debug_info, sptr);
+      lldbg_get_var_line(current_module->debug_info, sptr);
   call_op->ot_type = OT_CALL;
   call_op->ll_type = make_void_lltype();
   Curr_Instr->ll_type = call_op->ll_type;
@@ -4954,14 +4954,14 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
   call_op->next = make_metadata_wrapper_op(sptr, llTy);
   call_op->next->flags |= opflag;
   call_op->next->next = make_mdref_op(mdnode);
-  if (ll_feature_dbg_declare_needs_expression_md(&cpu_llvm_module->ir)) {
+  if (ll_feature_dbg_declare_needs_expression_md(&current_module->ir)) {
     if (exprMDOp) {
       call_op->next->next->next = exprMDOp;
     } else {
-      LL_DebugInfo *di = cpu_llvm_module->debug_info;
+      LL_DebugInfo *di = current_module->debug_info;
       const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
       LL_MDRef md;
-      if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir)) {
+      if (ll_feature_debug_info_ver11(&current_module->ir)) {
        /* For associate statement, we have replaced the type to its associated
 	* variable's type. Add a DW_OP_deref so that debugger can show the value.*/
         if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr)))
@@ -4987,7 +4987,7 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
    */
   if (!dbg_declare_defined) {
     dbg_declare_defined = true;
-    if (ll_feature_dbg_declare_needs_expression_md(&cpu_llvm_module->ir)) {
+    if (ll_feature_dbg_declare_needs_expression_md(&current_module->ir)) {
       gname = "declare void @llvm.dbg.declare(metadata, metadata, metadata)";
     } else {
       gname = "declare void @llvm.dbg.declare(metadata, metadata)";
@@ -5663,7 +5663,7 @@ static void insert_llvm_dbg_value(OPERAND *load, LL_MDRef mdnode, SPTR sptr,
   static bool defined = false;
   OPERAND *callOp;
   OPERAND *oper;
-  LLVMModuleRef mod = cpu_llvm_module;
+  LLVMModuleRef mod = current_module;
   LL_DebugInfo *di = mod->debug_info;
   INSTR_LIST *callInsn = make_instr(I_CALL);
 
@@ -5712,7 +5712,7 @@ consLoadDebug(OPERAND *ld, OPERAND *addr, LL_Type *type)
 {
   SPTR sptr = addr->val.sptr;
   if (sptr && need_debug_info(sptr)) {
-    LL_DebugInfo *di = cpu_llvm_module->debug_info;
+    LL_DebugInfo *di = current_module->debug_info;
     int fin = BIH_FINDEX(gbl.entbih);
     LL_MDRef lcl = lldbg_emit_local_variable(di, sptr, fin, true);
     insert_llvm_dbg_value(ld, lcl, sptr, type);
@@ -10913,9 +10913,9 @@ add_global_define(GBL_LIST *gitem)
       if (gitem->sptr && ST_ISVAR(STYPEG(gitem->sptr)) &&
           !CCSYMG(gitem->sptr)) {
         LL_Type *type = make_lltype_from_sptr(gitem->sptr);
-        LL_Value *value = ll_create_value_from_type(cpu_llvm_module, type,
+        LL_Value *value = ll_create_value_from_type(current_module, type,
                                                     SNAME(gitem->sptr));
-        lldbg_emit_global_variable(cpu_llvm_module->debug_info, gitem->sptr, 0,
+        lldbg_emit_global_variable(current_module->debug_info, gitem->sptr, 0,
                                    1, value);
       }
     }
@@ -11347,7 +11347,12 @@ is_ompaccel(SPTR sptr)
 INLINE static bool
 generating_debug_info(void)
 {
-  return flg.debug && cpu_llvm_module->debug_info;
+  bool generate_debug = flg.debug && cpu_llvm_module->debug_info;
+#ifdef OMP_OFFLOAD_LLVM
+  if (flg.omptarget)
+    generate_debug = flg.debug && current_module->debug_info;
+#endif
+  return generate_debug;
 }
 
 /**
@@ -11392,6 +11397,11 @@ addDebugForGlobalVar(SPTR sptr, ISZ_T off)
 {
   if (need_debug_info(sptr)) {
     LL_Module *mod = cpu_llvm_module;
+#ifdef OMP_OFFLOAD_LLVM
+    if (flg.omptarget)
+      mod = current_module;
+#endif
+
     /* TODO: defeat unwanted side-effects. make_lltype_from_sptr() will update
        the LLTYPE() type (sptr_type_array) along some paths. This may be
        undesirable at this point, because the array gets updated with an
@@ -11416,8 +11426,8 @@ process_cmnblk_data(SPTR sptr, ISZ_T off)
 
   if (flg.debug && !CCSYMG(cmnblk) && (scope > 0)) {
     const char *name = new_debug_name(SYMNAME(scope), SYMNAME(cmnblk), NULL);
-    if (!ll_get_module_debug(cpu_llvm_module->common_debug_map, name))
-      lldbg_emit_common_block_mdnode(cpu_llvm_module->debug_info, cmnblk);
+    if (!ll_get_module_debug(current_module->common_debug_map, name))
+      lldbg_emit_common_block_mdnode(current_module->debug_info, cmnblk);
   }
 }
 
@@ -11690,11 +11700,11 @@ addDebugForLocalVar(SPTR sptr, LL_Type *type)
 {
   if (need_debug_info(sptr) || pointer_scalar_need_debug_info(sptr)) {
     /* Dummy sptrs are treated as local (see above) */
-    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+    if (ll_feature_debug_info_ver11(&current_module->ir) &&
         ftn_array_need_debug_info(sptr)) {
       SPTR array_sptr = (SPTR)REVMIDLNKG(sptr);
       LL_MDRef array_md =
-          lldbg_emit_local_variable(cpu_llvm_module->debug_info, array_sptr,
+          lldbg_emit_local_variable(current_module->debug_info, array_sptr,
                                     BIH_FINDEX(gbl.entbih), true);
       LL_Type *sd_type = LLTYPE(SDSCG(array_sptr));
       if (sd_type && sd_type->data_type == LL_PTR)
@@ -11703,7 +11713,7 @@ addDebugForLocalVar(SPTR sptr, LL_Type *type)
                               sd_type, NULL, OPF_NONE);
     } else {
       LL_MDRef param_md = lldbg_emit_local_variable(
-          cpu_llvm_module->debug_info, sptr, BIH_FINDEX(gbl.entbih), true);
+          current_module->debug_info, sptr, BIH_FINDEX(gbl.entbih), true);
       insert_llvm_dbg_declare(param_md, sptr, type, NULL, OPF_NONE);
     }
   }
@@ -13560,7 +13570,7 @@ cons_expression_metadata_operand(LL_Type *llTy)
 {
   // FIXME: we don't need to always do this, do we? do a type check here
   if (llTy->data_type == LL_PTR) {
-    LL_DebugInfo *di = cpu_llvm_module->debug_info;
+    LL_DebugInfo *di = current_module->debug_info;
     unsigned v = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
     LL_MDRef exprMD = lldbg_emit_expression_mdnode(di, 1, v);
     return make_mdref_op(exprMD);
@@ -13586,7 +13596,7 @@ INLINE static void
 formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
 {
   if (formalsNeedDebugInfo(sptr)) {
-    LL_DebugInfo *db = cpu_llvm_module->debug_info;
+    LL_DebugInfo *db = current_module->debug_info;
     LL_MDRef param_md = lldbg_emit_param_variable(
         db, sptr, BIH_FINDEX(gbl.entbih), i, CCSYMG(sptr));
     if (!LL_MDREF_IS_NULL(param_md)) {
@@ -14340,7 +14350,7 @@ cg_llvm_init(void)
   if (flg.debug || XBIT(120, 0x1000)) {
     lldbg_init(cpu_llvm_module);
 #ifdef OMP_OFFLOAD_LLVM
-    if (flg.omptarget && XBIT(232, 0x8))
+    if (flg.omptarget)
       lldbg_init(gpu_llvm_module);
 #endif
   }
@@ -14369,7 +14379,6 @@ cg_llvm_end(void)
   ll_write_metadata(llvm_file(), cpu_llvm_module);
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget) {
-    ll_write_metadata(llvm_file(), gpu_llvm_module);
     ll_build_metadata_device(gbl.ompaccfile, gpu_llvm_module);
     ll_write_metadata(gbl.ompaccfile, gpu_llvm_module);
     write_kernel_attributes(gbl.ompaccfile); // AOCC
