@@ -1793,10 +1793,12 @@ semsmp(int rednum, SST *top)
    */
   case MP_STMT52:
     /* AOCC begin */
+#ifdef OMP_OFFLOAD_LLVM
     if (target_ast && teams_ast) {
       A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
             BT_TARGET | BT_TEAMS | BT_DISTRIBUTE));
     }
+#endif
     /* AOCC end */
 
     clause_errchk(BT_DISTRIBUTE, "OMP DISTRIBUTE");
