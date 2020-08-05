@@ -3703,38 +3703,6 @@ construct_arg_list(int ast)
   }
   return argroot;
 }
-//AOCC Begin
-static ACL *
-mk_nearest_intrin(AC_INTRINSIC init_intr, int ast, DTYPE dtype)
-{
-  ACL *expracl = mk_init_intrinsic(init_intr);
-  int argt = A_ARGSG(ast);
-  ACL *argroot = NULL;
-  ACL **curarg = &argroot;
-  int argast = ARGT_ARG(argt, 0);
-  if (argast) {
-    *curarg = construct_acl_from_ast(argast, A_DTYPEG(argast), 0);
-    if (!*curarg) {
-      return 0;
-    }
-    curarg = &(*curarg)->next;
-  }
-  argast = ARGT_ARG(argt, 1);
-  if (argast) {
-    *curarg = construct_acl_from_ast(argast-2, A_DTYPEG(argast), 0);
-    if (!*curarg) {
-      return 0;
-    }
-    curarg = &(*curarg)->next;
-  }
-  if (sem.dinit_error) {
-    return 0;
-  }
-  expracl->dtype = dtype;
-  expracl->u1.expr->rop = argroot;
-  return expracl;
-}
-//AOCC End
 
 static ACL *
 mk_nonelem_init_intrinsic(AC_INTRINSIC init_intr, int ast, DTYPE dtype)
@@ -3955,6 +3923,12 @@ map_PD_to_AC(int pdnum)
     return AC_I_ichar;
   case PD_int:
     return AC_I_int;
+  // AOCC begin
+  case PD_anint:
+    return AC_I_anint;
+  case PD_aint:
+    return AC_I_aint;
+  // AOCC end
   case PD_nint:
     return AC_I_nint;
   case PD_char:
@@ -4058,6 +4032,8 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_merge_bits:
   case AC_I_dshiftl:
   case AC_I_dshiftr:
+  case AC_I_aint:
+  case AC_I_anint:
   /* AOCC end */
     return mk_elem_init_intrinsic(intrin, ast, dtype, parent_acltype);
   case AC_I_maxloc:
@@ -4100,7 +4076,7 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
     return mk_nonelem_init_intrinsic(intrin, ast, A_DTYPEG(ast));
   //AOCC Begin
   case AC_I_nearest:
-        return mk_nearest_intrin(AC_I_nearest, ast, dtype);
+    return mk_elem_init_intrinsic(AC_I_nearest, ast, dtype, parent_acltype);
   //AOCC End
   case AC_I_size:
     return mk_size_intrin(ast);
@@ -11230,6 +11206,14 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case AC_I_nint:
       root = eval_nint(rop, dtype);
       break;
+    // AOCC begin
+    case AC_I_anint:
+      root = eval_nint(rop, dtype);
+      break;
+    case AC_I_aint:
+      root = eval_nint(rop, dtype);
+      break;
+    // AOCC end
     case AC_I_null:
       root = eval_null(sptr);
       break;

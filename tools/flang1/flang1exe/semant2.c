@@ -55,10 +55,14 @@ static int reassoc_add(int, int, int);
 static int get_mem_sptr_by_name(char *name, int dtype);
 static ITEM *mkitem(SST *stkp);
 
-int asz_count; // AOCC
+// AOCC begin
+int asz_count; 
+extern int asz_status;
+extern int asz_id_elem;
+int asz_id_elem_start;
+// AOCC end
 
-
-/**
+/*
    \brief semantic actions - part 2.
    \param rednum   reduction number
    \param top      top of stack after reduction
@@ -266,7 +270,7 @@ semant2(int rednum, SST *top)
    */
   case AC_END1:
     sem.in_array_const = false;
-    asz_count = 0; // AOCC: for assumed size array expressions reset the number of rhs elements
+    asz_id_elem = 0; // AOCC : reset that the elements for assumed size array are over
     break;
 
   /* ------------------------------------------------------------------ */
@@ -681,6 +685,15 @@ semant2(int rednum, SST *top)
         aclp->dtype = DTYPEG(sptr);
         SST_ACLP(LHS, aclp);
         init_named_array_constant(sptr, gbl.currsub);
+
+	// AOCC begin
+        /* indicating that ast holding the size of variable 
+	 * elements in an assumed size array needs to be copied 
+	 */ 
+        if (asz_id_elem == 1) {
+          asz_id_elem_start = 1;
+        }
+	// AOCC end
         ast = mk_id(sptr);
       }
       SST_ASTP(LHS, ast);
@@ -1865,7 +1878,8 @@ semant2(int rednum, SST *top)
       ast_conval(top);
     }
     // AOCC: Change the number of array elements for assumed size arrays
-    if (sem.in_array_const == true) asz_count += 1;
+    if (asz_status == 1)
+      asz_count += 1;
     break;
   /*
    *      <constant> ::= <int kind const> |
@@ -1881,6 +1895,7 @@ semant2(int rednum, SST *top)
       SST_CVALP(LHS, CONVAL2G(sptr));
       ast_conval(top);
     }
+
     break;
 
   /*
@@ -2037,7 +2052,8 @@ semant2(int rednum, SST *top)
     /* value set by scan */
     ast_cnst(top);
     // AOCC:  Change the number of array elements for assumed size arrays
-    if (sem.in_array_const == true) asz_count += 1;
+    if (asz_status == 1)
+      asz_count += 1;
     break;
   /*
    *	<char literal> ::= <id> <underscore> <quoted string> |
@@ -2058,7 +2074,7 @@ semant2(int rednum, SST *top)
               "- KIND parameter has unknown value for quoted string -",
               SYMNAME(sptr));
     }
-    string_with_kind(top);
+    string_with_kind(top); 
     break;
   /*
    *	<char literal> ::= <integer> <underscore> <quoted string>
@@ -2072,7 +2088,7 @@ semant2(int rednum, SST *top)
     } else if (SST_CVALG(RHS(1)) != 1)
       error(81, 3, gbl.lineno,
             "- KIND parameter has unknown value for quoted string", CNULL);
-    string_with_kind(top);
+    string_with_kind(top); 
     break;
 
   /* ------------------------------------------------------------------ */
@@ -2100,7 +2116,7 @@ semant2(int rednum, SST *top)
     SST_CVALP(LHS, getcon(val, dtype));
     ast_cnst(top);
     SST_IDP(LHS, S_CONST);
-    ch_substring(LHS, RHS(3), RHS(5));
+    ch_substring(LHS, RHS(3), RHS(5));   
     break;
 
   /* ------------------------------------------------------------------ */

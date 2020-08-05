@@ -23,6 +23,7 @@
  *
  * Support for assumed size array as parameter
  *   Date of modification 9th June 2020
+  
  *
  */
 
@@ -449,7 +450,10 @@ static void fix_iface0();
 extern int asz_count;    /* number of rhs elements */
 int asz_status = 0;      /* lhs is assumed size expression */
 int asz_arrdsc;          /* array descriptor of assumed size lhs expression */
-int asz_string = 0;          /* indicator to indicate assumed length string
+int asz_string = 0;          /* indicator to indicate assumed length string */
+int asz_id_elem;         /* variable element in assumed size array */
+extern int asz_id_elem_count_tot; /* total number of elements in assumed size 
+				     array when variables are its elements */
 //AOCC end
 
 /** \brief Initialize semantic analyzer for new user subprogram unit.
@@ -815,7 +819,8 @@ static int restored = 0;
 void
 semant1(int rednum, SST *top)
 {
-  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab, sptras;
+
+  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab, sptras, asz_sptr;
   int dtype, dtypeset, ss, numss, dtypeas;
   int stype, stype1, i;
   int begin, end, count;
@@ -836,6 +841,8 @@ semant1(int rednum, SST *top)
   VAR *ivl;        /* Initializer Variable List */
   ACL *ict, *ict1; /* Initializer Constant Tree */
   int ast, alias;
+  int asz_ast;
+  int res;
   static int et_type; /* one of ET_...; '<attr>::=' passes up */
   int et_bitv;
   LOGICAL no_init; /* init not allowed for entity decl */
@@ -2064,7 +2071,14 @@ semant1(int rednum, SST *top)
    *	<id> ::= <id name>
    */
   case ID1:
-    np = scn.id.name + SST_CVALG(RHS(1));
+    np = scn.id.name + SST_CVALG(RHS(1)); 
+    /* AOCC begin
+     * a variable is the element of an assumed size array
+     */
+    if (asz_status == 1 && sem.in_array_const == true) {
+      asz_id_elem = 1;
+    }
+    //AOCC end
     sptr = getsymbol(np);
     if (sem.in_dim && sem.type_mode && !KINDG(sptr) &&
         STYPEG(sptr) != ST_MEMBER) {
@@ -8576,51 +8590,62 @@ semant1(int rednum, SST *top)
       dtypeas = DTYPEG(sptras);
       adas = AD_DPTR(dtypeas);
       if (entity_attr.exist & ET_B(ET_PARAMETER)) {
-      // check if array is a parameter
-        if (AD_ASSUMSZ(adas)) {
-      // check if array is an assumed size array
+        // check if array is a parameter
+        if (AD_ASSUMSZ(adas)) { //check if array is an assumed size array
+          /* the size of the assumed size array when
+	   * its elements are variables 
+	   */
+          if (asz_count == 0 && asz_id_elem_count_tot != 0) {
+            asz_count = asz_id_elem_count_tot;
+          }
           sptras = SST_SYMG(asz_sst);
           SST_LSYMP(asz_sst, 0);
           SST_DTYPEP(asz_sst, DT_INT);
+	  SST_DTYPEP(asz_rhssst, DT_INT);
           SST_ACLP(asz_sst, 0);
           SST_CVALP(asz_sst, asz_count);
-          SST_ASTP(asz_sst, mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst)));
+	  SST_CVALP(asz_rhssst, asz_count);
+	  asz_ast =  mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst));
           SST_SHAPEP(asz_sst, 0);
           SST_IDP(asz_rhssst, S_CONST);
           SST_PARENP(LHS, 0);
+	  SST_ASTP(asz_rhssst, 0);
 
           arraysize = 0;
           if (SST_IDG(asz_rhssst) == S_CONST) {
             sem.bounds[sem.arrdim.ndim].uptype = S_CONST;
-            if (flg.standard) {
-              int uptyp;
-              uptyp = SST_DTYPEG(asz_rhssst);
-              if (!DT_ISINT(uptyp)) {
-                error(170, 2, gbl.lineno, "array upper bound", "is not integer");
-              }
-              // assign the lhs using the size of array computed from the rhs
-              arraysize = sem.bounds[sem.arrdim.ndim].upb =
-              chkcon_to_isz(asz_rhssst, FALSE);
-              sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+            int uptyp;
+            uptyp = SST_DTYPEG(asz_rhssst);
+            if (!DT_ISINT(uptyp)) {
+              error(170, 2, gbl.lineno, "array upper bound", "is not integer");
             }
-	    int savedsc_val = aux.arrdsc_avl;
-            if (asz_status) aux.arrdsc_avl = asz_arrdsc ;
-            dtypeas = mk_arrdsc();
-	    // update the lhs array descriptor
-            SST_DTYPEP(asz_sst, dtypeas);
-	    aux.arrdsc_avl = savedsc_val;
+            // assign the lhs using the size of array computed from the rhs
+            arraysize = sem.bounds[sem.arrdim.ndim].upb =
+              chkcon_to_isz(asz_rhssst, FALSE);
+            asz_ast = sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+            asz_sptr = A_SPTRG(sem.bounds[sem.arrdim.ndim].upast - 1);
+	    CONVAL2P(asz_sptr, arraysize);
+	    SST_ASTP(asz_rhssst, asz_ast);
+            SST_ASTP(asz_sst, asz_ast);
           }
+	  int savedsc_val = aux.arrdsc_avl;
+          if (asz_status) aux.arrdsc_avl = asz_arrdsc ;
+          dtypeas = mk_arrdsc();
+	  // update the lhs array descriptor
+          SST_DTYPEP(asz_sst, dtypeas);
+	  aux.arrdsc_avl = savedsc_val;
         }
-      }
+      } 
       asz_status = 0;
+      asz_id_elem_count_tot = 0;
     }
     //AOCC end
 
     inited = TRUE;
     sem.dinit_data = FALSE;
+    asz_string = 0;  // AOCC: reset the assumed size computation  status
+    asz_count = 0;
     goto entity_decl_shared;
-    asz_status = 0; // AOCC: reset the assumed size computation  status
-    asz_string = 0;
   /*
    *	<entity decl> ::= <entity id> '=>' <id> ( )
    */

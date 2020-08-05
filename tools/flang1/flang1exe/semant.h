@@ -638,8 +638,10 @@ typedef enum {
   AC_I_dshiftl,
   AC_I_dshiftr,
   AC_I_nearest,
-  /* AOCC end */
-  AC_I_shifta
+  AC_I_shifta,
+  AC_I_aint,
+  AC_I_anint
+  // AOCC end
 } AC_INTRINSIC;
 
 #define BINOP(p) ((p)->op != AC_NEG && (p)->op != AC_CONV)

@@ -5819,6 +5819,9 @@ ref_pd(SST *stktop, ITEM *list)
   SPTR pdsym = SST_SYMG(stktop);
   int pdtype = PDNUMG(pdsym);
   int is_real2_arg_error = 0;
+  SST *sp;
+  int argdtype;
+  int dt_cast_word;
 
 /* any integer type, or hollerith, or, if -x 51 0x20 not set, real/double */
 #define TYPELESS(dt)                     \
@@ -9468,7 +9471,50 @@ ref_pd(SST *stktop, ITEM *list)
       dtyper = get_array_dtype(1, dtyper);
     goto gen_call;
 
+  // AOCC begin
   case PD_aint:
+    if (count < 1 || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+    if (get_kwd_args(list, 2, KWDARGSTR(pdsym)))
+      goto exit_;
+    stkp = ARG_STK(0);
+    if (SST_ISNONDECC(stkp))
+      cngtyp(stkp, DT_INT);
+    dtype1 = DDTG(SST_DTYPEG(stkp));
+    if (!DT_ISREAL(dtype1)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+    if ((stkp = ARG_STK(1))) {
+      dtyper = set_kind_result(stkp, DT_REAL, TY_REAL);
+      if (!dtyper) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+    } else
+      dtyper = dtype1;
+
+    (void)mkexpr(ARG_STK(0));
+    shaper = SST_SHAPEG(ARG_STK(0));
+    XFR_ARGAST(0);
+    argt_count = 1;
+    if (ARG_STK(1)) {
+      (void)mkexpr(ARG_STK(1));
+      argt_count = 2;
+      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_INT4);
+    }
+    if (shaper)
+      dtyper = get_array_dtype(1, dtyper);
+
+    ast = ARG_AST(0);
+    ast = mk_convert(ast, DT_INT);
+    ast = mk_convert(ast, dtyper);
+    goto expr_val;
+
+    goto gen_call;
+  
   case PD_anint:
     if (count < 1 || count > 2) {
       E74_CNT(pdsym, count, 1, 2);
@@ -9484,17 +9530,64 @@ ref_pd(SST *stktop, ITEM *list)
       E74_ARG(pdsym, 0, NULL);
       goto call_e74_arg;
     }
+    
     if ((stkp = ARG_STK(1))) { /* kind */
       dtyper = set_kind_result(stkp, DT_REAL, TY_REAL);
       if (!dtyper) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
       }
-    } else
-      dtyper = dtype1; /* result is type of argument */
-    /* If this is f90, leave the kind argument in. Otherwise issue
-     * a warning and leave it -- we'll get to it someday
-     */
+    } else {
+      dtyper = dtype1;
+    }
+
+    if (sem.dinit_data) {
+      gen_init_intrin_call(stktop, pdsym, count, dtyper, TRUE);
+      return 0;
+    }
+   
+    stkp = ARG_STK(0);
+    if (is_sst_const(stkp)) {
+      con1 = get_sst_cval(stkp);
+      switch (DTY(dtype1)) {
+      case TY_REAL:
+        num1[0] = CONVAL2G(stb.flt0);
+        if (xfcmp(con1, num1[0]) >= 0) {
+          INT fv2_23 = 0x4b000000;
+          if (xfcmp(con1, fv2_23) >= 0)
+            xfadd(con1, CONVAL2G(stb.flt0), &res[0]);
+          else
+            xfadd(con1, CONVAL2G(stb.flthalf), &res[0]);
+        } else {
+          INT fvm2_23 = 0xcb000000;
+          if (xfcmp(con1, fvm2_23) <= 0)
+            xfsub(con1, CONVAL2G(stb.flt0), &res[0]);
+          else
+            xfsub(con1, CONVAL2G(stb.flthalf), &res[0]);
+        }
+        break;      
+      case TY_DBLE:
+        if (const_fold(OP_CMP, con1, stb.dbl0, DT_REAL8) >= 0) {
+          INT dv2_52[2] = {0x43300000, 0x00000000};
+          INT d2_52;
+          d2_52 = getcon(dv2_52, DT_DBLE);
+          if (const_fold(OP_CMP, con1, d2_52, DT_REAL8) >= 0)
+	    res[0] = const_fold(OP_ADD, con1, stb.dbl0, DT_REAL8);
+          else
+            res[0] = const_fold(OP_ADD, con1, stb.dblhalf, DT_REAL8);
+        } else {
+          INT dvm2_52[2] = {0xc3300000, 0x00000000};
+          INT dm2_52;
+          dm2_52 = getcon(dvm2_52, DT_DBLE);
+          if (const_fold(OP_CMP, con1, dm2_52, DT_REAL8) >= 0)
+            res[0] = const_fold(OP_SUB, con1, stb.dblhalf, DT_REAL8);
+          else
+	    res[0] = const_fold(OP_SUB, con1, stb.dbl0, DT_REAL8);
+        }
+        break;
+      }
+    }       
+    
     (void)mkexpr(ARG_STK(0));
     shaper = SST_SHAPEG(ARG_STK(0));
     XFR_ARGAST(0);
@@ -9502,20 +9595,13 @@ ref_pd(SST *stktop, ITEM *list)
     if (ARG_STK(1)) {
       (void)mkexpr(ARG_STK(1));
       argt_count = 2;
-      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_INT4);
+      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_REAL);
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
-    // AOCC begin: avoiding generation of _mth_aint lib call instead
-    // handling it here
-    if (pdtype == PD_aint) {
-      ast = ARG_AST(0);
-      ast = mk_convert(ast, DT_INT);
-      ast = mk_convert(ast, dtyper);
-      goto expr_val;
-    // AOCC end
-    }
+
     goto gen_call;
+  // AOCC end
 
   case PD_int:
     if (count < 1 || count > 2) {
@@ -9967,42 +10053,42 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
       goto exit_;
-    stkp = ARG_STK(0);
-    shaper = SST_SHAPEG(stkp);
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    dtype2 = DDTG(SST_DTYPEG(ARG_STK(1)));
-    if (!DT_ISREAL(dtype1) || !DT_ISREAL(dtype2)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
+
+    // AOCC begin
+    sp = ARG_STK(0);
+    dtype1 = 0;
+    for (i = 0; i < count; i++) {
+      sp = ARG_STK(i);
+      argdtype = SST_DTYPEG(sp);
+      if (argdtype == DT_WORD || argdtype == DT_DWORD) {
+        if (dt_cast_word) {
+          cngtyp(sp, dt_cast_word);
+	  argdtype = SST_DTYPEG(sp);
+	} else if (argdtype == DT_WORD) {
+	}
+      }
+      if (!dtype1) {
+        dtype1 = argdtype;
+	if (DTY(argdtype) == TY_ARRAY)
+          break;
+      }
+      else {
+        if (DTY(argdtype) == TY_ARRAY) {
+          dtype1 = argdtype;
+	  break;
+	}
+      }
     }
-    shape2 = SST_SHAPEG(ARG_STK(1));
-    shaper = set_shape_result(shaper, shape2);
-    if (shaper < 0) {
-      E74_ARG(pdsym, 2, NULL);
-      goto call_e74_arg;
-    }
-    ast = ARG_AST(1);
-    if (shape2)
-      dtyper = get_array_dtype(1, DT_LOG);
-    else
-      dtyper = DT_LOG;
-    if (DTY(dtype2) == TY_REAL)
-      ast = mk_binop(OP_GE, ast, mk_cnst(stb.flt0), dtyper);
-    else if (DTY(dtype2) == TY_DBLE)
-      ast = mk_binop(OP_GE, ast, mk_cnst(stb.dbl0), dtyper);
-    else
-      ast = mk_binop(OP_GE, ast, mk_cnst(stb.quad0), dtyper);
-    ARG_AST(1) = ast;
     if (DTY(dtype1) == TY_REAL)
       rtlRtn = RTE_nearest;
-    else if(DTY(dtype1) == TY_DBLE)/* TY_DBLE */
+    else if(DTY(dtype1) == TY_DBLE)
       rtlRtn = RTE_nearestd;
     else
-      rtlRtn = RTE_nearestq;        //AOCC
-    (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
-    dtyper = SST_DTYPEG(stkp);
-    if (shaper && DTY(dtyper) != TY_ARRAY)
-      dtyper = get_array_dtype(1, dtyper);
+      rtlRtn = RTE_nearestq;
+    char* nmptr = mkRteRtnNm(rtlRtn);
+    (void)sym_mkfunc_nodesc(nmptr, dtype1);
+    dtyper = SST_DTYPEG(sp);
+    // AOCC end
     break;
 
   case PD_precision:
@@ -11745,6 +11831,7 @@ gen_call:
   else
     func_ast = mk_id(pdsym);
   ast = mk_func_node(func_type, func_ast, argt_count + argt_extra, argt);
+
   if (shaper)
     dtyper = dtype_with_shape(dtyper, shaper);
   A_DTYPEP(ast, dtyper);

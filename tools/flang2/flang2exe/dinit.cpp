@@ -5392,6 +5392,14 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
     case AC_I_nint:
       root = eval_nint(rop, dtype);
       break;
+    // AOCC begin
+    case AC_I_anint:
+      root = eval_nint(rop, dtype);
+      break;
+    case AC_I_aint:
+      root = eval_nint(rop, dtype);
+      break;
+    // AOCC end
     case AC_I_fltconvert:
       root = eval_fltconvert(rop, dtype);
       break;

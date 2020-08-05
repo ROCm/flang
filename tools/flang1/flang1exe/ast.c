@@ -43,6 +43,7 @@
 #include "rte.h"
 #include "extern.h"
 #include "rtlRtns.h"
+#include "semant.h"
 
 static int reduce_iadd(int, INT);
 static int reduce_i8add(int, int);
@@ -58,6 +59,12 @@ static void truncation_warning(int);
 static void conversion_warning(void);
 
 static int atemps; /* temp counter for bounds' temporaries */
+
+// AOCC begin
+extern int asz_status;
+extern int asz_id_elem_start;
+int asz_id_elem_count_tot;
+// AOCC end
 
 #define MIN_INT64(n) \
   (((n[0] & 0xffffffff) == 0x80000000) && ((n[1] & 0xffffffff) == 0))
@@ -520,8 +527,20 @@ int
 mk_id(int id)
 {
   int ast = mk_id_noshape(id);
-  if (A_SHAPEG(ast) == 0)
+  
+  // AOCC begin
+  /* adding the sizes of the repeated variable array's 
+   * elements to assumed size array 
+   */
+  if ((asz_id_elem_start == 1) && (A_SHAPEG(ast) != 0)) {
+    asz_id_elem_count_tot += asz_id_elem_count_tot;
+    asz_id_elem_start = 0;
+  }
+  else if (A_SHAPEG(ast) == 0) {
     A_SHAPEP(ast, mkshape(DTYPEG(id)));
+  }
+  // AOCC end
+
   return ast;
 }
 
@@ -2237,6 +2256,9 @@ mkshape(DTYPE dtype)
 {
   int numdim, i;
   int lwb, upb, stride;
+  int asz_id_elem_count = 0;
+  SPTR asz_sptr;
+
 
   if (DTY(dtype) != TY_ARRAY)
     return 0;
@@ -2252,7 +2274,18 @@ mkshape(DTYPE dtype)
   add_shape_rank(numdim);
   for (i = 0; i < numdim; ++i) {
     lwb = lbound_of(dtype, i);
-    upb = ADD_UPAST(dtype, i);
+    upb = ADD_UPAST(dtype, i); 
+    // AOCC begin
+    /* copying the ast holding the size of the variable
+     *  elements of an assumed size array 
+     */
+    if (asz_id_elem_start == 1) {
+      asz_sptr = A_SPTRG(upb);
+      asz_id_elem_count = CONVAL2G(asz_sptr);
+      asz_id_elem_count_tot += asz_id_elem_count;
+      asz_id_elem_start = 0;
+    }
+    // AOCC end
     stride = astb.bnd.one;
     add_shape_spec(lwb, upb, stride);
   }

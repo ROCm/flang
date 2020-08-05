@@ -447,10 +447,10 @@ struct CONST {
 #define AC_I_shiftr 59
 #define AC_I_dshiftl 60
 #define AC_I_dshiftr 61
-/* AOCC end */
 #define AC_I_nearest 62
-/* AOCC begin */
 #define AC_I_shifta 63
+#define AC_I_anint 64
+#define AC_I_aint 65
 /* AOCC end */
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 
