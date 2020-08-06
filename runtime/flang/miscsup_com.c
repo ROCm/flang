@@ -4667,8 +4667,8 @@ ENTF90(NEARESTQX, nearestqx)(__REAL16_T q, __LOG_T sign)
 
   x.q = q;
   if (x.q == 0.0) {
-    x.i.h = (sign & 1) ? 0x00100000000000000000000000000000 : 0x00800000000000003fff000000000000;
-    x.i.l = 0;
+    x.ll.h = (sign & 1) ? 0x0000000000000001 : 0x8000000000000001;
+    x.ll.l = 0;
   } else {
     if ((x.ll.h >> 112 & 0x7FFF) != 0x7FFF) { /* not nan or inf */
       if ((x.q < 0) ^ (sign & GET_DIST_MASK_LOG))
