@@ -827,6 +827,9 @@ init(int argc, char *argv[])
   if (flg.amdgcn_target) {
     flg.x[232] |= 0x40;
   }
+
+  // alias settings
+  flg.x[53] |= 0x800000;
   // AOCC End
 
 #endif

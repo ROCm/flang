@@ -2848,6 +2848,26 @@ locset_to_tbaa_info(LL_Module *module, LL_MDRef omniPtr, int ilix)
 #if defined(REVMIDLNKG)
   if (REVMIDLNKG(bsym)) {
     const int ptr = REVMIDLNKG(bsym);
+    // AOCC begin
+    if (XBIT(53, 0x800000)) {
+      if (ILI_OPC(ilix) == IL_LDA &&
+          !NOCONFLICTG(ptr) && !PTRSAFEG(ptr) && !TARGETG(ptr)) {
+        char *bsym_name = getprint(bsym);
+        size_t bsym_len = strlen(bsym_name);
+        if (bsym_len > 2 && bsym_name[bsym_len - 1] == 'p'
+            && bsym_name[bsym_len - 2] == '$') {
+          bsym = ptr;
+          rv = snprintf(name, NAME_SZ, "t%x.%x", funcId, base);
+          DEBUG_ASSERT(rv < NAME_SZ, "buffer overrun");
+          a[0] = ll_get_md_string(module, name);
+          a[1] = omniPtr;
+          a[2] = ll_get_md_i64(module, 0);
+          return ll_get_md_node(module, LL_PlainMDNode, a, 3);
+        }
+      }
+    }
+    // AOCC end
+
     if (!NOCONFLICTG(ptr) && !PTRSAFEG(ptr) && !TARGETG(ptr))
       return LL_MDREF_ctor(0, 0);
     bsym = ptr;

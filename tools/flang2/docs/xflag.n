@@ -1748,6 +1748,9 @@ Don't use cgr_modifies() (optutil.c:is_static_call_safe()).
 .XB 0x400000
 Disable propagation of certain IPA pointer information from actual arguments
 to ..inline temporaries when a call-site is inlined.
+.XB 0x800000
+[experimental] Assume fortran pointer address loads (not to be confused with the
+load of the element at that address) can't alias.
 
 .XF "54:" 
 More Flang behavior modification
