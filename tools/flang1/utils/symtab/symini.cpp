@@ -1707,6 +1707,7 @@ const char *SyminiFE90::init_names0[] = {
     "dshiftl",
     "dshiftr",
     "mask",
+    "rank",
 };
 
 /**
@@ -2254,6 +2255,7 @@ const char *SyminiFE90::init_names1[] = {
     "dshiftl",
     "dshiftr",
     "mask",
+    "rank",
 };
 
 /**
@@ -2854,6 +2856,7 @@ const char *SyminiFE90::init_names2[] = {
     "ieee_set_flag",
     "ieee_set_halting_mode",
     "ieee_set_status",
+    "rank",
 };
 
 /**
@@ -3460,6 +3463,7 @@ const char *SyminiFE90::init_names3[] = {
     // AOCC end
     "popcnt",
     "poppar",
+    "rank",
 };
 
 const size_t SyminiFE90::init_names0_size =

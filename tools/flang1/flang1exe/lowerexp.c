@@ -42,6 +42,8 @@
  * Support for real*16 instrinsics
  * Date of modification: 18th July 2020
  *
+ * Implemented rank intrinsic
+ * Date of modification: 10th Aug 2020
  */
 
 /**
@@ -3427,6 +3429,7 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_SHIFTR:
   case I_DSHIFTL:
   case I_DSHIFTR:
+  case I_RANK:        //AOCC
   default:
     return -1;
   }
@@ -4974,7 +4977,7 @@ lower_intrinsic(int ast)
   case I_DSHIFTR:
   case I_C_F_POINTER:
   case I_C_F_PROCPOINTER:
-
+  case I_RANK:                  //AOCC
   default:
     ast_error("unknown intrinsic function", ast);
     return 0;

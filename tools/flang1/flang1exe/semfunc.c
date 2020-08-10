@@ -72,6 +72,8 @@
  * Support for real*16 intrinsics
  * Date of Modification: 18th July 2020
  *
+ * Implemented rank intrinsic
+ * Date of modification: 10th Aug 2020
  */
 
 /** \file
@@ -7965,6 +7967,30 @@ ref_pd(SST *stktop, ITEM *list)
     }
     break;
 
+  //AOCC Begin
+  case PD_rank:
+    if (count != 1) {
+    E74_CNT(pdsym, count, 1, 1);
+      goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 1, KWDARGSTR(pdsym)))
+      goto exit_;
+    dtyper =  stb.user.dt_int;
+    stkp = ARG_STK(0);
+    ad = AD_DPTR(SST_DTYPEG(stkp));
+    int rank = AD_NUMDIM(ad);
+    ast = mk_cval(rank, dtyper);
+    EXPSTP(pdsym, 1);
+    SST_IDP(stktop, S_CONST);
+    SST_DTYPEP(stktop, dtyper);
+    SST_SHAPEP(stktop, 0);
+    SST_ASTP(stktop, ast);
+    if (DTY(dtyper) != TY_INT8)
+      SST_CVALP(stktop, rank);
+    else
+      SST_CVALP(stktop, A_SPTRG(ast));
+    return SST_CVALG(stktop);
+  //AOCC End
   case PD_merge:
     if (count != 3) {
       E74_CNT(pdsym, count, 3, 3);
