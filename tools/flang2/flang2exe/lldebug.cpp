@@ -2249,9 +2249,6 @@ lldbg_emit_module_mdnode(LL_DebugInfo *db, int sptr)
       ll_get_module_debug(db->module->module_debug_map, SYMNAME(sptr));
   if (!LL_MDREF_IS_NULL(module_mdnode))
     return module_mdnode;
-  // Do not create mdnode if line number is not present.
-  if (!FUNCLINEG(sptr))
-    return ll_get_md_null();
 
   return lldbg_create_module_mdnode(db, ll_get_md_null(), SYMNAME(sptr),
                                     lldbg_emit_compile_unit(db),
