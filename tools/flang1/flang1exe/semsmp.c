@@ -9278,7 +9278,7 @@ void
 add_assign_firstprivate(int dstsym, int srcsym)
 {
   SST srcsst, dstsst;
-  int where, savepar, savetask, savetarget, ast;
+  int where, savepar, savetask, savetarget, ast, saveteams;
   int dupwhere;
 
   dupwhere = where = sem.scope_stack[sem.scope_level].end_prologue;
@@ -9299,7 +9299,9 @@ add_assign_firstprivate(int dstsym, int srcsym)
   savepar = sem.parallel;
   savetask = sem.task;
   savetarget = sem.target;
+  saveteams = sem.teams;
   sem.parallel = 0;
+  sem.teams = 0;
   if (sem.task && TASKG(dstsym)) {
     ast = mk_stmt(A_MP_TASKFIRSTPRIV, 0);
     int src_ast = mk_id(srcsym);
@@ -9320,6 +9322,7 @@ add_assign_firstprivate(int dstsym, int srcsym)
   sem.parallel = savepar;
   sem.task = savetask;
   sem.target = savetarget;
+  sem.teams = saveteams;
   sem.scope_stack[sem.scope_level].end_prologue = where;
   if (sem.task && TASKG(dstsym)) {
     ast = mk_stmt(A_MP_TASKDUP, 0);
