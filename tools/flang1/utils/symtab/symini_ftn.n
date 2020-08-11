@@ -25,6 +25,9 @@
 .\" *
 .\" * Complex datatype support for atan2 under flag f2008
 .\" *  Modified on 13th March 2020
+.\" 
+.\" * Implemented rank intrinsic
+.\" * Date of modification: 10th Aug 2020
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -1276,6 +1279,8 @@ of its single-precision (double-precision) argument.
 .AT transformational source shape *pad *order
 .PD SHAPE - -
 .AT transformational source *kind
+.PD RANK - -
+.AT transformational source *kind
 .PD SIZE - -
 .AT inquiry array *dim *kind
 .PD ALLOCATED - -
@@ -1305,6 +1310,9 @@ CM Fortran's version of LBOUND.
 CM Fortran UBOUND intrinsic.
 .AT inquiry array *dim
 .PD .DSHAPE - -
+CM Fortran SHAPE intrinsic.
+.AT transformational source
+.PD .DRANK - -
 CM Fortran SHAPE intrinsic.
 .AT transformational source
 .PD .DSIZE - -
