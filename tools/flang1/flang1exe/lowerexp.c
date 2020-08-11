@@ -4,27 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Support for DNORM intrinsic
- *
- * Date of Modification: 21st February 2019
- *
- * Support for parity intrinsic.
- * Month of Modification: July 2019
- *
- * Support for Bit transformational intrinsic iany, iall, iparity.
- * Month of Modification: July 2019
- *
- * Complex datatype support for acosh , asinh , atanh
- * Modified on 07 January 2020
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 12th February  2020
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
   \file
   \brief Routines used by lower.c for lowering to ILMs

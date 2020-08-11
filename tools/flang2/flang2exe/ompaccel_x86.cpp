@@ -1,8 +1,12 @@
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
- * Support for x86-64 OpenMP offloading
- * Last modified: Oct 2019
+ */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
 #ifdef OMP_OFFLOAD_LLVM
 
@@ -149,7 +153,14 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   if (ompaccel_x86_is_fork_wrapper_func(func_sptr))
     return;
 
-  if (ompaccel_x86_is_parallel_func(func_sptr)) {
+  // -Mx,232,0x1 implementation of parallel and teams expansion uses the
+  // ompaccel_x86_fork_call() which adds tid_args and fixes the arg types of the
+  // callback. So func_sptr with tid_args are already fixed.
+  if (XBIT(232, 0x1) && ompaccel_x86_has_tid_args(func_sptr)) {
+    return;
+  }
+
+  if (ompaccel_x86_has_tid_args(func_sptr)) {
     // Then skip the first 2 tid args.
     adjust_idx = 2;
     func_paramct -= 2;
@@ -163,7 +174,14 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
     OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
     OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
+
+    if (!ompaccel_sym)
+      continue;
     SPTR device_sym = ompaccel_sym->device_sym;
+
+    if (PASSBYVALG(device_sym))
+      continue;
+
     reduc_syms.insert(device_sym);
   }
 
@@ -175,9 +193,20 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
       if (reduc_syms.find(arg_sptr) != reduc_syms.end()) { continue; }
 
       DTYPEP(arg_sptr, DT_INT8);
+      if (XBIT(232, 0x1)) {
+        // FIXME! This condition is not suppose to happen, but it does in
+        // -Mx,232,0x1.
+        if (PASSBYVALG(arg_sptr) == PASSBYREFG(arg_sptr) &&
+            PASSBYREFG(arg_sptr) == 1) {
+          PASSBYREFP(arg_sptr, 1);
+          PASSBYVALP(arg_sptr, 0);
+        }
+      }
       if (debug_me) {
-        printf("[ompaccel-x86]: setting %s's type as DT_INT8\n",
-            SYMNAME(arg_sptr));
+        printf("[ompaccel-x86]: For %s setting %s's type as DT_INT8 ",
+            SYMNAME(func_sptr), SYMNAME(arg_sptr));
+        printf("PASSBYVAL: %d PASSBYREF: %d\n",
+            PASSBYVALG(arg_sptr), PASSBYREFG(arg_sptr));
       }
     }
   }
@@ -227,6 +256,9 @@ bool ompaccel_x86_is_entry_func(SPTR func_sptr) {
     // Most likely an outlined parallel function, we should only add the
     // fork_wrapper func corresponding to this.
     if (ompaccel_x86_is_parallel_func(func_sptr)) {
+      if (XBIT(232, 0x1))
+        return true;
+
       return false;
     } else {
 
@@ -286,10 +318,22 @@ void ompaccel_x86_add_tid_params(SPTR func_sptr) {
   // Prepend the thread-id params.
   sym = mk_ompaccel_addsymbol("global_tid", DT_INT, SC_DUMMY, ST_VAR);
   OMPACCDEVSYMP(sym, TRUE);
+
+  if (XBIT(232, 0x1)) {
+    PASSBYREFP(sym, 1);
+    PASSBYVALP(sym, 0);
+  }
+
   aux.dpdsc_base[aux.dpdsc_avl + 0] = sym;
 
   sym = mk_ompaccel_addsymbol("bound_tid", DT_INT, SC_DUMMY, ST_VAR);
   OMPACCDEVSYMP(sym, TRUE);
+
+  if (XBIT(232, 0x1)) {
+    PASSBYREFP(sym, 1);
+    PASSBYVALP(sym, 0);
+  }
+
   aux.dpdsc_base[aux.dpdsc_avl + 1] = sym;
 
   // Append the original params.
@@ -397,4 +441,31 @@ void ompaccel_x86_gen_fork_wrapper(SPTR target_func) {
   }
   return;
 }
+
+int ompaccel_x86_fork_call(SPTR outlined_func, int kmpc_api) {
+  int nargs, nme, ili, i;
+  SPTR sptr;
+  OMPACCEL_TINFO *omptinfo;
+  omptinfo = ompaccel_tinfo_get(outlined_func);
+  nargs = omptinfo->n_symbols;
+  int args[nargs + 2], garg_ilis[nargs + 2];
+  DTYPE arg_dtypes[nargs + 2];
+  SPTR sptr_args[nargs + 2];
+
+  DTYPEP(outlined_func, DT_NONE);
+  STYPEP(outlined_func, ST_PROC);
+  CFUNCP(outlined_func, 1);
+
+  for (i = 0; i < nargs; ++i) {
+    sptr_args[i] = omptinfo->symbols[i].host_sym;
+  }
+
+  ompaccel_x86_fix_arg_types(outlined_func);
+  ompaccel_x86_add_tid_params(outlined_func);
+
+  // The fork_call should be aware of the callback's type here
+  ll_process_routine_parameters(outlined_func);
+  return ll_make_kmpc_fork_call_variadic2(outlined_func, nargs, sptr_args);
+}
+
 #endif

@@ -5,15 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Fixes for CP2K application build
- * Month of Modification: November 2019
- *
- * Fixed issues related to type bound procedures with and without nopass clause
- * Date of Modification: December 2019
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /** \file
     \brief Fortran utility routines used by Semantic Analyzer to process
            user-defined generics including overloaded operators
@@ -393,7 +387,6 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       E155("Empty generic procedure -", SYMNAME(sptr));
     }
 
-    bool renamed = true;
     for (gndsc = GNDSCG(sptrgen); gndsc; gndsc = SYMI_NEXT(gndsc)) {
       func = SYMI_SPTR(gndsc);
       func_sptrgen = sptrgen;
@@ -442,7 +435,6 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
       }
       // AOCC Begin
       if (STYPEG(func) == ST_ALIAS) {
-        renamed = true;
         func = SYMLKG(func);
       }
       // AOCC End

@@ -5,12 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 26th Nov 2019
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
    \file
    FIXME - document what this is

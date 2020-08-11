@@ -5,14 +5,16 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
+ * Changes to support AMDGPU OpenMP offloading
  * Implemented diagnostics for simpler case of uninitialized variable use.
  *
  * Date of Modification: April 2019
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Dec 2019
+ * Last modified: May 2020
  *
  */
 
@@ -2369,6 +2371,62 @@ static int get_std_after_end_omp_parsec(int std) {
 }
 
 /*
+ * returns the std by skipping end-if's, end-do's etc. starting
+ * from \p std
+ */
+static int get_std_after_closures(int std) {
+  for (; std > 0; std = STD_NEXT(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    switch (asttype) {
+    case A_ENDIF: case A_ENDDO:
+      continue;
+    default:
+      return std;
+    }
+  }
+  return std;
+}
+
+/*
+ * returns the std by skipping else-if ladder starting
+ * from \p std
+ */
+static int get_std_after_switches(int std) {
+  int asttype = A_TYPEG(STD_AST(std));
+  switch (asttype) {
+  case A_ELSEIF: case A_ELSE: case A_GOTO:
+    break;
+  default:
+    return std;
+  }
+
+  int nesting = 0;
+  int next_ast = 0;
+
+  for (; std > 0; std = STD_NEXT(std)) {
+    asttype = A_TYPEG(STD_AST(std));
+    switch (asttype) {
+    case A_IF:
+      nesting++;
+      break;
+
+    case A_ENDIF:
+      next_ast = STD_AST(STD_NEXT(std));
+      if (A_TYPEG(next_ast) == A_IFTHEN) {
+        break;
+      }
+
+      nesting--;
+
+      if (nesting == -1) {
+        return STD_NEXT(std);
+      }
+    }
+  }
+  return std;
+}
+
+/*
  * returns the std after the parallel section beginning at
  * \p std
  */
@@ -2435,6 +2493,11 @@ static int get_target_teams_scope_std(int std) {
   return STD_PREV(std);
 }
 
+/* returns the BMPSCOPE of PARALLEL std at \p std */
+static int get_parallel_scope_std(int std) {
+  return STD_PREV(std);
+}
+
 /* returns a cloned TARGET of \p std */
 static int clone_target_std(int std) {
   int new_ast = new_node(A_MP_TARGET);
@@ -2446,10 +2509,66 @@ static int clone_target_std(int std) {
   return mk_std(new_ast);
 }
 
+/* returns a cloned EMAP of \p std */
+static int clone_emap_std() {
+  int new_ast = new_node(A_MP_EMAP);
+
+  return mk_std(new_ast);
+}
+
+/* returns a cloned stblk of \p ast */
+static int clone_stblk(int ast) {
+  bool debug_me = false;
+  int orig_scope_sptr = A_SPTRG(ast);
+
+  static int counter = 0;
+  /* create the scope sptr */
+  int cloned_scope_sptr = getccssym("uplevelCloned", counter++, ST_BLOCK);
+  PARSYMSCTP(cloned_scope_sptr, 0);
+  PARSYMSP(cloned_scope_sptr, 0);
+
+  /* create the uplevel sptr */
+  int cloned_uplevel_sptr = getccssym("uplevelCloned", counter++, ST_BLOCK);
+  PARSYMSCTP(cloned_uplevel_sptr, 0);
+  PARSYMSP(cloned_uplevel_sptr, 0);
+
+  /* link uplevel and scope sptr */
+  PARUPLEVELP(cloned_scope_sptr, cloned_uplevel_sptr);
+  LLUplevel *cloned_uplevel = llmp_create_uplevel(cloned_uplevel_sptr);
+
+  int orig_uplevel_sptr = PARUPLEVELG(orig_scope_sptr);
+
+  /* populate target-region sptr in the cloned uplevel sptr */
+  if (PARSYMSG(orig_uplevel_sptr)) {
+    LLUplevel *orig_uplevel = llmp_get_uplevel(orig_uplevel_sptr);
+
+    for (int i = 0; i < orig_uplevel->vals_count; ++i) {
+      if (orig_uplevel->vals[i] && STYPEG(orig_uplevel->vals[i]) == ST_ARRDSC)
+        continue;
+      if (debug_me) {
+        printf("[ompaccel-ast] mapping %s\n", getprint(orig_uplevel->vals[i]));
+      }
+
+      llmp_add_shared_var(cloned_uplevel, orig_uplevel->vals[i]);
+    }
+  }
+
+  if (debug_me) {
+    printf("[ompaccel-ast] made uplevel-sptr %d whose "
+        "parent is %d\n", cloned_uplevel_sptr, orig_uplevel_sptr);
+  }
+
+  int cloned_ast = mk_id(cloned_scope_sptr);
+  return cloned_ast;
+}
+
 /* returns a cloned BMPSCOPE of \p std */
 static int clone_bmpscope_std(int std) {
   int new_ast = new_node(A_MP_BMPSCOPE);
-  A_STBLKP(new_ast, A_STBLKG(STD_AST(std)));
+  int new_stblk = clone_stblk(A_STBLKG(STD_AST(std)));
+
+  int old_stblk = A_STBLKG(STD_AST(std));
+  A_STBLKP(new_ast, new_stblk);
   A_LOPP(new_ast, A_LOPG(STD_AST(std)));
 
   return mk_std(new_ast);
@@ -2476,16 +2595,11 @@ static void make_omp_buddies_std(int std1, int std2) {
  * at_std
  */
 static void end_target_std(int curr_target_std, int at_std) {
-  if (is_target_teams(curr_target_std)) {
-    int curr_target_teams_std = get_target_teams_std(curr_target_std);
-    int curr_target_endteams_std = emit_toplevel_std(A_MP_ENDTEAMS);
-    make_omp_buddies_std(curr_target_teams_std, curr_target_endteams_std);
-    insert_stmt_before(curr_target_endteams_std, at_std);
+  bool debug_me = false;
 
-    int curr_target_teams_bmpscope_std = get_target_teams_scope_std(curr_target_std);
-    int curr_target_teams_empscope_std = emit_toplevel_std(A_MP_EMPSCOPE);
-    make_omp_buddies_std(curr_target_teams_bmpscope_std, curr_target_teams_empscope_std);
-    insert_stmt_before(curr_target_teams_empscope_std, at_std);
+  if (debug_me) {
+    printf("[ompaccel-ast] ending target at ast:%s:%d\n",
+        astb.atypes[A_TYPEG(STD_AST(at_std))], STD_LINENO(at_std));
   }
 
   int curr_endtarget_std = emit_toplevel_std(A_MP_ENDTARGET);
@@ -2504,6 +2618,7 @@ static void end_target_std(int curr_target_std, int at_std) {
  */
 static int begin_target_std(int curr_target_std, int at_std) {
   bool debug_me = false;
+  int curr_target_ast = STD_AST(curr_target_std);
   int new_target_bmpscope_std =
     clone_bmpscope_std(get_target_scope_std(curr_target_std));
   A_LOPP(STD_AST(new_target_bmpscope_std), 0);
@@ -2512,28 +2627,77 @@ static int begin_target_std(int curr_target_std, int at_std) {
   int new_target_std = clone_target_std(curr_target_std);
   A_LOPP(STD_AST(new_target_std), 0);
   insert_stmt_before(new_target_std, at_std);
+
+  /* flang2's symbol replacer relies on this EMAP */
+  int new_emap_std = clone_emap_std();
+  insert_stmt_before(new_emap_std, at_std);
+
   if (debug_me)
-    printf("[ompaccel-x86] creating a new target region at %d\n", STD_LINENO(new_target_std));
+    printf("[ompaccel-ast] creating a new target region at %s:%d\n",
+        gbl.src_file, STD_LINENO(new_target_std));
 
-  if (is_target_teams(curr_target_std)) {
-    int curr_target_teams_std = get_target_teams_std(curr_target_std);
-    int new_target_teams_bmpscope_std =
-      clone_bmpscope_std(get_target_teams_scope_std(curr_target_teams_std));
-    insert_stmt_before(new_target_teams_bmpscope_std, at_std);
-
-    int new_target_teams_std = emit_toplevel_std(A_MP_TEAMS);
-    insert_stmt_before(new_target_teams_std, at_std);
-  }
   return new_target_std;
 }
 
-static void ompaccel_x86_segregate_parsec() {
+/* returns the MP_ENDPDO of \p pdo_std */
+int get_pdo_buddy_std(int pdo_std) {
+  int std = STD_NEXT(pdo_std);
+
+  for (; std > 0; std = STD_NEXT(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    if (asttype == A_MP_ENDPDO) {
+      return std;
+    }
+  }
+}
+
+/* returns the parallel std of \p pdo_std */
+int get_pdo_parallel_std(int pdo_std) {
+  int std = STD_PREV(pdo_std);
+
+  for (; std > 0; std = STD_PREV(std)) {
+    int asttype = A_TYPEG(STD_AST(std));
+    if (asttype == A_MP_PARALLEL) {
+      return std;
+    }
+  }
+}
+
+/*
+ * Converts MP_PDO std \p pdo_std to the corresponding DO std by stripping off
+ * the parallel std's
+ */
+static void conv_pdo_to_do_std(int pdo_std) {
+  /* convert MP_PDO */
+  int pdo_ast = STD_AST(pdo_std);
+  A_TYPEP(pdo_ast, A_DO);
+
+  /*convert MP_ENDPDO */
+  int endpdo_std = get_pdo_buddy_std(pdo_std);
+  int endpdo_ast = STD_AST(endpdo_std);
+  A_TYPEP(endpdo_ast, A_ENDDO);
+
+  /* remove MP_PARALLEL */
+  int parallel_std = get_pdo_parallel_std(pdo_std);
+  int end_parallel_std = A_STDG(A_LOPG(STD_AST(parallel_std)));
+  remove_stmt(parallel_std);
+  remove_stmt(end_parallel_std);
+}
+
+/*
+ * Returns true if the target region has multiple parallel sections
+ * in an else-if ladder
+ */
+static bool ompaccel_has_switched_parsec() {
   bool debug_me = false;
   ast_visit(1, 1);
 
-  bool intarget = false;
+  bool intarget = false, has_multi_parsec = false;
+  bool has_switches = false;
+
   int curr_target_ast = 0;
   int curr_target_std = -1;
+  int curr_end_target_std = -1;
   int std_next = -1;
 
   for (int std = STD_NEXT(0); std > 0; std = std_next) {
@@ -2544,6 +2708,124 @@ static void ompaccel_x86_segregate_parsec() {
     if (asttype == A_MP_TARGET) {
       curr_target_ast = ast;
       curr_target_std = std;
+
+      if (get_omp_buddy_std(curr_target_std))
+        curr_end_target_std = get_omp_buddy_std(curr_target_std);
+
+      intarget = true;
+
+    } else if (asttype == A_MP_ENDTARGET) {
+      intarget = false;
+
+    } else if (intarget) {
+      switch (asttype) {
+      case A_ELSEIF: case A_GOTO:
+        has_switches = true;
+        break;
+      default:
+        if (is_end_omp_parsec_std(std)) {
+          int next_beg_parsec_std = get_next_beg_omp_parsec_std(std);
+
+          if (next_beg_parsec_std > 0) {
+            if (STD_LINENO(next_beg_parsec_std) < STD_LINENO(curr_end_target_std)) {
+              has_multi_parsec = true;
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    if (has_switches && has_multi_parsec)
+      return true;
+  }
+
+  ast_unvisit();
+  return false;
+}
+
+/*
+ * AST transformation that transforms multi-nested parallel region to
+ * single-nested ones
+ */
+static bool ompaccel_ast_simplify_nested_parsec() {
+  bool debug_me = false;
+  ast_visit(1, 1);
+
+  bool in_target = false, in_target_parallel = false;
+
+  int std_next = -1;
+  int target_parallel_do_nesting = 0;
+
+  for (int std = STD_NEXT(0); std > 0; std = std_next) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+    std_next = STD_NEXT(std);
+
+    if (asttype == A_MP_TARGET) {
+      in_target = true;
+
+    } else if (asttype == A_MP_ENDTARGET) {
+      in_target = false;
+
+    } else if (asttype == A_MP_PARALLEL && in_target) {
+      in_target_parallel = true;
+
+    } else if (asttype == A_MP_ENDPARALLEL && in_target) {
+      in_target_parallel = false;
+
+    } else if (in_target_parallel) {
+      switch (asttype) {
+      case A_MP_PDO:
+        target_parallel_do_nesting++;
+
+        if (target_parallel_do_nesting == 2) {
+          if (debug_me) {
+            printf("[ompaccel-ast] Found nested parallel region in %s:%d\n",
+                gbl.src_file, STD_LINENO(std));
+          }
+          conv_pdo_to_do_std(std);
+          target_parallel_do_nesting--;
+        }
+        break;
+
+      case A_MP_ENDPDO:
+        target_parallel_do_nesting--;
+        break;
+      }
+    }
+  }
+
+  ast_unvisit();
+  return false;
+}
+
+/*
+ * AST transformation pass that serialize a target region if it has multiple
+ * parallel sections
+ */
+static void ompaccel_ast_serialize_parsec() {
+  bool debug_me = false;
+  ast_visit(1, 1);
+
+  bool intarget = false;
+  int curr_target_ast = 0;
+  int curr_target_std = -1;
+  int curr_end_target_std = -1;
+  int std_next = -1;
+
+  for (int std = STD_NEXT(0); std > 0; std = std_next) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+    std_next = STD_NEXT(std);
+
+    if (asttype == A_MP_TARGET) {
+      curr_target_ast = ast;
+      curr_target_std = std;
+
+      if (get_omp_buddy_std(curr_target_std))
+        curr_end_target_std = get_omp_buddy_std(curr_target_std);
+
       intarget = true;
 
     } else if (asttype == A_MP_ENDTARGET) {
@@ -2551,32 +2833,23 @@ static void ompaccel_x86_segregate_parsec() {
         make_omp_buddies_std(curr_target_std, std);
         make_omp_buddies_std(get_target_scope_std(curr_target_std),
             STD_NEXT(std));
-
-        if (is_target_teams(curr_target_std)) {
-          make_omp_buddies_std(get_target_teams_scope_std(
-                get_target_teams_std(curr_target_std)),
-              STD_PREV(std));
-
-          make_omp_buddies_std(get_target_teams_std(curr_target_std),
-              STD_PREV(STD_PREV(std)));
-        }
       }
       intarget = false;
     }
 
     if (intarget && is_end_omp_parsec_std(std)) {
       int next_beg_parsec_std = get_next_beg_omp_parsec_std(std);
-      int curr_end_target_std = get_omp_buddy_std(curr_target_std);
 
       if (next_beg_parsec_std > 0) {
         if (!has_map(curr_target_std) &&
             STD_LINENO(next_beg_parsec_std) < STD_LINENO(curr_end_target_std)) {
           if (debug_me) {
-            printf("[ompaccel-x86] in %s, non first parsec at %d\n", gbl.src_file, STD_LINENO(next_beg_parsec_std));
-            printf("[ompaccel-x86] in target region that ends at %d\n", STD_LINENO(curr_end_target_std));
+            printf("[ompaccel-ast] in %s, non first parsec at %d "
+                "where target region ends at %d\n",
+                gbl.src_file, STD_LINENO(next_beg_parsec_std),
+                STD_LINENO(curr_end_target_std));
           }
 
-          int insert_pt = get_std_after_end_omp_parsec(std);
           if (is_target_teams(curr_target_std)) {
             int target_teams_std = get_target_teams_std(curr_target_std);
             A_THRLIMITP(STD_AST(target_teams_std), mk_cnst(stb.i1));
@@ -2584,35 +2857,87 @@ static void ompaccel_x86_segregate_parsec() {
           }
 
           std_next = get_omp_buddy_std(curr_target_std);
+        }
+      }
+    }
+  }
+  ast_unvisit();
+}
 
-          /* Attempt to enclose the target region with critical sections.
-           * Not the best way, but this doesn't solve the inconsistency with the
-           * multi-parallel section target region issue */
-#if 0
-          int critical_std = emit_toplevel_std(A_MP_CRITICAL);
-          int endcritical_std = emit_toplevel_std(A_MP_ENDCRITICAL);
-          make_omp_buddies_std(critical_std, endcritical_std);
-          insert_stmt_before(critical_std, get_next_beg_omp_parsec_std(curr_target_std));
-          insert_stmt_before(endcritical_std, get_omp_buddy_std(curr_target_std));
-          std_next = get_omp_buddy_std(curr_target_std);
+/*
+ * AST transformation pass that segregates different parallel and
+ * serial section in a single target region into multiple target region.
+ * Currently, we bail out if it has complex else-if ladder due to the difficulty
+ * in doing this due to the linearized AST of flang.
+ * TODO: handle more complex cases
+ */
+static void ompaccel_ast_segregate_parsec() {
+  bool debug_me = false;
 
-          insert_stmt_before(endcritical_std,
-              get_next_end_omp_parsec_std(next_beg_parsec_std));
-#endif
+  if (ompaccel_has_switched_parsec()) {
+    if (debug_me)
+      printf("[ompaccel-ast] switch/else-if found amid multiple parallel "
+          "sections\n");
+    return;
+  }
 
-          /* Attempt to segregate target region. The ideal thing to do, but fails at
-           * flang2, mostly due to the STBLK flag of MP_BMPSCOPE) */
-#if 0
-          insert_stmt_before(critical_std, insert_pt);
-          insert_stmt_before(endcritical_std,
-              get_next_end_omp_parsec_std(next_beg_parsec_std));
+  ast_visit(1, 1);
+  bool intarget = false;
+  int curr_target_ast = 0;
+  int curr_target_std = -1;
+  int curr_end_target_std = -1;
+  int std_next = -1;
+
+  for (int std = STD_NEXT(0); std > 0; std = std_next) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+    std_next = STD_NEXT(std);
+
+    if (asttype == A_MP_TARGET) {
+      curr_target_ast = ast;
+      curr_target_std = std;
+
+      if (get_omp_buddy_std(curr_target_std))
+        curr_end_target_std = get_omp_buddy_std(curr_target_std);
+
+      intarget = true;
+
+    } else if (asttype == A_MP_ENDTARGET) {
+      if (A_LOPG(curr_target_ast) <= 0) {
+        make_omp_buddies_std(curr_target_std, std);
+        make_omp_buddies_std(get_target_scope_std(curr_target_std),
+            STD_NEXT(std));
+      }
+
+      intarget = false;
+    }
+
+    if (intarget && is_end_omp_parsec_std(std)) {
+      int next_beg_parsec_std = get_next_beg_omp_parsec_std(std);
+
+      if (next_beg_parsec_std > 0) {
+        if (!has_map(curr_target_std) &&
+            STD_LINENO(next_beg_parsec_std) < STD_LINENO(curr_end_target_std)) {
+          if (debug_me) {
+            printf("[ompaccel-ast] in %s, non first parsec at %d "
+                "where target region ends at %d\n",
+                gbl.src_file, STD_LINENO(next_beg_parsec_std),
+                STD_LINENO(curr_end_target_std));
+          }
+
+          int insert_pt = get_std_after_end_omp_parsec(std);
+          insert_pt = get_std_after_closures(insert_pt);
+          insert_pt = get_std_after_switches(insert_pt);
 
           end_target_std(curr_target_std, insert_pt);
           curr_target_std = begin_target_std(curr_target_std, insert_pt);
           curr_target_ast = STD_AST(curr_target_std);
 
           std_next = get_std_after_beg_omp_parsec(next_beg_parsec_std);
-#endif
+
+          if (STD_LINENO(curr_target_std) > STD_LINENO(std_next)) {
+            std_next = STD_NEXT(curr_target_std);
+          }
         }
       }
     }
@@ -2621,9 +2946,19 @@ static void ompaccel_x86_segregate_parsec() {
   ast_unvisit();
 }
 
-/* The main driver for openmp x86 offloading AST transformation */
-void ompaccel_x86_transform_ast() {
-  ompaccel_x86_segregate_parsec();
+/* The main driver for openmp offloading AST transformation */
+void ompaccel_ast_transform() {
+  if (flg.x86_64_omptarget && XBIT(232, 0x1))
+    return;
+
+  if (flg.amdgcn_target) {
+    ompaccel_ast_segregate_parsec();
+  }
+
+  if (flg.x86_64_omptarget) {
+    ompaccel_ast_simplify_nested_parsec();
+  }
 }
+
 #endif
 /* AOCC end */

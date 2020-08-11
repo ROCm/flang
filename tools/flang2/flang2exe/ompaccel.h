@@ -5,19 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 23rd September 2019
- * Date of modification 05th November 2019
- * Date of modification 10th December 2019
- * Date of modification 24th January 2020
- * Date of modification 12th February 2020
- * Date of modification 14th February 2020
- * Date of modification 04th April 2020
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
  *  \file
  *  \brief ompaccel.c - OpenMP GPU Offload for NVVM Targets. It uses

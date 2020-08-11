@@ -5,16 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Support for vector and novector directives
- * Date of Modification: 19th July 2019
- *
- * Ignoring simd directive for AMDGCN target
- * Date of modification: 21st April 2020
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /** \file
  *  \brief PGC & PGFTN directive scan & semantic module
  */

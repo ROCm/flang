@@ -3955,6 +3955,7 @@ fix_symbol(void)
           int parsptr = up->vals[i];
           parsptr = symbolxref[parsptr];
           up->vals[i] = parsptr;
+          up->orig_vals[i] = parsptr; // AOCC
         }
         if (up->parent) {
           up->parent = symbolxref[up->parent];
@@ -6499,6 +6500,7 @@ lookup_modvar_alias(SPTR sptr)
   }
   return NULL;
 }
+SPTR get_symbol_start(void) { return (SPTR)(oldsymbolcount + 1); }
 
 /**
    \brief Given a alias name of a mod var sptr, create a new alias_syminfo node

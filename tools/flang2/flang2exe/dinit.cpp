@@ -4,16 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Support for transpose intrinsic during initialization
- *
- * Date of Modification: 1st March 2019
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /** \file
  * \brief SCFTN routine to process data initialization statements; called by
  * semant.

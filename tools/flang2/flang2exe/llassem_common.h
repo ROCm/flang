@@ -5,14 +5,9 @@
  *
  */
 /*
-  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
-  *
-  * Bug fixes.
-  *
-  * Date of Modification: November 2018
-  *
-  */
-
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 #ifndef LLASSEM_COMMON_H_
 #define LLASSEM_COMMON_H_

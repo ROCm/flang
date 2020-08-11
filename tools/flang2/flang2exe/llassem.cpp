@@ -4,23 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
-  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
-  *
-  * Bug fixes.
-  *
-  * Date of Modification: November 2018
-  *
-  * Support for x86-64 OpenMP offloading
-  * Last modified: Oct 2019
-  *
-  * Changes to support AMDGPU OpenMP offloading.
-  * Date of modification 16th September 2019
-  * Date of modification 20th September 2019
-  * Date of modification 01st October 2019
-  * Date of modification 05th November 2019
-  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 /**
    \file
@@ -1142,7 +1130,7 @@ write_libomtparget(void)
       }
 
       else if (flg.x86_64_omptarget) {
-         // fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+          fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\

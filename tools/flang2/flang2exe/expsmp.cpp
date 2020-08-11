@@ -4,20 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Date of modification 16th September 2019
- * Date of modification 23rd September 2019
- * Date of modification 10th December  2019
- * Date of modification 20th January   2020
- * Date of modification 24th January   2020
- * Date of modification 3rd  February  2020
- * Date of modification 12th  February  2020
+ * Last modified: Apr 2020
  *
  * Support for x86-64 OpenMP offloading
- * Last modified: Dec 2019
+ * Last modified: May 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 
 /** \file
@@ -60,6 +59,14 @@ inline SPTR GetPARUPLEVEL(SPTR sptr) {
 #undef PARUPLEVELG
 #define PARUPLEVELG GetPARUPLEVEL
 #endif
+
+// AOCC Begin
+#include <list>
+#include <algorithm>
+#include <iterator>
+static bool in_parallel = false;
+std::list<int> targetVector;
+// AOCC End
 
 static int incrOutlinedCnt(void);
 static int decrOutlinedCnt(void);
@@ -592,6 +599,7 @@ jsrAddArg(int arglist, ILI_OP opc, int argili)
   case IL_ARGKR:
   case IL_ARGSP:
   case IL_ARGDP:
+  case IL_ARGQP:    // AOCC
     ili = ad2ili(opc, argili, arglist);
     return ili;
   default:
@@ -1064,6 +1072,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         break;
       }
 #endif
+    in_parallel = true; // AOCC
     if (flg.opt != 0) {
       wr_block();
       cr_block();
@@ -1371,6 +1380,11 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
               "Target region activated", NULL);
     break;
   case IM_ETARGET:
+    // AOCC Begin
+    if (in_parallel) {
+      targetVector.push_back(curilm);
+    }
+    // AOCC End
     if (outlinedCnt == 1) {
       ilm_outlined_pad_ilm(curilm);
     }
@@ -1392,6 +1406,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       // In Flang, We outline the region once, and offload it in the device
       // We don't generate outlined function for the host. so we don't have host fallback.
       exp_ompaccel_etarget(ilmp, curilm, targetfunc_sptr, outlinedCnt, (SPTR) uplevel_sptr, decrOutlinedCnt);
+      // AOCC Begin
+      std::list<int>::iterator it = std::find (targetVector.begin(),
+                                               targetVector.end(), curilm);
+      if (it != targetVector.end()) {
+        ili = ll_make_kmpc_barrier();
+        iltb.callfg = 1;
+        chk_block(ili);
+        targetVector.erase(it);
+      }
+      // AOCC End
       break;
     }
 #endif
@@ -1415,9 +1439,17 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.omptarget && gbl.ompaccel_intarget) {
         exp_ompaccel_epar(ilmp, curilm, outlinedCnt, decrOutlinedCnt);
+        // AOCC begin
+        if (flg.x86_64_omptarget && gbl.outlined && !XBIT(232, 0x1)) {
+          ili = ll_make_kmpc_barrier();
+          iltb.callfg = 1;
+          chk_block(ili);
+        }
+        // AOCC end
         break;
       }
 #endif
+    in_parallel = false; // AOCC
     if (outlinedCnt == 1) {
       ilm_outlined_pad_ilm(curilm);
     }
@@ -1630,7 +1662,8 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
 #ifdef OMP_OFFLOAD_LLVM
     // AOCC begin
     if (flg.x86_64_omptarget && ompaccel_x86_is_parallel_func(gbl.currsub)) {
-      ompaccel_x86_add_tid_params(gbl.currsub);
+      if (!XBIT(232, 0x1))
+        ompaccel_x86_add_tid_params(gbl.currsub);
     }
     // AOCC end
 

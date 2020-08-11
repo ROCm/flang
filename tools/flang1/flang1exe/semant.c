@@ -4,28 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- *
- * Date of Modification : 9th July 2019
- * Support for AMDGPU OpenMP offloading
- *
- * Date of Modification: 16th July 2019
- * Suppressed a duplicate diagnostic message: "Redundant specification of array"
- *
- * 7/10/2019 : Adding support for f2008 feature: Type statement for intrinsic
- *             types
- * 5/11/2019 : Fix for allowing atomic read/write construct inside omp critical
- *             construct
- *
- * Support for AMDGPU OpenMP offloading
- * Date of modification 04th April 2020
- * Date of modification 10th April 2020
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
     \file
     \brief This file contains part 1 of the compiler's semantic actions
@@ -192,6 +174,7 @@ static int next_enum;
 static int host_present;
 static INTERF host_state;
 static int end_of_host;
+extern int has_target;
 
 #define ERR310(s1, s2) error(310, 3, gbl.lineno, s1, s2)
 /*
@@ -1180,6 +1163,12 @@ semant1(int rednum, SST *top)
           sem.doif_depth--; /* pop DOIF stack */
           /* else ENDPARDO pops the stack */
         }
+	if (sem.doif_depth && has_target) {
+          if (scn.stmtyp != TK_MP_ENDTARGPARDO && scn.stmtyp != TK_MP_ENDTARGET) {
+             end_target();
+	  }
+	  has_target = false;
+	}
         break;
       case DI_TASKLOOP:
         if (scn.stmtyp != TK_MP_ENDTASKLOOP) {

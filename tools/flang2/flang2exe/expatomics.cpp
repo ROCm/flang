@@ -4,17 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /** \file
  * \brief OpenMP/OpenACC/C++11 atomics expander routines; all targets including
  * LLVM
- */
-
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * modification date: 7th Feb 2020
- * fix the issue with multiply reduction
  */
 
 #include "expatomics.h"
@@ -627,7 +628,7 @@ int
 create_atomic_capture_seq(int update_ili, int read_ili, int capture_first)
 {
   int function;
-  ILI_OP intarg_opcode, floatarg_opcode, doublearg_opcode, longarg_opcode;
+  ILI_OP intarg_opcode, floatarg_opcode, doublearg_opcode, longarg_opcode, quadarg_opcode;
   int ld_opcode;
   ILI_OP st_opcode, arg_opcode;
   int store_pt, store_nme, arg, garg;
@@ -1718,6 +1719,17 @@ msz_from_atomic_pd(PD_KIND pd)
 static MSZ
 msz_from_atomic_dtype(DTYPE dtype)
 {
+  // AOCC Begin
+  switch(dtype) {
+  //TODO: Use MSZ_I16 or MSZ_32
+  case DT_CMPLX:
+    return MSZ_I8;
+  case DT_DCMPLX:
+    return MSZ_I8;
+  default:
+    break;
+  }
+  // AOCC End
   switch(zsize_of(dtype)) {
   case 1:
     return MSZ_BYTE;
@@ -2445,9 +2457,19 @@ _exp_mp_atomic_read(int stc, DTYPE dtype, int* opnd, int* nme)
 #endif
 
   size = zsize_of(dtype);
-  if (dtype == DT_CMPLX ||
+  // AOCC Begin
+  if (flg.omptarget && (dtype == DT_CMPLX || dtype == DT_DCMPLX)) {
+    OPCODES const * ops;
+    ldst_msz(dtype, &ld, &st, &msz);
+    ops = get_ops(msz, 1);
+    opnd[TMP_SPTR_IDX] = 0;
+    ILI_OP opc = dtype == DT_CMPLX ? IL_LDSCMPLX : IL_LDDCMPLX;
+    result = ad3ili(IL_LDSCMPLX, opnd[LHS_IDX], nme[LHS_IDX], msz);
+    return result;
+  } else if (dtype == DT_CMPLX ||
+  // AOCC End
       dtype == DT_DCMPLX
-      || (size !=1 && size != 2 && size != 4 && size != 8)) 
+      || (size !=1 && size != 2 && size != 4 && size != 8))
   {
     tmp_sptr = GetSPTRVal(opnd);
     if (tmp_sptr <= NOSYM)  /* atomic capture may have set this already */
@@ -2927,9 +2949,9 @@ _exp_mp_atomic_update(DTYPE dtype, int* opnd, int* nme)
     ASSNP(desired_sptr, 1);
     chk_block(result);
 
-    if (dtype == DT_CMPLX ||
+    if (!flg.omptarget && (dtype == DT_CMPLX || //AOCC
         dtype == DT_DCMPLX
-        || (size != 1 && size != 2 && size !=4 && size !=8)) 
+        || (size != 1 && size != 2 && size !=4 && size !=8)))
     {
       size_ili = ad_icon(size);
       ADDRTKNP(expected_sptr, 1);

@@ -5,14 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Month of modification : May 2019 - Added OMP offload support
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /** \file main.c
     \brief main program and initialization routines for fortran front-end
 */
@@ -217,8 +213,8 @@ main(int argc, char *argv[])
 
       /* AOCC begin */
 #ifdef OMP_OFFLOAD_LLVM
-      if (flg.x86_64_omptarget) {
-        ompaccel_x86_transform_ast();
+      if (flg.omptarget) {
+        ompaccel_ast_transform();
       }
 #endif
       /* AOCC end */

@@ -5,15 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes for AMD GPU OpenMP offloading and bug fixes.
- * Date of Modification: 05th Septemeber 2019
- *
- * Date of Modification: November 2018
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
    \file llutil.c
    Contains misc. utility routines for LLVM Code Generator

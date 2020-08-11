@@ -4,26 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
-  * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
-  *
-  * Bug fixes.
-  *
-  * Date of Modification: December 2018
-  *
-  * Changes to support AMD GPU Offloading
-  * Added code to avoid allocations for implied do inside target region
-  * Date of Modification: 24th October 2019
-  * Date of Modification: 5th November 2019
-  *
-  * Changes to emit proper error message when pointer is associated with 
-  * a constant
-  * Date of Modification: 17th December 2019
-  *
-  * Added code to support reshape with implied dos inside target region
-  * Date of Modification: 23rd January 2020
-  *
-  */
+
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 
 /** \file
@@ -83,6 +68,9 @@ static bool is_selector(SPTR sptr);
 //AOCC Begin
 static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
 static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
+extern int distribute_doif;
+extern int distribute_pdo_ast;
+extern int tgt_distribute_ast;
 //AOCC End
 
 
@@ -645,6 +633,13 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       SST_IDP(old, S_EXPR);
       goto done;
 
+    // AOCC begin
+    case TY_QCMPLX:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+    // AOCC end
+
     case TY_CHAR:
     case TY_NCHAR:
     case TY_STRUCT:
@@ -771,7 +766,7 @@ done:
     if ((to == TY_BLOG || to == TY_SLOG || to == TY_LOG || to == TY_LOG8) &&
         (from == TY_BINT || from == TY_SINT || from == TY_INT ||
          from == TY_INT8 || from == TY_REAL || from == TY_DCMPLX ||
-         from == TY_DBLE || from == TY_CMPLX
+         from == TY_DBLE || from == TY_CMPLX 
          ))
       goto type_error;
     if ((from == TY_BLOG || from == TY_SLOG || from == TY_LOG ||
@@ -1051,6 +1046,8 @@ again:
     case TY_CMPLX:
       break;
     case TY_DCMPLX:
+      break;
+    case TY_QCMPLX:   // AOCC
       break;
     case TY_CHAR:
       break;
@@ -5061,7 +5058,6 @@ chkopnds(SST *lop, SST *operator, SST *rop)
     cngtyp(rop, DT_CMPLX16);
     cngtyp(lop, DT_CMPLX16);
   }
-
   if (opc == OP_CMP) {
     /* Rules for relational expressions: nondecimal constants result
      * in a typeless comparison.  Size of the larger operand is used.
@@ -5853,6 +5849,10 @@ mod_type(int dtype, int ty, int kind, int len, int propagated, int sptr)
         return DT_REAL8;
       if (len == 4)
         return (DT_REAL4);
+      // AOCC begin
+      if (len == 16)
+        return (DT_QUAD);
+      // AOCC end
     }
     error(31, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) :
                                      (ty == TY_HALF ? "real2" : "real"), CNULL);
@@ -6126,6 +6126,15 @@ do_parbegin(DOINFO *doinfo)
   DOVARP(iv, 1);
 
   ast = mk_stmt(A_MP_PDO, 0 /* SST_ASTG(RHS(1)) BLOCKDO */);
+  /* AOCC begin */
+  if(DI_ID(sem.doif_depth) == DI_DISTRIBUTE) {
+    distribute_pdo_ast = ast;
+  }
+  if(DI_ID(sem.doif_depth) == DI_TARGTEAMSDIST) {
+    tgt_distribute_ast = ast;
+  }
+  /* AOCC end */
+
   dovar = mk_id(iv);
   A_DOVARP(ast, dovar);
   A_M1P(ast, doinfo->init_expr);
@@ -6723,6 +6732,9 @@ do_end(DOINFO *doinfo)
     sem.close_pdo = TRUE;
     par_pop_scope();
     ast = mk_stmt(A_MP_ENDDISTRIBUTE, 0);
+    distribute_doif = 0; /* AOCC */
+    distribute_pdo_ast = 0; /* AOCC */
+    tgt_distribute_ast = 0; /* AOCC */
     A_LOPP(DI_BDISTRIBUTE(par_doif), ast);
     A_LOPP(ast, DI_BDISTRIBUTE(par_doif));
     (void)add_stmt(ast);
@@ -6746,6 +6758,8 @@ do_end(DOINFO *doinfo)
     par_pop_scope();
     par_pop_scope();
     ast = mk_stmt(A_MP_ENDDISTRIBUTE, 0);
+    distribute_doif = 0; /* AOCC */
+    distribute_pdo_ast = 0; /* AOCC */
     A_LOPP(DI_BDISTRIBUTE(par_doif), ast);
     A_LOPP(ast, DI_BDISTRIBUTE(par_doif));
     (void)add_stmt(ast);

@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ */
 /** \file
 *   \brief Routines for descriptor optimizatons and forall transformations
 */
@@ -2066,8 +2070,11 @@ _template(int ast, int rank, LOGICAL usevalue, int i8)
   if (flags & 0x100) /* BOGUSFLAG */
     return 0;
   flags |= TEMPLATE | SEQSECTION;
-
-  /* set newsd.rank = rank */
+  // AOCC
+  if (!sptrnewsd || (STYPEG(sptrnewsd) != ST_ARRDSC && STYPEG(sptrnewsd) != ST_DESCRIPTOR &&
+          DTY(DTYPEG(sptrnewsd)) != TY_ARRAY))
+      return 0;
+  /* set newsd.rank =u rank */
   insert_assign(get_desc_rank(sptrnewsd), mk_isz_cval(rank, astb.bnd.dtype),
                 beforestd);
   /* copy newsd.kind = kind */

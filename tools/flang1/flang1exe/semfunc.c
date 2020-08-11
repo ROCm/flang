@@ -4,55 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Avoiding generation of _mth_aint and _mth_dint lib calls for the aint input;
- * instead handling it in flang
- * Date of Modification: May 2018
- *
- * Support for DNORM intrinsic
- * Date of Modification: 21st February 2019
- *
- * Support for Bit Sequence Comparsion intrinsic
- * Month of Modification: May 2019
- *
- * Support for Bit Masking intrinsics.
- * Month of Modification: May 2019
- *
- * Support for Bit Shifting intrinsics.
- * Month of Modification: June 2019
- *
- * Support for MERGE_BITS intrinsic.
- * Month of Modification: July 2019
- *
- * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
- * Month of Modification: July 2019
- *
- * Support for Combined Bit Shifting intrinsic.
- * Month of Modification: July 2019
- *
- * Support for parity intrinsic.
- * Month of Modification: July 2019
- *
- * Support for Bit transformational intrinsic iany, iall, iparity.
- * Month of Modification: July 2019
- *
- * Fixes for CP2K application build
- * Month of Modification: November 2019
- *
- * Fixed issues related to type bound procedures with and without nopass clause
- * Date of Modification: December 2019
- *
- * Complex datatype support for acosh , asinh , atanh
- * Modified on 08 January 2020
- *
- * Added code to support reshape with implied dos inside target region
- * Date of Modification: 23rd January 2020
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /** \file
     \brief Fortran front-end utility routines used by Semantic Analyzer to
            process functions, subroutines, predeclareds, etc.

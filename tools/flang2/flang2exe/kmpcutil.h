@@ -4,13 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 11th July 2019
- * Date of modification 05th September 2019
+ *  Last modified: Sep 2019
  *
+ * Support for x86-64 OpenMP offloading
+ *  Last modified: Apr 2020
  */
 
 #ifndef KMPC_RUNTIME_H_
@@ -293,6 +296,13 @@ int ll_make_kmpc_fork_call(SPTR sptr, int argc, int *arglist, RegionType rt, int
  * from \p sptrlist.  Set refargs to true if they are passed by ref.
  */
 int ll_make_kmpc_fork_call_variadic(SPTR sptr, int argc, SPTR *sptrlist);
+
+/**
+ * \brief ll_make_kmpc_fork_call_variadic for -Mx,232,0x1 implementing
+ * functions. \p kmpc_api decides fork_call() or fork_teams()
+ */
+int ll_make_kmpc_fork_call_variadic2(SPTR sptr, int argc, SPTR *sptrlist,
+    int kmpc_api = KMPC_API_FORK_CALL);
 // AOCC end
 
 /**

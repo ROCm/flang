@@ -4,19 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Support for DNORM intrinsic
- *
- * Date of Modification: 21st February 2019
- *
- * Support for parity and bit transformational intrinsic iparity, iany, iall
- * Date of Modification: July 2019
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
     \file
     \brief Optimizer submodule responsible for performing flow analysis
@@ -1793,7 +1784,7 @@ new_storeitem(int nme)
   int store;
 
   store = opt.storeb.stg_avail++;
-  if (store > 32767)
+  if (store > 32767 * 4)
     error(7, 4, 0, CNULL, CNULL);
   OPT_NEED(opt.storeb, STORE, 100);
   STORE_TYPE(store) = 0;

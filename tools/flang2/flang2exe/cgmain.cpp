@@ -5,39 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Date of Modification: May 2018
- *
- * Support for ivdep directive
- * Date of Modification: 11th march 2019
- *
- * Support for vector and novector directives
- * Date of Modification: 19th July 2019
- *
- * Support for x86-64 OpenMP offloading
- * Last modified: Sept 2019
- *
- * Support for volatile in NME
- * Date of modification 05th September 2019
- *
- * Added some SPTR allocation code changes
- * Date of modification 19th September 2019
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 1st October 2019
- *
- * Compile time improvement changes
- * Date of modification 14th November 2019
- *
- * Allowing declaration of sqrt function in target module
- * Date of modification 31st November 2020
- *
- * Allowing declaration of __ockl_get* functions in target module
- * Date of modification 14th February 2020
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
    \file
    \brief Main source module to translate into LLVM
@@ -12922,9 +12892,32 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "exp", 3) == 0) ||
          (strncmp(fn_name, "log", 3) == 0) ||
          (strncmp(fn_name, "log10", 5) == 0) ||
+         (strncmp(fn_name, "sinhf", 5) == 0) ||
+         (strncmp(fn_name, "sinh", 5) == 0) ||
+         (strncmp(fn_name, "coshf", 5) == 0) ||
+         (strncmp(fn_name, "cosh", 5) == 0) ||
+         (strncmp(fn_name, "tanhf", 5) == 0) ||
+         (strncmp(fn_name, "tanh", 5) == 0) ||
+         (strncmp(fn_name, "atanf", 5) == 0) ||
+         (strncmp(fn_name, "atan", 4) == 0) ||
+         (strncmp(fn_name, "acosf", 5) == 0) ||
+         (strncmp(fn_name, "acos", 4) == 0) ||
+         (strncmp(fn_name, "asinf", 5) == 0) ||
+         (strncmp(fn_name, "asin", 4) == 0) ||
          (strncmp(fn_name, "__ockl_get", 10) == 0) ||
+	 (strncmp(fn_name, "sinhf", 5) == 0) ||
+         (strncmp(fn_name, "sinh", 5) == 0) ||
+         (strncmp(fn_name, "coshf", 5) == 0) ||
+         (strncmp(fn_name, "cosh", 5) == 0) ||
+         (strncmp(fn_name, "tanhf", 5) == 0) ||
+         (strncmp(fn_name, "tanh", 5) == 0) ||
+         (strncmp(fn_name, "atanf", 5) == 0) ||
+         (strncmp(fn_name, "atan", 4) == 0) ||
+         (strncmp(fn_name, "acosf", 5) == 0) ||
+         (strncmp(fn_name, "acos", 4) == 0) ||
+         (strncmp(fn_name, "asinf", 5) == 0) ||
+         (strncmp(fn_name, "asin", 4) == 0) ||
 #endif
-         // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
          (strncmp(fn_name, "llvm.fma", 8) == 0);
 }

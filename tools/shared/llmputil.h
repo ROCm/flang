@@ -4,12 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading
  * Date of modification 23rd September 2019
  *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
  */
 
 #ifndef LLMPUTIL_H_
@@ -28,6 +31,16 @@
  * are represented as a list of unique sptrs.
  */
 typedef struct {
+  /* AOCC begin */
+  /*
+   * orig_vals[] track the original SPTRs assigned to this uplevel.
+   * change_target_func_smbols() is called for omptarget compilation that
+   * changes vals[i] to it's corresponding device-sptr. So APIs that require
+   * the originally assigned SPTR should refer to orig_vals[] instead of vals[]
+   */
+  int *orig_vals; /* Contains the original shared var sptrs */
+  int orig_vals_size;  /* Total allocated slots in orig_vals */
+  /* AOCC end */
   int *vals;      /* Array containing shared var sptrs */
   int vals_size;  /* Total allocated slots in vals */
   int vals_count; /* Traditionally "available" or vals_avl */

@@ -5,31 +5,8 @@
  *
  */
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes made to create single team for omp target parallel block as well
- * Date of Modification: 26th June 2019
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 9th July 2019
- * Date of modification 26th July 2019
- * Date of modification 05th September 2019
- * Date of modification 06th September 2019
- * Date of modification 16th September 2019
- * Date of modification 23rd September 2019
- * Date of modification 05th November  2019
- * Date of modification 13th November  2019
- * Date of modification 26th November  2019
- * Date of modification 28th November  2019
- * Date of modification 10th December  2019
- * Date of modification 20th January   2020
- * Date of modification 24th January   2020
- * Date of modification 04th February  2020
- * Date of modification 12th February  2020
- * Date of modification 14th February  2020
- *
- * Support for x86-64 OpenMP offloading
- * Last modified: Dec 2019
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
 /**
  *  \file
@@ -143,6 +120,10 @@ _long_unsigned(int lilix, int *dt, bool *punsigned, DTYPE dtype)
     *dt = 2;
   } else if (dty == TY_DBLE) {
     *dt = 4;
+  } else if (dty == TY_CMPLX) {
+    *dt = 5;
+  } else if (dty == TY_DCMPLX) {
+    *dt = 6;
   }
 
   // todo ompaccel I don't know how to handle others
@@ -197,7 +178,9 @@ mk_ompaccel_ldsptr(SPTR sptr)
         return ad3ili(IL_LDA, ili, nme, MSZ_PTR);
       // AOCC Begin
       } else if (dtype == DT_CMPLX) {
-        return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F8);
+        return ad3ili(IL_LDSCMPLX, ili, nme, MSZ_F8);
+      } else if (dtype == DT_DCMPLX) {
+        return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
       // AOCC End
       } else {
         if (sz == 8)
@@ -235,6 +218,9 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
       return ad3ili(IL_LDDP, ili, nme, MSZ_DBLE);
       break;
     case DT_CMPLX:
+      return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F8);
+      break;
+    case DT_DCMPLX:
       return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
       break;
     case DT_NONE:

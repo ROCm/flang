@@ -5,16 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Use llvm math intrinsic instead of flang runtime;
- * assume function arguments are aliasing.
- * Date of Modification: February 2018
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
 

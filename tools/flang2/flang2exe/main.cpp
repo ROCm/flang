@@ -4,18 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes to support AMDGPU OpenMP offloading
- * Date of modification 9th July 2019
- * Date of modification 04th April 2020
- *
- * Support for x86-64 OpenMP offloading
- * Last modified: Oct 2019
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 
 /**
    \file
@@ -354,11 +346,16 @@ process_input(char *argv0, bool *need_cuda_constructor)
         DUMP("before-schedule");
         // AOCC Begin
 #if defined(OMP_OFFLOAD_LLVM)
-        bool orig = gbl.ompaccel_isdevice;
-        if (OMPACCFUNCDEVG(gbl.currsub))
+        if (OMPACCFUNCDEVG(gbl.currsub)) {
+          bool orig = gbl.ompaccel_isdevice;
           gbl.ompaccel_isdevice = true;
-        schedule();
-        gbl.ompaccel_isdevice = orig;
+          schedule();
+          gbl.ompaccel_isdevice = orig;
+          if (flg.amdgcn_target)
+            schedule();
+        } else {
+          schedule();
+        }
 #else
         // AOCC End
         schedule();

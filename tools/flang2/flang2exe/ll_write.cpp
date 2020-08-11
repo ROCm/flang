@@ -5,15 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changed the metadata name as per llvm trunk.
- * Date of Modification: May 2018
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 #include "gbldefs.h"
 #include "error.h"
 #include "ll_structure.h"

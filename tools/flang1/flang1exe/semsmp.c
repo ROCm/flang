@@ -5,29 +5,15 @@
  *
  */
 
-/*
- * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Date of modification 9th July 2019
- * Date of modification 5th September 2019
- * Date of modification 16th September 2019
- * Date of modification 20th September 2019
- * Date of modification 23rd September 2019
- * Date of modification 07th October 2019
- * Date of modification 14th October 2019
- * Date of modification 15th November 2019
- * Date of modification 30th November 2019
- * Date of modification 02nd December 2019
- * Date of modification 05th December 2019
- * Date of modification 04th February 2020
- * Date of modification 12th February 2020
- * Date of modification 20th April    2020
- * Date of modification 29th April    2020
+ * Last Modified: July 2020
  *
- * Added support for !$omp target and !$omp teams blocks
- * Date of modification 16th October 2019
- *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Mar 2020
  */
 
 /** \file
@@ -161,6 +147,9 @@ int reduction_kernel = 0;
 // AOCC End
 #endif
 int teams_ast = 0; // AOCC
+int distribute_pdo_ast = 0; /* AOCC */
+int distribute_doif = 0; /* AOCC */
+int tgt_distribute_ast = 0; /* AOCC */
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -583,6 +572,7 @@ static int distchunk;
 static int mp_iftype;
 static ISZ_T kernel_do_nest;
 static LOGICAL has_team = FALSE;
+LOGICAL has_target = FALSE;
 
 
 static LOGICAL any_pflsr_private = FALSE;
@@ -593,6 +583,30 @@ static void add_pragma(int pragmatype, int pragmascope, int pragmaarg);
 #define OPT_OMP_ATOMIC !XBIT(69,0x1000)
 
 static int kernel_argnum;
+
+/* AOCC begin */
+/*
+ * Rewrite distribute's sched correctly if under parallel region given that
+ * they're all enclosed in a target region.
+ */
+static void rewrite_distr_sched() {
+#ifdef OMP_OFFLOAD_AMD
+  int match_sched;
+  if (target_ast && distribute_doif) {
+    if (flg.x86_64_omptarget) {
+      match_sched = MP_SCH_STATIC;
+    } else {
+      match_sched = MP_SCH_TEAMS_DIST;
+    }
+    if (DI_SCHED_TYPE(distribute_doif) == match_sched) {
+      DI_SCHED_TYPE(distribute_doif) = DI_SCH_DIST_STATIC;
+      A_SCHED_TYPEP(distribute_pdo_ast, DI_SCH_DIST_STATIC);
+      A_SCHED_TYPEP(tgt_distribute_ast, DI_SCH_DIST_STATIC);
+    }
+  }
+#endif
+}
+/* AOCC end */
 
 /**
    \brief Semantic analysis for SMP statements.
@@ -679,6 +693,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::=	<par begin> <opt par list>  |
    */
   case MP_STMT1:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PAR, "OMP PARALLEL");
     mp_create_bscope(0);
     DI_BPAR(sem.doif_depth) = emit_bpar();
@@ -840,6 +855,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <pdo begin> <opt par list>  |
    */
   case MP_STMT7:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PDO, "OMP DO");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -930,6 +946,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <paralleldo begin> <opt par list> |
    */
   case MP_STMT14:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk(BT_PARDO, "OMP PARALLEL DO");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -1775,6 +1792,15 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <distribute begin> <opt par list> |
    */
   case MP_STMT52:
+    /* AOCC begin */
+#ifdef OMP_OFFLOAD_LLVM
+    if (target_ast && teams_ast) {
+      A_COMBINEDTYPEP(target_ast, get_omp_combined_mode(
+            BT_TARGET | BT_TEAMS | BT_DISTRIBUTE));
+    }
+#endif
+    /* AOCC end */
+
     clause_errchk(BT_DISTRIBUTE, "OMP DISTRIBUTE");
     doif = SST_CVALG(RHS(1));
     sem.expect_do = TRUE;
@@ -1872,6 +1898,7 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <pardosimd begin> <opt par list> |
    */
   case MP_STMT60:
+    rewrite_distr_sched(); /* AOCC */
     clause_errchk((BT_PARDO | BT_SIMD), "OMP PARALLEL DO SIMD");
     do_schedule(SST_CVALG(RHS(1)));
     sem.expect_do = TRUE;
@@ -6602,9 +6629,17 @@ do_dist_schedule(int doif, LOGICAL chk_collapse)
   DI_CHUNK(doif) = DI_DISTCHUNK(doif);
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-  if (flg.amdgcn_target && !CL_PRESENT(CL_DIST_SCHEDULE) && target_ast  &&
+  if (flg.omptarget && !CL_PRESENT(CL_DIST_SCHEDULE) && target_ast  &&
       A_COMBINEDTYPEG(target_ast) == mode_target_teams_distribute) {
-    DI_SCHED_TYPE(doif) = MP_SCH_TEAMS_DIST;
+    if (flg.amdgcn_target) {
+      DI_SCHED_TYPE(doif) = MP_SCH_TEAMS_DIST;
+    } else if (flg.x86_64_omptarget) {
+      // Force static scheduling if this is a target teams-distribute without a
+      // parallel do.
+      DI_SCHED_TYPE(doif) = MP_SCH_STATIC;
+    } else {
+      DI_SCHED_TYPE(doif) = DI_SCH_DIST_STATIC;
+    }
   } else
 #endif
   // AOCC End
@@ -8736,6 +8771,7 @@ do_bdistribute(int doif, LOGICAL chk_collapse)
 
   do_dist_schedule(doif, chk_collapse);
   ast = mk_stmt(A_MP_DISTRIBUTE, 0);
+  distribute_doif = doif; /* AOCC */
   DI_BDISTRIBUTE(doif) = ast;
   add_stmt(ast);
 
@@ -8915,6 +8951,7 @@ begin_combine_constructs(BIGINT64 construct)
   LOGICAL do_enter = FALSE;
 
   has_team = FALSE;
+  has_target = FALSE;
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   combinedMode = get_omp_combined_mode(construct);
   if (flg.omptarget) {
@@ -9031,6 +9068,9 @@ begin_combine_constructs(BIGINT64 construct)
     DI_BPAR(doif) = emit_bpar();
     par_push_scope(FALSE);
     begin_parallel_clause(sem.doif_depth);
+    if (BT_TARGET & construct && !has_team) {
+      has_target = TRUE;
+    }
   }
   if (BT_PAR & construct) {
     if (do_enter) {
@@ -9238,7 +9278,7 @@ void
 add_assign_firstprivate(int dstsym, int srcsym)
 {
   SST srcsst, dstsst;
-  int where, savepar, savetask, savetarget, ast;
+  int where, savepar, savetask, savetarget,saveteams, ast;
   int dupwhere;
 
   dupwhere = where = sem.scope_stack[sem.scope_level].end_prologue;
@@ -9259,6 +9299,7 @@ add_assign_firstprivate(int dstsym, int srcsym)
   savepar = sem.parallel;
   savetask = sem.task;
   savetarget = sem.target;
+  saveteams = sem.target;
   sem.parallel = 0;
   if (sem.task && TASKG(dstsym)) {
     ast = mk_stmt(A_MP_TASKFIRSTPRIV, 0);
@@ -9271,6 +9312,7 @@ add_assign_firstprivate(int dstsym, int srcsym)
   set_parref_flag(srcsym, srcsym, BLK_UPLEVEL_SPTR(sem.scope_level));
   sem.task = 0;
   sem.target = 0;
+  sem.teams = 0;
   if (!POINTERG(srcsym))
     where = add_stmt_after(assign(&dstsst, &srcsst), where);
   else {
@@ -9280,6 +9322,7 @@ add_assign_firstprivate(int dstsym, int srcsym)
   sem.parallel = savepar;
   sem.task = savetask;
   sem.target = savetarget;
+  sem.teams = saveteams;
   sem.scope_stack[sem.scope_level].end_prologue = where;
   if (sem.task && TASKG(dstsym)) {
     ast = mk_stmt(A_MP_TASKDUP, 0);
@@ -10758,6 +10801,11 @@ static LOGICAL use_atomic_for_reduction(int d)
 {
 #ifdef OMP_OFFLOAD_LLVM
   if(flg.omptarget && DI_IN_NEST(d, DI_TARGET) ) {
+    // AOCC Begin
+    if (DI_IN_NEST(d, DI_PARDO) && !teams_ast) {
+      return TRUE;
+    }
+    // AOCC End
     if(DI_IN_NEST(d, DI_PARDO) ||
         DI_IN_NEST(d, DI_TARGTEAMSDISTPARDO))
       return OPT_OMP_ATOMIC;

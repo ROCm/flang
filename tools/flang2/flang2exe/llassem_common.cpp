@@ -5,15 +5,9 @@
  *
  */
 /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Changes for AMD GPU OpenMP offloading and bug fixes.
- *
- * Date of Modification: November 2018
- * Date of Modification: 05th November 2019
- *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  */
-
 /**
    \file llassem_common.c
    Some various functions that emit LLVM IR.
