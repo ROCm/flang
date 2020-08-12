@@ -1796,7 +1796,7 @@ new_storeitem(int nme)
   int store;
 
   store = opt.storeb.stg_avail++;
-  if (store > 32767 * 4)  // AOCC increasing limit
+  if (store > 32767 * 4 )  // AOCC increasing limit
     error(7, 4, 0, CNULL, CNULL);
   OPT_NEED(opt.storeb, STORE, 100);
   STORE_TYPE(store) = 0;
@@ -1828,7 +1828,7 @@ update_stl(int lpx, int nme)
     if (STORE_NM(store) == nme)
       return store;
   store = opt.storeb.stg_avail++;
-  if (store > 65535)
+  if (store > 32767)
     error(7, 4, 0, CNULL, CNULL);
   OPT_NEED(opt.storeb, STORE, 100);
   STORE_TYPE(store) = 0;
@@ -2759,9 +2759,8 @@ const_prop(void)
   Q_ITEM *q;
   int dvl;
 
-  if (XBIT(6, 0x1))
+  if (true || XBIT(6, 0x1))  // AOCC
     return FALSE;
-//  return false;
 #if DEBUG
   if (OPTDBG(9, 32768)) {
     fprintf(gbl.dbgfil, "const_prop: file %s, function %s\n", gbl.src_file,
