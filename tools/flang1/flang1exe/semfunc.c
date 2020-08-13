@@ -179,6 +179,8 @@ static int byval_func_ptr = 0;
 static int byval_dscptr = 0;
 static int byval_paramct = 0;
 
+int nearest_status; /* indicating nearest is outside the array */
+
 #define PASS_BYVAL 1
 #define PASS_BYREF 2
 #define PASS_BYREF_NO_LEN 3
@@ -10055,42 +10057,86 @@ ref_pd(SST *stktop, ITEM *list)
       goto exit_;
 
     // AOCC begin
-    sp = ARG_STK(0);
-    dtype1 = 0;
-    for (i = 0; i < count; i++) {
-      sp = ARG_STK(i);
-      argdtype = SST_DTYPEG(sp);
-      if (argdtype == DT_WORD || argdtype == DT_DWORD) {
-        if (dt_cast_word) {
-          cngtyp(sp, dt_cast_word);
-	  argdtype = SST_DTYPEG(sp);
-	} else if (argdtype == DT_WORD) {
+      sp = ARG_STK(0);
+      dtype1 = SST_DTYPEG(sp);
+      shaper = SST_SHAPEG(sp);
+      sp = ARG_STK(1);
+      dtype2 = SST_DTYPEG(sp);
+   
+      if (sem.in_array_const == 0) {
+	nearest_status  = 1;
+	stkp = ARG_STK(0);
+	shaper = SST_SHAPEG(stkp);
+	dtype1 = DDTG(SST_DTYPEG(stkp));
+	dtype2 = DDTG(SST_DTYPEG(ARG_STK(1)));
+	if (!DT_ISREAL(dtype1) || !DT_ISREAL(dtype2)) {
+          E74_ARG(pdsym, 0, NULL);
+	  goto call_e74_arg;
 	}
-      }
-      if (!dtype1) {
-        dtype1 = argdtype;
-	if (DTY(argdtype) == TY_ARRAY)
-          break;
+	shape2 = SST_SHAPEG(ARG_STK(1));
+	shaper = set_shape_result(shaper, shape2);
+	if (shaper < 0) {
+	  E74_ARG(pdsym, 2, NULL);
+	  goto call_e74_arg;
+	}
+	ast = ARG_AST(1);
+	if (shape2)
+	  dtyper = get_array_dtype(1, DT_LOG);
+	else
+	  dtyper = DT_LOG;
+	if (DTY(dtype2) == TY_REAL)
+	  ast = mk_binop(OP_GE, ast, mk_cnst(stb.flt0), dtyper);
+        else
+          ast = mk_binop(OP_GE, ast, mk_cnst(stb.quad0), dtyper);
+        ARG_AST(1) = ast;
+        if (DTY(dtype1) == TY_REAL)
+          rtlRtn = RTE_nearest;
+        else
+          rtlRtn = RTE_nearestq;        //AOCC
+        (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
+        dtyper = SST_DTYPEG(stkp);
+        if (shaper && DTY(dtyper) != TY_ARRAY)
+        dtyper = get_array_dtype(1, dtyper);
+	break;
       }
       else {
-        if (DTY(argdtype) == TY_ARRAY) {
-          dtype1 = argdtype;
-	  break;
-	}
-      }
+	sp = ARG_STK(0);
+        dtype1 = 0;
+        for (i = 0; i < count; i++) {
+          sp = ARG_STK(i);
+          argdtype = SST_DTYPEG(sp);
+          if (argdtype == DT_WORD || argdtype == DT_DWORD) {
+            if (dt_cast_word) {
+              cngtyp(sp, dt_cast_word);
+	      argdtype = SST_DTYPEG(sp);
+	    } else if (argdtype == DT_WORD) {
+	    }
+          }
+          if (!dtype1) {
+           dtype1 = argdtype;
+	   if (DTY(argdtype) == TY_ARRAY)
+             break;
+          }
+          else {
+            if (DTY(argdtype) == TY_ARRAY) {
+              dtype1 = argdtype;
+	      break;
+	    }
+         }
+       }
+       if (DTY(dtype1) == TY_REAL)
+         rtlRtn = RTE_nearest;
+       else if(DTY(dtype1) == TY_DBLE)
+         rtlRtn = RTE_nearestd;
+       else
+         rtlRtn = RTE_nearestq;
+       char* nmptr = mkRteRtnNm(rtlRtn);
+       (void)sym_mkfunc_nodesc(nmptr, dtype1);
+       dtyper = SST_DTYPEG(sp);
+       break;
     }
-    if (DTY(dtype1) == TY_REAL)
-      rtlRtn = RTE_nearest;
-    else if(DTY(dtype1) == TY_DBLE)
-      rtlRtn = RTE_nearestd;
-    else
-      rtlRtn = RTE_nearestq;
-    char* nmptr = mkRteRtnNm(rtlRtn);
-    (void)sym_mkfunc_nodesc(nmptr, dtype1);
-    dtyper = SST_DTYPEG(sp);
     // AOCC end
-    break;
-
+ 
   case PD_precision:
     if (count != 1) {
       E74_CNT(pdsym, count, 1, 1);

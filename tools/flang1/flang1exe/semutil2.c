@@ -107,6 +107,8 @@ static int init_intrin_type_desc(int ast, SPTR sptr, int std);
  * semant-created temporaries which are re-used across statements.
  */
 
+extern int nearest_status;
+
 static int temps_ctr[3];
 #define TEMPS_CTR(n) (temps_ctr[n]++)
 #define TEMPS_STK(n) ((sem.doif_depth << 10) + temps_ctr[n]++)
@@ -3689,7 +3691,7 @@ construct_arg_list(int ast)
   ACL *argroot = NULL;
   ACL **curarg = &argroot;
   int i;
-
+   
   for (i = 0; i < A_ARGCNTG(ast); i++) {
     int argast = ARGT_ARG(argt, i);
     /* argast is 0 for optional args */
@@ -3722,32 +3724,65 @@ static ACL *
 mk_elem_init_intrinsic(AC_INTRINSIC init_intr, int ast, DTYPE dtype,
                        int parent_acltype)
 {
-  ACL *arg1acl;
-  ACL *a;
-  DTYPE arg1dtype;
-  DTYPE dtypebase = DDTG(dtype);
-  ACL *expracl = mk_init_intrinsic(init_intr);
-  ACL *arglist = construct_arg_list(ast);
-
-  if (!arglist) {
-    sem.dinit_error = TRUE;
-    return 0;
+  // AOCC begin
+  if (nearest_status == 1) {
+    ACL *expracl = mk_init_intrinsic(init_intr);
+    int argt = A_ARGSG(ast);
+    ACL *argroot = NULL;
+    ACL **curarg = &argroot;
+    int argast = ARGT_ARG(argt, 0);
+    if (argast) {
+      *curarg = construct_acl_from_ast(argast, A_DTYPEG(argast), 0);
+      if (!*curarg) {
+        return 0;
+      }
+      curarg = &(*curarg)->next;
+    }
+    argast = ARGT_ARG(argt, 1);
+    if (argast) {
+      *curarg = construct_acl_from_ast(argast-2, A_DTYPEG(argast), 0);
+      if (!*curarg) {
+        return 0;
+      }
+      curarg = &(*curarg)->next;
+    }
+    if (sem.dinit_error) {
+      return 0;
+    }
+    expracl->dtype = dtype;
+    expracl->u1.expr->rop = argroot;
+    return expracl;
   }
-  arg1acl = arglist;
-  arg1dtype = arg1acl->dtype;
-  expracl->dtype = dtypebase;
-  expracl->u1.expr->rop = arglist;
+  else {
+    ACL *arg1acl;
+    ACL *a;
+    DTYPE arg1dtype;
+    DTYPE dtypebase = DDTG(dtype);
+    ACL *expracl = mk_init_intrinsic(init_intr);
+    ACL *arglist = construct_arg_list(ast);
 
-  if (DTY(dtype) == TY_ARRAY) {
-    if (DTY(arg1dtype) != TY_ARRAY && parent_acltype != AC_ACONST)
-      expracl->repeatc = ADD_NUMELM(dtype);
-    a = GET_ACL(15);
-    a->id = AC_ACONST;
-    a->dtype = dtype;
-    a->subc = expracl;
-    expracl = a;
+    if (!arglist) {
+      sem.dinit_error = TRUE;
+      return 0;
+    }
+    arg1acl = arglist;
+    arg1dtype = arg1acl->dtype;
+    expracl->dtype = dtypebase;
+    expracl->u1.expr->rop = arglist;
+
+    if (DTY(dtype) == TY_ARRAY) {
+      if (DTY(arg1dtype) != TY_ARRAY && parent_acltype != AC_ACONST)
+        expracl->repeatc = ADD_NUMELM(dtype);
+      a = GET_ACL(15);
+      a->id = AC_ACONST;
+      a->dtype = dtype;
+      a->subc = expracl;
+      expracl = a;
+    }
+    return expracl;
   }
-  return expracl;
+  nearest_status = 0;
+  // AOCC end
 }
 
 static AC_INTRINSIC
@@ -9354,6 +9389,13 @@ eval_floor(ACL *arg, DTYPE dtype)
           adjust = 1;
       }
       break;
+    case TY_QUAD:
+      conval = cngcon(con1, DT_QUAD, dtype);
+      if (const_fold(OP_CMP, con1, stb.quad0, DT_QUAD) < 0) {
+        con1 = cngcon(conval, dtype, DT_QUAD);
+        if (const_fold(OP_CMP, con1, wrkarg->conval, DT_QUAD) != 0)
+          adjust = 1;
+      }
     }
     if (adjust) {
       if (DT_ISWORD(dtype))
