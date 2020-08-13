@@ -11675,8 +11675,11 @@ addDebugForLocalVar(SPTR sptr, LL_Type *type)
       LL_MDRef array_md =
           lldbg_emit_local_variable(cpu_llvm_module->debug_info, array_sptr,
                                     BIH_FINDEX(gbl.entbih), true);
+      LL_Type *sd_type = LLTYPE(SDSCG(array_sptr));
+      if (sd_type && sd_type->data_type == LL_PTR)
+        sd_type = sd_type->sub_types[0];
       insert_llvm_dbg_declare(array_md, SDSCG(array_sptr),
-                              LLTYPE(SDSCG(array_sptr)), NULL, OPF_NONE);
+                              sd_type, NULL, OPF_NONE);
     } else {
       LL_MDRef param_md = lldbg_emit_local_variable(
           cpu_llvm_module->debug_info, sptr, BIH_FINDEX(gbl.entbih), true);
