@@ -2217,6 +2217,82 @@ metadata_args_need_struct(void)
 }
 
 /**
+ * This function returns true for the types supported
+ * in function make_param_op
+ */
+bool should_preserve_param(const DTYPE dtype) {
+  switch (DTY(dtype)) {
+  // handled cases
+  case TY_ARRAY:
+  case TY_STRUCT:
+  case TY_BLOG:
+  case TY_SLOG:
+  case TY_LOG:
+  case TY_BINT:
+  case TY_SINT:
+  case TY_INT:
+  case TY_REAL:
+  case TY_INT8:
+  case TY_LOG8:
+  case TY_DBLE:
+  case TY_QUAD:
+  case TY_CMPLX:
+  case TY_DCMPLX:
+  case TY_CHAR:
+    return true;
+  // unsupported cases
+  case TY_WORD:
+  case TY_DWORD:
+  case TY_HOLL:
+  case TY_NCHAR:
+    return false;
+  default:
+    assert(0, "should_preserve_param(dtype): unexpected DTYPE", 0, ERR_Fatal);
+    return false;
+  }
+}
+
+OPERAND *make_param_op(SPTR sptr) {
+  OPERAND *oper;
+  DTYPE dtype = DTYPEG(sptr);
+
+  switch (DTY(dtype)) {
+  case TY_BLOG:
+  case TY_SLOG:
+  case TY_LOG:
+  case TY_BINT:
+  case TY_SINT:
+  case TY_INT:
+  case TY_REAL:
+    oper = make_constval_op(make_lltype_from_dtype(dtype), CONVAL1G(sptr),
+                            CONVAL2G(sptr));
+    break;
+  case TY_INT8:
+  case TY_LOG8:
+    oper = make_constval_op(make_lltype_from_dtype(dtype),
+                            CONVAL2G(CONVAL1G(sptr)), CONVAL1G(CONVAL1G(sptr)));
+    break;
+  case TY_DBLE:
+    oper = make_constval_op(make_lltype_from_dtype(dtype),
+                            CONVAL1G(CONVAL1G(sptr)), CONVAL2G(CONVAL1G(sptr)));
+    break;
+  case TY_QUAD:
+  case TY_CMPLX:
+  case TY_DCMPLX:
+    oper = make_constsptr_op((SPTR)CONVAL1G(sptr));
+    break;
+  case TY_CHAR:
+    oper = make_conststring_op((SPTR)CONVAL1G(sptr));
+    break;
+  // TODO: to add support for other types
+  default:
+    break;
+  }
+
+  return oper;
+}
+
+/**
    \brief Write a single operand
  */
 void
@@ -2403,11 +2479,14 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
         new_op = make_arg_op(p->val.sptr);
         if (p->ll_type)
           new_op->ll_type = p->ll_type;
+      } else if (STYPEG(p->val.sptr) == ST_PARAM) {
+        new_op = make_param_op(p->val.sptr);
       } else {
         new_op = make_var_op(p->val.sptr);
         if (p->ll_type)
           new_op->ll_type = ll_get_pointer_type(p->ll_type);
       }
+
       new_op->flags = p->flags;
       write_operand(new_op, "", 0);
       if (metadata_args_need_struct())
@@ -4359,3 +4438,39 @@ ll_coercion_type(LL_Module *module, DTYPE dtype, ISZ_T size, ISZ_T reg_size)
   return parts[0] ? parts[0] : parts[1];
 }
 
+//AOCC Begin
+char *get_flang_version()
+{
+#if defined(FLANG_VERSION)
+    return FLANG_VERSION;
+#else
+    return "INVALID\.VERSION";
+#endif
+}
+
+size_t
+get_flang_major_version()
+{
+#if defined(FLANG_VERSION_MAJOR)
+    return atoi(FLANG_VERSION_MAJOR);
+#else
+    return 10;  // default llvm version
+#endif
+}
+
+size_t
+get_flang_minor_version()
+{
+#if defined(FLANG_VERSION_MINOR)
+    return atoi(FLANG_VERSION_MINOR);
+#else
+    return 0;  // default llvm version
+#endif
+}
+
+size_t
+get_llvm_ir_version()
+{
+  return (10 * get_flang_major_version());
+}
+// AOCC End

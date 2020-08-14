@@ -873,6 +873,14 @@ init(int argc, char *argv[])
   /* setting the fortran standard */
   if (strcmp(flg.std_string, "f2008") == 0) {
     flg.std = F2008;
+  } else if (strcmp(flg.std_string, "f2003") == 0) {
+    flg.std = F2003;
+  } else if (strcmp(flg.std_string, "f95") == 0) {
+    flg.std = F95;
+  } else if (strcmp(flg.std_string, "f90") == 0) {
+    flg.std = F90;
+  } else if (strcmp(flg.std_string, "f77") == 0) {
+    flg.std = F77;
   } else if (strcmp(flg.std_string, "unknown") == 0) {
     flg.std = STD_UNKNOWN;
   } else {

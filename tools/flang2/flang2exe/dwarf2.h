@@ -527,6 +527,11 @@ void emit_dwf2_ftn_func_begin(int sptr);
 #define DW_LANG_ObjC_plus_plus 0x0011
 #define DW_LANG_UPC 0x0012
 #define DW_LANG_D 0x0013
+/* AOCC begin */
+/* dwarf5 additions */
+#define DW_LANG_Fortran03 0x0014
+#define DW_LANG_Fortran08 0x0015
+/* AOCC end */
 /* MIPS extension */
 #define DW_LANG_Mips_Assembler 0x8001
 /* UPC extension */

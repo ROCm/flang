@@ -5,6 +5,16 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ *
+ *
+ * Changes to DISubrange metadata for representing assumed shape arrays.
+ * Changes to DIModule metadata for representing Fortran modules.
+ * Date of Modification: July 2020
+ */
+
 #ifndef LL_STRUCTURE_H_
 #define LL_STRUCTURE_H_
 
@@ -19,6 +29,8 @@
 #include <stdio.h>
 
 /* clang-format off */
+
+extern size_t get_llvm_ir_version();
 
 typedef enum LL_Op {
   LL_ADD,      LL_FADD,        LL_SUB,      LL_FSUB,         LL_MUL,
@@ -147,6 +159,8 @@ typedef enum LL_IRVersion {
   LL_Version_8_0 = 80,
   LL_Version_8_9 = 89,
   LL_Version_9_0 = 90,
+  LL_Version_10_0 = 100,
+  LL_Version_11_0 = 110,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -387,6 +401,13 @@ ll_feature_debug_info_ver90(const LL_IRFeatures *feature)
 }
 
 /**
+   \brief Version 11.0 debug metadata
+ */
+INLINE static bool ll_feature_debug_info_ver11(const LL_IRFeatures *feature) {
+  return (get_llvm_ir_version() >= LL_Version_11_0);
+}
+
+/**
    \brief Version 9.0 onwards uses 3 field syntax for constructors
    and destructors
  */
@@ -485,6 +506,7 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 #define ll_feature_debug_info_ver70(f) ((f)->version >= LL_Version_7_0)
 #define ll_feature_debug_info_ver80(f) ((f)->version >= LL_Version_8_0)
 #define ll_feature_debug_info_ver90(f) ((f)->version >= LL_Version_9_0)
+#define ll_feature_debug_info_ver11(f) (get_llvm_ir_version() >= LL_Version_11_0)
 #define ll_feature_three_argument_ctor_and_dtor(f) \
   ((f)->version >= LL_Version_9_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
@@ -679,6 +701,8 @@ typedef enum LL_DW_OP_t {
   LL_DW_OP_constu,
   LL_DW_OP_plus_uconst,
   LL_DW_OP_int,
+  LL_DW_OP_push_object_address,
+  LL_DW_OP_mul,
   LL_DW_OP_MAX /**< must be last value */
 } LL_DW_OP_t;
 

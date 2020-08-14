@@ -277,6 +277,15 @@ void add_debug_cmnblk_variables(LL_DebugInfo *db, SPTR sptr);
  */
 bool ftn_array_need_debug_info(SPTR sptr);
 
+/**
+   \brief Insert <tt>@llvm.dbg.declare</tt> call for debug
+   \param mdnode  metadata node
+   \param sptr    symbol
+   \param llTy    preferred type of \p sptr or \c NULL
+ */
+void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
+                             OPERAND *exprMDOp, OperandFlag_t opflag);
+
 // AOCC Begin
 /**
   \brief Function to calculate alloca address space.
@@ -286,5 +295,11 @@ bool ftn_array_need_debug_info(SPTR sptr);
 int get_alloca_addrspace(LL_Module *module);
 #endif
 // AOCC End
+
+/**
+   \brief Check if sptr is the midnum of a scalar and scalar has POINTER/ALLOCATABLE attribute
+   \param sptr  A symbol
+ */
+bool pointer_scalar_need_debug_info(SPTR sptr);
 
 #endif

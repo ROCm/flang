@@ -5,6 +5,12 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ * Last modified: June 2020
+*/
+
 #ifndef LLUTIL_H_
 #define LLUTIL_H_
 
@@ -1592,6 +1598,11 @@ bool llis_vector_kind(DTYPE dtype);
 bool llis_struct_kind(DTYPE dtype);
 bool llis_function_kind(DTYPE dtype);
 
+/**
+   \brief return whether param debug info should be preserved
+ */
+bool should_preserve_param(const DTYPE dtype);
+
 #ifdef OMP_OFFLOAD_LLVM
 /**
    \brief Create a file to write the device code if it has not already been created,
@@ -1622,4 +1633,8 @@ void set_llasm_output_file(FILE *file);
 #endif // OMP_OFFLOAD_AMD
 // AOCC End
 #endif // OMP_OFFLOAD_LLVM
+char* get_flang_version();
+size_t get_flang_major_version();
+size_t get_flang_minor_version();
+size_t get_llvm_ir_version();
 #endif

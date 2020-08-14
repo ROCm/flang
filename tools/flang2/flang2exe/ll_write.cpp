@@ -9,6 +9,7 @@
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  */
+
 #include "gbldefs.h"
 #include "error.h"
 #include "ll_structure.h"
@@ -929,7 +930,8 @@ enum FieldType {
   DWLangField,
   DWVirtualityField,
   DWEncodingField,
-  DWEmissionField
+  DWEmissionField,
+  SignedOrMDField
 };
 
 enum FieldFlags {
@@ -1087,6 +1089,18 @@ static const MDTemplate Tmpl_DIModule[] = {
   { "tag",                      DWTagField, FlgHidden },
   { "scope",                    NodeField },
   { "name",                     StringField }
+  //,{ "configMacros",          StringField, FlgOptional },
+  //{ "includePath",            StringField, FlgOptional },
+  //{ "isysroot",               StringField, FlgOptional }
+};
+
+static const MDTemplate Tmpl_DIModule_11[] = {
+  { "DIModule", TF, 5 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "scope",                    NodeField },
+  { "name",                     StringField },
+  { "file",                     NodeField },
+  { "line",                     UnsignedField }
   //,{ "configMacros",          StringField, FlgOptional },
   //{ "includePath",            StringField, FlgOptional },
   //{ "isysroot",               StringField, FlgOptional }
@@ -1433,7 +1447,7 @@ static const MDTemplate Tmpl_DICompositeType_pre34[] = {
 };
 
 static const MDTemplate Tmpl_DICompositeType[] = {
-  { "DICompositeType", TF, 15 },
+  { "DICompositeType", TF, 16 },
   { "tag",                      DWTagField },
   { "file",                     NodeField },
   { "scope",                    NodeField },
@@ -1448,7 +1462,8 @@ static const MDTemplate Tmpl_DICompositeType[] = {
   { "runtimeLang",              DWLangField },
   { "vtableHolder",             NodeField },
   { "templateParams",           NodeField },
-  { "identifier",               StringField }
+  { "identifier",               StringField },
+  { "dataLocation",             NodeField}
 };
 
 static const MDTemplate Tmpl_DIFortranArrayType[] = {
@@ -1462,11 +1477,19 @@ static const MDTemplate Tmpl_DIFortranArrayType[] = {
   { "elements",                 NodeField }
 };
 
-static const MDTemplate Tmpl_DISubrange[] = {
+static const MDTemplate Tmpl_DISubrange_pre11[] = {
   { "DISubrange", TF, 3 },
   { "tag",                      DWTagField, FlgHidden },
   { "lowerBound",               SignedField },
   { "count",                    SignedField, FlgMandatory }
+};
+
+static const MDTemplate Tmpl_DISubrange[] = {
+  { "DISubrange", TF, 4 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "lowerBound",               SignedOrMDField },
+  { "upperBound",               SignedOrMDField, FlgMandatory },
+  { "stride",                   SignedOrMDField }
 };
 
 static const MDTemplate Tmpl_DISubrange_pre37[] = {
@@ -1624,8 +1647,8 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
   switch (LL_MDREF_kind(mdref)) {
   case MDRef_Node:
     if (value) {
-      assert(tmpl->type == NodeField, "metadata elem should not be a mdnode",
-             tmpl->type, ERR_Fatal);
+      assert(tmpl->type == NodeField || tmpl->type == SignedOrMDField,
+             "metadata elem should not be a mdnode", tmpl->type, ERR_Fatal);
       fprintf(out, "%s%s: !%u", prefix, tmpl->name, value);
     } else if (mandatory) {
       fprintf(out, "%s%s: null", prefix, tmpl->name);
@@ -1675,6 +1698,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
       }
       break;
 
+    case SignedOrMDField:
     case SignedField: {
       bool doOutput = true;
       const char *dv = module->constants[value]->data;
@@ -1702,6 +1726,7 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
     switch (tmpl->type) {
     case UnsignedField:
     case SignedField:
+    case SignedOrMDField:
       fprintf(out, "%s%s: %u", prefix, tmpl->name, value);
       break;
 
@@ -2033,11 +2058,15 @@ static void
 emitDISubRange(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
                unsigned mdi)
 {
+  if (ll_feature_debug_info_ver11(&mod->ir)) {
+    emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubrange);
+    return;
+  }
   if (!ll_feature_debug_info_subrange_needs_count(&mod->ir)) {
     emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubrange_pre37);
     return;
   }
-  emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubrange);
+  emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubrange_pre11);
 }
 
 static void
@@ -2072,6 +2101,10 @@ emitDINamespace(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
 static void
 emitDIModule(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnd, unsigned mdi)
 {
+  if (ll_feature_debug_info_ver11(&mod->ir)) {
+    emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule_11);
+    return;
+  }
   emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule);
 }
 
@@ -2204,6 +2237,10 @@ ll_dw_op_to_name(LL_DW_OP_t op)
     return "DW_OP_constu";
   case LL_DW_OP_plus_uconst:
     return "DW_OP_plus_uconst";
+  case LL_DW_OP_push_object_address:
+    return "DW_OP_push_object_address";
+  case LL_DW_OP_mul:
+    return "DW_OP_mul";
   default:
     break;
   }

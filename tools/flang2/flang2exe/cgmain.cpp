@@ -122,6 +122,7 @@ static char *fn_sig_ptr = NULL;
 static void insert_entry_label(int);
 static void insert_jump_entry_instr(int);
 static void store_return_value_for_entry(OPERAND *, int);
+static void insert_llvm_dbg_value(OPERAND *, LL_MDRef, SPTR, LL_Type *);
 
 static int openacc_prefix_sptr = 0;
 static unsigned addressElementSize;
@@ -1468,6 +1469,36 @@ static bool block_belong_to_outer_loop (int iter, int curr_line,
 // AOCC End
 
 /**
+   \brief process debug info of constants with parameter attribute.
+ */
+static void process_params(void) {
+  unsigned smax = stb.stg_avail;
+  for (SPTR sptr = get_symbol_start(); sptr < smax; ++sptr) {
+    DTYPE dtype = DTYPEG(sptr);
+    if (STYPEG(sptr) == ST_PARAM && should_preserve_param(dtype)) {
+      if (DTY(dtype) == TY_ARRAY || DTY(dtype) == TY_STRUCT) {
+        /* array and derived types have 'var$ac' constant variable
+         * lets use that, by renaming that to 'var'.
+         */
+        SPTR new_sptr = (SPTR)CONVAL1G(sptr);
+        NMPTRP(new_sptr, NMPTRG(sptr));
+      } else {
+        LL_DebugInfo *di = cpu_llvm_module->debug_info;
+        int fin = BIH_FINDEX(gbl.entbih);
+        LL_Type *type = make_lltype_from_dtype(dtype);
+        OPERAND *ld = make_operand();
+        ld->ot_type = OT_MDNODE;
+        ld->val.sptr = sptr;
+        LL_MDRef lcl = lldbg_emit_local_variable(di, sptr, fin, true);
+
+        /* lets generate llvm.dbg.value intrinsic for it.*/
+        insert_llvm_dbg_value(ld, lcl, sptr, type);
+      }
+    }
+  }
+}
+
+/**
    \brief Perform code translation from ILI to LLVM for one routine
  */
 void
@@ -1636,6 +1667,14 @@ restartConcur:
   for (; bih; bih = BIH_NEXT(bih))
     for (ilt = BIH_ILTFIRST(bih); ilt; ilt = ILT_NEXT(ilt))
       build_csed_list(ILT_ILIP(ilt));
+
+  /* process variables with parameter attribute */
+  if (!XBIT(49, 0x10)
+#if defined(OMP_OFFLOAD_PGI) || defined(OMP_OFFLOAD_LLVM)
+      && !gbl.ompaccel_isdevice
+#endif
+  )
+    process_params();
 
   merge_next_block = false;
   bih = BIH_NEXT(0);
@@ -4792,10 +4831,8 @@ insert_llvm_memcpy(int ilix, int size, OPERAND *dest_op, OPERAND *src_op,
    \param sptr    symbol
    \param llTy    preferred type of \p sptr or \c NULL
  */
-static void
-insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
-                        OPERAND *exprMDOp, OperandFlag_t opflag)
-{
+void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
+                             OPERAND *exprMDOp, OperandFlag_t opflag) {
 
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget) {
@@ -4826,16 +4863,25 @@ insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
       call_op->next->next->next = exprMDOp;
     } else {
       LL_DebugInfo *di = cpu_llvm_module->debug_info;
+      const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
       LL_MDRef md;
-      /* Handle the Fortran allocatable array cases. Emit expression
-       * mdnode with sigle argument of DW_OP_deref to workaround known
-       * gdb bug not able to debug array bounds.
-       */
-      if (ftn_array_need_debug_info(sptr)) {
-        const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
-        md = lldbg_emit_expression_mdnode(di, 1, deref);
-      } else
-        md = lldbg_emit_empty_expression_mdnode(di);
+      if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir)) {
+       /* For associate statement, we have replaced the type to its associated
+	* variable's type. Add a DW_OP_deref so that debugger can show the value.*/
+        if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr)))
+          md = lldbg_emit_expression_mdnode(di, 1, deref);
+        else
+          md = lldbg_emit_empty_expression_mdnode(di);
+      } else {
+        /* Handle the Fortran allocatable array cases. Emit expression
+         * mdnode with single argument of DW_OP_deref to workaround known
+         * gdb bug not able to debug array bounds.
+         */
+        if (ftn_array_need_debug_info(sptr))
+          md = lldbg_emit_expression_mdnode(di, 1, deref);
+        else
+          md = lldbg_emit_empty_expression_mdnode(di);
+      }
       call_op->next->next->next = make_mdref_op(md);
     }
   }
@@ -5478,9 +5524,8 @@ gen_gep_index(OPERAND *base_op, LL_Type *llt, int index)
   return gen_gep_op(0, base_op, llt, make_constval32_op(index));
 }
 
-static void
-insertLLVMDbgValue(OPERAND *load, LL_MDRef mdnode, SPTR sptr, LL_Type *type)
-{
+static void insert_llvm_dbg_value(OPERAND *load, LL_MDRef mdnode, SPTR sptr,
+                                  LL_Type *type) {
   static bool defined = false;
   OPERAND *callOp;
   OPERAND *oper;
@@ -5517,6 +5562,7 @@ insertLLVMDbgValue(OPERAND *load, LL_MDRef mdnode, SPTR sptr, LL_Type *type)
   callOp->next = oper = make_operand();
   oper->ot_type = OT_MDNODE;
   oper->tmps = load->tmps;
+  oper->val = load->val;
   oper->ll_type = type;
   oper->flags |= OPF_WRAPPED_MD;
   oper = make_constval_op(ll_create_int_type(mod, 64), 0, 0);
@@ -5541,7 +5587,7 @@ consLoadDebug(OPERAND *ld, OPERAND *addr, LL_Type *type)
     LL_DebugInfo *di = cpu_llvm_module->debug_info;
     int fin = BIH_FINDEX(gbl.entbih);
     LL_MDRef lcl = lldbg_emit_local_variable(di, sptr, fin, true);
-    insertLLVMDbgValue(ld, lcl, sptr, type);
+    insert_llvm_dbg_value(ld, lcl, sptr, type);
   }
 }
 
@@ -10868,6 +10914,21 @@ create_global_initializer(GBL_LIST *gitem, const char *flag_str,
 }
 
 /**
+   \brief Check if sptr is the midnum of a scalar and scalar has POINTER/ALLOCATABLE attribute
+   \param sptr  A symbol
+ */
+bool
+pointer_scalar_need_debug_info(SPTR sptr)
+{
+  if ((sptr > NOSYM) && REVMIDLNKG(sptr)) {
+    SPTR scalar_sptr = (SPTR)REVMIDLNKG(sptr);
+    if ((POINTERG(scalar_sptr) || ALLOCATTRG(scalar_sptr)) && (STYPEG(scalar_sptr) == ST_VAR))
+      return true;
+  }
+  return false;
+}
+
+/**
    \brief Check if sptr is the midnum of an array and the array has descriptor 
    \param sptr  A symbol
  */
@@ -11246,11 +11307,24 @@ process_extern_variable_sptr(SPTR sptr, ISZ_T off)
 INLINE static void
 addDebugForLocalVar(SPTR sptr, LL_Type *type)
 {
-  if (need_debug_info(sptr)) {
+  if (need_debug_info(sptr) || pointer_scalar_need_debug_info(sptr)) {
     /* Dummy sptrs are treated as local (see above) */
-    LL_MDRef param_md = lldbg_emit_local_variable(
-        cpu_llvm_module->debug_info, sptr, BIH_FINDEX(gbl.entbih), true);
-    insert_llvm_dbg_declare(param_md, sptr, type, NULL, OPF_NONE);
+    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+        ftn_array_need_debug_info(sptr)) {
+      SPTR array_sptr = (SPTR)REVMIDLNKG(sptr);
+      LL_MDRef array_md =
+          lldbg_emit_local_variable(cpu_llvm_module->debug_info, array_sptr,
+                                    BIH_FINDEX(gbl.entbih), true);
+      LL_Type *sd_type = LLTYPE(SDSCG(array_sptr));
+      if (sd_type && sd_type->data_type == LL_PTR)
+        sd_type = sd_type->sub_types[0];
+      insert_llvm_dbg_declare(array_md, SDSCG(array_sptr),
+                              sd_type, NULL, OPF_NONE);
+    } else {
+      LL_MDRef param_md = lldbg_emit_local_variable(
+          cpu_llvm_module->debug_info, sptr, BIH_FINDEX(gbl.entbih), true);
+      insert_llvm_dbg_declare(param_md, sptr, type, NULL, OPF_NONE);
+    }
   }
 }
 
@@ -11433,7 +11507,7 @@ process_auto_sptr(SPTR sptr)
   /* Now create the alloca for this variable. Since the alloca produces the
    * address of the local, name it "%foo.addr". */
   local = ll_create_local_object(llvm_info.curr_func, type, align_of_var(sptr),
-                                 "%s.addr", SYMNAME(sptr));
+		                 "%s.addr", SYMNAME(sptr));
   SNAME(sptr) = (char *)local->address.data;
 
   addDebugForLocalVar(sptr, type);
@@ -13193,7 +13267,7 @@ process_formal_arguments(LL_ABI_Info *abi)
     /* Make a name for the real LLVM IR argument. This will also be used by
      * build_routine_and_parameter_entries(). */
     arg_op->string = (char *)ll_create_local_name(
-        llvm_info.curr_func, "%s%s", get_llvm_name(arg->sptr), suffix);
+       llvm_info.curr_func, "%s%s", get_llvm_name(arg->sptr), suffix);
 
     /* Emit code in the entry block that saves the argument into the local
      * variable. */
@@ -13296,7 +13370,7 @@ process_formal_arguments(LL_ABI_Info *abi)
     assert(llTy->data_type == LL_PTR, "expected a pointer type",
            llTy->data_type, ERR_Fatal);
     /* Emit an @llvm.dbg.declare right after the store. */
-    formalsAddDebug(arg->sptr, i, llTy, true);
+	formalsAddDebug(arg->sptr, i, llTy, true);
   }
 }
 

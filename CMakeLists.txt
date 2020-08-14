@@ -364,6 +364,13 @@ mark_as_advanced(FLANG_EXECUTABLE_VERSION LIBFLANG_LIBRARY_VERSION)
 
 option(FLANG_LLVM_EXTENSIONS "enable the Flang LLVM extensions" OFF)
 
+if ( FLANG_EXECUTABLE_VERSION )
+  add_definitions( -DFLANG_VERSION="${FLANG_EXECUTABLE_VERSION} " )
+  add_definitions( -DFLANG_VERSION_MAJOR="${FLANG_VERSION_MAJOR} " )
+  add_definitions( -DFLANG_VERSION_MINOR="${FLANG_VERSION_MINOR} " )
+endif()
+
+
 option(FLANG_INCLUDE_TESTS
        "Generate build targets for the Flang unit tests."
        ${LLVM_INCLUDE_TESTS})

@@ -5,6 +5,13 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ *
+ * Last modified: June 2020
+ */
+
 /** \file
  * \brief upper - import the lowered F90/HPF code
  */
