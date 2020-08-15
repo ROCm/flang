@@ -5849,10 +5849,12 @@ mod_type(int dtype, int ty, int kind, int len, int propagated, int sptr)
         return DT_REAL8;
       if (len == 4)
         return (DT_REAL4);
+#ifdef BREAKS_OPENMPI_REAL16
       // AOCC begin
       if (len == 16)
         return (DT_QUAD);
       // AOCC end
+#endif
     }
     error(31, 2, gbl.lineno, (sptr) ? SYMNAME(sptr) :
                                      (ty == TY_HALF ? "real2" : "real"), CNULL);
