@@ -15,7 +15,9 @@
 .\" * Complex datatype support for atan2 under flag f2008
 .\" * Modified on 13th March 2020
 .\" *
-
+.\" * Added quad support for floor and ceiling intrinsics
+.\" * Last modified: August 2020
+.\" *
 .\" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -230,6 +232,9 @@ Convert real number to unsigned.
 .IL DBLE arth lnk
 Convert single precision floating point value to double precision.
 .OP DBLE r p1
+.IL QFIX arth lnk
+Convert double precision floating point number to integer.
+.OP QFIX r p1
 .IL DFIX arth lnk
 Convert double precision floating point number to integer.
 .OP DFIX r p1
@@ -1259,6 +1264,12 @@ FLOOR of real to real
 .IL DFLOOR arth lnk
 FLOOR of double to double
 .OP DFLOOR r p1
+.IL QFLOOR arth lnk
+FLOOR of quad to quad
+.OP QFLOOR r p1
+.IL QCEIL arth lnk
+CEIL of quad to quad
+.OP QCEIL r p1
 .IL RCEIL arth lnk
 CELING of real to real
 .OP FCEIL r p1

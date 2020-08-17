@@ -74,6 +74,10 @@
  *
  * Implemented rank intrinsic
  * Date of modification: 10th Aug 2020
+ *
+ * Added quad support for floor and ceiling intrinsics
+ * Last modified: August 2020
+ *
  */
 
 /** \file
@@ -9437,13 +9441,14 @@ ref_pd(SST *stktop, ITEM *list)
 
     dtyper = dtype1; /* initial result of call is type of argument */
 
-    /* for this case dtype2 is used for conversion; the actual floor/ceiling 
-     * calls we use return real, but the Fortran declaration returns int. 
+     
+    /* for this case dtype2 is used for conversion; the actual floor/ceiling
+     * calls we use return real, but the Fortran declaration returns int.
      * We need to calculate final type for conversion to correct int kind.
      */
 
     if ((stkp = ARG_STK(1))) { /* kind */
-      dtype2 = set_kind_result(stkp, DT_INT, TY_INT); 
+      dtype2 = set_kind_result(stkp, DT_INT, TY_INT);
       if (!dtype2) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;

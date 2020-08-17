@@ -18,6 +18,10 @@
 # Added code to support SHIFTA intrinsic
 # Last modified: April 2020
 #
+# Added quad support for floor and ceiling intrinsics
+# Last modified: August 2020
+
+#
 ABS	ilm
 ACON	sym
 ACOS	ilm
@@ -271,9 +275,12 @@ DDIV	ilm	ilm
 DEALLOCA	ilm	sym	sym	num
 DEXP	ilm
 DFIX	ilm
+QFIX    ilm
 DFLOAT	ilm
 DFLOATK	ilm
 DFLOOR	ilm
+QFLOOR  ilm
+QCEIL   ilm
 DFUNC	num	sym	ilms
 DFUNCA	num	num	ilm	ilms
 PDFUNCA	num	num	sym	ilm	ilms

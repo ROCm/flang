@@ -49,6 +49,9 @@
  * Using i64 shift for pow(2) expansion
  * Last modified : 23rd May 2020
  *
+ * Added quad support for floor and ceiling intrinsics
+ * Last modified: August 2020
+ *
  */
 
 /**
@@ -2800,8 +2803,8 @@ addarth(ILI *ilip)
     case IL_QSQRT:
 #ifdef OMP_OFFLOAD_LLVM
       if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("sqrt", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "sqrt", 1, op1);
+        (void)mk_prototype("sqrtq", "f pure", DT_QUAD, 1, DT_QUAD);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "sqrtq", 1, op1);
         return ad1altili(opc, op1, ilix);
       }
 #endif
@@ -8399,6 +8402,13 @@ addarth(ILI *ilip)
              opc, ERR_Informational);
 #endif
     break;
+
+  // AOCC Begin
+  case IL_QCEIL:
+    (void)mk_prototype("ceilq", "f pure", DT_QUAD, 1, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "ceilq", 1, op1);
+    return ad1altili(opc, op1, ilix);
+  // AOCC End
 
   case IL_FFLOOR:
     if (XBIT_NEW_MATH_NAMES) {

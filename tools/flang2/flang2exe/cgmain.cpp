@@ -53,6 +53,9 @@
  *
  * Last modified: Jun 2020
  *
+ * Added quad support for floor and ceiling intrinsics
+ * Last modified: August 2020
+ *
  */
 
 /**
@@ -8424,10 +8427,8 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_VAINT:
   case IL_FFLOOR:
   case IL_DFLOOR:
-  case IL_QFLOOR:     // AOCC
   case IL_FCEIL:
   case IL_DCEIL:
-  case IL_QCEIL:      // AOCC
   case IL_AINT:
   case IL_DINT:
   case IL_QINT:       // AOCC
@@ -8754,6 +8755,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FIX:
   case IL_DFIX:
+  case IL_QFIX: //AOCC
     operand = gen_unary_expr(ilix, I_FPTOSI);
     break;
   case IL_FIXK:
@@ -9876,7 +9878,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   // AOCC begin
   case IL_QFLOOR:
     operand = gen_call_llvm_intrinsic(
-        "floor.f128",
+        "floorq",
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
         make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
     break;
@@ -9893,6 +9895,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+    // AOCC begin
+  case IL_QCEIL:
+    operand = gen_call_llvm_intrinsic(
+        "ceilq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_AINT:
     operand = gen_call_llvm_intrinsic(
         "trunc.f32",
@@ -12274,6 +12284,7 @@ make_type_from_opc(ILI_OP opc)
   case IL_INEG:
   case IL_UINEG:
   case IL_DFIX:
+  case IL_QFIX: //AOCC
   case IL_DFIXU:
   case IL_ICMP:
   case IL_ICMPZ:
