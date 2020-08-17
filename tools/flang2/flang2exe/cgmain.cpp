@@ -4964,7 +4964,8 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
       if (ll_feature_debug_info_ver11(&current_module->ir)) {
        /* For associate statement, we have replaced the type to its associated
 	* variable's type. Add a DW_OP_deref so that debugger can show the value.*/
-        if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr)))
+        if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr))
+			&& ADDRTKNG(REVMIDLNKG(sptr)))
           md = lldbg_emit_expression_mdnode(di, 1, deref);
         else
           md = lldbg_emit_empty_expression_mdnode(di);
