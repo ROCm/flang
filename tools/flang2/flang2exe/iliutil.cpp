@@ -52,6 +52,9 @@
  * Added quad support for floor and ceiling intrinsics
  * Last modified: August 2020
  *
+ * complex quad support for asin, asinh, acos, acosh, atan, atanh
+ *  Modified on 19th August 2020
+ *
  */
 
 /**
@@ -12544,6 +12547,16 @@ prilitree(int i)
     opval = "cqcos";
     goto intrinsic;
     break;
+  case IL_QCMPLXACOS:
+    n = 1;
+    opval = "cqacos";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXACOSH:
+    n = 1;
+    opval = "cqacosh";
+    goto intrinsic;
+    break;
   // AOCC end
   case IL_SCMPLXSIN:
     n = 1;
@@ -12561,6 +12574,16 @@ prilitree(int i)
     opval = "cqsin";
     goto intrinsic;
     break;
+  case IL_QCMPLXASIN:
+    n = 1;
+    opval = "cqasin";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXASINH:
+    n = 1;
+    opval = "cqasinh";
+    goto intrinsic;
+    break;
   // AOCC end
   case IL_SCMPLXTAN:
     n = 1;
@@ -12576,6 +12599,16 @@ prilitree(int i)
   case IL_QCMPLXTAN:
     n = 1;
     opval = "cqtan";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXATAN:
+    n = 1;
+    opval = "cqatan";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXATANH:
+    n = 1;
+    opval = "cqatanh";
     goto intrinsic;
     break;
   // AOCC end

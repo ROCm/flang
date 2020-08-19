@@ -24,6 +24,9 @@
 .\" * Added quad support for floor and ceiling intrinsics
 .\" * Last modified: August 2020
 .\" *
+.\" * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+.\" * Last modified: 19th August 2020
+.\" *
 
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
@@ -498,6 +501,10 @@ EXP intrinsic for single precision floating point values.
 .\" AOCC begin
 .IL CQTAN arth lnk
 .AT spec
+.IL CQATAN arth lnk
+.AT spec
+.IL CQATANH arth lnk
+.AT spec
 .\" AOCC end
 .IL CACOSH arth lnk
 .AT spec
@@ -550,6 +557,10 @@ Sine of a single precision value
 .AT spec dcmplx
 .IL CQSIN arth lnk
 .AT spec
+.IL CQASIN arth lnk
+.AT spec
+.IL CQASINH arth lnk
+.AT spec
 .IL COS arth lnk
 Cosine of a single precision number
 .OP FCOS r p1
@@ -571,6 +582,10 @@ Cosine of a single precision number
 .AT spec dcmplx
 .\" AOCC begin
 .IL CQCOS arth lnk
+.AT spec
+.IL CQACOS arth lnk
+.AT spec
+.IL CQACOSH arth lnk
 .AT spec
 .\" AOCC end
 .IL TAN arth lnk

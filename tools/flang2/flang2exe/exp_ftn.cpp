@@ -23,6 +23,9 @@
  *
  * Last Modified : Jun 2020
  *
+ * complex quad support for asin, asinh, acos, acosh, atan, atanh
+ *  Modified on 19th August 2020
+ *
  */
 
 /** \file
@@ -752,6 +755,12 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CQSIN:
     exp_qjsr("cqsin", DT_QCMPLX, ilmp, curilm);
     return;
+  case IM_CQASIN:
+    exp_qjsr("cqasin", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQASINH:
+    exp_qjsr("cqasinh", DT_QCMPLX, ilmp, curilm);
+    return;
   // AOCC end
   case IM_CCOS:
     exp_qjsr("__mth_i_ccos", DT_CMPLX, ilmp, curilm);
@@ -762,6 +771,12 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   // AOCC begin
   case IM_CQCOS:
     exp_qjsr("cqcos", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQACOS:
+    exp_qjsr("cqacos", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQACOSH:
+    exp_qjsr("cqacosh", DT_QCMPLX, ilmp, curilm);
     return;
   // AOCC end
   case IM_CASIN:
@@ -830,6 +845,14 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CQTAN:
     exp_qjsr("cqtan", DT_QCMPLX, ilmp, curilm);
     return;
+  //AOCC begin
+  case IM_CQATAN:
+    exp_qjsr("cqatan", DT_QCMPLX, ilmp, curilm);
+    return;
+  case IM_CQATANH:
+    exp_qjsr("cqatanh", DT_QCMPLX, ilmp, curilm);
+    return;
+  //AOCC end
   case IM_CACOSH:
     exp_qjsr("__mth_i_cacosh", DT_CMPLX, ilmp, curilm);
     return;

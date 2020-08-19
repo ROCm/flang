@@ -9,6 +9,9 @@
  * Notified per clause 4(b) of the license.
  * Last Modified: June 2020
  *
+ * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+ * Last modified: 19th August 2020
+ *
  */
 
 #include <quadmath.h>
@@ -37,6 +40,31 @@ __complex128 cqsin(__complex128 res, __float128 real, __float128 imag)
    imag = __imag__ res;
   return res;
 }
+
+__complex128 cqasin(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = casinq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
+__complex128 cqasinh(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = casinhq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
 __complex128 cqcos(__complex128 res, __float128 real, __float128 imag)
 {
   __float128 x, y;
@@ -49,6 +77,30 @@ __complex128 cqcos(__complex128 res, __float128 real, __float128 imag)
   return res;
 }
 
+__complex128 cqacos(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = cacosq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
+__complex128 cqacosh(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = cacoshq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
 __complex128 cqtan(__complex128 res, __float128 real, __float128 imag)
 {
   __float128 x, y;
@@ -56,6 +108,30 @@ __complex128 cqtan(__complex128 res, __float128 real, __float128 imag)
    __real__ val = real;
    __imag__ val = imag;
    res = ctanq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
+__complex128 cqatan(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = catanq(val);
+   real = __real__ res;
+   imag = __imag__ res;
+  return res;
+}
+
+__complex128 cqatanh(__complex128 res, __float128 real, __float128 imag)
+{
+  __float128 x, y;
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   res = catanhq(val);
    real = __real__ res;
    imag = __imag__ res;
   return res;

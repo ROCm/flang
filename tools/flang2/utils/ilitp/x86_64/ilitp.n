@@ -15,6 +15,9 @@
 .\" * Added code to support SHIFTA intrinsic
 .\" *   Last modified: April 2020
 .\" *
+.\" * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+.\" * Last modified: 19th August 2020
+.\" *
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -1202,6 +1205,11 @@ Double-precision complex arccosine.
 Quad-precision complex arccosine.
 .AT arth null cq cse
 .CG notCG
+
+.IL QCMPLXACOSH cqlnk
+Quad-precision complex arccosine.
+.AT arth null cq cse
+.CG notCG
 ./" AOCC end
 
 .IL SCMPLXASIN cslnk
@@ -1219,6 +1227,11 @@ Double-precision complex arcsine.
 Quad-precision complex arcsine.
 .AT arth null cq cse
 .CG notCG
+
+.IL QCMPLXASINH cqlnk
+Quad-precision complex arcsine.
+.AT arth null cq cse
+.CG notCG
 ./" AOCC end
 
 .IL SCMPLXATAN cslnk
@@ -1233,6 +1246,11 @@ Double-precision complex arctangent.
 
 ./" AOCC begin
 .IL QCMPLXATAN cqlnk
+Quad-precision complex arctangent.
+.AT arth null cq cse
+.CG notCG
+
+.IL QCMPLXATANH cqlnk
 Quad-precision complex arctangent.
 .AT arth null cq cse
 .CG notCG

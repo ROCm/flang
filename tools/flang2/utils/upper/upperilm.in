@@ -20,7 +20,9 @@
 #
 # Added quad support for floor and ceiling intrinsics
 # Last modified: August 2020
-
+#
+# Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+# Last modified: 19th August 2020
 #
 ABS	ilm
 ACON	sym
@@ -176,10 +178,14 @@ CQCOSH   ilm
 CQSINH   ilm
 CQTANH   ilm
 CQTAN    ilm
+CQATAN   ilm
+CQATANH  ilm
 CQADD    ilm	ilm
 CQCMP	ilm	ilm
 CQCON	sym
 CQCOS	ilm
+CQACOS  ilm
+CQACOSH ilm
 CQDIV	ilm	ilm
 CQEXP	ilm
 #CQFUNC	num	sym	ilms
@@ -193,6 +199,8 @@ CQLOG	ilm
 CQMUL	ilm	ilm
 CQNEG	ilm
 CQSIN	ilm
+CQASIN  ilm
+CQASINH ilm
 CQSQRT	ilm
 CQST	ilm	ilm
 CQSUB	ilm	ilm
