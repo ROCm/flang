@@ -827,7 +827,6 @@ dinit_acl_val2(int sptr, int dtype, ACL *ict, int op)
           case AC_I_selected_real_kind:
             process_real_kind(sptr, subict, op);
             break;
-          }
         case AC_I_selected_char_kind:
           ast = subict->u1.ast;
           if (A_TYPEG(ast) == A_CNST) {
@@ -841,10 +840,8 @@ dinit_acl_val2(int sptr, int dtype, ACL *ict, int op)
           }
           setConval(sptr, conval, op);
           break;
-        default:
-          error(155, 3, gbl.lineno,
-                "Invalid initialization of kind type parameter", SYMNAME(sptr));
         }
+      }
       }
       dinit_intr_call(sptr, dtype, ict);
       break;
