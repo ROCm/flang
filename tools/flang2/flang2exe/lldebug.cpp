@@ -1376,7 +1376,10 @@ static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef lb,
   llmd_set_class(mdb, LL_DISubRange);
   llmd_add_i32(mdb, make_dwtag(db, DW_TAG_subrange_type));
   llmd_add_md(mdb, lb);
-  llmd_add_md(mdb, ub);
+  if (ub != ll_get_md_null())
+    llmd_add_md(mdb, ub);
+  else
+    llmd_add_null(mdb);
   llmd_add_null(mdb);
 
   return llmd_finish(mdb);
@@ -3010,9 +3013,11 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
                 /* Create subrange mdnode based on array descriptor */
                 subscript_mdnode =
                     lldbg_create_subrange_via_sdsc(db, findex, sptr, i);
-              } else { // explicit shape, assumed shape arrays
+              } else { // explicit shape, assumed size, assumed shape arrays
                 init_subrange_bound(db, &lbv, lower_bnd, 1, findex);
-                init_subrange_bound(db, &ubv, upper_bnd, 0, findex);
+                if (!ll_feature_debug_info_ver12(&db->module->ir) ||
+                    (upper_bnd != SPTR_NULL)) // assumed size
+                  init_subrange_bound(db, &ubv, upper_bnd, 0, findex);
                 subscript_mdnode = lldbg_create_subrange_mdnode(db, lbv, ubv);
               }
               llmd_add_md(mdb, subscript_mdnode);
