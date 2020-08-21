@@ -9064,6 +9064,20 @@ ref_pd(SST *stktop, ITEM *list)
       }
       sname = "epsilon(1.0_8)";
       goto const_dble_val;
+    //  AOCC begin
+    case TY_QUAD:
+      if (XBIT(49, 0x40000)) { /* C90 */
+#define C90_EPSILON "0.50487097934144755546350628178090e-28L"
+        atoxq(C90_EPSILON, &val[0], strlen(C90_EPSILON));
+      } else {
+        val[0] = 0x3f8f0000;
+        val[1] = 0;
+        val[2] = 0;
+        val[3] = 0;
+      }
+      sname = "epsilon(1.0_16)";
+      goto const_quad_val;
+    // AOCC end
     default:
       break;
     }
