@@ -7567,7 +7567,9 @@ gen_call_expr(int ilix, DTYPE ret_dtype, INSTR_LIST *call_instr, int call_sptr)
       // create prototypes for quad print functions. otherwise, it will take
       // double as first argument
       if (strcmp(SYMNAME(call_sptr),"f90io_sc_q_ldw") == 0) {
-        mk_prototype_llvm("f90io_sc_q_ldw", "f pure", DT_INT, 2, DT_QUAD,DT_INT);
+        SPTR sptr = mk_prototype_llvm("f90io_sc_q_ldw", "", DT_INT, 2, DT_QUAD,DT_INT);
+        LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+        abi->is_pure = 0;
       }
   }
   // AOCC End
