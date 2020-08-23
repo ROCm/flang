@@ -1436,16 +1436,10 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
     if (skip_size > 0) {
       if (ptrcnt) {
         if (!first_data && skip_size)
-// TODO Fix this more generically!
-          if (!flg.amdgcn_target)
             fprintf(ASMFIL, ", ");
         if (!i8cnt) {
-// TODO Fix this more generically!
-          if (!flg.amdgcn_target) {
-            ptr = put_next_member(ptr);
-            fprintf(ASMFIL, "zeroinitializer ");
-          }
-
+          ptr = put_next_member(ptr);
+          fprintf(ASMFIL, "zeroinitializer ");
           free(cptrCopy);
           return dsrtp;
         }
