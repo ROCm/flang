@@ -2954,6 +2954,24 @@ addarth(ILI *ilip)
       (void)mk_prototype("fmaxq", "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
       ilix = ad_func(IL_qpfunc, IL_QJSR, "fmaxq", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
+  case IL_NINT:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("llvm.nearbyint.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f32", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      }
+#endif
+      break;
+  case IL_IDNINT:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("llvm.nearbyint.f64", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f64", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      }
+#endif
+      break;
     // AOCC end
 
     default:
