@@ -344,7 +344,9 @@ process_input(char *argv0, bool *need_cuda_constructor)
         // ompaccel_create_device_symbol() can end up lowering incorrect code.
         // And, in some scenarios there are assertion failures as well.
         // So doing it right before the final schedule.
-        if (flg.x86_64_omptarget) {
+        if (flg.omptarget) {
+          // TODO: maybe rename this if we're sure that all -fopenmp-targets
+          // require this ?
           ompaccel_x86_fix_arg_types(gbl.currsub);
         }
         // AOCC end
