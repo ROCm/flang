@@ -2940,11 +2940,14 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
                   const unsigned pushobj = lldbg_encode_expression_arg(
                       LL_DW_OP_push_object_address, 0);
                   dataloc = lldbg_emit_expression_mdnode(db, 2, pushobj, deref);
-                  is_live = lldbg_emit_expression_mdnode(db, 2, pushobj, deref);
-                  if (ALLOCATTRG(sptr))
-                    allocated = is_live;
-                  else
-                    associated = is_live;
+                  if (ll_feature_debug_info_ver12(&db->module->ir)) {
+                    is_live =
+                        lldbg_emit_expression_mdnode(db, 2, pushobj, deref);
+                    if (ALLOCATTRG(sptr))
+                      allocated = is_live;
+                    else
+                      associated = is_live;
+                  }
                 } else {
                   SPTR datasptr = MIDNUMG(sptr);
                   if (datasptr == NOSYM)
@@ -2965,27 +2968,30 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
                         lldbg_emit_local_variable(db, datasptr, findex, true);
                     insert_llvm_dbg_declare(dataloc, datasptr, dataloctype,
                                             NULL, OPF_NONE);
-                    LL_MDRef file_mdnode;
-                    if (ll_feature_debug_info_need_file_descriptions(
-                            &db->module->ir))
-                      file_mdnode = get_filedesc_mdnode(db, findex);
-                    else
-                      file_mdnode = lldbg_emit_file(db, findex);
-                    BLKINFO *blk_info = get_lexical_block_info(db, sptr, true);
-                    LL_MDRef type_mdnode = lldbg_emit_type(
-                        db, DT_LOG, sptr, findex, false, false, false);
-                    is_live = lldbg_create_local_variable_mdnode(
-                        db, DW_TAG_auto_variable, blk_info->mdnode, NULL,
-                        file_mdnode, 0, 0, type_mdnode, DIFLAG_ARTIFICIAL,
-                        ll_get_md_null(), 1 /*distinct*/);
+                    if (ll_feature_debug_info_ver12(&db->module->ir)) {
+                      LL_MDRef file_mdnode;
+                      if (ll_feature_debug_info_need_file_descriptions(
+                              &db->module->ir))
+                        file_mdnode = get_filedesc_mdnode(db, findex);
+                      else
+                        file_mdnode = lldbg_emit_file(db, findex);
+                      BLKINFO *blk_info =
+                          get_lexical_block_info(db, sptr, true);
+                      LL_MDRef type_mdnode = lldbg_emit_type(
+                          db, DT_LOG, sptr, findex, false, false, false);
+                      is_live = lldbg_create_local_variable_mdnode(
+                          db, DW_TAG_auto_variable, blk_info->mdnode, NULL,
+                          file_mdnode, 0, 0, type_mdnode, DIFLAG_ARTIFICIAL,
+                          ll_get_md_null(), 1 /*distinct*/);
 
-                    if (ALLOCATTRG(sptr))
-                      allocated = is_live;
-                    else
-                      associated = is_live;
+                      if (ALLOCATTRG(sptr))
+                        allocated = is_live;
+                      else
+                        associated = is_live;
 
-                    insert_llvm_dbg_declare(is_live, datasptr, dataloctype,
-                                            NULL, OPF_NONE);
+                      insert_llvm_dbg_declare(is_live, datasptr, dataloctype,
+                                              NULL, OPF_NONE);
+                    }
                   }
                 }
                 /* Create subrange mdnode based on array descriptor */
