@@ -5095,6 +5095,8 @@ _MZERO(4, int)
 
 _MZERO(8, long long)
 
+_MZERO(16, __float128)
+
 void
 ENTF90(MZEROZ8, mzeroz8)(void *d, SZ_T size)
 {
@@ -5108,6 +5110,14 @@ ENTF90(MZEROZ16, mzeroz16)(void *d, SZ_T size)
 {
   if (d && size > 0) {
     __c_mzero8(d, size * 2);
+  }
+}
+
+void
+ENTF90(MZEROZ32, mzeroz32)(void *d, SZ_T size)
+{
+  if (d && size > 0) {
+    __c_mzero16(d, size * 2);
   }
 }
 
@@ -5163,6 +5173,24 @@ ENTF90(MSETZ16, msetz16)(void *d, void *v, SZ_T size)
   }
 }
 
+void
+ENTF90(MSETZ32, msetz32)(void *d, void *v, SZ_T size)
+{
+  if (d) {
+    SZ_T i;
+    __float128 *pd;
+    __float128 v0, v1;
+    pd = (__float128 *)d;
+    v0 = ((__float128 *)v)[0];
+    v1 = ((__float128 *)v)[1];
+    for (i = 0; i < size; i++) {
+      pd[0] = v0;
+      pd[1] = v1;
+      pd += 2;
+    }
+  }
+}
+
 #undef _MCOPY
 #define _MCOPY(n, t)                                                           \
   void ENTF90(MCOPY##n, mcopy##n)(void *d, void *v, SZ_T size)                 \
@@ -5179,6 +5207,8 @@ _MCOPY(4, int)
 
 _MCOPY(8, long long)
 
+_MCOPY(16, __float128)
+
 void
 ENTF90(MCOPYZ8, mcopyz8)(void *d, void *v, SZ_T size)
 {
@@ -5192,6 +5222,14 @@ ENTF90(MCOPYZ16, mcopyz16)(void *d, void *v, SZ_T size)
 {
   if (d && v && size) {
     __c_mcopy8(d, v, size * 2);
+  }
+}
+
+void
+ENTF90(MCOPYZ32, mcopyz32)(void *d, void *v, SZ_T size)
+{
+  if (d && v && size) {
+    __c_mcopy16(d, v, size * 2);
   }
 }
 

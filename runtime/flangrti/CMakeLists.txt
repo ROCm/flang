@@ -38,6 +38,7 @@ SET(PGC_SRC_FILES
   mcopy2.c
   mcopy4.c
   mcopy8.c
+  mcopy16.c
   mthi64.c
   mset1.c
   mset2.c
@@ -46,7 +47,9 @@ SET(PGC_SRC_FILES
   mzero1.c
   mzero2.c
   mzero4.c
+  mzero4.c
   mzero8.c
+  mzero16.c
   ioargs.c
   memalign.c
   iostdinit.c
