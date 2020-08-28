@@ -4040,6 +4040,16 @@ map with to map type
 lnk - symbol to be mapped
 stc - map type
 .fi
+\" AOCC BEGIN
+.AT spec trm
+.IL MP_MAP_MEM SMP lnk stc lnk
+map with to map type
+.nf
+lnk - symbol to be mapped
+stc - map type
+lnk - Base incase of memory pointers
+.fi
+\" AOCC END
 .AT spec trm
 .IL MP_REDUCTIONITEM SMP sym sym stc
 Begin of reduction clause.

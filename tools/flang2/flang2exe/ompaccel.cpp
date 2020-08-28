@@ -1416,7 +1416,8 @@ ompaccel_tinfo_current_addupdate_mapitem(SPTR host_symbol, int map_type)
     ompaccel_msg_interr("XXX", "Current target info is not found\n");
 
   // check whether it is allocatable or not
-  if (SCG(host_symbol) == SC_BASED) {
+  if (SCG(host_symbol) == SC_BASED &&
+                                  STYPEG(host_symbol) != ST_MEMBER) { // AOCC
     /* if it is in data mode, we should keep midnum at active symbols*/
     if (current_tinfo->mode == mode_target_data_enter_region ||
         current_tinfo->mode == mode_target_data_exit_region ||
@@ -1452,7 +1453,8 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
     }
   }
   // AOCC End
-  if ((MIDNUMG(host_symbol) && SCG(host_symbol) == SC_BASED)) {
+  if ((MIDNUMG(host_symbol) && SCG(host_symbol) == SC_BASED)
+                            && STYPEG(host_symbol) != ST_MEMBER) { // AOCC
     NEED((current_tinfo->n_quiet_symbols + 1), current_tinfo->quiet_symbols,
          OMPACCEL_SYM, current_tinfo->sz_quiet_symbols,
          current_tinfo->sz_quiet_symbols * INC_EXP);
@@ -1476,7 +1478,9 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
   // AOCC Begin
   // For pointer arrays copy array descripor to device
 #ifdef OMP_OFFLOAD_AMD
-  if (SDSCG(host_symbol) && (MIDNUMG(host_symbol)) && POINTERG(host_symbol)) {
+  if (SDSCG(host_symbol) && (MIDNUMG(host_symbol) > NOSYM)
+                                      && POINTERG(host_symbol)
+                                      && STYPEG(host_symbol) != ST_MEMBER) {
     ompaccel_tinfo_current_add_sym(SDSCG(host_symbol), NOSYM,
                                    OMP_TGT_MAPTYPE_TARGET_PARAM |
                                    OMP_TGT_MAPTYPE_TO |
@@ -3176,6 +3180,7 @@ void
 exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
 {
   int label, argilm;
+  int base = 0; // AOCC
   SPTR sptr;
   if (outlinedCnt >= 2)
     return;
@@ -3188,7 +3193,16 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
     sptr = ILM_SymOPND(mapop, 2); // make 2
     label = ILM_OPND(ilmp, 2);    /* map type */
   }
+
+  // AOCC Begin
+  if (STYPEG(sptr) == ST_MEMBER && ILM_OPC(ilmp) == IM_MP_MAP_MEM) {
+    base = ILM_OPND(ilmp, 3);
+    base = ILI_OF(base);
+  }
+  // AOCC End
+
   ompaccel_tinfo_current_addupdate_mapitem(sptr, label);
+  current_tinfo->symbols[current_tinfo->n_symbols-1].ili_base = base; // AOCC
 }
 
 void
