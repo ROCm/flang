@@ -2782,12 +2782,25 @@ lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr, int findex,
   if (LL_MDREF_IS_NULL(type_mdnode)) {
     if (is_assumed_char(dtype)) {
 // AOCC Begin
-        /* For assumed length string type, always emit !DIStringType metadata
-	 * node. Here compiler created local variable holds the string length
-	 */
+        /* For assumed length string type, emit !DIStringType metadata node
+         * if LLVM version is 11 and above. Here compiler created
+         * local variable holds the string length.
+         */
 // AOCC End
-	 type_mdnode =
-            lldbg_create_assumed_len_string_type_mdnode(db, sptr, findex);
+        if (ll_feature_debug_info_ver11(&db->module->ir))
+           type_mdnode =
+               lldbg_create_assumed_len_string_type_mdnode(db, sptr, findex);
+        else {
+           type_mdnode =
+               lldbg_emit_type(db, DT_CPTR, sptr, findex, false, false, false);
+#if defined(FLANG_LLVM_EXTENSIONS)
+           if (!skipDataDependentTypes) {
+#endif
+             dtype_array_check_set(db, dtype, type_mdnode);
+#if defined(FLANG_LLVM_EXTENSIONS)
+           }
+#endif
+        }
     } else
         if (DT_ISBASIC(dtype) && (DTY(dtype) != TY_PTR)) {
 
