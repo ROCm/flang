@@ -613,6 +613,10 @@ QNEG	ilm
 QFLOAT	ilm
 QFLOATK	ilm
 QFUNC	num	sym	ilms
+QUFUNC/QFUNC	num	sym	args
+QUFUNCA/QFUNCA	num	num	ilm	args
+PQUFUNCA/PQFUNCA	num	num	sym	ilm	args
+QUVFUNCA/QVFUNCA	num	num	sym	ilm	sym	args
 #QOBEGNZ	ilm	sym	sym	ilm
 #QOEND	sym	sym
 #QOENDNZ	sym	sym

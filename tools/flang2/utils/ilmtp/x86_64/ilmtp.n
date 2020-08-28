@@ -2087,6 +2087,9 @@ Call m128 function
 .IL QFUNCA proc n stc lnk lnk*
 Call m128 function
 .AT spec
+.IL PQFUNCA proc n stc sym lnk lnk*
+Call m128 function through procedure pointer
+.AT spec
 .CL M256FUNC proc n lnk lnk*
 Call m256 function
 .AT spec
