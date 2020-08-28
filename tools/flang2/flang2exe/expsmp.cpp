@@ -9,7 +9,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Last modified: Apr 2020
+ * Last modified: Aug 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: May 2020
@@ -2993,6 +2993,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_looptripcount(ilmp, curilm);
       break;
     case IM_MP_MAP:
+    case IM_MP_MAP_MEM: // AOCC
       // AOCC : Modification
       // Removed gbl.ompaccel_intarget from condition or else it will disable
       // replacer, leading to usage of host symbols in device
