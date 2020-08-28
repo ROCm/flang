@@ -7055,6 +7055,11 @@ addarth(ILI *ilip)
     ilix = ad_func(IL_DFRQP, IL_QJSR, "atanq", 1, op1);
     return ad1altili(opc, op1, ilix);
     break;
+  case IL_QATAN2:
+    (void)mk_prototype("atan2q", "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
+    ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2q", 2, op1,op2);
+    return ad2altili(opc, op1,op2, ilix);
+    break;
   //AOCC End
   case IL_FLOG:
     if (XBIT_NEW_MATH_NAMES) {
@@ -12604,6 +12609,11 @@ prilitree(int i)
   case IL_QCMPLXATAN:
     n = 1;
     opval = "cqatan";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXATAN2:
+    n = 1;
+    opval = "cqatan2";
     goto intrinsic;
     break;
   case IL_QCMPLXATANH:

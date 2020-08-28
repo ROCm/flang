@@ -849,6 +849,9 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CQATAN:
     exp_qjsr("cqatan", DT_QCMPLX, ilmp, curilm);
     return;
+  case IM_CQATAN2:
+    exp_qjsr("cqatan2", DT_QCMPLX, ilmp, curilm);
+    return;
   case IM_CQATANH:
     exp_qjsr("cqatanh", DT_QCMPLX, ilmp, curilm);
     return;

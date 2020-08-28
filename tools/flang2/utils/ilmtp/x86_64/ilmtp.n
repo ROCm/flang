@@ -503,6 +503,8 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CQATAN arth lnk
 .AT spec
+.IL CQATAN2 arth lnk lnk
+.AT spec
 .IL CQATANH arth lnk
 .AT spec
 .\" AOCC end
@@ -625,6 +627,8 @@ Tangent of a single precision value
 .OP FATAN2 r p1 p2
 .IL DATAN2 arth lnk lnk
 .OP DATAN2 r p1 p2
+.IL QATAN2 arth lnk lnk
+.OP QATAN2 r p1 p2
 .IL SIND arth lnk
 SIN in degrees.
 .OP NULL t1 iv0

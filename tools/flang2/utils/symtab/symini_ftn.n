@@ -137,6 +137,7 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN DATAN2 2 D D DATAN2 ftn_datan2
 .IN .ATAN2D 2 R R ATAN2D ftn_atan2d
 .IN DATAN2D 2 D D DATAN2D ftn_datan2d
+.IN QATAN2 2 Q Q QATAN2 ftn_qatan2
 .IN .SINH 1 R R SINH ftn_sinh
 .IN DSINH 1 D D DSINH ftn_dsinh
 .IN QSINH 1 Q Q QSINH ftn_qsinh
@@ -412,7 +413,7 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN ACOSD - - .ACOSD DACOSD - - -
 .GN ATAN - - .ATAN DATAN - - -
 .GN ATAND - - .ATAND DATAND - - -
-.GN ATAN2 - - .ATAN2 DATAN2 - - -
+.GN ATAN2 - - .ATAN2 DATAN2 QATAN2 - -
 .GN ATAN2D - - .ATAN2D DATAN2D - - -
 .GN SINH - - .SINH DSINH QSINH - - -
 .GN COSH - - .COSH DCOSH QCOSH - - -

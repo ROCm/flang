@@ -179,6 +179,7 @@ CQSINH   ilm
 CQTANH   ilm
 CQTAN    ilm
 CQATAN   ilm
+CQATAN2   ilm ilm
 CQATANH  ilm
 CQADD    ilm	ilm
 CQCMP	ilm	ilm
@@ -642,6 +643,7 @@ QSUB	ilm	ilm
 QTAN	ilm
 QTANH ilm
 QATAN ilm
+QATAN2 ilm ilm
 QATANH ilm
 QCMPLX	ilm	ilm
 QIMAG	ilm
