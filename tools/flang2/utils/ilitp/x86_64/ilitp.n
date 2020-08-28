@@ -941,6 +941,11 @@ Qaud-precision  arctangent.
 .AT arth null qp cse
 .CG notCG
 
+.IL QATAN2 qplnk qplnk
+Qaud-precision  arc2tangent.
+.AT arth null qp cse
+.CG notCG
+
 .IL FATAN2 splnk splnk
 Single-precision floating-point two-argument arctangent.
 .AT arth null sp cse
@@ -1247,6 +1252,11 @@ Double-precision complex arctangent.
 ./" AOCC begin
 .IL QCMPLXATAN cqlnk
 Quad-precision complex arctangent.
+.AT arth null cq cse
+.CG notCG
+
+.IL QCMPLXATAN2 cqlnk cqlnk
+Quad-precision complex arc2tangent.
 .AT arth null cq cse
 .CG notCG
 
