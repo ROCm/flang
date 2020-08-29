@@ -506,6 +506,14 @@ double __mth_i_dbessel_y0(double arg);
 double __mth_i_dbessel_y1(double arg);
 double __mth_i_dbessel_yn(int n, double arg);
 double __f90_dbessel_yn(int n1, int n, double d);
+__float128 __mth_i_qbessel_j0(__float128 arg);
+__float128 __mth_i_qbessel_j1(__float128 arg);
+__float128 __mth_i_qbessel_jn(int n, __float128 arg);
+__float128 __f90_qbessel_jn(int n1, int n, __float128 d);
+__float128 __mth_i_qbessel_y0(__float128 arg);
+__float128 __mth_i_qbessel_y1(__float128 arg);
+__float128 __mth_i_qbessel_yn(int n, __float128 arg);
+__float128 __f90_qbessel_yn(int n1, int n, __float128 d);
 double __mth_i_dceil(double);
 double __mth_i_dfloor(double);
 

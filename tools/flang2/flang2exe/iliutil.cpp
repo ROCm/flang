@@ -7507,6 +7507,12 @@ addarth(ILI *ilip)
     return ilix;
     break;
 
+  case IL_QJN:
+    (void)mk_prototype(MTH_I_QJN, "f pure", DT_QUAD, 2, DT_INT, DT_QUAD);
+    ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_QJN, 2, op1, op2);
+    return ilix;
+    break;
+
   case IL_YN:
     (void)mk_prototype(MTH_I_YN, "f pure", DT_FLOAT, 2, DT_INT, DT_FLOAT);
     ilix = ad_func(IL_spfunc, IL_QJSR, MTH_I_YN, 2, op1, op2);
@@ -7518,72 +7524,92 @@ addarth(ILI *ilip)
     ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_DYN, 2, op1, op2);
     return ilix;
     break;
+  case IL_QYN:
+    (void)mk_prototype(MTH_I_QYN, "f pure", DT_QUAD, 2, DT_INT, DT_QUAD);
+    ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_DYN, 2, op1, op2);
+    return ilix;
+    break;
 
   // AOCC begin
   case IL_QCMPLXEXP:
     ilix = ad1mathfunc_cmplx(MTH_exp, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXCOS:
     ilix = ad1mathfunc_cmplx(MTH_cos, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXSIN:
     ilix = ad1mathfunc_cmplx(MTH_sin, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXTAN:
     ilix = ad1mathfunc_cmplx(MTH_tan, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXACOS:
     ilix = ad1mathfunc_cmplx(MTH_acos, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXASIN:
     ilix = ad1mathfunc_cmplx(MTH_asin, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXATAN:
     ilix = ad1mathfunc_cmplx(MTH_atan, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXCOSH:
     ilix = ad1mathfunc_cmplx(MTH_cosh, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXSINH:
     ilix = ad1mathfunc_cmplx(MTH_sinh, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXTANH:
     ilix = ad1mathfunc_cmplx(MTH_tanh, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXLOG:
     ilix = ad1mathfunc_cmplx(MTH_log, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXSQRT:
     ilix = ad1mathfunc_cmplx(MTH_sqrt, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXPOW:
     ilix = ad2mathfunc_cmplx(MTH_pow, opc, op1, op2, DT_QCMPLX, DT_QCMPLX,
                              DT_QCMPLX);
     return ilix;
+    break;
 
   case IL_QCMPLXPOWI:
     /**** ad2mathfunc_cmplx needs WORK for the integer argument ****/
     ilix = ad2mathfunc_cmplx(MTH_powi, opc, op1, op2, DT_QCMPLX, DT_QCMPLX,
                              DT_INT);
     return ilix;
+    break;
 
   case IL_QCMPLXPOWK:
     /**** ad2mathfunc_cmplx needs WORK for the integer argument ****/
     ilix = ad2mathfunc_cmplx(MTH_powk, opc, op1, op2, DT_QCMPLX, DT_QCMPLX,
                              DT_INT8);
     return ilix;
+    break;
   // AOCC end
 
   case IL_IPOWI:

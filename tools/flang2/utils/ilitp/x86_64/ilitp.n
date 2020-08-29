@@ -2497,6 +2497,11 @@ double bessel_jn
 .AT arth null dp cse
 .CG notCG
 
+.IL QJN  irlnk qplnk
+QUAD bessel_jn
+.AT arth null qp cse
+.CG notCG
+
 .IL YN  irlnk splnk
 float bessel_yn
 .AT arth null sp cse
@@ -2505,6 +2510,11 @@ float bessel_yn
 .IL DYN  irlnk dplnk
 double bessel_yn
 .AT arth null dp cse
+.CG notCG
+
+.IL QYN  irlnk qplnk
+QUAD bessel_yn
+.AT arth null qp cse
 .CG notCG
 
 .IL DFMA dplnk dplnk dplnk

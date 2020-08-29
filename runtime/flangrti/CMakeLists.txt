@@ -31,6 +31,8 @@ SET(PGC_SRC_FILES
   bessel_tyn.c
   dbessel_tjn.c
   dbessel_tyn.c
+  qbessel_tjn.c
+  qbessel_tyn.c
   f2cmain.c
   kidnnt.c
   ktrap.c
@@ -95,6 +97,7 @@ find_library(
   libpgmath.so
   HINTS ${CMAKE_BINARY_DIR}/lib)
 target_link_libraries(flangrti_shared ${LIBPGMATH})
+target_link_libraries(flangrti_shared quadmath)
 
 if( ${TARGET_ARCHITECTURE} STREQUAL "aarch64" )
   target_compile_definitions(flangrti_static PRIVATE TARGET_LINUX_ARM)

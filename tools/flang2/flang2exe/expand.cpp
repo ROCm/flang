@@ -2492,6 +2492,9 @@ efunc(const char *nm)
     case 'l':
       resdt = DT_INT8;
       break;
+    case 'q':
+      resdt = DT_QUAD;
+      break;
     case 'u':
       p++;
       if (*p == 'i')

@@ -163,8 +163,10 @@ typedef enum MTH_FN {
 
 #define MTH_I_JN "__mth_i_bessel_jn"
 #define MTH_I_DJN "__mth_i_dbessel_jn"
+#define MTH_I_QJN "__mth_i_qbessel_jn"
 #define MTH_I_YN "__mth_i_bessel_yn"
 #define MTH_I_DYN "__mth_i_dbessel_yn"
+#define MTH_I_QYN "__mth_i_qbessel_yn"
 
 #define FMTH_I_RPOWF "__fmth_i_rpowr"
 #define FMTH_I_DPOWD "__fmth_i_dpowd"

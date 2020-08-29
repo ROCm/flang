@@ -245,6 +245,12 @@ set(SRCS
   dbessel_y0.c
   dbessel_y1.c
   dbessel_yn.c
+  qbessel_j0.c
+  qbessel_j1.c
+  qbessel_jn.c
+  qbessel_y0.c
+  qbessel_y1.c
+  qbessel_yn.c
   dceil.c
   dcosd.c
   dfloor.c

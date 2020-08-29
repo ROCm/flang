@@ -341,7 +341,7 @@ QNINT intrinsic (converts quad to quad).
 .OP NULL t1 iv0
 .OP DAQP t1 p1 qp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_qnint t1
-.OP DFR128 r t2 qpret
+.OP DFRQP r t2 qpret
 .\" AOCC end
 .IL NINT arth lnk
 NINT intrinsic (converts real to integer).
@@ -842,6 +842,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_j0 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_J0 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_j0 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_J1 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -852,6 +857,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_j1 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_J1 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_j1 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_JN arth lnk lnk
 .OP NULL t1 iv0
 .OP DASP t1 p2 sp(0) t1
@@ -864,6 +874,12 @@ ATAN2 in degrees.
 .OP DAIR t2 p1 dr(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dbessel_jn t2
 .OP DFRDP r t3 dpret
+.IL QBESSEL_JN arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qbessel_jn t2
+.OP DFRQP r t3 dpret
 .IL BESSEL_Y0 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -874,6 +890,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_y0 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_Y0 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_y0 t1
+.OP DFRQP r t2 dpret
 .IL BESSEL_Y1 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -884,6 +905,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_y1 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_Y1 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_y1 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_YN arth lnk lnk
 .OP NULL t1 iv0
 .OP DASP t1 p2 sp(0) t1
@@ -896,6 +922,12 @@ ATAN2 in degrees.
 .OP DAIR t2 p1 dr(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dbessel_yn t2
 .OP DFRDP r t3 dpret
+.IL QBESSEL_YN arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qbessel_yn t2
+.OP DFRQP r t3 qpret
 .IL SNGL arth lnk
 Convert double precision number to single precision (SNGL intrinsic).
 .OP SNGL r p1

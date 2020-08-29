@@ -518,6 +518,13 @@ static inline __attribute__((always_inline)) quad_complex_t  pgmath_cmplxq(__flo
 #define BESSEL_Y1F y1f
 #define BESSEL_YNF ynf
 
+#define BESSEL_J0Q j0q
+#define BESSEL_J1Q j1q
+#define BESSEL_JNQ jnq
+#define BESSEL_Y0Q y0q
+#define BESSEL_Y1Q y1q
+#define BESSEL_YNQ ynq
+
 #define BESSEL_J0 j0
 #define BESSEL_J1 j1
 #define BESSEL_JN jn
@@ -629,6 +636,14 @@ double __mth_i_dbessel_y0(double arg);
 double __mth_i_dbessel_y1(double arg);
 double __mth_i_dbessel_yn(int n, double arg);
 double __f90_dbessel_yn(int n1, int n, double d);
+__float128 __mth_i_qbessel_j0(__float128 arg);
+__float128 __mth_i_qbessel_j1(__float128 arg);
+__float128 __mth_i_qbessel_jn(int n, __float128 arg);
+__float128 __f90_qbessel_jn(int n1, int n, __float128 d);
+__float128 __mth_i_qbessel_y0(__float128 arg);
+__float128 __mth_i_qbessel_y1(__float128 arg);
+__float128 __mth_i_qbessel_yn(int n, __float128 arg);
+__float128 __f90_qbessel_yn(int n1, int n, __float128 d);
 double __mth_i_dceil(double);
 double __mth_i_dfloor(double);
 
