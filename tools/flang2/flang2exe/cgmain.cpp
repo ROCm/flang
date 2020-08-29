@@ -3085,7 +3085,8 @@ static bool should_suppress_debug_loc(INSTR_LIST *instrs) {
   case I_CALL:
     // f90 runtime functions fort_init and f90_* dont need debug location
     if (instrs->prev && (instrs->operands->ot_type == OT_TMP) &&
-        (instrs->operands->tmps == instrs->prev->tmps)) {
+        (instrs->operands->tmps == instrs->prev->tmps) &&
+        (instrs->prev->operands->ot_type == OT_VAR)) {
       // We dont need to expose those internals in prolog to user
       // %1 = bitcast void (...)* @fort_init to void (i8*, ...)*
       // call void (i8*, ...) %1(i8* %0)
@@ -3094,13 +3095,12 @@ static bool should_suppress_debug_loc(INSTR_LIST *instrs) {
       // call void (i8*, i8*, i8*, i8*, i8*, i8*, ...) %8(i8*
       //      %2, i8* %3, i8* %4, i8* %5, i8* %6, i8* %7)
 
-      return (
-          !strncmp(instrs->prev->operands[0].string, "@fort_init",
-                   strlen("@fort_init")) ||
-          !strncmp(instrs->prev->operands[0].string, "@f90_", strlen("@f90_")));
-    } else {
-      return false;
+      if (char *name_str = instrs->prev->operands->string) {
+        return (!strncmp(name_str, "@fort_init", strlen("@fort_init")) ||
+                !strncmp(name_str, "@f90_", strlen("@f90_")));
+      }
     }
+    return false;
   default:
     return true;
   }
