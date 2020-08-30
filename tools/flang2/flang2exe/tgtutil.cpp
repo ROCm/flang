@@ -271,7 +271,7 @@ is_complex_dtype(DTYPE dtype) {
 // AOCC End
 
 static int
-_tgt_target_fill_size(SPTR sptr, int map_type)
+_tgt_target_fill_size(SPTR sptr, int map_type, int base_ili)
 {
   DTYPE dtype = DTYPEG(sptr);
   int ilix, rilix;
@@ -328,10 +328,16 @@ _tgt_target_fill_size(SPTR sptr, int map_type)
           }
         }
         if (AD_SDSC(ad) && SDSCG(sptr) && all_zero) {
-          SPTR sdsc = AD_SDSC(ad);
+          SPTR sdsc = SDSCG(sptr);
           int nme = addnme(NT_VAR, sdsc, 0, 0);
 
           // 6th Element in section descriptor is size, 48 = 6 * 8(INT8)
+          if (SCG(sdsc) == SC_NONE && base_ili) {
+            ilix = ad3ili(IL_AADD, base_ili, ad_aconi(ADDRESSG(sdsc)), 0);
+            ilix = ad3ili(IL_AADD, ilix, ad_aconi(48), 0);
+            ilix = ad3ili(IL_LD, ilix, nme, MSZ_WORD);
+            return ilix;
+          }
           ilix = ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
           ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
           return ilix;
@@ -511,11 +517,19 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = mk_ompaccel_store(ilix, DT_ADDR, nme_args, ad_acon(args_sptr, i * TARGET_PTRSIZE));
       chk_block(ilix);
     } else {
+      ADSC *ad = AD_DPTR(param_dtype); // AOCC
       /* Optimization - Pass by value for scalar */
       // AOCC Modification : Removed use of uninitalized variable isThis from condition
       if (TY_ISSCALAR(DTY(param_dtype)) && (targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT) || isMidnum) {
         iliy = mk_ompaccel_ldsptr(param_sptr);
         load_dtype = param_dtype;
+      // AOCC Begin
+      } else if (AD_SDSC(ad) && AD_ZBASE(ad) &&
+                                targetinfo->symbols[i].ili_base) {
+        iliy = targetinfo->symbols[i].ili_base;
+        iliy = ad3ili(IL_AADD, iliy, ad_aconi(ADDRESSG(param_sptr)), 0);
+        load_dtype = DT_ADDR;
+      // AOCC End
       } else {
         iliy = mk_address(param_sptr);
         load_dtype = DT_ADDR;
@@ -533,9 +547,13 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {
       if(isMidnum)
-        ilix = _tgt_target_fill_size(midnum_sym.host_sym, targetinfo->symbols[i].map_type);
+        ilix = _tgt_target_fill_size(midnum_sym.host_sym,
+                                     targetinfo->symbols[i].map_type,
+                                     targetinfo->symbols[i].ili_base); // AOCC
       else
-        ilix = _tgt_target_fill_size(param_sptr, targetinfo->symbols[i].map_type);
+        ilix = _tgt_target_fill_size(param_sptr,
+                                     targetinfo->symbols[i].map_type,
+                                     targetinfo->symbols[i].ili_base); // AOCC
     }
     ilix = ad4ili(IL_STKR, ilix, ad_acon(arg_size_sptr, i * TARGET_PTRSIZE), nme_size,
                  TARGET_PTRSIZE == 8 ? MSZ_I8 : MSZ_WORD);

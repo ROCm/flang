@@ -5273,10 +5273,19 @@ lower_stmt(int std, int ast, int lineno, int label)
   case A_MP_MAP:
       lower_start_stmt(lineno, label, TRUE, std);
       lop = A_LOPG(ast);
+      rop = A_ROPG(ast); // AOCC
       lower_expression(lop);
-      //todo ompaccel need to pass size and base
       flag = A_PRAGMATYPEG(STD_AST(std));
-      plower("oin", "MP_MAP", lower_base(lop), flag);
+      // AOCC Begin
+      if (rop) {
+        lower_expression(rop);
+        //todo ompaccel need to pass size and base
+        plower("oini", "MP_MAP_MEM", lower_base(lop), flag, lower_base(rop));
+      } else {
+      // AOCC End
+        //todo ompaccel need to pass size and base
+        plower("oini", "MP_MAP", lower_base(lop), flag);
+      }
       lower_end_stmt(std);
     break;
   case A_MP_BREDUCTION:
