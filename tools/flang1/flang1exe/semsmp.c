@@ -10,7 +10,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Last Modified: July 2020
+ * Last Modified: Aug 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -7948,6 +7948,11 @@ do_map()
       (void)add_stmt(ast);
       A_LOPP(ast, item->ast);
       A_PRAGMATYPEP(ast, item->t.cltype);
+      // AOCC Begin
+      if (A_TYPEG(item->ast) == A_MEM) {
+        A_ROPP(ast, A_PARENTG(item->ast));
+      }
+      // AOCC End
       // TODO ompaccel do later lower/upper bounds
     }
   }
