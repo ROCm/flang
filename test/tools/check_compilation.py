@@ -22,6 +22,7 @@ not match the original source info.
 """
 
 import re
+import sys
 import argparse
 from collections import namedtuple
 from os.path import basename
@@ -101,7 +102,7 @@ def getLogErrors(log):
 			elif terminatedError.search(line):
 				terminated = True
 			else:
-				print (line)
+				sys.stdout.write (line)
 	return terminated, errorList
 
 def getFileSet(source, logErrors):
