@@ -615,7 +615,7 @@ QMIN	ilm	ilm
 QMOD	ilm	ilm
 QMUL	ilm	ilm
 QNEG	ilm
-#QNINT	ilm
+QNINT	ilm
 #QOBEG	ilm	sym	sym
 QFLOAT	ilm
 QFLOATK	ilm
