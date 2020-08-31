@@ -9,7 +9,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading
- * Last modified: 04th April 2020
+ * Last modified: August 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020
@@ -61,6 +61,9 @@ typedef struct {
   int ili_base;         /* symbol base */
   int ili_lowerbound;   /* lower bound */
   int ili_length;       /* length */
+  int ili_sptr;         /* ili for sptr, // AOCC
+                           ili_base represents base of struct,
+                           this represets offsetted pointer */
 } OMPACCEL_SYM;
 
 /* Target Info is the main struct which keeps all the information about target
