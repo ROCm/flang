@@ -336,9 +336,9 @@ _tgt_target_fill_size(SPTR sptr, int map_type, int base_ili)
             ilix = ad3ili(IL_AADD, base_ili, ad_aconi(ADDRESSG(sdsc)), 0);
             ilix = ad3ili(IL_AADD, ilix, ad_aconi(48), 0);
             ilix = ad3ili(IL_LD, ilix, nme, MSZ_WORD);
-            return ilix;
+          } else {
+            ilix = ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
           }
-          ilix = ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
           ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
           return ilix;
         }
@@ -525,9 +525,8 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
         load_dtype = param_dtype;
       // AOCC Begin
       } else if (AD_SDSC(ad) && AD_ZBASE(ad) &&
-                                targetinfo->symbols[i].ili_base) {
-        iliy = targetinfo->symbols[i].ili_base;
-        iliy = ad3ili(IL_AADD, iliy, ad_aconi(ADDRESSG(param_sptr)), 0);
+                                targetinfo->symbols[i].ili_sptr) {
+        iliy = targetinfo->symbols[i].ili_sptr;
         load_dtype = DT_ADDR;
       // AOCC End
       } else {

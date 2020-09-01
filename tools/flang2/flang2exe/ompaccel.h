@@ -53,6 +53,9 @@ typedef struct {
   int ili_base;         /* symbol base */
   int ili_lowerbound;   /* lower bound */
   int ili_length;       /* length */
+  int ili_sptr;         /* ili for sptr, // AOCC
+                           ili_base represents base of struct,
+                           this represets offsetted pointer */
 } OMPACCEL_SYM;
 
 /* Target Info is the main struct which keeps all the information about target

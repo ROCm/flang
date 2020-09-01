@@ -3054,7 +3054,7 @@ void
 exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
 {
   int label, argilm;
-  int base = 0; // AOCC
+  int base = 0, ili_sptr = 0; // AOCC
   SPTR sptr;
   if (outlinedCnt >= 2)
     return;
@@ -3072,11 +3072,18 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
   if (STYPEG(sptr) == ST_MEMBER && ILM_OPC(ilmp) == IM_MP_MAP_MEM) {
     base = ILM_OPND(ilmp, 3);
     base = ILI_OF(base);
+    ili_sptr = ILI_OF(argilm);
   }
   // AOCC End
 
   ompaccel_tinfo_current_addupdate_mapitem(sptr, label);
-  current_tinfo->symbols[current_tinfo->n_symbols-1].ili_base = base; // AOCC
+
+  // AOCC Begin
+  assert(current_tinfo->n_symbols, "Expecting atleast one symbol", 0,
+                                                              ERR_Fatal);
+  current_tinfo->symbols[current_tinfo->n_symbols-1].ili_base = base;
+  current_tinfo->symbols[current_tinfo->n_symbols-1].ili_sptr = ili_sptr;
+  // AOCC End
 }
 
 void
