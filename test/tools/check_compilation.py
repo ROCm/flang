@@ -103,6 +103,7 @@ def getLogErrors(log):
 				terminated = True
 			else:
 				sys.stdout.write (line)
+				sys.stdout.write (" ")
 	return terminated, errorList
 
 def getFileSet(source, logErrors):
