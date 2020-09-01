@@ -3525,7 +3525,7 @@ assign(SST *newtop, SST *stktop)
   sem.acl_ido.replace_temp = false;
   ACL * aclp;
   // check if it is an 1D-array assignment statement and rhs is an array constructor
-  if (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT) {
+  if (flg.omptarget && (SST_IDG(newtop) == S_LVALUE || SST_IDG(newtop) == S_IDENT)) {
     if (DTY(dtype) == TY_ARRAY && ADD_NUMDIM(dtype) == 1) {
        if (SST_IDG(stktop) == S_ACONST && SST_ACLG(stktop) != 0) {
 	  SPTR lhs_sptr;
