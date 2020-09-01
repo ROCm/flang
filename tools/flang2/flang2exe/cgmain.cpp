@@ -11336,7 +11336,8 @@ pointer_scalar_need_debug_info(SPTR sptr)
 {
   if ((sptr > NOSYM) && REVMIDLNKG(sptr)) {
     SPTR scalar_sptr = (SPTR)REVMIDLNKG(sptr);
-    if ((POINTERG(scalar_sptr) || ALLOCATTRG(scalar_sptr)) && (STYPEG(scalar_sptr) == ST_VAR))
+    if ((POINTERG(scalar_sptr) || ALLOCATTRG(scalar_sptr)) &&
+        ((STYPEG(scalar_sptr) == ST_VAR) || (STYPEG(scalar_sptr) == ST_STRUCT)))
       return true;
   }
   return false;
