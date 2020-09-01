@@ -11459,9 +11459,18 @@ process_cmnblk_data(SPTR sptr, ISZ_T off)
   SPTR scope = SCOPEG(cmnblk);
 
   if (flg.debug && !CCSYMG(cmnblk) && (scope > 0)) {
+    /* For non-openmp applications, current_module is not used or is set to
+     * NULL, hence we can not use current_module for both openmp and non-openmp
+     * applications, instead we need to use respective LL_Module.
+     */
+    LL_Module *mod = cpu_llvm_module;
+#ifdef OMP_OFFLOAD_LLVM
+    if (flg.omptarget)
+      mod = current_module;
+#endif
     const char *name = new_debug_name(SYMNAME(scope), SYMNAME(cmnblk), NULL);
-    if (!ll_get_module_debug(current_module->common_debug_map, name))
-      lldbg_emit_common_block_mdnode(current_module->debug_info, cmnblk);
+    if (!ll_get_module_debug(mod->common_debug_map, name))
+      lldbg_emit_common_block_mdnode(mod->debug_info, cmnblk);
   }
 }
 
