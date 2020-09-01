@@ -413,7 +413,7 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN ACOSD - - .ACOSD DACOSD - - -
 .GN ATAN - - .ATAN DATAN - - -
 .GN ATAND - - .ATAND DATAND - - -
-.GN ATAN2 - - .ATAN2 DATAN2 QATAN2 - -
+.GN ATAN2 - - .ATAN2 DATAN2 - - -
 .GN ATAN2D - - .ATAN2D DATAN2D - - -
 .GN SINH - - .SINH DSINH QSINH - - -
 .GN COSH - - .COSH DCOSH QCOSH - - -
