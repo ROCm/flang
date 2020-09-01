@@ -930,7 +930,7 @@ lldbg_create_aggregate_members_type(LL_DebugInfo *db, SPTR first, int findex,
           contains_allocatable = true;
           db->need_dup_composite_type |= true;
         }
-      } else {
+      } else if (!SDSCG(element)) {
         element = SYMLKG(element);
         assert(element > NOSYM, 
                "lldbg_create_aggregate_members_type: element not exists",
