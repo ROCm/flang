@@ -7572,6 +7572,7 @@ mk_smallest_val(DTYPE dtype)
     return (mk_cval1(tmp, DT_INT8));
   case TY_REAL:
   case TY_DBLE:
+  case TY_QUAD:         // AOCC
     tmp = _huge(dtype);
     tmp = mk_unop(OP_SUB, tmp, dtype);
     return tmp;
