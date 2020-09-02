@@ -919,6 +919,9 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
       if (!XBIT(57, 0x2))
         out_dtype = DT_INT8;
       break;
+    case 16:
+      out_dtype = DT_QUAD;
+      break;
     case 4:
       out_dtype = DT_INT4;
       break;
