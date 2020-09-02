@@ -3055,6 +3055,7 @@ addarth(ILI *ilip)
   case IL_IDIM:
   case IL_FDIM:
   case IL_DDIM:
+  case IL_QDIM:
     /* add constant folding later */
     break;
 
