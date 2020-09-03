@@ -10338,6 +10338,22 @@ ref_pd(SST *stktop, ITEM *list)
       if (XBIT(51, 0x10))
         goto const_dword_val;
       goto const_dble_val;
+    // AOCC begin
+    case TY_QUAD:
+      if (XBIT(49, 0x40000)) {            /* C90 */
+#define C90_TINY "0.733441547021938866248564956819e-2465" /* 0200044000000000000000 */
+                                                          /* 0000000000000000000000 */
+        atoxq(C90_TINY, &val[0], strlen(C90_TINY));
+      } else {
+        /* 3.362103143112093506262677817321752603E-4932 */
+        val[0] = 0x00010000; /* was 0x00080000 */
+        val[1] = 0x00000000;
+        val[2] = 0x00000000;
+        val[3] = 0x00000000;
+      }
+      sname = "tiny(1.0_16)";
+      goto const_quad_val;
+    // AOCC end
     default:
       break;
     }
