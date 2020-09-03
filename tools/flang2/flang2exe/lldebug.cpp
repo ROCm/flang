@@ -3774,7 +3774,7 @@ lldbg_create_common_block_mdnode(LL_DebugInfo *db, LL_MDRef scope,
 LL_MDRef
 lldbg_emit_common_block_mdnode(LL_DebugInfo *db, SPTR sptr)
 {
-  LL_MDRef scope_modnode, cmnblk_mdnode, cmnblk_gv_mdnode;
+  LL_MDRef scope_modnode, cmnblk_mdnode;
   SPTR scope = SCOPEG(sptr), var;
   const char *cmnblk_name = new_debug_name(SYMNAME(scope), SYMNAME(sptr), NULL);
   LL_MDNode *node;
@@ -3789,11 +3789,6 @@ lldbg_emit_common_block_mdnode(LL_DebugInfo *db, SPTR sptr)
   cmnblk_mdnode = lldbg_create_common_block_mdnode(
       db, scope_modnode, ll_get_md_null(), SYMNAME(sptr));
   db->cur_cmnblk_mdnode = cmnblk_mdnode;
-  cmnblk_gv_mdnode = lldbg_create_cmblk_gv_mdnode(db, cmnblk_mdnode, sptr);
-  slot = LL_MDREF_value(cmnblk_gv_mdnode) - 1;
-  node = db->module->mdnodes[slot];
-  cmnblk_gv_mdnode = node->elem[0];
-  ll_update_md_node(db->module, cmnblk_mdnode, 1, cmnblk_gv_mdnode);
   ll_add_module_debug(db->module->common_debug_map, cmnblk_name, cmnblk_mdnode);  
   if (db->cur_subprogram_mdnode)
     add_debug_cmnblk_variables(db, sptr);
