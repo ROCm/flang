@@ -156,12 +156,6 @@ EXPORT(FTN_NEWN(ftn_ddim))
 	FTN_NEWN(ftn_ddim) = ddim(x, y)
 	return
 	end
-	real*16 function FTN_NEWN(ftn_qdim)(x, y)
-EXPORT(FTN_NEWN(ftn_qdim))
-	real*16 x, y
-	FTN_NEWN(ftn_ddim) = ddim(x, y)
-	return
-	end
 	real*8 function FTN_NEWN(ftn_dexp)(r)
 EXPORT(FTN_NEWN(ftn_dexp))
 	real*8 r
