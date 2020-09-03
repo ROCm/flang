@@ -13,6 +13,8 @@
 
 #include "mthdecls.h"
 
+__float128 __attribute__((weak)) erfcq(__float128);
+
 __float128
 __mth_i_qerfc(__float128 arg)
 {

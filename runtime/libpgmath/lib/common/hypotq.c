@@ -14,6 +14,8 @@
 
 #include "mthdecls.h"
 
+__float128 __attribute__((weak)) hypotq(__float128 x, __float128 y);
+
 __float128
 __mth_i_qhypot(__float128 x, __float128 y)
 {
