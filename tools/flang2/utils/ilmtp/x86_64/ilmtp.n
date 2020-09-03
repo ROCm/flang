@@ -789,6 +789,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dgamma t1
 .OP DFRDP r t2 dpret
+.IL QGAMMA arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qgamma t1
+.OP DFRQP r t2 qpret
 .IL LOG_GAMMA arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -811,6 +816,12 @@ ATAN2 in degrees.
 .OP DADP t2 p1 dp(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dhypot t2
 .OP DFRDP r t3 dpret
+.IL QHYPOT arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(1) t1
+.OP DAQP t2 p1 qp(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qhypot t2
+.OP DFRQP r t3 qpret
 .IL ACOSH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1

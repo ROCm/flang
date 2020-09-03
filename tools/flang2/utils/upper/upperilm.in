@@ -55,11 +55,13 @@ QERFC	ilm
 QERFC_SCALED	ilm
 GAMMA	ilm
 DGAMMA	ilm
+QGAMMA	ilm
 LOG_GAMMA	ilm
 LSECTION	ilm	sym	sym
 DLOG_GAMMA	ilm
 HYPOT	ilm	ilm
 DHYPOT	ilm	ilm
+QHYPOT	ilm	ilm
 ACOSH	ilm
 DACOSH	ilm
 ASINH	ilm
