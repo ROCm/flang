@@ -145,6 +145,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"expon", "", false, "k"},
     {"expond", "", false, "k"},
     {"expondx", "", false, "k"},
+    {"exponqx", "", false, "k"},
     {"exponx", "", false, "k"},
     {"extends_type_of", "", true, "k"},
     {"finalize", "", true, ""},

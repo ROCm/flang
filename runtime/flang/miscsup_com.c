@@ -4521,6 +4521,23 @@ ENTF90(EXPONDX, expondx)(__REAL8_T d)
 }
 
 __INT_T
+ENTF90(EXPONQX, exponqx)(__REAL16_T q)
+{
+  union {
+    struct {
+    __INT8_T lo;
+    __INT8_T hi;
+    } i;
+    __REAL16_T r;
+  } g;
+  g.r = q;
+  if ((((g.i.hi >> 32) & ~0x80000000) | (g.i.hi & 0xffffffff)) == 0)
+    return 0;
+  else
+    return ((g.i.hi >> 48) & 0x7FFF) - 16382;
+}
+
+__INT_T
 ENTF90(EXPOND, expond)(__REAL8_T *d)
 {
   return ENTF90(EXPONDX, expondx)(*d);
