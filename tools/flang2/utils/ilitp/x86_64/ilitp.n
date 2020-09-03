@@ -3,20 +3,10 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" */
+.\"/*
 .\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
 .\" * Notified per clause 4(b) of the license.
-.\" *
-.\" * Added support for quad precision
-.\" *   Last modified: Feb 2020
-.\" *
-.\" * Support for Real128 support for math intrinsics
-.\" *   Date of Modification: Feb 2020
-.\" *
-.\" * Added code to support SHIFTA intrinsic
-.\" *   Last modified: April 2020
-.\" *
-.\" * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
-.\" * Last modified: 19th August 2020
 .\" *
 .\" */
 .NS 13 "X86-64 ILI Definitions"
@@ -1076,6 +1066,11 @@ Real dim.
 .IL DDIM dplnk dplnk
 Double dim.
 .AT arth null dp cse
+.CG notCG
+
+.IL QDIM qplnk qplnk
+QUAD dim.
+.AT arth null qp cse
 .CG notCG
 
 .IL FFLOOR splnk

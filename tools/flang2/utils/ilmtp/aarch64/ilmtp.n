@@ -1030,6 +1030,12 @@ Real valued DIM intrinsic.
 .OP ARGDP t2 p1 t1
 .OP QJSR t3 =e'%d%ftn_i_ddim t2
 .OP DFRDP r t3 dpret
+.IL QDIM arth lnk lnk
+.OP NULL t1 iv0
+.OP ARGQP t1 p2 t1
+.OP ARGQP t2 p1 t1
+.OP QJSR t3 =e'%q%ftn_i_ddim t2
+.OP DFRQP r t3 qpret
 .IL DPROD arth lnk lnk
 Multiply two single precision real values and return double
 precision value. (DPROD intrinsic).

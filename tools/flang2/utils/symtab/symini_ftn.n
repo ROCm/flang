@@ -273,6 +273,7 @@ Converts complex*32 to quad.
 .IN IDIM 2 I I IDIM ftn_idim 
 .IN .DIM 2 R R DIM ftn_dim 
 .IN DDIM 2 D D DDIM ftn_ddim 
+.IN QDIM 2 Q Q QDIM ftn_qdim
 .IN IMOD 2 SI SI MOD ftn_imod 
 .IN JMOD 2 I I MOD ftn_mod 
 .IN =KMOD 2 I8 I8 KMOD ftn_kmod 

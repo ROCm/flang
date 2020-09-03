@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 int
 ftn_i_jishft(int x, int shift)
@@ -120,6 +124,13 @@ ftn_i_idim(int a, int b)
 
 double
 ftn_i_ddim(double a, double b)
+{
+  if (a > b)
+    return a - b;
+  return 0.0;
+}
+__float128
+ftn_i_qdim(__float128 a, __float128 b)
 {
   if (a > b)
     return a - b;

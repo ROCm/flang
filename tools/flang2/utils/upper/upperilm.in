@@ -616,6 +616,7 @@ QMOD	ilm	ilm
 QMUL	ilm	ilm
 QNEG	ilm
 QNINT	ilm
+QDIM	ilm	ilm
 #QOBEG	ilm	sym	sym
 QFLOAT	ilm
 QFLOATK	ilm
