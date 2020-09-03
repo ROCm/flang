@@ -275,8 +275,10 @@ set(SRCS
   fpcvt.c
   gamma.c
   gammaf.c
+  gammaq.c
   hypot.c
   hypotf.c
+  hypotq.c
   i2powi.c
   ipowi.c
   kpowi.c
