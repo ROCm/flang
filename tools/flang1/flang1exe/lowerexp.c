@@ -4614,6 +4614,9 @@ lower_intrinsic(int ast)
       case TY_DBLE:
         rtlRtn = RTE_expondx;
         break;
+      case TY_QUAD:
+        rtlRtn = RTE_exponqx;
+        break;
       default:
         ast_error("unexpected argument type for exponent", ast);
         break;

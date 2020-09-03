@@ -150,6 +150,7 @@ typedef enum {
   RTE_expon,
   RTE_expond,
   RTE_expondx,
+  RTE_exponqx,
   RTE_exponx,
   RTE_extends_type_of,
   RTE_finalize,
