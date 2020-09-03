@@ -14,6 +14,8 @@
 
 #include "mthdecls.h"
 
+__float128 __attribute__((weak)) BESSEL_YNQ(int, __float128);
+
 __float128
 __mth_i_qbessel_yn(int n, __float128 arg)
 {

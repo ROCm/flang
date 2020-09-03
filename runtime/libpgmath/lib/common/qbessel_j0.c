@@ -14,6 +14,8 @@
 
 #include "mthdecls.h"
 
+__float128 __attribute__((weak)) BESSEL_J0Q( __float128);
+
 __float128
 __mth_i_qbessel_j0(__float128 arg)
 {

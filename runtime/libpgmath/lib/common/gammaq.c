@@ -13,6 +13,7 @@
 #pragma global - Mx, 6, 0x100
 
 #include "mthdecls.h"
+__float128 __attribute__((weak)) tgammaq(__float128);
 
 __float128
 __mth_i_qgamma(__float128 arg)
