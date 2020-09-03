@@ -45,11 +45,14 @@ ATAN2	ilm	ilm
 ATAN2D	ilm	ilm
 ATAND	ilm
 ERF	ilm
-DERF	ilm
 ERFC	ilm
 ERFC_SCALED	ilm
+DERF	ilm
 DERFC	ilm
 DERFC_SCALED	ilm
+QERF	ilm
+QERFC	ilm
+QERFC_SCALED	ilm
 GAMMA	ilm
 DGAMMA	ilm
 LOG_GAMMA	ilm

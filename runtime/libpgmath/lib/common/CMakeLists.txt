@@ -266,6 +266,9 @@ set(SRCS
   erfc_scaledf.c
   erfcf.c
   erff.c
+  erfc_scaledq.c
+  erfcq.c
+  erfq.c
   floor.c
   fltfenv.c
   fltmanip.c
