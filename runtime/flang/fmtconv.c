@@ -756,9 +756,9 @@ __fortio_fmt_e(__BIGREAL16_T val, int w, int d, int e, int sf, int type,
       conv_e(d, e, sf, e_flag);
   #endif
       // AOCC
-      if(fpdat.exp > 0 && fpdat.exp >= d+e)
+      if(fpdat.exp > 0 && fpdat.exp >= d)
         conv_e(d, e, sf, e_flag);
-      else if(fpdat.exp < 0 && (fpdat.exp >= -d-e || fpdat.exp <= -d))
+      else if(fpdat.exp < 0)
         conv_e(d, e, sf, e_flag);
       else
         conv_e(d, e, fpdat.exp, e_flag);

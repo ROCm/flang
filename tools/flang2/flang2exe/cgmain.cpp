@@ -5153,13 +5153,15 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_SNGL:
     opc_type = make_lltype_from_dtype(DT_DBLE);
     break;
-  case IL_QUAD:              // AOCC
   case IL_DBLE:
   case IL_UFIX:
   case IL_FIX:
   case IL_FIXK:
   case IL_FIXUK:
     opc_type = make_lltype_from_dtype(DT_FLOAT);
+    break;
+  case IL_QUAD:              // AOCC
+    opc_type = make_lltype_from_dtype(DT_DBLE);
     break;
   case IL_FLOAT:
   case IL_FLOATU:
