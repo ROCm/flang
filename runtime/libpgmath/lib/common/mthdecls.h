@@ -626,6 +626,7 @@ double __mth_i_derfc(double f);
 double __mth_i_derfc_scaled(double f);
 double __mth_i_dgamma(double f);
 double __mth_i_dlog_gamma(double f);
+__float128 __mth_i_qlog_gamma(__float128 f);
 double __mth_i_dhypot(double, double);
 double __mth_i_pow(double, double);
 double __mth_i_dbessel_j0(double arg);

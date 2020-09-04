@@ -285,6 +285,7 @@ set(SRCS
   kpowk.c
   log_gamma.c
   log_gammaf.c
+  log_gammaq.c
   mod.c
   mth_vreturns.c
   mth_xintrinsics.c
