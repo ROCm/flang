@@ -59,6 +59,7 @@ QGAMMA	ilm
 LOG_GAMMA	ilm
 LSECTION	ilm	sym	sym
 DLOG_GAMMA	ilm
+QLOG_GAMMA	ilm
 HYPOT	ilm	ilm
 DHYPOT	ilm	ilm
 QHYPOT	ilm	ilm
