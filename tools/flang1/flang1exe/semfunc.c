@@ -10061,6 +10061,7 @@ ref_pd(SST *stktop, ITEM *list)
         conval = pdtype == PD_maxexponent ? 8189 : -8188;
       else
         conval = pdtype == PD_maxexponent ? 16384 : -16381;
+      break;
     default:
       E74_ARG(pdsym, 0, NULL);
       goto call_e74_arg;
@@ -10205,6 +10206,7 @@ ref_pd(SST *stktop, ITEM *list)
     case TY_INT8:
     case TY_REAL:
     case TY_DBLE:
+    case TY_QUAD:
       conval = 2;
       break;
     default:
