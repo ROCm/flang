@@ -51,6 +51,8 @@
  *
  *   Last modified: Jun 2020
  *
+ * Support for CPU_TIME for real128
+ * Last modified: Sept 2020
  */
 
 /**
@@ -2856,7 +2858,9 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
   case I_CPU_TIME:
     is_icall = FALSE;
     arg1 = ARGT_ARG(func_args, 0);
-    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_cpu_timed : RTE_cpu_time;
+    //AOCC
+    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_cpu_timed :
+              DTYG(A_DTYPEG(arg1)) == TY_QUAD ? RTE_cpu_timeq : RTE_cpu_time;
     nargs = 1;
     goto opt_common;
   case I_RANDOM_NUMBER:

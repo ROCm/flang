@@ -479,6 +479,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"counts", "", true, ""},
     {"cpu_time", "", false, ""},
     {"cpu_timed", "", false, ""},
+    {"cpu_timeq", "", false, ""},
     {"cshift", "", true, ""},
     {"cshiftc", "", true, ""},
     {"cshifts", "", true, ""},
