@@ -587,6 +587,7 @@ float __mth_i_floor(float);
 int __mth_i_idnint(double d);
 int __mth_i_mod(int i, int j);
 int __mth_i_nint(float d);
+int __mth_i_qnint(__float128 q);
 int __mth_i_ipowi(int x, int i);
 
 double __mth_i_dacos(double d);

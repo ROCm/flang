@@ -251,6 +251,7 @@ set(SRCS
   qbessel_y0.c
   qbessel_y1.c
   qbessel_yn.c
+  qnint.c
   dceil.c
   dcosd.c
   dfloor.c

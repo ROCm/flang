@@ -337,11 +337,11 @@ DNINT intrinsic (converts double to double).
 .OP DFRDP r t2 dpret
 .\" AOCC begin
 .IL QNINT arth lnk
-QNINT intrinsic (converts quad to quad).
+QNINT intrinsic (converts quad to integer).
 .OP NULL t1 iv0
 .OP DAQP t1 p1 qp(0) t1
-.OP QJSR t2 =e'%d%roundq t1
-.OP DFRQP r t2 qpret
+.OP QJSR t2 =e'%i%__mth_i_qnint t1
+.OP DFRIR r t2 drret
 .\" AOCC end
 .IL NINT arth lnk
 NINT intrinsic (converts real to integer).

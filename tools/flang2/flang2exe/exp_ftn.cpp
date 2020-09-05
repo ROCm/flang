@@ -592,7 +592,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     exp_qjsr("cqconj", DT_QCMPLX, ilmp, curilm);
     return;
   case IM_QNINT:
-    exp_qjsr("roundq", DT_QCMPLX, ilmp, curilm);
+    exp_qjsr("__mth_i_qnint", DT_QUAD, ilmp, curilm);
     return;
   case IM_CQABS:
     exp_qjsr("cqabs", DT_QCMPLX, ilmp, curilm);

@@ -4062,6 +4062,8 @@ lower_intrinsic(int ast)
     dty = DTYG(A_NDTYPEG(ast));
     if (DTYG(A_NDTYPEG(ARGT_ARG(args, 0))) == TY_DBLE) {
       ilm = intrin_name("DNINT", ast, in_I_K);
+    } else if (DTYG(A_NDTYPEG(ARGT_ARG(args, 0))) == TY_QUAD) {
+      ilm = intrin_name("QNINT", ast, in_i_K);
     } else {
       ilm = intrin_name("NINT", ast, in_i_K);
     }
