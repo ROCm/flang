@@ -1080,6 +1080,15 @@ p3 - mask
 .fi
 .OP ICMPZ t1 p3 ne
 .OP DSELECT r t1 p2 p1
+.IL QMERGE arth lnk lnk lnk
+Real*16 valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP QSELECT r t1 p2 p1
 .IL CMERGE arth lnk lnk lnk
 Real*4 complex valued f90 merge intrinsic.
 .nf

@@ -9990,8 +9990,10 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_ASELECT:
   case IL_FSELECT:
   case IL_DSELECT:
+  case IL_QSELECT:
   case IL_CSSELECT:
   case IL_CDSELECT:
+  case IL_CQSELECT:
     operand = gen_select_expr(ilix);
     break;
   case IL_FSQRT:

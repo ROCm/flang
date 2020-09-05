@@ -209,7 +209,7 @@ CQEXP	ilm
 #CDIV	ilm	ilm
 CQLD	ilm
 CQLOG	ilm
-#CQMERGE	ilm	ilm	ilm
+CQMERGE	ilm	ilm	ilm
 CQMUL	ilm	ilm
 CQNEG	ilm
 CQSIN	ilm
@@ -616,7 +616,7 @@ QCONJG	ilm
 QCMP	ilm	ilm
 QDIV	ilm	ilm
 QMAX	ilm	ilm
-#QMERGE	ilm	ilm	ilm
+QMERGE	ilm	ilm	ilm
 QMIN	ilm	ilm
 QMOD	ilm	ilm
 QMUL	ilm	ilm
