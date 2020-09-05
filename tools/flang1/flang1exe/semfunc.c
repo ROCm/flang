@@ -7979,15 +7979,16 @@ ref_pd(SST *stktop, ITEM *list)
   //AOCC Begin
   case PD_rank:
     if (count != 1) {
-    E74_CNT(pdsym, count, 1, 1);
-      goto call_e74_cnt;
+      E74_CNT(pdsym, count, 1, 1);
+        goto call_e74_cnt;
     }
     if (evl_kwd_args(list, 1, KWDARGSTR(pdsym)))
       goto exit_;
     dtyper =  stb.user.dt_int;
     stkp = ARG_STK(0);
-    ad = AD_DPTR(SST_DTYPEG(stkp));
-    int rank = AD_NUMDIM(ad);
+    int rank = 0;
+    if (DTY(SST_DTYPEG(stkp)) == TY_ARRAY)
+       rank = AD_NUMDIM(AD_DPTR(SST_DTYPEG(stkp)));
     ast = mk_cval(rank, dtyper);
     EXPSTP(pdsym, 1);
     SST_IDP(stktop, S_CONST);
