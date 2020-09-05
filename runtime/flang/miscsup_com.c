@@ -4787,12 +4787,16 @@ ENTF90(RRSPACINGQX, rrspacingqx)(__REAL16_T q)
     return 0;
   y.i.h = (x.i.h & 0x7FFF << 20) ^ 0x7FFF << 20;
   y.i.l = 0;
+  y.i.j = 0;
+  y.i.k = 0;
   x.q *= y.q;
   if (x.q < 0)
     x.q = -x.q;
   e = 111 + 16383;
-  y.i.h = e << 80;
+  y.i.h = e << 16;
   y.i.l = 0;
+  y.i.j = 0;
+  y.i.k = 0;
   x.q *= y.q;
   return x.q;
 }
@@ -4883,7 +4887,7 @@ ENTF90(SCALEQX, scaleqx)(__REAL16_T q, __INT_T i)
     e = 0;
   else if (e > 32767)
     e = 32767;
-  x.i.h = e << 80;
+  x.i.h = e << 16;
   x.i.l = 0;
   x.i.j = 0;
   x.i.k = 0;
@@ -4901,7 +4905,7 @@ ENTF90(SCALEQ, scaleq)(__REAL16_T *q, void *i, __INT_T *size)
     e = 0;
   else if (e > 32767)
     e = 32767;
-  x.i.h = e << 80;
+  x.i.h = e << 16;
   x.i.l = 0;
   x.i.j = 0;
   x.i.k = 0;
@@ -5017,7 +5021,7 @@ ENTF90(SETEXPQX, setexpqx)(__REAL16_T q, __INT_T i)
     e = 0;
   else if (e > 32767)
     e = 32767;
-  x.i.h = e << 80;
+  x.i.h = e << 16;
   x.i.l = 0;
   x.i.k = 0;
   x.i.j = 0;
@@ -5040,7 +5044,7 @@ ENTF90(SETEXPQ, setexpq)(__REAL16_T *q, void *i, __INT_T *size)
     e = 0;
   else if (e > 32767)
     e = 32767;
-  x.i.h = e << 80;
+  x.i.h = e << 16;
   x.i.l = 0;
   return x.q * y.q;
 }
@@ -5098,10 +5102,10 @@ ENTF90(SPACINGQX, spacingqx)(__REAL16_T q)
   __REAL16_SPLIT x;
 
   x.q = q;
-  e = ((x.i.h >> 80) & 0x7FFF) - 112;
+  e = ((x.i.h >> 16) & 0x7FFF) - 112;
   if (e < 1)
     e = 1;
-  x.i.h = e << 80;
+  x.i.h = e << 16;
   x.i.l = 0;
   return x.q;
 }
