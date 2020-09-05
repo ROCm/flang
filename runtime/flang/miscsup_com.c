@@ -581,6 +581,28 @@ ENTFTN(CPU_TIMED, cpu_timed)(__REAL8_T *x)
   *x = res;
 }
 
+//AOCC Begin
+void
+ENTFTN(CPU_TIMEQ, cpu_timeq)(__REAL16_T *x)
+{
+  extern double __fort_second();
+  double secs;
+  __REAL16_T res;
+
+  secs = __fort_second();
+  /* probably not necessary for this version, except that
+     user could mix real*4 and real*8 versions.
+   */
+  if (secs > TIME_THRESHOLD2)
+    res = secs - TIME_THRESHOLD2;
+  else if (secs > TIME_THRESHOLD1)
+    res = secs - TIME_THRESHOLD1;
+  else
+    res = secs;
+  *x = res;
+}
+//AOCC End
+
 __REAL4_T
 ENTFTN(SECNDS, secnds)(__REAL4_T *x, F90_Desc *xd)
 {

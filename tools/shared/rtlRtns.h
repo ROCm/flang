@@ -484,6 +484,7 @@ typedef enum {
   RTE_counts,
   RTE_cpu_time,
   RTE_cpu_timed,
+  RTE_cpu_timeq,
   RTE_cshift,
   RTE_cshiftca,
   RTE_cshifts,
