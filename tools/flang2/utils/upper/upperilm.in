@@ -645,6 +645,7 @@ QREAL	ilm
 #QSIGN	ilm	ilm
 #QSIGNNZ	ilm	ilm
 QCOS  ilm
+QCOSD  ilm
 QCOSH ilm
 QACOS ilm
 QACOSH ilm
@@ -653,7 +654,7 @@ QSIN	ilm
 QSINH ilm
 QASIN ilm
 QASINH ilm
-#QSIND	ilm
+QSIND	ilm
 #QSINH	ilm
 QSQRT	ilm
 QPST	ilm	ilm
@@ -665,7 +666,7 @@ QATAN2 ilm ilm
 QATANH ilm
 QCMPLX	ilm	ilm
 QIMAG	ilm
-#QTAND	ilm
+QTAND	ilm
 #QTANH	ilm
 QTOQ	ilm	ilm
 #QTOI	ilm	ilm

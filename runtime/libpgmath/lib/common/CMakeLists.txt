@@ -254,13 +254,16 @@ set(SRCS
   qnint.c
   dceil.c
   dcosd.c
+  qcosd.c
   dfloor.c
   dmod.c
   dpowi.c
   dpowk.c
   dsign.c
   dsind.c
+  qsind.c
   dtand.c
+  qtand.c
   erf.c
   erfc.c
   erfc_scaled.c
