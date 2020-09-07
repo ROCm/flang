@@ -239,6 +239,10 @@ set(SRCS
   dasind.c
   datan2d.c
   datand.c
+  qacosd.c
+  qasind.c
+  qatan2d.c
+  qatand.c
   dbessel_j0.c
   dbessel_j1.c
   dbessel_jn.c

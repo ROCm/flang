@@ -4,22 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/* 
+
+/*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
  */
 
-/* inhibit floating point copy propagation */
-#pragma global - Mx, 6, 0x100
-
 #include "mthdecls.h"
 #include <quadmath.h>
 
-__float128 __attribute__((weak)) BESSEL_J1Q( __float128);
+__float128 __attribute__((weak)) asinq( __float128);
 
 __float128
-__mth_i_qbessel_j1(__float128 arg)
+__mth_i_qasind(__float128 q)
 {
-  __float128 f = BESSEL_J1Q(arg);
-  return f;
+  return (CNVRTRAD(asinq(q)));
 }

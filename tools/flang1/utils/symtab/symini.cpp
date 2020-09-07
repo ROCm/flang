@@ -1287,6 +1287,7 @@ const char *SyminiFE90::init_names0[] = {
     ".atan2d",
     ".datan2d",
     "datan2d",
+    ".qatan2d",
     "..sinh",
     ".sinh",
     ".dsinh",

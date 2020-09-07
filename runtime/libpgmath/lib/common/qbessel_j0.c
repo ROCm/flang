@@ -13,6 +13,7 @@
 #pragma global - Mx, 6, 0x100
 
 #include "mthdecls.h"
+#include <quadmath.h>
 
 __float128 __attribute__((weak)) BESSEL_J0Q( __float128);
 

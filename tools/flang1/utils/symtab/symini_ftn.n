@@ -379,6 +379,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental x
 .IN DASIND 1 D D none * V
 .AT elemental x
+.IN .QASIND 1 Q Q none * V
+.AT elemental x
 
 .IN ..ACOS 1 R R none * V
 .AT elemental x
@@ -398,6 +400,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .DACOSD 1 D D none * V
 .AT elemental x
 .IN DACOSD 1 D D none * V
+.AT elemental x
+.IN .QACOSD 1 Q Q none * V
 .AT elemental x
 
 .IN ..ATAN 1 R R none * V
@@ -419,6 +423,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental x
 .IN DATAND 1 D D none * V
 .AT elemental x
+.IN .QATAND 1 Q Q none * V
+.AT elemental x
 
 .IN ..ATAN2 2 R R none * V
 .AT elemental y x
@@ -438,6 +444,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .DATAN2D 2 D D none * V
 .AT elemental y x
 .IN DATAN2D 2 D D none * V
+.AT elemental y x
+.IN .QATAN2D 2 Q Q none * V
 .AT elemental y x
 
 .IN ..SINH 1 R R none * V
@@ -1030,19 +1038,19 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .AT elemental x
 .GN ASIN - - .ASIN DASIN - - - .QASIN -
 .AT elemental x
-.GN ASIND - - .ASIND DASIND - - - - -
+.GN ASIND - - .ASIND DASIND - - - .QASIND -
 .AT elemental x
 .GN ACOS - - .ACOS DACOS - - - .QACOS -
 .AT elemental x
-.GN ACOSD - - .ACOSD DACOSD - - - - -
+.GN ACOSD - - .ACOSD DACOSD - - - .QACOSD -
 .AT elemental x
 .GN ATAN - - .ATAN DATAN - - - .QATAN -
 .AT elemental x
-.GN ATAND - - .ATAND DATAND - - - - -
+.GN ATAND - - .ATAND DATAND - - - .QATAND -
 .AT elemental x
 .GN ATAN2 - - .ATAN2 DATAN2 - - - .QATAN2 -
 .AT elemental y x
-.GN ATAN2D - - .ATAN2D DATAN2D - - - - -
+.GN ATAN2D - - .ATAN2D DATAN2D - - - .QATAN2D -
 .AT elemental y x
 .GN SINH - - .SINH DSINH - - - .QSINH -
 .AT elemental x

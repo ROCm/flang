@@ -4,9 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 #include "mthdecls.h"
-#include "quadmath.h"
+#include <quadmath.h>
 
 __float128 __attribute__((weak)) cosq( __float128);
 

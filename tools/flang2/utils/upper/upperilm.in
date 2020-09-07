@@ -275,14 +275,18 @@ D2K	ilm
 DABS	ilm
 DACOS	ilm
 DACOSD	ilm
+QACOSD	ilm
 DADD	ilm	ilm
 DAIF	ilm	sym	sym	sym
 DASIN	ilm
 DASIND	ilm
+QASIND	ilm
 DATAN	ilm
 DATAN2	ilm	ilm
 DATAN2D	ilm	ilm
+QATAN2D	ilm	ilm
 DATAND	ilm
+QATAND	ilm
 DBLE	ilm
 DCEIL	ilm
 DCMP	ilm	ilm

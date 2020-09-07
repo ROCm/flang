@@ -688,6 +688,11 @@ ASIN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dasind t1
 .OP DFRDP r t2 dpret
+.IL QASIND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qasind t1
+.OP DFRQP r t2 qpret
 .IL ACOSD arth lnk
 ACOS in degrees.
 .OP NULL t1 iv0
@@ -699,6 +704,11 @@ ACOS in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dacosd t1
 .OP DFRDP r t2 dpret
+.IL QACOSD arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qacosd t1
+.OP DFRDP r t2 qpret
 .IL ATAND arth lnk
 ATAN in degrees.
 .OP NULL t1 iv0
@@ -710,6 +720,11 @@ ATAN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_datand t1
 .OP DFRDP r t2 dpret
+.IL QATAND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qatand t1
+.OP DFRQP r t2 qpret
 .IL ATAN2D arth lnk lnk
 ATAN2 in degrees.
 .OP NULL t1 iv0
@@ -723,6 +738,12 @@ ATAN2 in degrees.
 .OP DADP t2 p1 dp(0) t1
 .OP QJSR t3 =e'%d%__mth_i_datan2d t2
 .OP DFRDP r t3 dpret
+.IL QATAN2D arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(1) t1
+.OP DAQP t2 p1 qp(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qatan2d t2
+.OP DFRDP r t3 qpret
 .IL SINH arth lnk
 .OP FSINH r p1
 \".OP NULL t1 iv0
