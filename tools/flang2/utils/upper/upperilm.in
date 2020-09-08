@@ -202,10 +202,10 @@ CQACOS  ilm
 CQACOSH ilm
 CQDIV	ilm	ilm
 CQEXP	ilm
-#CQFUNC	num	sym	ilms
-#CQFUNCA	num	num	ilm	ilms
-#PCQFUNCA	num	num	sym	ilm	ilms
-#CQVFUNCA	num	num	sym	ilm	sym	ilms
+CQFUNC	num	sym	ilms
+CQFUNCA	num	num	ilm	ilms
+PCQFUNCA	num	num	sym	ilm	ilms
+CQVFUNCA	num	num	sym	ilm	sym	ilms
 #CDIV	ilm	ilm
 CQLD	ilm
 CQLOG	ilm
@@ -222,10 +222,10 @@ CQTOCQ	ilm	ilm
 CQTOI	ilm	ilm
 #CQTOK	ilm	ilm
 #CQTOUDI	ilm
-#CQUFUNC/CQFUNC	num	sym	args
-#CQUFUNCA/CQFUNCA	num	num	ilm	args
-#PCQUFUNCA/PCQFUNCA	num	num	sym	ilm	args
-#CQUVFUNCA/CQVFUNCA	num	num	sym	ilm	sym	args
+CQUFUNC/CQFUNC	num	sym	args
+CQUFUNCA/CQFUNCA	num	num	ilm	args
+PCQUFUNCA/PCQFUNCA	num	num	sym	ilm	args
+CQUVFUNCA/CQVFUNCA	num	num	sym	ilm	sym	args
 # AOCC END
 CEXP	ilm
 CFUNC	num	sym	ilms

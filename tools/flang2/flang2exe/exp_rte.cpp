@@ -3484,6 +3484,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DVFUNCA:
     descno = 5;
     goto vcalla_common;
+  // AOCC begin
+  case IM_QVFUNCA:
+    descno = 5;
+    goto vcalla_common;
+  // AOCC end
   case IM_CVFUNCA:
     descno = 5;
     goto vcalla_common;
@@ -3652,6 +3657,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     break;
   case IM_CVFUNCA:
   case IM_CDVFUNCA:
+  case IM_CQVFUNCA:      // AOCC
     ilm1 = ILM_OPND(ilmp, 6);
     if (IILM_OPC(ilm1) == IM_FARG)
       ilm1 = IILM_OPND(ilm1, 1);
@@ -3669,6 +3675,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_IVFUNCA:
   case IM_RVFUNCA:
   case IM_DVFUNCA:
+  case IM_QVFUNCA:       // AOCC
   case IM_PVFUNCA:
     i = 6;
     break;
@@ -4435,8 +4442,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     case IM_IVFUNCA:
     case IM_RVFUNCA:
     case IM_DVFUNCA:
+    case IM_QVFUNCA:         // AOCC
     case IM_CVFUNCA:
     case IM_CDVFUNCA:
+    case IM_CQVFUNCA:         // AOCC
     case IM_PVFUNCA: {
       SPTR sptr_descno = (SPTR) descno;
       ililnk = exp_type_bound_proc_call(exp_call_sym, sptr_descno, vtoff, arglnk);
@@ -4521,8 +4530,9 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
     break;
   //AOCC Begin
+  case IM_QVFUNCA:
   case IM_QFUNC:
-    ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
+    ILI_OF(curilm) = ad2ili(IL_DFRQP, ililnk, FR_RETVAL);
     break;
   //AOCC End
   case IM_CFUNC:
@@ -4554,6 +4564,23 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
     break;
+  // AOCC begin
+  case IM_CQFUNC:
+  case IM_CQFUNCA:
+  case IM_PCQFUNCA:
+  case IM_CQVFUNCA:
+    chk_block(ililnk);
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, cfunc, cfunc_nme, MSZ_F32);
+    } else {
+      ILM_RRESULT(curilm) = ad3ili(IL_LDQP, cfunc, addnme(NT_MEM, SPTR_NULL, cfunc_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) =
+          ad3ili(IL_LDQP, ad3ili(IL_AADD, cfunc, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, cfunc_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
+    break;
+  // AOCC end
   case IM_PFUNC:
   case IM_PFUNCA:
   case IM_PPFUNCA:
