@@ -2257,6 +2257,8 @@ in the CALL statement.
 .AT spec
 .CL CDFUNC proc n lnk lnk*
 .AT spec dcmplx
+.CL CQFUNC proc n lnk lnk*
+.AT spec
 .FL CFUNC proc n sym lnk*
 .AT spec
 .IL CFUNCA proc n stc lnk lnk*
@@ -2275,6 +2277,17 @@ Call double complex function through procedure pointer.
 .AT spec dcmplx
 .IL CDVFUNCA proc n stc sym lnk sym lnk*
 .AT spec dcmplx
+./" AOCC begin
+.FL CQFUNC proc n sym lnk*
+.AT spec
+.IL CQFUNCA proc n stc lnk lnk*
+.AT spec
+.IL PCQFUNCA proc n stc sym lnk lnk*
+Call quad complex function through procedure pointer.
+.AT spec
+.IL CQVFUNCA proc n stc sym lnk sym lnk*
+.AT spec
+./" AOCC end
 .IL LFUNC proc n sym lnk*
 .AT spec
 .IL LFUNCA proc n stc lnk lnk*
