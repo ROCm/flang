@@ -2308,16 +2308,6 @@ wrap_q(IEEE128 res, __float128 *x)
 }
 
 void
-xquad(IEEE64 d, IEEE128 r)
-{
-  __float128 x;
-  float64_t y;
-  unwrap_d(&y, &d);
-  check(fold_real128_from_real64(&x, &y));
-  wrap_q(r, &x);
-}
-
-void
 xqfix(IEEE128 q, INT *i)
 {
   __float128 y;

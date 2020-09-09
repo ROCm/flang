@@ -729,10 +729,10 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       return CONVAL1G(oldval);
     else if (from == TY_DCMPLX) {
       oldval = CONVAL1G(oldval);
-      xquad(&oldval, num);
+      xdtoq(&oldval, num);
     } else if (from == TY_CMPLX) {
       oldval = CONVAL1G(oldval);
-      xquad(&oldval, num);
+      xdtoq(&oldval, num);
     } else if (from == TY_REAL) {
       xftoq(oldval, num);
     } else if (from == TY_DBLE) {

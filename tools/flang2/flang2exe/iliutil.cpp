@@ -3553,7 +3553,7 @@ addarth(ILI *ilip)
 
   case IL_QUAD:
     if (ncons == 1) {
-      xquad(&con1v2, res.numq);
+      xdtoq(&con1v2, res.numq);
       goto add_qcon;
     }
     break;

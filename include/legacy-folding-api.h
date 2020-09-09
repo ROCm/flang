@@ -259,7 +259,6 @@ void xefix(IEEE80 e, INT *i);
 void xddfix(IEEE6464 dd, INT *i);
 void xqfix(IEEE128 q, INT *i);
 
-void xquad(IEEE64 f, IEEE128 r);     // AOCC
 void xdble(IEEE32 f, IEEE64 r);
 void xsngl(IEEE64 d, IEEE32 *r);
 void xdtoe(IEEE64 d, IEEE80 r);
