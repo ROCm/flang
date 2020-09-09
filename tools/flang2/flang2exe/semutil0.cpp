@@ -133,8 +133,10 @@ getrval(int ilmptr)
   case IM_KVFUNCA:
   case IM_RVFUNCA:
   case IM_DVFUNCA:
+  case IM_QVFUNCA:      // AOCC
   case IM_CVFUNCA:
   case IM_CDVFUNCA:
+  case IM_CQVFUNCA:     // AOCC
   case IM_VCALLA:
     return opr2;
 
@@ -142,8 +144,10 @@ getrval(int ilmptr)
   case IM_KFUNCA:
   case IM_RFUNCA:
   case IM_DFUNCA:
+  case IM_QFUNCA:       // AOCC
   case IM_CFUNCA:
   case IM_CDFUNCA:
+  case IM_CQFUNCA:      // AOCC
   case IM_CALLA:
   case IM_PIFUNCA:
   case IM_PKFUNCA:
@@ -151,6 +155,7 @@ getrval(int ilmptr)
   case IM_PDFUNCA:
   case IM_PCFUNCA:
   case IM_PCDFUNCA:
+  case IM_PCQFUNCA:     // AOCC
   case IM_PCALLA:
     return getrval(opr2);
 

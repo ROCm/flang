@@ -2903,6 +2903,12 @@ Convert real number to integer*8 (INT and IFIX intrinsics).
 Convert double precision floating point number to integer*8.
 .AT i8
 .OP DFIXK r p1
+./" AOCC begin
+.IL KQFIX arth lnk
+Convert quad precision floating point number to integer*8.
+.AT i8
+.OP QFIXK r p1
+./" AOCC end
 .IL UKDFIX arth lnk
 Convert double precision floating point number to integer*8.
 .AT spec i8

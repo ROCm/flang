@@ -465,6 +465,7 @@ KBTEST	ilm	ilm
 KCMP	ilm	ilm
 KCON	sym
 KDFIX	ilm
+KQFIX	ilm
 KDIM	ilm	ilm
 KDIV	ilm	ilm
 KDNINT	ilm

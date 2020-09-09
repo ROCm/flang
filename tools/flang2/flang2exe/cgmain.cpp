@@ -8785,11 +8785,13 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FIXK:
   case IL_DFIXK:
+  case IL_QFIXK: //AOCC
     operand = gen_unary_expr(ilix, I_FPTOSI);
     break;
   case IL_FIXUK:
   case IL_DFIXUK:
   case IL_DFIXU:
+  case IL_QFIXU: //AOCC
   case IL_UFIX:
     operand = gen_unary_expr(ilix, I_FPTOUI);
     break;
@@ -12321,8 +12323,9 @@ make_type_from_opc(ILI_OP opc)
   case IL_INEG:
   case IL_UINEG:
   case IL_DFIX:
-  case IL_QFIX: //AOCC
   case IL_DFIXU:
+  case IL_QFIX:   // AOCC
+  case IL_QFIXU:  // AOCC
   case IL_ICMP:
   case IL_ICMPZ:
   case IL_ISELECT:
@@ -12374,6 +12377,7 @@ make_type_from_opc(ILI_OP opc)
   case IL_UKCMP:
   case IL_DFIXK:
   case IL_DFIXUK:
+  case IL_QFIXK:            // AOCC
   case IL_UKCJMP:
   case IL_UKADD:
   case IL_UKSUB:
