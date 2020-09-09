@@ -6464,7 +6464,7 @@ state1: /* digits  */
         goto return_integer; /* digits .eq */
       goto state2;           /* digits .e */
     }
-    if (isdig(cp[1]) || cp[1] == 'd' || cp == 'q')
+    if (isdig(cp[1]) || cp[1] == 'd' || cp[1] == 'q')
       goto state2; /* digits . digits|d */
     if (islower(cp[1]))
       goto return_integer; /* digits . <lowercase letter> */
