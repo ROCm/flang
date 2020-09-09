@@ -13,7 +13,7 @@
 #include "mthdecls.h"
 #include <quadmath.h>
 
-__float128 __attribute__((weak)) atanq( __float128);
+__float128 __attribute__((weak)) atan2q( __float128, __float128);
 
 __float128
 __mth_i_qatan2d(__float128 x, __float128 y)
