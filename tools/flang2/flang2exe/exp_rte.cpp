@@ -112,7 +112,7 @@ static int add_gargl_closure(SPTR sdsc);
   (opc == IM_PCALLA || opc == IM_PCHFUNCA || opc == IM_PNCHFUNCA || \
    opc == IM_PKFUNCA || opc == IM_PLFUNCA || opc == IM_PIFUNCA ||   \
    opc == IM_PRFUNCA || opc == IM_PDFUNCA || opc == IM_PCFUNCA ||   \
-   opc == IM_PCDFUNCA || opc == IM_PPFUNCA)
+   opc == IM_PCDFUNCA || opc == IM_PPFUNCA || opc == IM_PQFUNCA)
 
 static SPTR exp_call_sym; /**< sptr subprogram being called */
 static SPTR fptr_iface;   /**< sptr of function pointer's interface */
@@ -3435,6 +3435,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_PCDFUNCA:
   case IM_PFUNCA:
   case IM_PPFUNCA:
+  // AOCC begin
+  case IM_QFUNCA:
+  case IM_CQFUNCA:
+  case IM_PQFUNCA:
+  // AOCC end
     funcptr_flags = ILM_OPND(ilmp, 2);
     exp_call_sym = SPTR_NULL; /* via procedure ptr */
     if (!IS_INTERNAL_PROC_CALL(opc)) {
@@ -3486,6 +3491,9 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     goto vcalla_common;
   // AOCC begin
   case IM_QVFUNCA:
+    descno = 5;
+    goto vcalla_common;
+  case IM_CQVFUNCA:
     descno = 5;
     goto vcalla_common;
   // AOCC end
@@ -3717,6 +3725,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_PIFUNCA:
   case IM_PRFUNCA:
   case IM_PDFUNCA:
+  case IM_PQFUNCA:        // AOCC
   case IM_PLFUNCA:
   case IM_PPFUNCA:
   case IM_PKFUNCA:
@@ -4530,6 +4539,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
     break;
   //AOCC Begin
+  case IM_PQFUNCA:
   case IM_QVFUNCA:
   case IM_QFUNC:
     ILI_OF(curilm) = ad2ili(IL_DFRQP, ililnk, FR_RETVAL);

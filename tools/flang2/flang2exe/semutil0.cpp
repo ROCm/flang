@@ -153,6 +153,7 @@ getrval(int ilmptr)
   case IM_PKFUNCA:
   case IM_PRFUNCA:
   case IM_PDFUNCA:
+  case IM_PQFUNCA:      // AOCC
   case IM_PCFUNCA:
   case IM_PCDFUNCA:
   case IM_PCQFUNCA:     // AOCC
