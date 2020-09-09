@@ -889,10 +889,13 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num[1] = getcon(&num1[2], DT_DBLE);
     } else if (from == TY_QUAD) {
       // AOCC begin
-        num[0] = CONVAL1G(oldval);
-        num[1] = CONVAL2G(oldval);
-        num[2] = CONVAL3G(oldval);
-        num[3] = CONVAL4G(oldval);
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      num1[2] = CONVAL3G(oldval);
+      num1[3] = CONVAL4G(oldval);
+      xqtod(num1, &result);
+      num[0] = getcon(&result,DT_DBLE);
+      num[1] = stb.dbl0;
       // AOCC end
     } else {
       num[0] = 0;
