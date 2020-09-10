@@ -793,6 +793,12 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num1[0] = CONVAL1G(oldval);
       num1[1] = CONVAL2G(oldval);
       xsngl(num1, &num[0]);
+    } else if (from == TY_QUAD) {
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      num1[2] = CONVAL3G(oldval);
+      num1[3] = CONVAL4G(oldval);
+      xqtof(num1, &num[0]);
     } else if (from == TY_DCMPLX) {
       num1[0] = CONVAL1G(CONVAL1G(oldval));
       num1[1] = CONVAL2G(CONVAL1G(oldval));
@@ -926,7 +932,13 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_REAL) {
-      xquad(&oldval, num);
+      xftoq(CONVAL1G(oldval), num);
+      num[0] = getcon(num, DT_QUAD);
+      num[1] = stb.quad0;
+    } else if (from == TY_DBLE) {
+      num1[0] = CONVAL1G(oldval);
+      num1[1] = CONVAL2G(oldval);
+      xdtoq(num1, num);
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_QUAD) {
@@ -966,13 +978,6 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       }
       num[0] = getcon(&num1[0], DT_QUAD);
       num[1] = getcon(&num1[2], DT_QUAD);
-    } else if (from == TY_QUAD) {
-      // AOCC begin
-        num[0] = CONVAL1G(oldval);
-        num[1] = CONVAL2G(oldval);
-        num[2] = CONVAL3G(oldval);
-        num[3] = CONVAL4G(oldval);
-      // AOCC end
     } else {
       num[0] = 0;
       num[1] = 0;
