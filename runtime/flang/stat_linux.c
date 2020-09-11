@@ -131,6 +131,27 @@ __fort_second()
   return (d - first);
 }
 
+/* AOCC begin */
+double
+__fort_sysclk_second()
+{
+  struct timeval v;
+  struct timezone t;
+  double d;
+  int s;
+
+  s = gettimeofday(&v, &t);
+  if (s == -1) {
+    __fort_abortp("gettimeofday");
+  }
+  d = (double)v.tv_sec + (double)v.tv_usec / 1000000;
+  if (first == 0.0) {
+    first = d;
+  }
+  return (d - first);
+}
+/* AOCC end */
+
 void
 __fort_set_second(double d)
 {
