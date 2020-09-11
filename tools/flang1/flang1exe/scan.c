@@ -7181,7 +7181,7 @@ check_ccon(void)
     // AOCC begin
     } else if (tok1 == TK_QCON) {
       if (tkntyp == TK_RCON) { /* (quad, real)  */
-        xquad(num[1], val);
+        xftoq(num[1], val);
         num[1] = getcon(val, DT_QUAD);
       }
     // AOCC end
@@ -7197,7 +7197,7 @@ check_ccon(void)
           num[0] = getcon(val, DT_DBLE);
         } // AOCC begin
         else if (tkntyp == TK_QCON) { /* (real, quad) */
-          xquad(num[0], val);
+          xftoq(num[0], val);
           num[0] = getcon(val,DT_QUAD);
         }
          // AOCC end

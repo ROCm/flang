@@ -1727,7 +1727,7 @@ convert_cnst(int cnst, int newtyp)
         result = CONVAL1G(sptr);
         goto call_mk_cval1;
       case TY_DCMPLX:
-        result = CONVAL1G(sptr);
+        oldval = CONVAL1G(sptr);
         xquad(oldval, num);
         break;
       case TY_CMPLX:
@@ -1925,10 +1925,10 @@ convert_cnst(int cnst, int newtyp)
       case TY_DCMPLX:
         num1[0] = CONVAL1G(CONVAL1G(sptr));
         num1[1] = CONVAL2G(CONVAL1G(sptr));
-        xquad(num1, &num[0]);
+        xdtoq(num1, &num[0]);
         num1[0] = CONVAL1G(CONVAL2G(sptr));
         num1[1] = CONVAL2G(CONVAL2G(sptr));
-        xquad(num1, &num[1]);
+        xdtoq(num1, &num[1]);
         break;
       default: /* TY_HOLL, TY_CHAR, TY_NCHAR */
         return cnst;
@@ -9144,14 +9144,14 @@ cngcon(INT oldval, int oldtyp, int newtyp)
       case TY_DCMPLX:
         oldval = CONVAL1G(oldval);
       case TY_DBLE:
-        num[0] = CONVAL1G(oldval);
-        num[1] = CONVAL2G(oldval);
-        xquad(oldval, num);
+        num1[0] = CONVAL1G(oldval);
+        num1[1] = CONVAL2G(oldval);
+        xdtoq(num1, &num);
         break;
       case TY_CMPLX:
         oldval = CONVAL1G(oldval);
       case TY_REAL:
-        xquad(oldval, num);
+        xftoq(oldval, num);
         break;
       case TY_HOLL:
         cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
@@ -9348,12 +9348,12 @@ cngcon(INT oldval, int oldtyp, int newtyp)
     if (from == TY_WORD) {
       num[0] = 0;
       num[1] = oldval;
-      num[0] = getcon(num, DT_REAL8);
+      num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_DWORD) {
       num[0] = CONVAL1G(oldval);
       num[1] = CONVAL2G(oldval);
-      num[0] = getcon(num, DT_REAL8);
+      num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_INT8 || from == TY_LOG8) {
       num1[0] = CONVAL1G(oldval);
@@ -9361,8 +9361,6 @@ cngcon(INT oldval, int oldtyp, int newtyp)
       xqflt64(num1, num);
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
-      num[2] = stb.quad1;
-      num[3] = stb.quad2;
     } else if (TY_ISINT(from)) {
       xqfloat(oldval, num);
       num[0] = getcon(num, DT_QUAD);
@@ -9372,20 +9370,20 @@ cngcon(INT oldval, int oldtyp, int newtyp)
     } else {
       switch (from) {
       case TY_REAL:
-        xquad(oldval, num);
+        xftoq(oldval, num);
         num[0] = getcon(num, DT_QUAD);
         num[1] = stb.quad0;
         break;
       case TY_DBLE:
-        xquad(oldval, num);
-        num[0] = oldval;
+        num1[0] = CONVAL1G(oldval);
+        num1[1] = CONVAL2G(oldval);
+        xdtoq(num1, &num);
+        num[0] = getcon(num, DT_QUAD);
         num[1] = stb.quad0;
         break;
       case TY_QUAD:
         num[0] = oldval;
         num[1] = stb.quad0;
-        num[2] = stb.quad1;
-        num[3] = stb.quad2;
         break;
       case TY_CMPLX:
         xftoq(CONVAL1G(oldval), num1);
@@ -9394,12 +9392,15 @@ cngcon(INT oldval, int oldtyp, int newtyp)
         num[1] = getcon(num1, DT_QUAD);
         break;
       case TY_DCMPLX:
-        num[0] = CONVAL1G(CONVAL1G(oldval));
-        num[1] = CONVAL2G(CONVAL1G(oldval));
-        xquad(CONVAL2G(oldval), num1);
-        num[0] = CONVAL1G(CONVAL2G(oldval));
-        num[1] = CONVAL2G(CONVAL2G(oldval));
-        xquad(CONVAL2G(oldval), num1);
+        num1[0] = CONVAL1G(CONVAL1G(oldval));
+        num1[1] = CONVAL2G(CONVAL1G(oldval));
+        xdtoq(num1, &result);
+        num[0] = getcon(&result, DT_QUAD);
+
+        num1[0] = CONVAL1G(CONVAL2G(oldval));
+        num1[1] = CONVAL2G(CONVAL2G(oldval));
+        xdtoq(num1, &result);
+        num[1] = getcon(&result, DT_QUAD);
         break;
       case TY_HOLL:
         cp = stb.n_base + CONVAL1G(CONVAL1G(oldval));
