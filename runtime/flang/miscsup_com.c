@@ -39,6 +39,7 @@ MP_SEMAPHORE(static, sem);
 #include "type.h"
 
 extern double __fort_second();
+extern double __fort_sysclk_second(); /* AOCC */
 extern long __fort_getoptn(char *, long);
 
 #define time(x) __fort_time(x)
@@ -871,7 +872,7 @@ ENTFTN(SYSCLK, sysclk)(__STAT_T *count, __STAT_T *count_rate,
     }
   }
   if (ISPRESENT(count)) {
-    double t = __fort_second();
+    double t = __fort_sysclk_second(); /* AOCC */
     MXINT_T mxt;
     mxt = mxint(countd);
     if (t * resol > mxt) {
