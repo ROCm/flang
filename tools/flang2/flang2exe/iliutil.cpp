@@ -4068,6 +4068,24 @@ addarth(ILI *ilip)
       op2 = ILI_OPND(op2, 1);
     }
     break;
+
+  case IL_QSUB:
+    if (ncons == 2 && is_quad0(cons2))
+      return op1;
+    if (!flg.ieee && ncons == 3) {
+      GETVAL128(num1, cons1);
+      GETVAL128(num1, cons2);
+      GETVAL128(num2, cons1);
+      GETVAL128(num2, cons2);
+      xqsub(num1.numq, num2.numq, res.numd);
+      goto add_qcon;
+    }
+    if (ILI_OPC(op2) == IL_QNEG) {
+      /* a - -b --> a + b */
+      opc = IL_QADD;
+      op2 = ILI_OPND(op2, 1);
+    }
+    break;
   // AOCC end
 
   case IL_SCMPLXADD:
@@ -7884,6 +7902,21 @@ addarth(ILI *ilip)
     }
     (void)mk_prototype(MTH_I_DPOWI, "f pure", DT_DBLE, 2, DT_DBLE, DT_INT);
     ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_DPOWI, 2, op1, op2);
+    ilix = ad2altili(opc, op1, op2, ilix);
+    return ilix;
+
+  case IL_QPOWI:
+    if ((!flg.ieee || con2v2 == 1 || con2v2 == 2)
+         && ncons >= 2 && !XBIT(124, 0x200)) {
+      if (con2v2 == 1)
+        return op1;
+      if (con2v2 > 1 && con2v2 <= __MAXPOW) {
+        ilix = _xpowi(op1, con2v2, IL_QMUL);
+        return ilix;
+      }
+    }
+    (void)mk_prototype(MTH_I_QPOWI, "f pure", DT_QUAD, 2, DT_QUAD, DT_INT);
+    ilix = ad_func(IL_qpfunc, IL_QJSR, MTH_I_QPOWI, 2, op1, op2);
     ilix = ad2altili(opc, op1, op2, ilix);
     return ilix;
   case IL_DPOWK:

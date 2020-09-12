@@ -674,9 +674,9 @@ QIMAG	ilm
 QTAND	ilm
 #QTANH	ilm
 QTOQ	ilm	ilm
-#QTOI	ilm	ilm
+QTOI	ilm	ilm
 #QTOK	ilm	ilm
-QTOUDI	ilm
+#QTOUDI	ilm
 #QTOUI	ilm
 #AOCC end
 R2K	ilm
