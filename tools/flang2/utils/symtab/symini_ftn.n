@@ -15,6 +15,8 @@
 .\" * Added code to support SHIFTA intrinsic
 .\" *  Last modified: April 2020
 .\" *
+.\" * Added code support for dasinh
+.\" * Modified on 31st Aug 2020
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -140,6 +142,7 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN QATAN2 2 Q Q QATAN2 ftn_qatan2
 .IN .SINH 1 R R SINH ftn_sinh
 .IN DSINH 1 D D DSINH ftn_dsinh
+.IN DASINH 1 D D DASINH ftn_dasinh
 .IN QSINH 1 Q Q QSINH ftn_qsinh
 .IN QASINH 1 Q Q QASINH ftn_qasinh
 .IN .COSH 1 R R COSH ftn_cosh

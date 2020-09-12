@@ -28,6 +28,9 @@
 .\" 
 .\" * Implemented rank intrinsic
 .\" * Date of modification: 10th Aug 2020
+.\"
+.\" * Added code support for dasinh
+.\" * Modified on 31st Aug 2020
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -455,6 +458,10 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .DSINH 1 D D none * V
 .AT elemental x
 .IN DSINH 1 D D none * V
+.AT elemental x
+.IN .DASINH 1 D D none * V
+.AT elemental x
+.IN DASINH 1 D D none * V
 .AT elemental x
 .IN .QSINH 1 Q Q none * V
 .AT elemental x
