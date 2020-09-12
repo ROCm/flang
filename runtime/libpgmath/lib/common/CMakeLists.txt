@@ -262,6 +262,7 @@ set(SRCS
   dfloor.c
   dmod.c
   dpowi.c
+  qpowi.c
   dpowk.c
   dsign.c
   dsind.c

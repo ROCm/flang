@@ -2578,6 +2578,11 @@ Double raised to a double power.
 .AT arth null dp cse
 .CG notCG
 
+.IL QPOWI qplnk irlnk
+QUAD raised to a integer power.
+.AT arth null qp cse
+.CG notCG
+
 .IL ICMP irlnk irlnk stc
 Integer compare with result of true or false.
 For C the value of true is 1, and for Fortran, -1.

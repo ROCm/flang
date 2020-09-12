@@ -1326,6 +1326,8 @@ Exponentiation - integer to an integer power.
 .OP FPOWI r p1 p2
 .IL DTOI arth lnk lnk
 .OP DPOWI r p1 p2
+.IL QTOI arth lnk lnk
+.OP QPOWI r p1 p2
 .CL MOD arth lnk lnk
 Integer remainder
 .OP MOD r p1 p2

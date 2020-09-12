@@ -136,6 +136,7 @@ typedef enum MTH_FN {
 #define MTH_I_DPOWI "__mth_i_dpowi"
 #define MTH_I_DPOWK "__mth_i_dpowk"
 #define MTH_I_DPOWD "__mth_i_dpowd"
+#define MTH_I_QPOWI "__mth_i_qpowi" //AOCC
 #define MTH_I_FSIGN "__mth_i_sign"
 #define MTH_I_DSIGN "__mth_i_dsign"
 #define MTH_I_EXP "__mth_i_exp"
