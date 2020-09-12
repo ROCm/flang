@@ -1891,6 +1891,22 @@ semant2(int rednum, SST *top)
     SST_DTYPEP(LHS, dtype);
     if (dtype == DT_INT8) {
       ast_cnst(top);
+    } else if (dtype == DT_QUAD) {
+      // AOCC begin
+      SST_DTYPEP(LHS, DT_INT8);
+      SST_CVALP(LHS, CONVAL2G(sptr));
+      SST_ACLP(LHS, 0);
+      int v = SST_CVALG(LHS);
+      if (v < 0)
+        val[0] = -1;
+      else
+        val[0] = 0;
+      val[1] = v;
+      int cnst = getcon(val, DT_INT8);
+      SST_CVALP(LHS, cnst);
+      SST_ASTP(LHS, mk_cnst(cnst));
+      SST_SHAPEP(LHS, 0);
+      // AOCC end
     } else {
       SST_CVALP(LHS, CONVAL2G(sptr));
       ast_conval(top);
