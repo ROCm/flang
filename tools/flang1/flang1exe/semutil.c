@@ -5352,7 +5352,7 @@ chkopnds(SST *lop, SST *operator, SST *rop)
     } else if (!XBIT(124, 0x40000) && SST_IDG(rop) == S_CONST) {
       int pw, is_int;
       INT conval;
-      INT num[2];
+      INT num[4];
       switch (TY_OF(rop)) {
       case TY_CMPLX:
         conval = SST_CVALG(rop);
