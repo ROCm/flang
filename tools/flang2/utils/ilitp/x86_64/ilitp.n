@@ -8,6 +8,8 @@
 .\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
 .\" * Notified per clause 4(b) of the license.
 .\" *
+.\" * Added code support for dasinh
+.\" * Modified on 31st Aug 2020
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -953,6 +955,11 @@ Single-precision floating-point hyperbolic sin
 
 .IL DSINH dplnk
 Double-precision hyperbolic sin
+.AT arth null dp cse
+.CG notCG
+
+.IL DASINH dplnk
+Double-precision hyperbolic asin
 .AT arth null dp cse
 .CG notCG
 

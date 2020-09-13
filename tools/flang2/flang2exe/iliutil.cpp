@@ -55,6 +55,10 @@
  * complex quad support for asin, asinh, acos, acosh, atan, atanh
  *  Modified on 19th August 2020
  *
+ * Added code support for dasinh
+ * Modified on 31st Aug 2020
+ *
+ *
  */
 
 /**
@@ -5620,6 +5624,41 @@ addarth(ILI *ilip)
     }
     ilix = ad1altili(opc, op1, ilix);
     return ilix;
+
+   // AOCC begin
+  case IL_DASINH:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+      (void)mk_prototype("asinh", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "asinh", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
+    if (XBIT_NEW_MATH_NAMES) {
+      fname = make_math(MTH_sinh, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+    }
+    if (!flg.ieee) {
+#ifdef TARGET_X8664
+      (void)mk_prototype(fast_math("asinh", 's', 'd', FMTH_I_DSINH), "f pure",
+                         DT_DBLE, 1, DT_DBLE);
+#else
+      (void)mk_prototype(MTH_I_DSINH, "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, MTH_I_DSINH, 1, op1);
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+#endif
+      ilix = ad_func(IL_DFRDP, IL_QJSR,
+                     fast_math("asinh", 's', 'd', FMTH_I_DSINH), 1, op1);
+    } else {
+      (void)mk_prototype(MTH_I_DSINH, "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, MTH_I_DSINH, 1, op1);
+    }
+    ilix = ad1altili(opc, op1, ilix);
+    return ilix;
+  // AOCC end
 
   case IL_FCOSH:
  #ifdef OMP_OFFLOAD_LLVM

@@ -44,6 +44,10 @@
  *
  * Implemented rank intrinsic
  * Date of modification: 10th Aug 2020
+ *
+ * Added code support for dasinh
+ * Modified on 31st Aug 2020
+ *
  */
 
 /**
@@ -3000,6 +3004,7 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
 
   case I_SINH:
   case I_DSINH:
+  case I_DASINH:
 
   case I_COSH:
   case I_DCOSH:
@@ -4148,6 +4153,12 @@ lower_intrinsic(int ast)
   case I_DSINH:
     ilm = intrin_name("SINH", ast, in_r_D);
     break;
+
+  // AOCC begin
+  case I_DASINH:
+    ilm = intrin_name("ASINH", ast, in_r_D);
+    break;
+  // AOCC end
 
   /* sqrt family */
   case I_SQRT:

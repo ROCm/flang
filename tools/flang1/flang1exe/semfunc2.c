@@ -16,6 +16,9 @@
  *
  * Fixed flang throws unexpected CE 'Illegal number or type of arguments' for ST_IDENT
  * Date of modification : 29th June 2020
+ *
+ * Added code support for dasinh
+ * Modified on 31st Aug 2020
  */
 
 /** \file
@@ -2938,6 +2941,13 @@ iface_intrinsic(int sptr)
     dtyper = DT_DBLE;
     argdtype = DT_DBLE;
     break;
+  // AOCC begin
+  case I_DASINH:
+    paramct = 1;
+    dtyper = DT_DBLE;
+    argdtype = DT_DBLE;
+    break;
+  // AOCC end
   case I_DSQRT: /* dsqrt */
     paramct = 1;
     dtyper = DT_DBLE;
