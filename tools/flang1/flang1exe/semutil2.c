@@ -4279,6 +4279,7 @@ get_ac_op(int ast)
       break;
     case DT_REAL4:
     case DT_REAL8:
+    case DT_QUAD:          //AOCC
       ac_op = AC_EXPX;
       break;
     default:

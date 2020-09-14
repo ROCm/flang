@@ -2483,8 +2483,8 @@ void
 xqpow(IEEE128 q1, IEEE128 q2, IEEE128 r)
 {
   __float128 x, y, z;
-  unwrap_q(&x, q1);
-  unwrap_q(&y, q2);
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
   check(fold_real128_pow(&x, &y, &z));
   wrap_q(r, &x);
 }
