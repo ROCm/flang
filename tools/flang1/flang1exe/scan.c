@@ -6506,7 +6506,14 @@ state5: /* digits [ . [ digits ] ] { e | d } [ + | - ] digits  */
   c = *++cp;
   if (isdig(c))
     goto state5;
-  goto return_real;
+  // AOCC begin
+  if (q_exp && c == '_') {
+    errsev(1063);
+    return;
+  } else {
+    goto return_real;
+  }
+  // AOCC end
 
 syntax_error:
   errsev(28);
