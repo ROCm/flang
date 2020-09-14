@@ -3807,6 +3807,17 @@ errorstop_shared:
         int dest_ast = itemp->ast;
         DTYPE dest_dtype = A_DTYPEG(dest_ast);
 
+        // AOCC begin
+        if (DT_ISREAL(dtype) && DT_ISREAL(dest_dtype) &&
+           DDTG(dtype) != DDTG(dest_dtype)) {
+
+        error(155, 3, gbl.lineno,
+              "In an ALLOCATE statement the source expression in "
+              "SOURCE= or MOLD= specifiers must be of the same type "
+              "and kind type parameters as the object being allocated ",
+              NULL);
+        }
+        // AOCC end
         if (A_TYPEG(dest_ast) != A_SUBSCR && is_array_dtype(dest_dtype)) {
           /* An array is being allocated with shape assumed from the
            * MOLD= or SOURCE= expression.
