@@ -5620,7 +5620,7 @@ find_funcptr_name(SPTR sptr)
         goto Continue;
     } while (*sp);
     if (np - sptrnm != len)
-      continue;
+        goto Continue;
     goto Found;
   Continue:
     if (gblsym == FPTR_HASHLK(gblsym))
