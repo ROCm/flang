@@ -194,11 +194,26 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   */
   case IM_RISNAN:
   case IM_DISNAN:
+  case IM_QISNAN:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
     tmp = ad1ili(IL_NULL, 0);
-    tmp = ad2ili((opc == IM_RISNAN) ? IL_ARGSP : IL_ARGDP , op1, tmp);
-    op2 = mk_prototype((opc == IM_RISNAN) ? "isnanf" : "isnan", "pure",
-          DT_LOG, 1, (opc == IM_RISNAN) ? DT_REAL : DT_DBLE);
+    switch (opc) {
+    case IM_RISNAN:
+      tmp = ad2ili(IL_ARGSP, op1, tmp);
+      op2 = mk_prototype("isnanf", "pure", DT_LOG, 1, DT_REAL);
+      break;
+    case IM_DISNAN:
+      tmp = ad2ili(IL_ARGDP, op1, tmp);
+      op2 = mk_prototype("isnan", "pure", DT_LOG, 1, DT_DBLE);
+      break;
+    case IM_QISNAN:
+      tmp = ad2ili(IL_ARGQP, op1, tmp);
+      op2 = mk_prototype("isnanq", "pure", DT_LOG, 1, DT_QUAD);
+      tmp = ad2ili(IL_QJSR, op2, tmp);
+      ILM_RESULT(curilm) = ad2ili(IL_DFRQP, tmp, QP_RETVAL);
+      return;
+    }
+
     tmp = ad2ili(IL_QJSR, op2, tmp);
     ILM_RESULT(curilm) = ad2ili(IL_DFRKR, tmp, KR_RETVAL);
     return;

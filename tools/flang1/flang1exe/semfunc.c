@@ -6184,7 +6184,8 @@ ref_pd(SST *stktop, ITEM *list)
     if (count != 1 || get_kwd_args(list, count, KWDARGSTR(pdsym)))
       goto bad_args;
     dtype1 = SST_DTYPEG(ARG_STK(0));
-    if (DTYG(dtype1) != TY_REAL && DTYG(dtype1) != TY_DBLE)
+    if (DTYG(dtype1) != TY_REAL && DTYG(dtype1) != TY_DBLE
+        && DTYG(dtype1 != TY_QUAD))
       goto bad_args;
     (void)mkexpr(ARG_STK(0));
     XFR_ARGAST(0);
