@@ -64,6 +64,7 @@ set(GENERIC_SRCS
   log.c
   mthi64.c
   nint.c
+  qnint.c
   remainder.c
   round.c
   rpowr.c
