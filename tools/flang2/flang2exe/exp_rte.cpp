@@ -3406,9 +3406,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_IFUNC:
   case IM_RFUNC:
   case IM_DFUNC:
-  case IM_QFUNC:        //AOCC
+  case IM_QFUNC:        // AOCC
   case IM_CFUNC:
   case IM_CDFUNC:
+  case IM_CQFUNC:       // AOCC
   case IM_PFUNC:
   case IM_SFUNC:
     exp_call_sym = ILM_SymOPND(ilmp, 2); /* external reference  */
@@ -3599,14 +3600,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     break;
   case IM_CFUNC:
   case IM_CDFUNC:
+  case IM_CQFUNC:     // AOCC
     i = 3;
     goto share_cfunc;
   case IM_PCFUNCA:
   case IM_PCDFUNCA:
+  case IM_PCQFUNCA:
     i = 5;
     goto share_cfunc;
   case IM_CFUNCA:
   case IM_CDFUNCA:
+  case IM_CQFUNCA:    // AOCC
     i = 4;
   share_cfunc:
     ilm1 = ILM_OPND(ilmp, i);
@@ -3618,7 +3622,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     if (CFUNCG(exp_call_sym) || (funcptr_flags & FUNCPTR_BINDC) ||
         CMPLXFUNC_C) {
       ADDRTKNP(IILM_OPND(ilm1, 1), 1);
-      if (opc == IM_CFUNCA || opc == IM_CDFUNCA) {
+      if (opc == IM_CFUNCA || opc == IM_CDFUNCA || opc == IM_CQFUNCA) {
         ilm1 = ILM_OPND(ilmp, i);
       } else {
         ilm1 = ILM_OPND(ilmp, (i + 2));
