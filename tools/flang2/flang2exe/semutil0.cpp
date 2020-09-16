@@ -932,7 +932,7 @@ cngcon(INT oldval, DTYPE oldtyp, DTYPE newtyp)
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_REAL) {
-      xftoq(CONVAL1G(oldval), num);
+      xftoq(oldval, num);
       num[0] = getcon(num, DT_QUAD);
       num[1] = stb.quad0;
     } else if (from == TY_DBLE) {
