@@ -3239,7 +3239,8 @@ lldbg_emit_global_variable(LL_DebugInfo *db, SPTR sptr, ISZ_T off, int findex,
         llObjtodbgAddUnique(*listp, db->gbl_obj_exp_mdnode);
     }
     ll_add_global_debug(db->module, sptr, mdref);
-    if (gbl.rutype == RU_BDATA && sc == SC_CMBLK) {
+    // `RU_SUBR` is set for modules imported from different CompileUnits.
+    if ((gbl.rutype == RU_SUBR || gbl.rutype == RU_BDATA) && sc == SC_CMBLK) {
       const char *modvar_name;
       if (CCSYMG(MIDNUMG(sptr))) {
         modvar_name = new_debug_name(SYMNAME(ENCLFUNCG(sptr)),
