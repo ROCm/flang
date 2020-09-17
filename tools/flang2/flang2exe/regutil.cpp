@@ -907,7 +907,7 @@ static struct {  /* Register temporary information */
     {'g', "ga", DT_INT8, 0, 0, -1},   /* 4: integer*8 temps */
     {'h', "ha", DT_CMPLX, 0, 0, -1},  /* 5: complex temps */
     {'k', "ka", DT_DCMPLX, 0, 0, -1}, /* 6: double complex temps */
-    {'h', "ha", DT_QCMPLX, 0, 0, -1}, /* 7: quad complex temps */
+    {'Q', "Qa", DT_QUAD, 0, 0, -1}, /* 7: quad register temps */    //AOCC
     {'v', "va", DT_NONE, 0, 0, -1},   /* 8: vector temps */
 #if   defined LONG_DOUBLE_FLOAT128
     {'X', "Xa", DT_FLOAT128, 0, 0, -1}, /* 9: float128 temps */
@@ -916,6 +916,7 @@ static struct {  /* Register temporary information */
     {'X', "Xa", DT_NONE, 0, 0, -1}, /* 9 and 10: filler */
     {'x', "xa", DT_NONE, 0, 0, -1}, /* 9 and 10: filler */
 #endif
+    {'q', "qa", DT_QCMPLX, 0, 0, -1}  /* 11: quad complex temps */  //AOCC
 };
 
 static int select_rtemp(int);
@@ -1375,6 +1376,11 @@ select_rtemp(int ili)
   case ILIA_QP:
     type = 7;
     break;
+#ifdef ILIA_CQ
+  case ILIA_CQ:
+    type = 11;
+    break;
+#endif
   // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case ILIA_FLOAT128:
