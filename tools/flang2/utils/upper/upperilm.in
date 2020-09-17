@@ -647,7 +647,7 @@ QUVFUNCA/QVFUNCA	num	num	sym	ilm	sym	args
 QMAX	ilm	ilm
 QMIN	ilm	ilm
 QREAL	ilm
-#QSIGN	ilm	ilm
+QSIGN	ilm	ilm
 #QSIGNNZ	ilm	ilm
 QCOS  ilm
 QCOSD  ilm

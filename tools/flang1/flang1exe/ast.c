@@ -1907,8 +1907,8 @@ convert_cnst(int cnst, int newtyp)
     } else {
       switch (from) {
       case TY_REAL:
-        xdtoq(CONVAL2G(sptr), num);
-        num[0] = getcon(num, DT_QUAD);
+        xftoq(CONVAL1G(sptr), num1);
+        num[0] = getcon(num1, DT_QUAD);
         num[1] = stb.quad0;
         break;
       case TY_DBLE:

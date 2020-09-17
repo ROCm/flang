@@ -40,7 +40,7 @@ QMPLXFUNC_C_I(__mth_i_cqpowi)
     gi = ti;
   }
 
-  quad_complex_t q = pgmath_cmplx(fr, fi);
+  quad_complex_t q = pgmath_cmplxq(fr, fi);
   if (i < 0) {
     QMPLX_CALL_QR_Q_Q(__mth_i_cqdiv,q,c1plusi0,q);
   }
