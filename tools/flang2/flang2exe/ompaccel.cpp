@@ -665,7 +665,7 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
     //AOCC Begin
-  case 360:
+  case 362:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
     // AOCC End
   default:
@@ -3090,7 +3090,7 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 360:
+      case 362:
         ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
