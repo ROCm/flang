@@ -2496,6 +2496,7 @@ gen_funcret(finfo_t *fp)
     return;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
     if (!CFUNCG(gbl.currsub) && !CMPLXFUNC_C)
       return;
     move = ad2ili(IL_MVAR, addr, RES_IR(0));

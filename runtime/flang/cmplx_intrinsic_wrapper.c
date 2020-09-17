@@ -19,194 +19,130 @@
 
 __complex128 cqsqrt(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = csqrtq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return csqrtq(val);
 }
 
 __complex128 cqsin(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = csinq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return csinq(val);
 }
 
 __complex128 cqasin(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = casinq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return casinq(val);
 }
 
 __complex128 cqasinh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = casinhq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return casinhq(val);
 }
 
 __complex128 cqcos(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = ccosq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return ccosq(val);
 }
 
 __complex128 cqacos(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = cacosq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return cacosq(val);
 }
 
 __complex128 cqacosh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = cacoshq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return cacoshq(val);
 }
 
 __complex128 cqtan(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = ctanq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return ctanq(val);
 }
 
 __complex128 cqatan(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = catanq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return catanq(val);
 }
 
 __complex128 cqatanh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = catanhq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return catanhq(val);
 }
 
 __complex128 cqsinh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = csinhq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return csinhq(val);
 }
 
 __complex128 cqcosh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = ccoshq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return ccoshq(val);
 }
 
 __complex128 cqtanh(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = ctanhq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return ctanhq(val);
 }
 
 __complex128 cqexp(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = cexpq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return cexpq(val);
 }
 
 __complex128 cqlog(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = clogq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return clogq(val);
 }
 
 __complex128 cqconj(__complex128 res, __float128 real, __float128 imag)
 {
-  __float128 x, y;
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = conjq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return conjq(val);
 }
 
 __complex128 cqabs(__complex128 res, __float128 real, __float128 imag)
@@ -214,9 +150,6 @@ __complex128 cqabs(__complex128 res, __float128 real, __float128 imag)
    __complex128  val;
    __real__ val = real;
    __imag__ val = imag;
-   res = cabsq(val);
-   real = __real__ res;
-   imag = __imag__ res;
-  return res;
+   return cabsq(val);
 }
 
