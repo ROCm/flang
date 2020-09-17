@@ -145,11 +145,18 @@ __complex128 cqconj(__complex128 res, __float128 real, __float128 imag)
    return conjq(val);
 }
 
-__complex128 cqabs(__complex128 res, __float128 real, __float128 imag)
+__float128 cqabs( __float128 real, __float128 imag)
 {
-   __complex128  val;
-   __real__ val = real;
-   __imag__ val = imag;
-   return cabsq(val);
+   return hypotq (real, imag);
 }
 
+__complex128 cqpow(__complex128 res, __float128 real1, __float128 imag1,
+                   __float128 real2, __float128 imag2)
+{
+   __complex128  val1, val2;
+   __real__ val1 = real1;
+   __imag__ val1 = imag1;
+   __real__ val2 = real2;
+   __imag__ val2 = imag2;
+   return cpowq(val1, val2);
+}

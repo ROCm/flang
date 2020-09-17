@@ -248,7 +248,7 @@ static inline __attribute__((always_inline)) quad_complex_t  pgmath_cmplxq(__flo
 #define	DBLFUNC_C_C99_(_f)    \
         double MTHCONCAT__(_f,__MTH_C99_CMPLX_SUFFIX) \
         (double_complex_t zarg)
-#define	QUADFUNC_C_C99_(_f)    \
+#define QUADFUNC_C_C99_(_f)    \
         __float128 MTHCONCAT__(_f,__MTH_C99_CMPLX_SUFFIX) \
         (quad_complex_t qarg)
 
