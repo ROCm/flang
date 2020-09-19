@@ -1040,6 +1040,8 @@ init(int argc, char *argv[])
 
   if (flg.es && !flg.p)
     flg.x[123] |= 0x100;
+  if (flg.omptarget)
+    flg.x[123] |= 0x400;
 
   empty_cl:
   if (sourcefile == NULL) {
