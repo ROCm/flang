@@ -3808,7 +3808,7 @@ errorstop_shared:
         DTYPE dest_dtype = A_DTYPEG(dest_ast);
 
         // AOCC begin
-        if (DT_ISREAL(dtype) && DT_ISREAL(dest_dtype) &&
+        if (DT_ISREAL(DDTG(dtype)) && DT_ISREAL(DDTG(dest_dtype)) &&
            DDTG(dtype) != DDTG(dest_dtype)) {
 
         error(155, 3, gbl.lineno,
