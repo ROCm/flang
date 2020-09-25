@@ -234,6 +234,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"matmul_real4mxv_t", "", true, ""},
     {"matmul_real8", "", true, ""},
     {"matmul_real8mxv_t", "", true, ""},
+    {"matmul_real16mxv_t", "", true, ""},
     {"max", "", false, "k"},
     {"mcopy1", "", false, ""},
     {"mcopy2", "", false, ""},
@@ -305,6 +306,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"norm2_real4_dim", "", true, ""},
     {"norm2_real8", "", true, ""},
     {"norm2_real8_dim", "", true, ""},
+    {"norm2_real16", "", true, ""},
+    {"norm2_real16_dim", "", true, ""},
     // AOCC End
     {"nrepeat", "", false, ""},
     {"nscan", "", false, "k"},

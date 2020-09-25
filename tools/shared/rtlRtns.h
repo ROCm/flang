@@ -239,6 +239,7 @@ typedef enum {
   RTE_matmul_real4mxv_t,
   RTE_matmul_real8,
   RTE_matmul_real8mxv_t,
+  RTE_matmul_real16mxv_t,
   RTE_max,
   RTE_mcopy1,
   RTE_mcopy2,
@@ -310,6 +311,8 @@ typedef enum {
   RTE_norm2_real4_dim,
   RTE_norm2_real8,
   RTE_norm2_real8_dim,
+  RTE_norm2_real16,
+  RTE_norm2_real16_dim,
   // AOCC End
   RTE_nrepeat,
   RTE_nscan,

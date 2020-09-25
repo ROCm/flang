@@ -7213,8 +7213,17 @@ emit_norm2(int func_ast, int func_args, int lhs) {
       else
         rtlRtn = RTE_norm2_real8;
       break;
+
+    case TY_QUAD:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real16_dim;
+      else
+        rtlRtn = RTE_norm2_real16;
+      break;
+
     default:
       error(456, 3, gbl.lineno, CNULL, CNULL);
+    // AOCC end
   }
 
   newargt = mk_argt(nargs);
@@ -7330,6 +7339,15 @@ matmul(int func_ast, int func_args, int lhs)
       rtlRtn = RTE_matmul_real8;
     }
     break;
+  // AOCC begin
+  case TY_QUAD:
+    if (matmul_transpose) {
+      rtlRtn = RTE_matmul_real16mxv_t;
+    } else {
+      rtlRtn = RTE_matmul_real16;
+    }
+    break;
+  // AOCC end
   case TY_CMPLX:
     if (matmul_transpose) {
       rtlRtn = RTE_matmul_cplx8mxv_t;
