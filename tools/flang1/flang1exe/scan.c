@@ -371,7 +371,7 @@ static int (*p_get_token[])(INT *) = {_get_token, _read_token};
 #include "kwddf.h"
 
 static void init_ktable(KTABLE *);
-static int keyword(char *, KTABLE *, int *, LOGICAL);
+static int keyword(char *, KTABLE *, int *, int);
 static int keyword_idx; /* index of KWORD entry found by keyword() */
 
 /* Macro to NULL terminate a substring to error module */
@@ -6102,7 +6102,7 @@ get_kind_value(int knd)
  *  entry matching the keyword.
  */
 static int
-keyword(char *id, KTABLE *ktable, int *keylen, LOGICAL exact)
+keyword(char *id, KTABLE *ktable, int *keylen, int flag)
 {
   int chi, low, high, p, kl, cond;
   KWORD *base;
@@ -6127,6 +6127,17 @@ keyword(char *id, KTABLE *ktable, int *keylen, LOGICAL exact)
     if (cond == 0)
       p = low;
   }
+
+  //AOCC Begin
+  /*This condition is solely for Type intrinsic check*/
+  if(flag == 2){
+    if(strcmp(id,base[p].keytext) != 0)
+      return 0;
+    else
+      return base[p].toktyp;
+  }
+  //AOCC End
+
   if (p) {
     keyword_idx = p;
     return base[p].toktyp;
@@ -9701,7 +9712,7 @@ void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
       --insert;
     *insert = '\0';
     int temp_idlen = curr_token - cp;
-    intrinsic_type = keyword(look_ahead, &normalkw, &temp_idlen, sig_blanks);
+    intrinsic_type = keyword(look_ahead, &normalkw, &temp_idlen, 2);
     switch(intrinsic_type){
       case TK_INTEGER:
       case TK_REAL:
