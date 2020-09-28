@@ -761,6 +761,11 @@ cngtyp2(SST *old, DTYPE newtyp, bool allowPolyExpr)
       goto done;
 
     // AOCC begin
+    case TY_QUAD:
+      mkexpr1(old);
+      SST_IDP(old, S_EXPR);
+      goto done;
+
     case TY_QCMPLX:
       mkexpr1(old);
       SST_IDP(old, S_EXPR);
