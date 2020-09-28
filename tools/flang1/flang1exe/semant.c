@@ -4923,8 +4923,8 @@ semant1(int rednum, SST *top)
       sem.gdtype = sem.ogdtype = sem.stag_dtype;
     }
     defer_put_kind_type_param(0, 0, NULL, 0, 0, 0);
-    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype) &&
-        defer_pt_decl(0, 2)) {
+    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype)
+        /*&& defer_pt_decl(0, 2)*/ /*AOCC*/ ) {
       /* In this case we're using just the default type
        * of a parameterized derived type. We need to make sure we
        * create another instance of it so we don't pollute the
