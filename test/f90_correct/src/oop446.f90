@@ -7,9 +7,9 @@ module mod
 logical expect(8),rslt(8)
 type :: stuff(k11,k22)
 integer(k22) :: i
-integer(k22) :: j
 integer,kind :: k22 = 2 
 integer,kind :: k11 = 4
+integer(k22) :: j
 end type
 end module
 
@@ -19,7 +19,7 @@ use mod
 
 type(stuff) :: y
 
-y = stuff(4,2)(i=3,j=4)
+y = stuff(2,4)(i=3,j=4)
 
 rslt(1) = y%i .eq. 3
 rslt(5) = y%j .eq. 4
