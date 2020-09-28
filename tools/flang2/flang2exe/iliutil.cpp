@@ -15366,9 +15366,10 @@ complement_int_cc(CC_RELATION cc)
     return CC_NE;
   case CC_NE:
     return CC_EQ;
+  case CC_NOTGE:
   case CC_LT:
     return CC_GE;
-  case CC_NOTGE:
+  case CC_NOTLT:
   case CC_GE:
     return CC_LT;
   case CC_NOTGT:
