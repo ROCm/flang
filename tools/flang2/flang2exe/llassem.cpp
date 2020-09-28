@@ -627,8 +627,9 @@ get_struct_from_dsrt2(SPTR sptr, DSRT *dsrtp, ISZ_T size, int *align8,
         addr = dsrtp->offset;
         first_data = 0;
       } else if (addr > dsrtp->offset) {
-        error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
-              SYMNAME(dsrtp->sptr), CNULL);
+        if (!(CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)) // AOCC
+          error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
+                SYMNAME(dsrtp->sptr), CNULL);
         continue;
       }
     }
@@ -1409,8 +1410,9 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
         first_data = 0;
         addr = dsrtp->offset;
       } else if (addr > dsrtp->offset) {
-        error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
-              SYMNAME(dsrtp->sptr), CNULL);
+        if (!(CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)) // AOCC
+          error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
+                SYMNAME(dsrtp->sptr), CNULL);
         continue;
       }
     }
@@ -1442,6 +1444,13 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
       emit_init(p->dtype, p->conval, &addr, &repeat_cnt, loc_base, &i8cnt,
                 &ptrcnt, &ptr);
     }
+
+    // AOCC begin
+    // If this is a bind(C) variable then we stop processing `dsrt`s since each
+    // bind(C) variable must be a separate symbol.
+    if (CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)
+      break;
+    // AOCC end
   }
 
   if (size >= 0) {
