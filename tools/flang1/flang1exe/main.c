@@ -1040,9 +1040,9 @@ init(int argc, char *argv[])
 
   if (flg.es && !flg.p)
     flg.x[123] |= 0x100;
-  if (flg.omptarget)
-    flg.x[123] |= 0x400;
-
+  if (flg.omptarget && flg.debug)
+    if (!XBIT(123, 0x10000000))
+      flg.x[123] |= 0x400;
   empty_cl:
   if (sourcefile == NULL) {
     if (flg.ipa & 0x0a) {

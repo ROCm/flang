@@ -3451,7 +3451,7 @@ Use the legacy Fortran preprocessor (fpp), and not the ANSI-C99 preprocessor.
 .XB 0x8000000
 Preprocessor puts out dependence lines to gbl.cppfil instead of file.d or stdout
 .XB 0x10000000
-Unused.
+With -fopenmp and -g options, XBIT(123,0x400) is set by default. This option overrides it.
 .XB 0x20000000
 preprocessor generates makefile information to stdout; driver option -MT
 .XB 0x40000000
