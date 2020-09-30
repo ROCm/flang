@@ -8813,7 +8813,10 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     operand = gen_unary_expr(ilix, I_FPTRUNC);
     break;
   case IL_DBLE:
-    operand = gen_unary_expr(ilix, I_FPEXT);
+    if (ILI_OPC(ILI_OPND(ilix, 1)) == IL_LDQP)
+      operand = gen_llvm_expr(ILI_OPND(ilix, 1), NULL);
+    else
+      operand = gen_unary_expr(ilix, I_FPEXT);
     break;
   // AOCC begin
   case IL_QUAD:
