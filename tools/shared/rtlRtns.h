@@ -653,6 +653,7 @@ typedef enum {
   RTE_reshapeca,
   RTE_rnum,
   RTE_rnumd,
+  RTE_rnumq,           // AOCC
   RTE_rseed,
   RTE_secnds,
   RTE_secndsd,

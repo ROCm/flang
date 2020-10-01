@@ -330,6 +330,115 @@ static void I8(prng_loop_r_npb)(__REAL4_T *hb, F90_Desc *harvest, __INT_T li,
   }
 }
 
+// AOCC begin
+static void I8(prng_loop_q_npb)(__REAL8_T *hb, F90_Desc *harvest, __INT_T li,
+                                int dim, __INT_T section_offset, __INT_T limit)
+{
+  DECL_DIM_PTRS(hdd);
+  DECL_DIM_PTRS(tdd);
+  __INT_T cl, clof, cn, current, i, il, iu, lo, n;
+  __INT_T hi, tcl, tcn, tclof;
+  int itmp;
+  double tmp1, tmp2;
+
+  SET_DIM_PTRS(hdd, harvest, dim - 1);
+  cl = DIST_DPTR_CL_G(hdd);
+  cn = DIST_DPTR_CN_G(hdd);
+  clof = DIST_DPTR_CLOF_G(hdd);
+
+  if (dim > (limit + 1))
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      lo = li +
+           (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+               F90_DPTR_LSTRIDE_G(hdd);
+      current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                (il - F90_DPTR_LBOUND_G(hdd));
+      for (i = 0; i < n; ++i) {
+        I8(prng_loop_q_npb)(hb, harvest, lo, dim - 1, current + i, limit);
+        lo += F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+      }
+    }
+  /*
+   * Optimization collapsing non-distributed leading dimensions.
+   */
+  else if (limit > 0) {
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      /*
+       * Find first current and low value of fill range.
+       */
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      lo = li +
+           (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+               F90_DPTR_LSTRIDE_G(hdd);
+      current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                (il - F90_DPTR_LBOUND_G(hdd));
+      hi = lo + (n - 1) * F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+      for (i = dim - 1; i > 0; --i) {
+        SET_DIM_PTRS(tdd, harvest, i - 1);
+        tcl = DIST_DPTR_CL_G(tdd);
+        tcn = DIST_DPTR_CN_G(tdd);
+        tclof = DIST_DPTR_CLOF_G(tdd);
+        (void)I8(__fort_block_bounds)(harvest, i, tcl, &il, &iu);
+        lo = lo +
+             (F90_DPTR_SSTRIDE_G(tdd) * il + F90_DPTR_SOFFSET_G(tdd) - tclof) *
+                 F90_DPTR_LSTRIDE_G(tdd);
+        current =
+            F90_DPTR_EXTENT_G(tdd) * current + (il - F90_DPTR_LBOUND_G(tdd));
+        n = I8(__fort_block_bounds)(
+            harvest, i, tcl + (tcn - 1) * DIST_DPTR_CS_G(tdd), &il, &iu);
+        hi = hi +
+             (F90_DPTR_SSTRIDE_G(tdd) * (il + n - 1) + F90_DPTR_SOFFSET_G(tdd) -
+              tclof) *
+                 F90_DPTR_LSTRIDE_G(tdd);
+      }
+      /*
+       * Fill the array with random numbers.
+       */
+      hb[lo] = advance_seed_npb(current - last_i);
+      last_i = current + hi - lo;
+      for (i = lo + 1; i <= hi; ++i) {
+        tmp1 = seed_lo * table[0][0];
+        itmp = T23 * tmp1;
+        tmp2 = R23 * itmp;
+        seed_hi = tmp2 + seed_lo * table[0][1] + seed_hi * table[0][0];
+        seed_lo = tmp1 - tmp2;
+        itmp = seed_hi;
+        seed_hi -= itmp;
+        hb[i] = seed_lo + seed_hi;
+      }
+    }
+  } else {
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      if (n > 0) {
+        lo = li +
+             (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+                 F90_DPTR_LSTRIDE_G(hdd);
+        current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                  (il - F90_DPTR_LBOUND_G(hdd));
+        hb[lo] = advance_seed_npb(current - last_i);
+        for (i = 1; i < n; ++i) {
+          lo += F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+          tmp1 = seed_lo * table[0][0];
+          itmp = T23 * tmp1;
+          tmp2 = R23 * itmp;
+          seed_hi = tmp2 + seed_lo * table[0][1] + seed_hi * table[0][0];
+          seed_lo = tmp1 - tmp2;
+          itmp = seed_hi;
+          seed_hi -= itmp;
+          hb[lo] = seed_lo + seed_hi;
+        }
+        last_i = current + n - 1;
+      }
+    }
+  }
+}
+// AOCC end
+
 /*
  * ========================================================================
  * Lagged fibonacci pseudo-random number generator code.
@@ -6108,6 +6217,114 @@ static void I8(prng_loop_r_lf)(__REAL4_T *hb, F90_Desc *harvest, __INT_T li,
   }
 }
 
+// AOCC begin
+/*
+ * Routine that loops through a dimension of the quad precision output.
+ * Recursive down to last dimension, where work is done.
+ */
+
+static void I8(prng_loop_q_lq)(__REAL16_T *hb, F90_Desc *harvest, __INT_T li,
+                               int dim, __INT_T section_offset, __INT_T limit)
+{
+  DECL_DIM_PTRS(hdd);
+  DECL_DIM_PTRS(tdd);
+  __INT_T cl, cn, current, i, il, iu, lo, clof, n;
+  __INT_T hi, tcl, tcn, tclof;
+
+  SET_DIM_PTRS(hdd, harvest, dim - 1);
+  cl = DIST_DPTR_CL_G(hdd);
+  cn = DIST_DPTR_CN_G(hdd);
+  clof = DIST_DPTR_CLOF_G(hdd);
+
+  if (dim > 1)
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      lo = li +
+           (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+               F90_DPTR_LSTRIDE_G(hdd);
+      current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                (il - F90_DPTR_LBOUND_G(hdd));
+      for (i = 0; i < n; ++i) {
+        I8(prng_loop_q_lq)(hb, harvest, lo, dim - 1, current + i, limit);
+        lo += F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+      }
+    }
+  /*
+   * Optimization collapsing non-distributed leading dimensions.
+   */
+  else if (limit > 0) {
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      /*
+       * Find first current and low value of fill range.
+       */
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      lo = li +
+           (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+               F90_DPTR_LSTRIDE_G(hdd);
+      current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                (il - F90_DPTR_LBOUND_G(hdd));
+      hi = lo + (n - 1) * F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+      for (i = dim - 1; i > 0; --i) {
+        SET_DIM_PTRS(tdd, harvest, i - 1);
+        tcl = DIST_DPTR_CL_G(tdd);
+        tcn = DIST_DPTR_CN_G(tdd);
+        tclof = DIST_DPTR_CLOF_G(tdd);
+        (void)I8(__fort_block_bounds)(harvest, i, tcl, &il, &iu);
+        lo = lo +
+             (F90_DPTR_SSTRIDE_G(tdd) * il + F90_DPTR_SOFFSET_G(tdd) - tclof) *
+                 F90_DPTR_LSTRIDE_G(hdd);
+        current =
+            F90_DPTR_EXTENT_G(tdd) * current + (il - F90_DPTR_LBOUND_G(tdd));
+        n = I8(__fort_block_bounds)(
+            harvest, i, tcl + (tcn - 1) * DIST_DPTR_CS_G(tdd), &il, &iu);
+        hi = hi +
+             (F90_DPTR_SSTRIDE_G(tdd) * (il + n - 1) + F90_DPTR_SOFFSET_G(tdd) -
+              tclof) *
+                 F90_DPTR_LSTRIDE_G(tdd);
+      }
+      /*
+       * Fill the array with random numbers.
+       */
+      hb[lo] = advance_seed_lf(current - last_i);
+      last_i = current + hi - lo;
+      for (i = lo + 1; i <= hi; ++i) {
+        offset = (offset + 1) & MASK;
+        seed_lf[offset] = seed_lf[(offset - SHORT_LAG) & MASK] +
+                          seed_lf[(offset - LONG_LAG) & MASK];
+        if (seed_lf[offset] > 1.0)
+          seed_lf[offset] -= 1.0;
+        hb[i] = seed_lf[offset];
+      }
+    }
+  } else {
+    for (; cn > 0;
+         --cn, cl += DIST_DPTR_CS_G(hdd), clof += DIST_DPTR_CLOS_G(hdd)) {
+      n = I8(__fort_block_bounds)(harvest, dim, cl, &il, &iu);
+      if (n > 0) {
+        lo = li +
+             (F90_DPTR_SSTRIDE_G(hdd) * il + F90_DPTR_SOFFSET_G(hdd) - clof) *
+                 F90_DPTR_LSTRIDE_G(hdd);
+        current = F90_DPTR_EXTENT_G(hdd) * section_offset +
+                  (il - F90_DPTR_LBOUND_G(hdd));
+        hb[lo] = advance_seed_lf(current - last_i);
+        for (i = 1; i < n; ++i) {
+          lo += F90_DPTR_SSTRIDE_G(hdd) * F90_DPTR_LSTRIDE_G(hdd);
+          offset = (offset + 1) & MASK;
+          seed_lf[offset] = seed_lf[(offset - SHORT_LAG) & MASK] +
+                            seed_lf[(offset - LONG_LAG) & MASK];
+          if (seed_lf[offset] > 1.0)
+            seed_lf[offset] -= 1.0;
+          hb[lo] = seed_lf[offset];
+        }
+        last_i = current + n - 1;
+      }
+    }
+  }
+}
+// AOCC end
+
 /*
  * ========================================================================
  * Common code.
@@ -6117,6 +6334,10 @@ static void I8(prng_loop_r_lf)(__REAL4_T *hb, F90_Desc *harvest, __INT_T li,
 static int fibonacci = 1;
 
 static double (*advance_seed)(__INT_T) = advance_seed_lf;
+// AOCC begin
+static void (*prng_loop_q)(__REAL16_T *, F90_Desc *, __INT_T, int, __INT_T,
+                           __INT_T) = I8(prng_loop_q_lq);
+// AOCC end
 static void (*prng_loop_d)(__REAL8_T *, F90_Desc *, __INT_T, int, __INT_T,
                            __INT_T) = I8(prng_loop_d_lf);
 static void (*prng_loop_r)(__REAL4_T *, F90_Desc *, __INT_T, int, __INT_T,
@@ -6127,6 +6348,7 @@ set_fibonacci(void)
 {
   fibonacci = 1;
   advance_seed = advance_seed_lf;
+  prng_loop_q = I8(prng_loop_q_lq);   // AOCC
   prng_loop_d = I8(prng_loop_d_lf);
   prng_loop_r = I8(prng_loop_r_lf);
 }
@@ -6136,6 +6358,7 @@ set_npb(void)
 {
   fibonacci = 0;
   advance_seed = advance_seed_npb;
+  prng_loop_q = I8(prng_loop_q_npb);
   prng_loop_d = I8(prng_loop_d_npb);
   prng_loop_r = I8(prng_loop_r_npb);
 }
@@ -6244,6 +6467,60 @@ void ENTFTN(RNUMD, rnumd)(__REAL8_T *hb, F90_Desc *harvest)
       I8(__fort_cycle_bounds)(harvest);
       i = I8(level)(harvest);
       prng_loop_d(hb, harvest, F90_LBASE_G(harvest) - 1, F90_RANK_G(harvest), 0,
+                  i);
+    }
+    final = F90_GSIZE_G(harvest) - 1;
+    if (last_i < final)
+      (void)advance_seed(final - last_i);
+#ifdef DEBUG
+    else if (last_i != final)
+      rnum_abort(__FILE__, __LINE__,
+                 "random_number:  internal error:  last_i != final");
+#endif
+  } else {
+    if (fibonacci) {
+      offset = (offset + 1) & MASK;
+      seed_lf[offset] = seed_lf[(offset - SHORT_LAG) & MASK] +
+                        seed_lf[(offset - LONG_LAG) & MASK];
+      if (seed_lf[offset] > 1.0)
+        seed_lf[offset] -= 1.0;
+      *hb = seed_lf[offset];
+    } else {
+      tmp1 = seed_lo * table[0][0];
+      itmp = T23 * tmp1;
+      tmp2 = R23 * itmp;
+      seed_hi = tmp2 + seed_lo * table[0][1] + seed_hi * table[0][0];
+      seed_lo = tmp1 - tmp2;
+      itmp = seed_hi;
+      seed_hi -= itmp;
+      *hb = seed_lo + seed_hi;
+    }
+  }
+  MP_V(sem);
+}
+
+/*
+ * AOCC
+ * Quad precision, pseudo-random number generator, RANDOM_NUMBER.
+ */
+
+void ENTFTN(RNUMQ, rnumq)(__REAL16_T *hb, F90_Desc *harvest)
+{
+  __INT_T final, i;
+  int itmp;
+  double tmp1, tmp2;
+
+  MP_P(sem);
+  if (F90_TAG_G(harvest) == __DESC) {
+    if (F90_GSIZE_G(harvest) <= 0) {
+      MP_V(sem);
+      return;
+    }
+    last_i = -1;
+    if (~F90_FLAGS_G(harvest) & __OFF_TEMPLATE) {
+      I8(__fort_cycle_bounds)(harvest);
+      i = I8(level)(harvest);
+      prng_loop_q(hb, harvest, F90_LBASE_G(harvest) - 1, F90_RANK_G(harvest), 0,
                   i);
     }
     final = F90_GSIZE_G(harvest) - 1;

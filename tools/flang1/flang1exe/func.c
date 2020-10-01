@@ -2866,7 +2866,8 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
   case I_RANDOM_NUMBER:
     is_icall = FALSE;
     arg1 = ARGT_ARG(func_args, 0);
-    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_rnumd : RTE_rnum;
+    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_rnumd :
+             DTYG(A_DTYPEG(arg1)) == TY_QUAD ? RTE_rnumq : RTE_rnum;
     nargs = 1;
     goto opt_common;
   case I_RANDOM_SEED:

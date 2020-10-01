@@ -648,6 +648,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"reshapeca", "", true, ""},
     {"rnum", "", true, ""},
     {"rnumd", "", true, ""},
+    {"rnumq", "", true, ""},         // AOCC
     {"rseed", "", true, ""},
     {"secnds", "", true, ""},
     {"secndsd", "", true, ""},
