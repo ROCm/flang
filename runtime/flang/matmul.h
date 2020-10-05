@@ -2,12 +2,27 @@
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *  Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ *  Notified per clause 4(b) of the license.
+ *  Last Modified: Oct 2020
  */
 
 /** \file
  * \brief Matrix multiplication routines
  */
 
+// AOCC begin
+void f90_mm_cplx32_str1_mxv_(__CPLX32_T *, __CPLX32_T *, __CPLX32_T *,
+                               __INT_T *, __INT_T *, __INT_T *, __INT_T *);
+void f90_mm_cplx32_str1_vxm_(__CPLX32_T *, __CPLX32_T *, __CPLX32_T *,
+                               __INT_T *, __INT_T *, __INT_T *, __INT_T *);
+void f90_mm_cplx32_str1_(__CPLX32_T *, __CPLX32_T *, __CPLX32_T *, __INT_T *,
+                           __INT_T *, __INT_T *, __INT_T *, __INT_T *,
+                           __INT_T *, __INT_T *);
+void f90_mm_cplx32_str1_mxv_t_(__CPLX32_T *, __CPLX32_T *, __CPLX32_T *,
+                                 __INT_T *, __INT_T *, __INT_T *, __INT_T *);
+// AOCC end
 void f90_mm_cplx16_str1_mxv_(__CPLX16_T *, __CPLX16_T *, __CPLX16_T *,
                                __INT_T *, __INT_T *, __INT_T *, __INT_T *);
 void f90_mm_cplx16_str1_vxm_(__CPLX16_T *, __CPLX16_T *, __CPLX16_T *,

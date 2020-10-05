@@ -7366,7 +7366,7 @@ matmul(int func_ast, int func_args, int lhs)
   // AOCC begin
   case TY_QCMPLX:
     if (matmul_transpose) {
-      rtlRtn = RTE_matmul_cplx16mxv_t;
+      rtlRtn = RTE_matmul_cplx32mxv_t;
     } else {
       rtlRtn = RTE_matmul_cplx32;
     }

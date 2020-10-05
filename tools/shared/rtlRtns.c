@@ -219,6 +219,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"matmul_cplx16", "", true, ""},
     {"matmul_cplx16mxv_t", "", true, ""},
     {"matmul_cplx32", "", true, ""},
+    {"matmul_cplx32mxv_t", "", true, ""},
     {"matmul_cplx8", "", true, ""},
     {"matmul_cplx8mxv_t", "", true, ""},
     {"matmul_int1", "", true, ""},
