@@ -224,6 +224,7 @@ typedef enum {
   RTE_matmul_cplx16,
   RTE_matmul_cplx16mxv_t,
   RTE_matmul_cplx32,
+  RTE_matmul_cplx32mxv_t,
   RTE_matmul_cplx8,
   RTE_matmul_cplx8mxv_t,
   RTE_matmul_int1,

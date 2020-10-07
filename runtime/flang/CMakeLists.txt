@@ -348,6 +348,13 @@ SET(FTN_SUPPORT_DESC_DEP
   mget.c
   miscsup_com.c
   mmul.c
+  mmulcplx32.c
+  mmul_cplx32contmxm.F95
+  mmul_cplx32contmxv.F95
+  mmul_cplx32contvxm.F95
+  mmul_cplx32str1.F95
+  mmul_cplx32str1_t.F95
+  mmulcplx32_t.c
   mmulcplx16.c
   mmul_cplx16contmxm.F95
   mmul_cplx16contmxv.F95
