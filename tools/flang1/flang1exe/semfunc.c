@@ -4230,8 +4230,8 @@ gen_newer_intrin(int sptrgenr, int dtype)
       strcmp(intrin_nmptr, "sinh") == 0 || strcmp(intrin_nmptr, "tanh") == 0 ||
       strcmp(intrin_nmptr, "tan") == 0  ||
        //AOCC begin
-      strcmp(intrin_nmptr, "asinh") == 0|| strcmp(intrin_nmptr, "atanh") == 0|| 
-      strcmp(intrin_nmptr, "acosh") == 0 ) {
+      strcmp(intrin_nmptr, "asinh") == 0 || strcmp(intrin_nmptr, "atanh") == 0|| 
+      strcmp(intrin_nmptr, "acosh") == 0 || strcmp(intrin_nmptr, "cotan") == 0 ) {
       //AOCC end 
     if (DT_ISCMPLX(dtype)) {
       switch (DTY(dtype)) {

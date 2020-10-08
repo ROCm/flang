@@ -14,6 +14,9 @@
  *
  * Support for TRAILZ intrinsic.
  * Month of Modification: July 2019
+ *
+ * Support for COTAN intrinsic
+ * Modified on Oct 2020
  */
 
 #ifndef MTH_H_
@@ -90,7 +93,8 @@ typedef enum MTH_FN {
   MTH_mod,
   MTH_floor,
   MTH_ceil,
-  MTH_aint
+  MTH_aint,
+  MTH_cotan //AOCC 
 } MTH_FN;
 
 #define MTH_I_DFIXK "__mth_i_dfixk"
@@ -125,11 +129,13 @@ typedef enum MTH_FN {
 #define MTH_I_SIN "__mth_i_sin"
 #define MTH_I_COS "__mth_i_cos"
 #define MTH_I_SINCOS "__mth_i_sincos"
+#define MTH_I_COTAN "__mth_i_cotan" // AOCC
 #define MTH_I_TAN "__mth_i_tan"
 #define MTH_I_DSIN "__mth_i_dsin"
 #define MTH_I_DCOS "__mth_i_dcos"
 #define MTH_I_DSINCOS "__mth_i_dsincos"
 #define MTH_I_DTAN "__mth_i_dtan"
+#define MTH_I_DCOTAN "__mth_i_dcotan" // AOCC
 #define MTH_I_RPOWI "__mth_i_rpowi"
 #define MTH_I_RPOWK "__mth_i_rpowk"
 #define MTH_I_RPOWF "__mth_i_rpowr"

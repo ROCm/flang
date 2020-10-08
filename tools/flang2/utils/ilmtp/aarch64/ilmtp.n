@@ -18,6 +18,10 @@
 .\" * Added quad support for floor and ceiling intrinsics
 .\" * Last modified: August 2020
 .\" *
+.\" * Added support for cotan and cotand intrinsics
+.\" * Last modified: Oct 2020
+.\" *
+.\" *
 .\" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -407,6 +411,10 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDTAN arth lnk
 .AT spec dcmplx
+.IL CCOTAN arth lnk
+.AT spec
+.IL CDCOTAN arth lnk
+.AT spec dcmplx
 .IL CACOSH arth lnk
 .AT spec
 .IL CASINH arth lnk
@@ -466,6 +474,24 @@ Tangent of a single precision value
 .\".OP ARGSP t1 p1 t1
 .\".OP QJSR t2 =e'%s%__mth_i_tan t1
 .\".OP DFRSP r t2 spret
+.IL COTAN arth lnk
+Cotangent of a single precision value
+.OP FCOTAN r p1
+.\".OP NULL t1 iv0
+.\".OP ARGSP t1 p1 t1
+.\".OP QJSR t2 =e'%s%__mth_i_cotan t1
+.\".OP DFRSP r t2 spret
+.IL DCOTAN arth lnk
+.OP DCOTAN r p1
+.\".OP NULL t1 iv0
+.\".OP ARGDP t1 p1 t1
+.\".OP QJSR t2 =e'%d%_mth_i_dcotan t1
+.\".OP DFRDP r t2 dpret
+.IL QCOTAN arth lnk
+.OP NULL t1 iv0
+.OP ARGQP t1 p1 t1
+.OP QJSR t2 =e'%d%__mth_i_qcotan t1
+.OP DFRQP r t2 qpret
 .IL DTAN arth lnk
 .OP DTAN r p1
 .\".OP NULL t1 iv0
@@ -510,6 +536,22 @@ COS in degrees.
 .OP ARGDP t1 p1 t1
 .OP QJSR t2 =e'%d%__mth_i_dcosd t1
 .OP DFRDP r t2 dpret
+.IL COTAND arth lnk
+TAN in degrees.
+.OP NULL t1 iv0
+.OP ARGSP t1 p1 t1
+.OP QJSR t2 =e'%s%__mth_i_cotand t1
+.OP DFRSP r t2 spret
+.IL DCOTAND arth lnk
+.OP NULL t1 iv0
+.OP ARGDP t1 p1 t1
+.OP QJSR t2 =e'%d%__mth_i_dcotand t1
+.OP DFRDP r t2 dpret
+.IL QCOTAND arth lnk
+.OP NULL t1 iv0
+.OP ARGQP t1 p1 t1
+.OP QJSR t2 =e'%d%__mth_i_qcotand t1
+.OP DFRQP r t2 qpret
 .IL TAND arth lnk
 TAN in degrees.
 .OP NULL t1 iv0

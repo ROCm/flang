@@ -19,6 +19,9 @@
  *
  * Added code support for dasinh
  * Modified on 31st Aug 2020
+ *
+ * Added code support for cotan
+ * Modified on Oct 2020
  */
 
 /** \file
@@ -1026,6 +1029,11 @@ intrinsic_as_arg(int intr)
       case I_COS:
         sp2 = intast_sym[I_DCOS];
         break;
+      /* AOCC begin */
+      case I_COTAN:
+        sp2 = intast_sym[I_DCOTAN];
+        break;
+      /* AOCC end */
       case I_TAN:
         sp2 = intast_sym[I_DTAN];
         break;
@@ -1062,6 +1070,11 @@ intrinsic_as_arg(int intr)
       case I_COSD:
         sp2 = intast_sym[I_DCOSD];
         break;
+      /* AOCC begin */
+      case I_COTAND:
+        sp2 = intast_sym[I_DCOTAND];
+        break;
+      /* AOCC end */
       case I_TAND:
         sp2 = intast_sym[I_DTAND];
         break;
@@ -2953,6 +2966,13 @@ iface_intrinsic(int sptr)
     dtyper = DT_DBLE;
     argdtype = DT_DBLE;
     break;
+  /* AOCC begin */
+  case I_DCOTAN: /* dcotan */
+    paramct = 1;
+    dtyper = DT_DBLE;
+    argdtype = DT_DBLE;
+    break;
+  /* AOCC end */
   case I_DTAN: /* dtan */
     paramct = 1;
     dtyper = DT_DBLE;
@@ -3033,6 +3053,13 @@ iface_intrinsic(int sptr)
     dtyper = DT_REAL;
     argdtype = DT_REAL;
     break;
+  /* AOCC begin */
+  case I_COTAN: /* cotan */
+    paramct = 1;
+    dtyper = DT_REAL;
+    argdtype = DT_REAL;
+    break;
+  /* AOCC end */
   case I_TANH: /* tanh */
     paramct = 1;
     dtyper = DT_REAL;

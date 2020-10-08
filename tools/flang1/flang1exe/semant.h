@@ -640,7 +640,8 @@ typedef enum {
   AC_I_nearest,
   AC_I_shifta,
   AC_I_aint,
-  AC_I_anint
+  AC_I_anint,
+  AC_I_cotan
   // AOCC end
 } AC_INTRINSIC;
 

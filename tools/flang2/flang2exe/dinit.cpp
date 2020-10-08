@@ -18,6 +18,9 @@
  * Support for nearest intrinsic
  *  Last modified: 01 March 2020
  * Last Modified : Jun 2020
+ *
+ * Added code support for cotan intrinsic
+ * Last modified on Oct 2020
  */
 
 /** \file
@@ -5103,6 +5106,8 @@ FPINTRIN1("acos", eval_acos, xfacos, xdacos, xqacos)
 
 FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
 
+FPINTRIN1("cotan", eval_cotan, xfcotan, xdcotan, xqcotan) // AOCC
+
 // AOCC parameter: qscutil
 #define FPINTRIN2(iname, ent, fscutil, dscutil, qscutil)            \
   static CONST *ent(CONST *arg, DTYPE dtype)                        \
@@ -5483,6 +5488,11 @@ eval_init_op(int op, CONST *lop, DTYPE ldtype, CONST *rop, DTYPE rdtype,
     case AC_I_cos:
       root = eval_cos(rop, dtype);
       break;
+    /* AOCC begin */
+    case AC_I_cotan:
+      root = eval_cotan(rop, dtype);
+      break;
+    /* AOCC end */
     case AC_I_tan:
       root = eval_tan(rop, dtype);
       break;

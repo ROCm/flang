@@ -117,6 +117,7 @@ enum fold_status fold_real32_divide(float32_t *res, const float32_t *x, const fl
 enum fold_status fold_real32_pow(float32_t *res, const float32_t *x, const float32_t *y);
 enum fold_status fold_real32_sin(float32_t *res, const float32_t *arg);
 enum fold_status fold_real32_cos(float32_t *res, const float32_t *arg);
+enum fold_status fold_real32_cotan(float32_t *res, const float32_t *arg);
 enum fold_status fold_real32_tan(float32_t *res, const float32_t *arg);
 enum fold_status fold_real32_asin(float32_t *res, const float32_t *arg);
 enum fold_status fold_real32_acos(float32_t *res, const float32_t *arg);
@@ -143,6 +144,7 @@ enum fold_status fold_real64_divide(float64_t *res, const float64_t *x, const fl
 enum fold_status fold_real64_pow(float64_t *res, const float64_t *x, const float64_t *y);
 enum fold_status fold_real64_sin(float64_t *res, const float64_t *arg);
 enum fold_status fold_real64_cos(float64_t *res, const float64_t *arg);
+enum fold_status fold_real64_cotan(float64_t *res, const float64_t *arg);
 enum fold_status fold_real64_tan(float64_t *res, const float64_t *arg);
 enum fold_status fold_real64_asin(float64_t *res, const float64_t *arg);
 enum fold_status fold_real64_acos(float64_t *res, const float64_t *arg);
@@ -174,6 +176,7 @@ enum fold_status fold_real128_divide(float128_t *res, const float128_t *x, const
 enum fold_status fold_real128_pow(float128_t *res, const float128_t *x, const float128_t *y);
 enum fold_status fold_real128_sin(float128_t *res, const float128_t *arg);
 enum fold_status fold_real128_cos(float128_t *res, const float128_t *arg);
+enum fold_status fold_real128_cotan(float128_t *res, const float128_t *arg);
 enum fold_status fold_real128_tan(float128_t *res, const float128_t *arg);
 enum fold_status fold_real128_asin(float128_t *res, const float128_t *arg);
 enum fold_status fold_real128_acos(float128_t *res, const float128_t *arg);
@@ -204,6 +207,7 @@ enum fold_status fold_real128_divide(__float128 *res, const __float128 *x, const
 enum fold_status fold_real128_pow(__float128 *res, const __float128 *x, const __float128 *y);
 enum fold_status fold_real128_sin(__float128 *res, const __float128 *arg);
 enum fold_status fold_real128_cos(__float128 *res, const __float128 *arg);
+enum fold_status fold_real128_cotan(__float128 *res, const __float128 *arg);
 enum fold_status fold_real128_tan(__float128 *res, const __float128 *arg);
 enum fold_status fold_real128_asin(__float128 *res, const __float128 *arg);
 enum fold_status fold_real128_acos(__float128 *res, const __float128 *arg);

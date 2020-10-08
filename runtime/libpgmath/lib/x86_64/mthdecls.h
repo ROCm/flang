@@ -419,6 +419,7 @@ float __mth_i_rpowr(float f, float g);
 float __mth_i_sin(float f);
 float __mth_i_sinh(float f);
 float __mth_i_sqrt(float f);
+float __mth_i_cotan(float f);
 float __mth_i_tan(float f);
 float __mth_i_tanh(float f);
 float __mth_i_amod(float f, float g);
@@ -604,6 +605,7 @@ extern float_complex_t ctanhf(float_complex_t);
 extern double_complex_t ctanh(double_complex_t);
 extern float_complex_t ctanf(float_complex_t);
 extern double_complex_t ctan(double_complex_t);
+extern double_complex_t ccotan(double_complex_t);
 //AOCC begin
 extern float_complex_t cacoshf(float_complex_t);
 extern double_complex_t cacosh(double_complex_t);

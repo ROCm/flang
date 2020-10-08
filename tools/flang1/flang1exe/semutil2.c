@@ -31,6 +31,9 @@
  *   Last modified : April 2020
  *
  * Last modified: Jun 2020
+ *
+ * Added code support for COTAN intrinsic
+ *   Last modified : Oct 2020
  */
 
 /** \file
@@ -3889,6 +3892,11 @@ map_I_to_AC(int intrin)
   case I_COS:
   case I_DCOS:
     return AC_I_cos;
+  /* AOCC begin */
+  case I_COTAN:
+  case I_DCOTAN:
+    return AC_I_cotan;
+  /* AOCC end */
   case I_TAN:
   case I_DTAN:
     return AC_I_tan;
@@ -10683,6 +10691,8 @@ FPINTRIN1("asin", eval_asin, xfasin, xdasin, xqasin)
 FPINTRIN1("acos", eval_acos, xfacos, xdacos, xdacos)
 
 FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
+
+FPINTRIN1("cotan", eval_cotan, xfcotan, xdcotan, xqcotan)
 
 // AOCC parameter: qscutil
 #define FPINTRIN2(iname, ent, fscutil, dscutil, qscutil)            \

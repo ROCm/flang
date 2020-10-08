@@ -31,6 +31,10 @@
 .\"
 .\" * Added code support for dasinh
 .\" * Modified on 31st Aug 2020
+.\"
+.\" * Added code support for cotan
+.\" * Modified on Oct 2020
+.\"
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -339,6 +343,32 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN DCOSD 1 D D none * V
 .AT elemental x
 .IN .QCOSD 1 Q Q none * V
+.AT elemental x
+
+.IN ..COTAN 1 R R none * V
+.AT elemental x
+.IN .COTAN 1 R R none * V
+.AT elemental x
+.IN .DCOTAN 1 D D none * V
+.AT elemental x
+.IN DCOTAN 1 D D none * V
+.AT elemental x
+.IN .QCOTAN 1 Q Q none * V
+.AT elemental x
+.IN QCOTAN 1 Q Q none * V
+.AT elemental x
+
+.IN ..COTAND 1 R R none * V
+.AT elemental x
+.IN .COTAND 1 R R none * V
+.AT elemental x
+.IN .DCOTAND 1 D D none * V
+.AT elemental x
+.IN DCOTAND 1 D D none * V
+.AT elemental x
+.IN .QCOTAND 1 Q Q none * V
+.AT elemental x
+.IN QCOTAND 1 Q Q none * V
 .AT elemental x
 
 .IN ..TAN 1 R R none * V
@@ -1038,6 +1068,10 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN COS - - .COS DCOS CCOS CDCOS - .QCOS .CQCOS
 .AT elemental x
 .GN COSD - - .COSD DCOSD - - - .QCOSD -
+.AT elemental x
+.GN COTAN - - .COTAN DCOTAN - - - .QCOTAN -
+.AT elemental x
+.GN COTAND - - .COTAND DCOTAND - - - .QCOTAND -
 .AT elemental x
 .GN TAN - - .TAN DTAN - - - .QTAN -
 .AT elemental x

@@ -48,6 +48,9 @@
  * Added code support for dasinh
  * Modified on 31st Aug 2020
  *
+ * Added code support for cotan
+ * Modified on Oct 2020
+ *
  */
 
 /**
@@ -2972,6 +2975,16 @@ intrinsic_arg_dtype(int intr, int ast, int args, int nargs)
   case I_COSD:
   case I_DCOSD:
 
+  /* AOCC begin */
+  case I_COTAN:
+  case I_DCOTAN:
+  case I_QCOTAN:
+
+  case I_COTAND:
+  case I_DCOTAND:
+  case I_QCOTAND:
+  /* AOCC end */
+
   case I_TAN:
   case I_DTAN:
 
@@ -4168,7 +4181,21 @@ lower_intrinsic(int ast)
     ilm = intrin_name("SQRT", ast, in_r_D_C_CD);
     break;
 
-  /* tan family */
+  /* AOCC begin */
+  case I_COTAN:
+  case I_DCOTAN:
+  case I_QCOTAN:
+    ilm = intrin_name("COTAN", ast, in_r_D);
+    break;
+
+  case I_COTAND:
+  case I_DCOTAND:
+  case I_QCOTAND:
+    ilm = intrin_name("COTAND", ast, in_r_D);
+    break;
+  /* AOCC end */
+
+    /* tan family */
   case I_TAN:
   case I_DTAN:
     ilm = intrin_name("TAN", ast, in_r_D);
@@ -4890,6 +4917,8 @@ lower_intrinsic(int ast)
       ilm = intrin_name("TANH", ast, in_r_D_C_CD);
     else if (strcmp(nm, "tan") == 0)
       ilm = intrin_name("TAN", ast, in_r_D_C_CD);
+    else if (strcmp(nm, "cotan") == 0)
+      ilm = intrin_name("COTAN", ast, in_r_D_C_CD); //AOCC
     else {
       ast_error("unrecognized NEW INTRINSIC", ast);
       break;

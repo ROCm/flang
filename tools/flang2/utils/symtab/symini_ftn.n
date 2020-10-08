@@ -17,6 +17,9 @@
 .\" *
 .\" * Added code support for dasinh
 .\" * Modified on 31st Aug 2020
+.\" *
+.\" * Added code support for cotan and cotand
+.\" * Modified on Oct 2020
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -120,6 +123,12 @@ sptr	name	pcnt	atyp	dtype	ILM	pname
 .IN QTAN 1 Q Q QTAN ftn_qtan
 .IN .TAND 1 R R TAND ftn_tand
 .IN DTAND 1 D D DTAND ftn_dtand
+.IN .COTAN 1 R R COTAN ftn_cotan
+.IN DCOTAN 1 D D DCOTAN ftn_dcotan
+.IN QCOTAN 1 Q Q QCOTAN ftn_qcotan
+.IN .COTAND 1 R R COTAND ftn_cotand
+.IN DCOTAND 1 D D DCOTAND ftn_dcotand
+.IN QCOTAND 1 Q Q QCOTAND ftn_qcotand
 .IN .ASIN 1 R R ASIN ftn_asin
 .IN DASIN 1 D D DASIN ftn_dasin
 .IN QASIN 1 Q Q QASIN ftn_qasin
@@ -409,6 +418,8 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN SIND - - .SIND DSIND - - -
 .GN COS - - .COS DCOS CCOS CDCOS QCOS QACOS-
 .GN COSD - - .COSD DCOSD - - -
+.GN COTAN - - .COTAN DCOTAN QCOTAN - -
+.GN COTAND - - .COTAND DCOTAND QCOTAND - - - -
 .GN TAN - - .TAN DTAN - - -
 .GN TAND - - .TAND DTAND QTAN QATAN- - -
 .GN ASIN - - .ASIN DASIN - - -

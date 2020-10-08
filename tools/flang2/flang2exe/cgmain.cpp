@@ -56,6 +56,9 @@
  * Added quad support for floor and ceiling intrinsics
  * Last modified: August 2020
  *
+ * Added quad support for cotan and cotand intrinsics
+ * Last modified: Oct 2020
+ *
  */
 
 /**
@@ -10071,6 +10074,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
         make_lltype_from_dtype(DT_FLOAT), NULL, I_CALL);
     break;
+  /* AOCC begin */
+  case IL_FCOTAN:
+    operand = gen_call_pgocl_intrinsic(
+        "cotan_f",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
+        make_lltype_from_dtype(DT_FLOAT), NULL, I_CALL);
+    break;
+  /* AOCC end */
   case IL_DTAN:
     operand = gen_call_pgocl_intrinsic(
         "tan_d",
@@ -10139,6 +10150,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         "pow_q", operand, make_lltype_from_dtype(DT_QUAD), NULL, I_CALL);
     break;
   // AOCC end
+  
   case IL_FAND: {
     /* bitwise logical AND op. operand has floating-point type
        %copnd1 = bitcast float %opnd1 to iX

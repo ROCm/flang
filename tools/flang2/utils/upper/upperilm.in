@@ -24,6 +24,9 @@
 # Added complex quad support for asin, asinh, acos, acosh, atan, atanh
 # Last modified: 19th August 2020
 #
+# Added code support for cotan and cotand
+# Last modified: Oct 2020
+#
 ABS	ilm
 ACON	sym
 ACOS	ilm
@@ -131,6 +134,7 @@ CCOSH	ilm
 CSINH	ilm
 CTANH	ilm
 CTAN	ilm
+CCOTAN    ilm
 CADD	ilm	ilm
 CALL	num	sym	ilms
 CALLA	num	num	ilm	ilms
@@ -151,6 +155,7 @@ CDCOSH   ilm
 CDSINH   ilm
 CDTANH   ilm
 CDTAN    ilm
+CDCOTAN  ilm
 CDADD	ilm	ilm
 CDCMP	ilm	ilm
 CDCON	sym
@@ -191,6 +196,7 @@ CQCOSH   ilm
 CQSINH   ilm
 CQTANH   ilm
 CQTAN    ilm
+CQCOTAN  ilm
 CQATAN   ilm
 CQATAN2   ilm ilm
 CQATANH  ilm
@@ -346,7 +352,9 @@ DSQRT	ilm
 DST	ilm	ilm
 DSUB	ilm	ilm
 DTAN	ilm
+DCOTAN    ilm
 DTAND	ilm
+DCOTAND   ilm
 DTANH	ilm
 DTOD	ilm	ilm
 DTOI	ilm	ilm
@@ -665,6 +673,7 @@ QSQRT	ilm
 QPST	ilm	ilm
 QSUB	ilm	ilm
 QTAN	ilm
+QCOTAN  ilm
 QTANH ilm
 QATAN ilm
 QATAN2 ilm ilm
@@ -672,6 +681,7 @@ QATANH ilm
 QCMPLX	ilm	ilm
 QIMAG	ilm
 QTAND	ilm
+QCOTAND ilm
 #QTANH	ilm
 QTOQ	ilm	ilm
 QTOI	ilm	ilm
@@ -748,7 +758,9 @@ STOUI	ilm
 STRAILZ ilm
 SUBS	ilm	ilm	ilm
 TAN	ilm
+COTAN   ilm
 TAND	ilm
+COTAND    ilm
 TANH	ilm
 TARGETENTERDATA	ilm	num
 TARGETEXITDATA	ilm	num

@@ -27,6 +27,9 @@
 .\" * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
 .\" * Last modified: 19th August 2020
 .\" *
+.\" * Added support for cotan and cotand intrinsics
+.\" * Last modified: Oct 2020
+.\" *
 
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
@@ -503,6 +506,13 @@ EXP intrinsic for single precision floating point values.
 .\" AOCC begin
 .IL CQTAN arth lnk
 .AT spec
+.IL CCOTAN arth lnk
+.AT spec
+.IL CDCOTAN arth lnk
+.AT spec dcmplx
+.\" AOCC begin
+.IL CQCOTAN arth lnk
+.AT spec
 .IL CQATAN arth lnk
 .AT spec
 .IL CQATAN2 arth lnk lnk
@@ -599,14 +609,32 @@ Tangent of a single precision value
 \".OP DASP t1 p1 sp(0) t1
 \".OP QJSR t2 =e'%s%__mth_i_tan t1
 \".OP DFRSP r t2 spret
+.IL COTAN arth lnk
+Cotangent of a single precision value
+.OP FCOTAN r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_cotan t1
+\".OP DFRSP r t2 spret
 .IL DTAN arth lnk
 .OP DTAN r p1
 \".OP NULL t1 iv0
 \".OP DADP t1 p1 dp(0) t1
-\".OP QJSR t2 =e'%d%__mth_i_dtan t1
+\".OP QJSR t2 =e'%d%__mth_i_dcotan t1
 \".OP DFRDP r t2 dpret
 .IL QTAN arth lnk
 .OP QTAN r p1
+.IL DCOTAN arth lnk
+.OP DCOTAN r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dcotan t1
+\".OP DFRDP r t2 dpret
+.IL QCOTAN arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qcotan t1
+.OP DFRQP r t2 qpret
 .IL ASIN arth lnk
 .OP FASIN r p1
 .IL DASIN arth lnk
@@ -678,6 +706,22 @@ TAN in degrees.
 .OP NULL t1 iv0
 .OP DAQP t1 p1 qp(0) t1
 .OP QJSR t2 =e'%q%__mth_i_qtand t1
+.OP DFRQP r t2 qpret
+.IL COTAND arth lnk
+COTAN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_cotand t1
+.OP DFRSP r t2 spret
+.IL DCOTAND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dcotand t1
+.OP DFRDP r t2 dpret
+.IL QCOTAND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qcotand t1
 .OP DFRQP r t2 qpret
 .IL ASIND arth lnk
 ASIN in degrees.

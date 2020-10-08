@@ -55,6 +55,8 @@ set(GENERIC_SRCS
   dsinh.c
   dsqrt.c
   dtan.c
+  dcotan.c
+  dcan.c
   dtanh.c
   exp.c
   fabs.c
@@ -72,6 +74,7 @@ set(GENERIC_SRCS
   sinh.c
   sqrt.c
   tan.c
+  cotan.c
   tanh.c)
 set(GENERIC_FLAGS "${FLAGS} -ffast-math ")
 libmath_add_object_library("${GENERIC_SRCS}" "${GENERIC_FLAGS}" "${DEFINITIONS}" "")

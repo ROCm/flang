@@ -10,6 +10,9 @@
 .\" *
 .\" * Added code support for dasinh
 .\" * Modified on 31st Aug 2020
+.\" *
+.\" * Added support for cotan and cotand intrinsics
+.\" * Modified on Oct 2020
 .\" */
 .NS 13 "X86-64 ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -837,6 +840,16 @@ Quad-precision tangent.
 .AT arth null qp cse
 .CG notAILI
 
+.IL FCOTAN splnk
+Single-precision floating-point tangent.
+.AT arth null sp cse
+.CG notCG
+
+.IL DCOTAN dplnk
+Double-precision tangent.
+.AT arth null dp cse
+.CG notCG
+
 .IL FLOG splnk
 Single-precision floating-point natural logarithm.
 .AT arth null sp cse
@@ -1192,6 +1205,23 @@ Double-precision complex tangent.
 
 ./" AOCC begin
 .IL QCMPLXTAN cqlnk
+Quad-precision complex tangent.
+.AT arth null cq cse
+.CG notCG
+./" AOCC end
+
+.IL SCMPLXCOTAN cslnk
+Single-precision complex tangent.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXCOTAN cdlnk
+Double-precision complex tangent.
+.AT arth null cd cse
+.CG notCG
+
+./" AOCC begin
+.IL QCMPLXCOTAN cqlnk
 Quad-precision complex tangent.
 .AT arth null cq cse
 .CG notCG

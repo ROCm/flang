@@ -352,6 +352,15 @@ fold_real32_cos(float32_t *res, const float32_t *arg)
 }
 
 enum fold_status
+fold_real32_cotan(float32_t *res, const float32_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = 1.0/tanf(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
 fold_real32_tan(float32_t *res, const float32_t *arg)
 {
   fenv_t saved_fenv;
@@ -584,6 +593,15 @@ fold_real64_cos(float64_t *res, const float64_t *arg)
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
   *res = cos(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real64_cotan(float64_t *res, const float64_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = 1.0/tan(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
 
@@ -832,6 +850,15 @@ fold_real128_cos(float128_t *res, const float128_t *arg)
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
   *res = cosl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_cotan(float128_t *res, const float128_t *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = 1.0/tanl(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
 
@@ -1102,6 +1129,15 @@ fold_real128_cos(__float128 *res, const __float128 *arg)
   fenv_t saved_fenv;
   set_up_floating_point_environment(&saved_fenv);
   *res = cosl(*arg);
+  return check_and_restore_floating_point_environment(&saved_fenv);
+}
+
+enum fold_status
+fold_real128_cotan(__float128 *res, const __float128 *arg)
+{
+  fenv_t saved_fenv;
+  set_up_floating_point_environment(&saved_fenv);
+  *res = 1.0/tanl(*arg);
   return check_and_restore_floating_point_environment(&saved_fenv);
 }
 

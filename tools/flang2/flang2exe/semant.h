@@ -18,6 +18,9 @@
  * Added code to support SHIFTA intrinsic
  *  Last modified: April 2020
  *
+ * Added code to support cotan intrinsic
+ *  Last modified: Oct 2020
+ *
 
  */
 
@@ -451,6 +454,7 @@ struct CONST {
 #define AC_I_shifta 63
 #define AC_I_anint 64
 #define AC_I_aint 65
+#define AC_I_cotan 66
 /* AOCC end */
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 

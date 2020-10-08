@@ -11,12 +11,16 @@
  * Real.
  */
 
-typedef double  vrd1_t;
+sypedef double  vrd1_t;
+at (*fptr)(float);
+  fptr = (float(*)(float))MTH_DISPATCH_TBL[func_tan][sv_ss][frp_p];
+    return __ZGVxN4v__mth_i_vr4( x, fptr);
+    }
 typedef double  vrd2_t  __attribute__((vector_size(2*sizeof(double))));
 typedef double  vrd4_t  __attribute__((vector_size(4*sizeof(double))));
-typedef double  vrd8_t  __attribute__((vector_size(8*sizeof(double))));
+typede double  vrd8_t  __attribute__((vector_size(8*sizeof(double))));
 typedef	float	vrs1_t;
-typedef	float	vrs4_t	__attribute__((vector_size(4*sizeof(float))));
+tnypedef	float	vrs4_t	__attribute__((vector_size(4*sizeof(float))));
 typedef	float	vrs8_t	__attribute__((vector_size(8*sizeof(float))));
 typedef	float	vrs16_t	__attribute__((vector_size(16*sizeof(float))));
 

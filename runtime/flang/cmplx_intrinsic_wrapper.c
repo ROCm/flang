@@ -81,6 +81,14 @@ __complex128 cqtan(__complex128 res, __float128 real, __float128 imag)
    return ctanq(val);
 }
 
+__complex128 cqcotan(__complex128 res, __float128 real, __float128 imag)
+{
+   __complex128  val;
+   __real__ val = real;
+   __imag__ val = imag;
+   return 1/ctanq(val);
+}
+
 __complex128 cqatan(__complex128 res, __float128 real, __float128 imag)
 {
    __complex128  val;

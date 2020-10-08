@@ -42,9 +42,10 @@ if(${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES "x86_64" AND NOT ${LIBPGMATH_WITH_GENER
   if(${LIBPGMATH_SYSTEM_NAME} MATCHES "Linux")
     add_subdirectory("sincosf")
     add_subdirectory("tanf")
+    add_subdirectory("cotanf")
 
     # Specific definition, will probably need to remove when we create a single file for each def
-    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh}{,f} -fno-builtin-{ceil,floor}{,f}")
+    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh,cotan}{,f} -fno-builtin-{ceil,floor}{,f}")
     set_property(SOURCE dispatch.c APPEND PROPERTY COMPILE_DEFINITIONS PGFLANG)
     set_property(SOURCE mth_xintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-march=core2 ")
     set_property(SOURCE mth_yintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-march=sandybridge ")
@@ -82,9 +83,10 @@ if(${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES "x86_64" AND NOT ${LIBPGMATH_WITH_GENER
   elseif(${LIBPGMATH_SYSTEM_NAME} MATCHES "Darwin|Windows")
     add_subdirectory("sincosf")
     add_subdirectory("tanf")
+    add_subdirectory("cotanf")
 
     # Specific definition, will probably need to remove when we create a single file for each def
-    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh}{,f} -fno-builtin-{ceil,floor}{,f}")
+    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh,cotan}{,f} -fno-builtin-{ceil,floor}{,f}")
     set_property(SOURCE dispatch.c APPEND PROPERTY COMPILE_DEFINITIONS PGFLANG)
     set_property(SOURCE mth_xintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-msse2 ")
     set_property(SOURCE mth_yintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-mavx ")
@@ -203,6 +205,7 @@ set(MTH_CMPLX_SRCS
   cdsinh.c
   cdsqrt.c
   cdtan.c
+  cdcotan.c
   cdtanh.c
   cexp.c
   clog.c
@@ -213,6 +216,7 @@ set(MTH_CMPLX_SRCS
   csinh.c
   csqrt.c
   ctan.c
+  ccotan.c
   ctanh.c
   cqdiv.c
   cqpowi.c
@@ -304,7 +308,11 @@ set(SRCS
   rpowk.c
   sign.c
   sind.c
-  tand.c)
+  tand.c
+  cotand.c
+  dcotand.c
+  qcotand.c
+  qcotan.c)
 libmath_add_object_library("${SRCS}" "${FLAGS}" "${DEFINITIONS}" "")
 
 set(DEFINITIONS_CMPLX ${DEFINITIONS} MTH_CMPLX_C99_ABI)

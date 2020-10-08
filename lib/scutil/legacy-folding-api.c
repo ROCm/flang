@@ -703,6 +703,15 @@ xfcos(IEEE32 f, IEEE32 *r)
 }
 
 void
+xfcotan(IEEE32 f, IEEE32 *r)
+{
+  float32_t x, y;
+  unwrap_f(&y, &f);
+  check(fold_real32_cotan(&x, &y));
+  wrap_f(r, &x);
+}
+
+void
 xftan(IEEE32 f, IEEE32 *r)
 {
   float32_t x, y;
@@ -1089,6 +1098,15 @@ xdcos(IEEE64 d, IEEE64 r)
   float64_t x, y;
   unwrap_d(&y, d);
   check(fold_real64_cos(&x, &y));
+  wrap_d(r, &x);
+}
+
+void
+xdcotan(IEEE64 d, IEEE64 r)
+{
+  float64_t x, y;
+  unwrap_d(&y, d);
+  check(fold_real64_cotan(&x, &y));
   wrap_d(r, &x);
 }
 
@@ -2155,6 +2173,15 @@ xqcos(IEEE128 q, IEEE128 r)
 }
 
 void
+xqcotan(IEEE128 q, IEEE128 r)
+{
+  float128_t x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_cotan(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
 xqtan(IEEE128 q, IEEE128 r)
 {
   float128_t x, y;
@@ -2531,6 +2558,15 @@ xqcos(IEEE128 q, IEEE128 r)
   __float128 x, y;
   unwrap_q(&y, q);
   check(fold_real128_cos(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqcotan(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_cotan(&x, &y));
   wrap_q(r, &x);
 }
 

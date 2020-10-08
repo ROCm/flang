@@ -58,6 +58,9 @@
  * Added code support for dasinh
  * Modified on 31st Aug 2020
  *
+ * Added code support for cotan and cotand
+ * Modified on Oct 2020
+ *
  *
  */
 
@@ -6800,6 +6803,48 @@ addarth(ILI *ilip)
 #endif
     break;
 
+  /* AOCC begin */
+  case IL_FCOTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("cotanf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "cotanf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
+    if (XBIT_NEW_MATH_NAMES) {
+      fname = make_math(MTH_cotan, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+    }
+#if defined(TARGET_X8664)
+    if (!flg.ieee && TEST_FEATURE(FEATURE_AVX)) {
+      (void)mk_prototype(relaxed_math("cotan", 's', 's', MTH_I_COTAN), "f pure",
+                         DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR,
+                     relaxed_math("cotan", 's', 's', MTH_I_COTAN), 1, op1);
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+    }
+#endif
+#if defined(TARGET_POWER)
+    if (flg.ieee) {
+      (void)mk_prototype(MTH_I_COTAN, "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, MTH_I_COTAN, 1, op1);
+    } else {
+      (void)mk_prototype(fast_math("cotan", 's', 's', MTH_I_COTAN), "f pure",
+                         DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, fast_math("cotan", 's', 's', MTH_I_COTAN),
+                     1, op1);
+    }
+    return ad1altili(opc, op1, ilix);
+#else
+    (void)mk_prototype(MTH_I_COTAN, "f pure", DT_FLOAT, 1, DT_FLOAT);
+    ilix = ad_func(IL_spfunc, IL_QJSR, MTH_I_COTAN, 1, op1);
+    return ad1altili(opc, op1, ilix);
+#endif
+  /* AOCC end */
   case IL_FTAN:
  #ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
@@ -6841,6 +6886,56 @@ addarth(ILI *ilip)
     return ad1altili(opc, op1, ilix);
 #endif
 
+  /* AOCC begin */
+  case IL_DCOTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("cotan", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "cotan", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
+    if (XBIT_NEW_MATH_NAMES) {
+      fname = make_math(MTH_cotan, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+    }
+#if defined(TARGET_X8664)
+    if (!flg.ieee && TEST_FEATURE(FEATURE_AVX)) {
+      if (!XBIT(36, 0x04)) {
+        (void)mk_prototype(fast_math("cotan", 's', 'd', MTH_I_DCOTAN), "f pure",
+                           DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR,
+                       fast_math("cotan", 's', 'd', MTH_I_DCOTAN), 1, op1);
+      } else {
+        (void)mk_prototype(relaxed_math("cotan", 's', 'd', MTH_I_DCOTAN), "f pure",
+                           DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR,
+                       relaxed_math("cotan", 's', 'd', MTH_I_DCOTAN), 1, op1);
+      }
+      ilix = ad1altili(opc, op1, ilix);
+      return ilix;
+    }
+#endif
+#if defined(TARGET_POWER)
+    if (flg.ieee) {
+      (void)mk_prototype(MTH_I_DCOTAN, "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, MTH_I_DCOTAN, 1, op1);
+    } else {
+      (void)mk_prototype(fast_math("cotan", 's', 'd', MTH_I_DCOTAN), "f pure",
+                         DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, fast_math("cotan", 's', 'd', MTH_I_DCOTAN),
+                     1, op1);
+    }
+    return ad1altili(opc, op1, ilix);
+#else
+    (void)mk_prototype(MTH_I_DCOTAN, "f pure", DT_DBLE, 1, DT_DBLE);
+    ilix = ad_func(IL_dpfunc, IL_QJSR, MTH_I_DCOTAN, 1, op1);
+    return ad1altili(opc, op1, ilix);
+#endif
+    /* AOCC end */
+    
   case IL_DTAN:
  #ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
@@ -7453,6 +7548,12 @@ addarth(ILI *ilip)
     ilix = ad1mathfunc_cmplx(MTH_tan, opc, op1, DT_CMPLX, DT_CMPLX);
     return ilix;
 
+  /* AOCC begin */
+  case IL_SCMPLXCOTAN:
+    ilix = ad1mathfunc_cmplx(MTH_cotan, opc, op1, DT_CMPLX, DT_CMPLX);
+    return ilix;
+  /* AOCC end */
+
   case IL_SCMPLXACOS:
     ilix = ad1mathfunc_cmplx(MTH_acos, opc, op1, DT_CMPLX, DT_CMPLX);
     return ilix;
@@ -7517,6 +7618,12 @@ addarth(ILI *ilip)
   case IL_DCMPLXTAN:
     ilix = ad1mathfunc_cmplx(MTH_tan, opc, op1, DT_DCMPLX, DT_DCMPLX);
     return ilix;
+
+  /* AOCC begin */
+  case IL_DCMPLXCOTAN:
+    ilix = ad1mathfunc_cmplx(MTH_cotan, opc, op1, DT_DCMPLX, DT_DCMPLX);
+    return ilix;
+  /* AOCC end */
 
   case IL_DCMPLXACOS:
     ilix = ad1mathfunc_cmplx(MTH_acos, opc, op1, DT_DCMPLX, DT_DCMPLX);
@@ -7617,6 +7724,13 @@ addarth(ILI *ilip)
     ilix = ad1mathfunc_cmplx(MTH_sin, opc, op1, DT_QCMPLX, DT_QCMPLX);
     return ilix;
     break;
+
+  /* AOCC begin */
+  case IL_QCMPLXCOTAN:
+    ilix = ad1mathfunc_cmplx(MTH_cotan, opc, op1, DT_QCMPLX, DT_QCMPLX);
+    return ilix;
+    break;
+  /* AOCC end */
 
   case IL_QCMPLXTAN:
     ilix = ad1mathfunc_cmplx(MTH_tan, opc, op1, DT_QCMPLX, DT_QCMPLX);
@@ -12719,6 +12833,23 @@ prilitree(int i)
     opval = "cqtan";
     goto intrinsic;
     break;
+  /* AOCC begin */
+  case IL_SCMPLXCOTAN:
+    n = 1;
+    opval = "ccotan";
+    goto intrinsic;
+    break;
+  case IL_DCMPLXCOTAN:
+    n = 1;
+    opval = "cdcotan";
+    goto intrinsic;
+    break;
+  case IL_QCMPLXCOTAN:
+    n = 1;
+    opval = "cqcotan";
+    goto intrinsic;
+    break;
+  /* AOCC end */
   case IL_QCMPLXATAN:
     n = 1;
     opval = "cqatan";
@@ -15719,7 +15850,7 @@ make_math_name(MTH_FN fn, int vectlen, bool mask, DTYPE res_dt)
                            "div",  "exp",   "log",   "log10", "pow",    "powi",
                            "powk", "powi1", "powk1", "sin",   "sincos", "sinh",
                            "sqrt", "tan",   "tanh",  "mod", "floor", "ceil",
-                           "aint"};
+                           "aint", "cotan"};
   char *fstr;
   char ftype = 'f';
   if (flg.ieee)

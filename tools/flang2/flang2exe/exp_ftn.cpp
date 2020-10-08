@@ -26,6 +26,9 @@
  * complex quad support for asin, asinh, acos, acosh, atan, atanh
  *  Modified on 19th August 2020
  *
+ * complex support for cotan
+ *  Last modified on Oct 2020
+ *
  */
 
 /** \file
@@ -863,6 +866,17 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_CDTANH:
     exp_qjsr("__mth_i_cdtanh", DT_DCMPLX, ilmp, curilm);
     return;
+  /* AOCC begin */
+  case IM_CCOTAN:
+    exp_qjsr("__mth_i_ccotan", DT_CMPLX, ilmp, curilm);
+    return;
+  case IM_CDCOTAN:
+    exp_qjsr("__mth_i_cdcotan", DT_DCMPLX, ilmp, curilm);
+    return;
+  case IM_CQCOTAN:
+    exp_qjsr("cqcotan", DT_QCMPLX, ilmp, curilm);
+    return;
+  /* AOCC end */
   case IM_CTAN:
     exp_qjsr("__mth_i_ctan", DT_CMPLX, ilmp, curilm);
     return;

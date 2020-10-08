@@ -1486,6 +1486,220 @@ ENT(ASM_CONCAT3(__rvd_exp_,TARGET_VEX_OR_FMA,_256)):
         ELF_SIZE(ASM_CONCAT3(__rvd_exp_,TARGET_VEX_OR_FMA,_256))
 
 
+/*
+ *  vector single precision cotangent - 128
+ *
+ *  Prototype:
+ *
+ *      single __rvs_cotan_vex/fma4(float *x);
+ *
+ */
+
+/* ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__rvs_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__rvs_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq $8, %rsp
+
+        CALL(ENT(ASM_CONCAT(__fvs_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vdivps  %xmm1, %xmm0, %xmm0
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__rvs_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__rvs_cotan_,TARGET_VEX_OR_FMA))
+
+
+/* ------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------- */
+
+/*
+ *  vector single precision cotangent - 256
+ *
+ *  Prototype:
+ *
+ *      single __rvs_cotan_vex/fma4_256(float *x);
+ *
+ */
+
+/* ------------------------------------------------------------------------- */
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256))
+ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256)):
+
+
+        subq    $136, %rsp
+
+        vmovups %ymm0, 32(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvs_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vmovups 32(%rsp), %ymm2
+        vmovaps %xmm0, %xmm3
+        vmovaps %xmm1, %xmm4
+        vextractf128    $1, %ymm2, %xmm0
+        vmovups %xmm3, 64(%rsp)
+        vmovups %xmm4, 96(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvs_sincos_,TARGET_VEX_OR_FMA)))
+        vmovups 64(%rsp), %xmm3
+        vinsertf128     $1, %xmm0, %ymm3, %ymm0
+        vmovups 96(%rsp), %xmm4
+        vinsertf128     $1, %xmm1, %ymm4, %ymm1
+
+        vdivps %ymm1, %ymm0, %ymm0
+
+        addq    $136, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256))
+        ELF_SIZE(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256))
+
+
+/* ------------------------------------------------------------------------- */
+
+/*
+ *  scalar single precision cotangent
+ *
+ *  Prototype:
+ *
+ *      single __rss_cotan_vex/fma4(float *x);
+ *
+ */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__rss_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__rss_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq $8, %rsp
+
+        CALL(ENT(ASM_CONCAT(__fss_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vdivss  %xmm1, %xmm0, %xmm0
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__rss_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__rss_cotan_,TARGET_VEX_OR_FMA))
+
+
+
+/* ------------------------------------------------------------------------- */
+
+/*
+ *  vector double precision cotangent
+ *
+ *  Prototype:
+ *
+ *      single __rvd_cotan_vex/fma4(double *x);
+ *
+ */
+
+/* ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__rvd_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__rvd_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq $8, %rsp
+
+        CALL(ENT(ASM_CONCAT(__fvd_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vdivpd  %xmm1, %xmm0, %xmm0
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__rvd_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__rvd_cotan_,TARGET_VEX_OR_FMA))
+
+
+/* ------------------------------------------------------------------------- */
+
+/*
+ *  vector double precision cotangent
+ *
+ *  Prototype:
+ *
+ *      single __rvd_cotan_vex/fma4_256(double *x);
+ *
+ */
+
+/* ------------------------------------------------------------------------- */
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__rvd_cotan_,TARGET_VEX_OR_FMA,_256))
+ENT(ASM_CONCAT3(__rvd_cotan_,TARGET_VEX_OR_FMA,_256)):
+
+
+        subq    $136, %rsp
+
+        vmovupd %ymm0, 32(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvd_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vmovupd 32(%rsp), %ymm2
+        vmovapd %xmm0, %xmm3
+        vmovapd %xmm1, %xmm4
+        vextractf128    $1, %ymm2, %xmm0
+        vmovupd %xmm3, 64(%rsp)
+        vmovupd %xmm4, 96(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvd_sincos_,TARGET_VEX_OR_FMA)))
+
+	vmovupd 64(%rsp), %xmm3
+        vinsertf128     $1, %xmm0, %ymm3, %ymm0
+        vmovupd 96(%rsp), %xmm4
+        vinsertf128     $1, %xmm1, %ymm4, %ymm1
+
+        vdivpd %ymm1, %ymm0, %ymm0
+
+        addq    $136, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__rvd_cotan_,TARGET_VEX_OR_FMA,_256))
+        ELF_SIZE(ASM_CONCAT3(__rvd_cotan_,TARGET_VEX_OR_FMA,_256))
+
+
+/* ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__rsd_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__rsd_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq $8, %rsp
+
+        CALL(ENT(ASM_CONCAT(__fsd_sincos_,TARGET_VEX_OR_FMA)))
+
+
+        vdivsd  %xmm1, %xmm0, %xmm0
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__rsd_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__rsd_cotan_,TARGET_VEX_OR_FMA))
+
 
 /* ------------------------------------------------------------------------- */
 

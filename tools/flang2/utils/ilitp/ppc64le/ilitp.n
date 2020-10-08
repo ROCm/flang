@@ -8,6 +8,9 @@
 .\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
 .\" * Notified per clause 4(b) of the license.
 .\" *
+.\" *
+.\" * Added support for cotan and cotand intrinsics
+.\" * Modified on Oct 2020
 .\" */
 .NS 13 "Power ILI Definitions"
 .sh 2 "Key to ILI Template Listing"
@@ -604,6 +607,16 @@ Double-precision tangent.
 .AT arth null dp cse
 .CG notCG
 
+.IL FCOTAN splnk
+Single-precision floating-point tangent.
+.AT arth null sp cse
+.CG notCG
+
+.IL DCOTAN dplnk
+Double-precision tangent.
+.AT arth null dp cse
+.CG notCG
+
 .IL FLOG splnk
 Single-precision floating-point natural logarithm.
 .AT arth null sp cse
@@ -820,6 +833,16 @@ Single-precision complex tangent.
 .CG notCG
 
 .IL DCMPLXTAN cdlnk
+Double-precision complex tangent.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXCOTAN cslnk
+Single-precision complex tangent.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXCOTAN cdlnk
 Double-precision complex tangent.
 .AT arth null cd cse
 .CG notCG
