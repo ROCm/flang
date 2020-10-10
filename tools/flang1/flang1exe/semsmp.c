@@ -118,8 +118,8 @@ static void do_map();
 // AOCC Begin
 static void do_tofrom();
 static void do_usedeviceptr();
+static LOGICAL use_atomic_for_reduction(int, REDUC *, REDUC_SYM *);
 // AOCC End
-static LOGICAL use_atomic_for_reduction(int);
 
 static LOGICAL is_in_omptarget(int d);
 
@@ -8370,7 +8370,7 @@ gen_reduction(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
       return;
     }
   }
-  if (use_atomic_for_reduction(sem.doif_depth))
+  if (use_atomic_for_reduction(sem.doif_depth, reducp, reduc_symp)) // AOCC
     add_stmt(mk_stmt(A_MP_ATOMIC, 0));
 
   (void)mk_storage(reduc_symp->shared, &lhs);
@@ -8391,7 +8391,7 @@ gen_reduction(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
      *    shared  <-- intrin(shared, private)
      */
     (void)ref_intrin(&intrin, arg1);
-    if (use_atomic_for_reduction(sem.doif_depth) &&
+    if (use_atomic_for_reduction(sem.doif_depth, reducp, reduc_symp) && // AOCC
         sem.mpaccatomic.rmw_op != AOP_UNDEF) {
       MEMORY_ORDER save_mem_order = sem.mpaccatomic.mem_order;
       sem.mpaccatomic.mem_order = MO_SEQ_CST;
@@ -8438,7 +8438,8 @@ gen_reduction(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
     SST_ASTP(&op1, ast);
     SST_SHAPEP(&op1, A_SHAPEG(ast));
 
-    if (use_atomic_for_reduction(sem.doif_depth)&& get_atomic_rmw_op(opc) != AOP_UNDEF) {
+    if (use_atomic_for_reduction(sem.doif_depth, reducp, reduc_symp) // AOCC
+        && get_atomic_rmw_op(opc) != AOP_UNDEF) {
       MEMORY_ORDER save_mem_order = sem.mpaccatomic.mem_order;
 
       sem.mpaccatomic.rmw_op = get_atomic_rmw_op(opc);
@@ -8512,7 +8513,8 @@ end_reduction(REDUC *red, int doif)
         if (reduc_symp->shared == 0)
           /* error - illegal reduction variable */
           continue;
-        if (!use_atomic_for_reduction(sem.doif_depth) && !done) {
+        if (!use_atomic_for_reduction(sem.doif_depth, red, reduc_symp) // AOCC
+            && !done) {
           ast_crit = emit_bcs_ecs(A_MP_CRITICAL);
           done = TRUE;
         }
@@ -8526,7 +8528,8 @@ end_reduction(REDUC *red, int doif)
       if (reduc_symp->shared == 0)
         /* error - illegal reduction variable or set by loop above */
         continue;
-      if (!use_atomic_for_reduction(sem.doif_depth) && !done) {
+      if (!use_atomic_for_reduction(sem.doif_depth, red, reduc_symp) // AOCC
+          && !done) {
 #ifdef OMP_OFFLOAD_LLVM
         ast_red = mk_stmt(A_MP_BREDUCTION, 0);
         // AOCC Begin
@@ -8536,7 +8539,7 @@ end_reduction(REDUC *red, int doif)
 #endif
         ast_crit = emit_bcs_ecs(A_MP_CRITICAL);
 #ifdef OMP_OFFLOAD_LLVM
-        if (!use_atomic_for_reduction(sem.doif_depth)) {
+        if (!use_atomic_for_reduction(sem.doif_depth, red, reduc_symp)) { // AOCC
           A_ISOMPREDUCTIONP(ast_crit, 1);
           gen_reduction_ompaccel(reducp, reduc_symp, FALSE, in_parallel);
         }
@@ -8551,7 +8554,7 @@ end_reduction(REDUC *red, int doif)
   sem.parallel = save_par;
   sem.target = save_target;
   sem.teams = save_teams;
-  if (!use_atomic_for_reduction(sem.doif_depth)) {
+  if (!use_atomic_for_reduction(sem.doif_depth, red, reduc_symp)) { // AOCC
     ast_endcrit = emit_bcs_ecs(A_MP_ENDCRITICAL);
     A_LOPP(ast_crit, ast_endcrit);
     A_LOPP(ast_endcrit, ast_crit);
@@ -10802,11 +10805,22 @@ LOGICAL use_opt_atomic(int d)
    \brief Decide whether to use llvm atomic for reduction or not.
    Atomic is used only for teams reduction.
  */
-static LOGICAL use_atomic_for_reduction(int d)
+static LOGICAL use_atomic_for_reduction(int d, REDUC *reducp,
+    REDUC_SYM *red_sym) // AOCC
 {
 #ifdef OMP_OFFLOAD_LLVM
   if(flg.omptarget && DI_IN_NEST(d, DI_TARGET) ) {
-    // AOCC Begin
+    // AOCC begin
+    if (DI_IN_NEST(d, DI_PARDO) && teams_ast) {
+      for (REDUC_SYM *reduc_symp = reducp->list; reduc_symp;
+            reduc_symp = reduc_symp->next) {
+        int ty = DTY(DTYPEG(reduc_symp->shared));
+        if (ty == TY_CMPLX || ty == TY_DCMPLX) {
+          return TRUE;
+        }
+      }
+    }
+
     if (DI_IN_NEST(d, DI_PARDO) && !teams_ast) {
       return TRUE;
     }
