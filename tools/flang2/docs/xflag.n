@@ -235,6 +235,8 @@ F90 pointer optimizations.
 Use GSMOVE in exp_rte.c
 .XB 0x1000000
 Don't expand SMOVEs (struct moves) in a single IL_SMOVEI/IL_SMOVES
+.XB 0x2000000
+[experimental] Enable aggressive gep folding.
 
 .XF "3:" 
 Used to turn on/off various dual-op/dual-inst/pipelined ops.

@@ -832,6 +832,9 @@ init(int argc, char *argv[])
 
   // alias settings
   flg.x[53] |= 0x800000;
+
+  // aggressive gep folding
+  // flg.x[2] |= 0x2000000;
   // AOCC End
 
 #endif

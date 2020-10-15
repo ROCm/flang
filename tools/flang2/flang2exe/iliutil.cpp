@@ -12198,6 +12198,14 @@ dump_ili(FILE *f, int i)
   fprintf(f, "\n");
 }
 
+// AOCC begin
+void
+dump_ili(int i)
+{
+  dump_ili(stdout, i);
+}
+// AOCC end
+
 /* ****************************************************************** */
 static void
 dilitree(int i)

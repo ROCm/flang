@@ -12836,6 +12836,62 @@ gen_acon_expr(int ilix, LL_Type *expected_type)
   return operand;
 }
 
+// AOCC begin
+static OPERAND *
+attempt_ptr_gep_folding(int baseOp, int idxOp) {
+  int base_acon = ILI_OPND(baseOp, 1);
+  SPTR addr_sptr = ILI_SymOPND(base_acon, 1);
+  SPTR base_sptr = (SPTR)CONVAL1G(addr_sptr);
+
+  int _base_nme = ILI_OPND(baseOp, 2);
+
+  if (_base_nme < 0 || _base_nme >= nmeb.stg_avail)
+    return NULL;
+
+  int base_nme = basenme_of(_base_nme);
+  if (base_nme) {
+    if (NME_SYM(base_nme) != base_sptr)
+      return NULL;
+  }
+
+  if (DTY(DTYPEG(addr_sptr)) != TY_PTR)
+    return NULL;
+
+  if (STYPEG(base_sptr) != ST_VAR)
+    return NULL;
+
+  // FIXME! It would be nice if we could get the underlying shape here and only
+  // perform the folding if we're working on pointers to simpler shapes like 1D
+  // arrays for now.
+  //
+  // ADSC *ad = AD_DPTR(DTYPEG(base_nme));
+  // printf("%d\n", AD_NUMDIM(ad)); // ?
+  //
+  // #include "mwd.h"
+  // gbl.dbgfil = stdout;
+  // dumpdtype(DTYPEG(NME_SYM(base_nme)));
+  // dumpdtype(DTYPEG(base_sptr));
+
+  if (ILI_OPC(idxOp) != IL_KAMV)
+    return NULL;
+
+  int kmul = ILI_OPND(idxOp, 1);
+  if (ILI_OPC(kmul) != IL_KMUL)
+    return NULL;
+
+  int ldkr = ILI_OPND(kmul, 1);
+  if (ILI_OPC(ldkr) != IL_LDKR)
+    return NULL;
+
+  int acon = ILI_OPND(ldkr, 1);
+  if (ILI_OPC(acon) != IL_ACON)
+    return NULL;
+
+  OPERAND *op = gen_llvm_expr(ILI_OPND(kmul, 2), make_int_lltype(64));
+  return op;
+}
+// AOCC end
+
 /**
    \brief Pattern match the ILI tree and fold when there is a match
    \param addr  The ILI to pattern match
@@ -12909,6 +12965,17 @@ maybe_do_gep_folding(int aadd, int idxOp, LL_Type *ty)
     rv = gen_gep_op(aadd, index, ty, rv);
     return rv;
   }
+
+  // AOCC begin
+  if (XBIT(2, 0x2000000)) {
+    rv = attempt_ptr_gep_folding(baseOp, idxOp);
+    if (rv) {
+      OPERAND *base = gen_base_addr_operand(baseOp, ty);
+      rv = gen_gep_op(aadd, base, ty, rv);
+      return rv;
+    }
+  }
+  // AOCC end
 
   addressElementSize = savedAddressElementSize;
   return NULL;
