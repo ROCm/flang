@@ -23,7 +23,9 @@
  *
  * Support for assumed size array as parameter
  *   Date of modification 9th June 2020
-  
+ *
+ * Fix to assign right kind of dtype for derived types
+ * Date of modification 06 October 2020
  *
  */
 
@@ -4923,8 +4925,8 @@ semant1(int rednum, SST *top)
       sem.gdtype = sem.ogdtype = sem.stag_dtype;
     }
     defer_put_kind_type_param(0, 0, NULL, 0, 0, 0);
-    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype) &&
-        defer_pt_decl(0, 2)) {
+    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype)
+        /*&& defer_pt_decl(0, 2)*/ /*AOCC*/) {
       /* In this case we're using just the default type
        * of a parameterized derived type. We need to make sure we
        * create another instance of it so we don't pollute the
@@ -5548,14 +5550,27 @@ semant1(int rednum, SST *top)
     }
 
     set_char_attributes(sptr, &dtype);
-    if (DTY(DTYPEG(sptr)) == TY_ARRAY) {
-      DTY(DTYPEG(sptr) + 1) = dtype;
-      if (DTY(dtype) == TY_DERIVED && DTY(dtype + 3) &&
-          DISTMEMG(DTY(dtype + 3))) {
-        error(451, 3, gbl.lineno, SYMNAME(sptr), CNULL);
+    //AOCC Begin
+    if (sem.new_param_dt) {
+      dtype = DTYPEG(sptr);
+      if (DTY(dtype) == TY_ARRAY) {
+        DTY(dtype + 1) = sem.new_param_dt;
+      } else {
+        DTYPEP(sptr, sem.new_param_dt);
       }
-    } else {
-      DTYPEP(sptr, dtype);
+      fix_type_param_members(sptr, sem.new_param_dt);
+    }
+    //AOCC End
+    else {
+      if (DTY(DTYPEG(sptr)) == TY_ARRAY) {
+        DTY(DTYPEG(sptr) + 1) = dtype;
+        if (DTY(dtype) == TY_DERIVED && DTY(dtype + 3) &&
+          DISTMEMG(DTY(dtype + 3))) {
+          error(451, 3, gbl.lineno, SYMNAME(sptr), CNULL);
+        }
+      } else {
+        DTYPEP(sptr, dtype);
+      }
     }
     if (STYPEG(sptr) == ST_ENTRY && FVALG(sptr)) {
 #if DEBUG
