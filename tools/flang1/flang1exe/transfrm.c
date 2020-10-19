@@ -1328,7 +1328,8 @@ rewrite_block_forall(void)
             continue;
         }
         if (A_TYPEG(ast) == A_ALLOC || A_TYPEG(ast) == A_CONTINUE ||
-            A_TYPEG(ast) == A_COMMENT || A_TYPEG(ast) == A_COMSTR)
+            A_TYPEG(ast) == A_COMMENT || A_TYPEG(ast) == A_COMSTR ||
+            A_TYPEG(ast) == A_DO || A_TYPEG(ast) == A_ENDDO)      //AOCC
           continue;
         /* or it may be like, z_b_0 = 1 */
         if (A_TYPEG(ast) == A_ASN && A_TYPEG(A_DESTG(ast)) == A_ID)
