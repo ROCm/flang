@@ -94,3 +94,14 @@ void f90_mm_real8_str1_(__REAL8_T *, __REAL8_T *, __REAL8_T *, __INT_T *,
                           __INT_T *);
 void f90_mm_real8_str1_mxv_t_(__REAL8_T *, __REAL8_T *, __REAL8_T *,
                                 __INT_T *, __INT_T *, __INT_T *, __INT_T *);
+// AOCC begin
+void f90_mm_real16_str1_mxv_(__REAL16_T *, __REAL16_T *, __REAL16_T *, __INT_T *,
+                              __INT_T *, __INT_T *, __INT_T *);
+void f90_mm_real16_str1_vxm_(__REAL16_T *, __REAL16_T *, __REAL16_T *, __INT_T *,
+                              __INT_T *, __INT_T *, __INT_T *);
+void f90_mm_real16_str1_(__REAL16_T *, __REAL16_T *, __REAL16_T *, __INT_T *,
+                          __INT_T *, __INT_T *, __INT_T *, __INT_T *, __INT_T *,
+                          __INT_T *);
+void f90_mm_real16_str1_mxv_t_(__REAL16_T *, __REAL16_T *, __REAL16_T *,
+                                __INT_T *, __INT_T *, __INT_T *, __INT_T *);
+// AOCC end

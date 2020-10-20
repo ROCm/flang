@@ -263,6 +263,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   fpcvt.c
   ftn.c
   ftnexit.c
+  gather_cmplx32.F95
   gather_cmplx16.F95
   gather_cmplx8.F95
   gather_real4.F95
@@ -277,26 +278,32 @@ SET(FTN_SUPPORT_DESC_INDEP
   linux_dummy.c
   malloc.c
   misc.c
+  mmcmplx32.c
   mmcmplx16.c
   mmcmplx8.c
   mmreal4.c
   mmreal8.c
+  mnaxnb_cmplx32.F95
   mnaxnb_cmplx16.F95
   mnaxnb_cmplx8.F95
   mnaxnb_real4.F95
   mnaxnb_real8.F95
+  mnaxtb_cmplx32.F95
   mnaxtb_cmplx16.F95
   mnaxtb_cmplx8.F95
   mnaxtb_real4.F95
   mnaxtb_real8.F95
+  mtaxnb_cmplx32.F95
   mtaxnb_cmplx16.F95
   mtaxnb_cmplx8.F95
   mtaxnb_real4.F95
   mtaxnb_real8.F95
+  mtaxtb_cmplx32.F95
   mtaxtb_cmplx16.F95
   mtaxtb_cmplx8.F95
   mtaxtb_real4.F95
   mtaxtb_real8.F95
+  mvmul_cmplx32.F95
   mvmul_cmplx16.F95
   mvmul_cmplx8.F95
   mvmul_real4.F95
@@ -307,6 +314,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   rw.c
   scalar_copy.c
   stat_linux.c
+  transpose_cmplx32.F95
   transpose_cmplx16.F95
   transpose_cmplx8.F95
   transpose_real4.F95
@@ -315,6 +323,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   utils.c
   utilsi64.c
   version.c
+  vmmul_cmplx32.F95
   vmmul_cmplx16.F95
   vmmul_cmplx8.F95
   vmmul_real4.F95
@@ -419,6 +428,13 @@ SET(FTN_SUPPORT_DESC_DEP
   mmul_real8str1.F95
   mmul_real8str1_t.F95
   mmulreal8_t.c
+  mmulreal16.c
+  mmul_real16contmxm.F95
+  mmul_real16contmxv.F95
+  mmul_real16contvxm.F95
+  mmul_real16str1.F95
+  mmul_real16str1_t.F95
+  mmulreal16_t.c
   nmlread.c
   nmlwrite.c
   nmlutil.c
