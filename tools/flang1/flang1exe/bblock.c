@@ -10,8 +10,8 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Implemented diagnostics for simpler case of uninitialized variable use.
+ * Last modified: Oct 2020
  *
- * Date of Modification: April 2019
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: May 2020
@@ -37,6 +37,7 @@
 #include "direct.h"
 #include "pd.h"
 #include "rtlRtns.h"
+#include "gramtk.h"
 /* AOCC begin */
 #include "flang/ADT/hash.h"
 #include "llmputil.h"
@@ -2742,6 +2743,127 @@ static bool ompaccel_has_switched_parsec() {
 
   ast_unvisit();
   return false;
+}
+
+typedef struct {
+  int begin;
+  int end;
+  int move_after;
+} MoveCandidate;
+
+void ompaccel_ast_alloc_array() {
+  bool debug_me = false;
+  ast_visit(1, 1);
+
+  bool in_target = false;
+  bool alloc_found = false;
+  bool dealloc_found = false;
+  bool allocated_found = false;
+  bool in_if = false;
+  int if_nest = 0;
+  int btarget_std = -1;
+  int etarget_std = -1;
+  int last_std = -1;
+  int btarget_prevstd = -1;
+  int ifbegin_std = -1;
+  int ifend_std = -1;
+  MoveCandidate candidates[25];
+  int num_candidates = 0;
+
+  for (int std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+
+    if (asttype == A_MP_TARGET) {
+      in_target = true;
+      btarget_std = std;
+      btarget_prevstd = last_std;
+    } else if (asttype == A_MP_ENDTARGET) {
+      in_target = false;
+      etarget_std = std;
+    }
+
+    if (in_target && asttype == A_ALLOC && in_if) {
+      if (A_TKNG(ast) == TK_ALLOCATE) {
+        alloc_found = true;
+      } else if (A_TKNG(ast) == TK_DEALLOCATE) {
+        dealloc_found = true;
+      }
+    }
+
+    if (asttype == A_ICALL) {
+      if (A_OPTYPEG(ast) == I_NULLIFY && in_target) {
+        MoveCandidate cand;
+        cand.begin = std;
+        cand.end = std;
+        cand.move_after = btarget_prevstd;
+        candidates[num_candidates++] = cand;
+      }
+    }
+
+    if (asttype == A_IFTHEN && in_target) {
+      if (!in_if) {
+        ifbegin_std = std;
+        in_if = true;
+      } else {
+        if_nest++;
+      }
+    }
+
+    if (asttype == A_ENDIF && in_target && (alloc_found || allocated_found)) {
+      if (if_nest) {
+        if_nest--;
+        continue;
+      }
+
+      MoveCandidate cand;
+      cand.begin = ifbegin_std;
+      cand.end = std;
+      cand.move_after = btarget_prevstd;
+      candidates[num_candidates++] = cand;
+      assert(num_candidates < 25, "More than expected candidates",
+             num_candidates, ERR_Fatal);
+      in_if = false;
+      alloc_found = alloc_found ? false : alloc_found;
+      allocated_found = allocated_found ? false : allocated_found;
+    }
+
+    if (asttype == A_ENDIF && in_target && dealloc_found) {
+
+      if (if_nest) {
+        if_nest--;
+        continue;
+      }
+
+      MoveCandidate cand;
+      cand.begin = ifbegin_std;
+      cand.end = std;
+      cand.move_after = -1;
+      candidates[num_candidates++] = cand;
+      assert(num_candidates < 25, "More than expected candidates",
+             num_candidates, ERR_Fatal);
+      in_if = false;
+      dealloc_found = false;
+    }
+
+    if (asttype == A_ENDIF) {
+      in_if = false;
+      ifend_std = std;
+    }
+
+    last_std = std;
+  }
+
+  for (unsigned i = 0; i < num_candidates; ++i) {
+    if (candidates[i].move_after == -1)
+      candidates[i].move_after = etarget_std;
+    if (candidates[i].move_after == -1)
+      candidates[i].move_after = etarget_std;
+    move_range_after(candidates[i].begin, candidates[i].end,
+                     candidates[i].move_after);
+  }
+
+  ast_unvisit();
 }
 
 /*
