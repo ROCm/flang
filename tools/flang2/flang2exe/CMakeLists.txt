@@ -132,7 +132,7 @@ target_compile_options(flang2
   )
 
 target_link_libraries(flang2
-  PRIVATE
+  PUBLIC
   flangArgParser
   ${FLANG_LIB_DIR}/scutil.a
   -lm
