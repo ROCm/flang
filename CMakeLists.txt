@@ -130,8 +130,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib)
 
-  option(LLVM_INSTALL_TOOLCHAIN_ONLY
-    "Only include toolchain files in the 'install' target." OFF)
+  # option(LLVM_INSTALL_TOOLCHAIN_ONLY
+  # "Only include toolchain files in the 'install' target." OFF)
 
   option(LLVM_INSTALL_RUNTIME
      "Build and install the flang runtime. Do this last" OFF)
