@@ -147,7 +147,6 @@ target_compile_options(flang1
   )
 
 target_link_libraries(flang1
-  PUBLIC
   flangArgParser
   ${FLANG_LIB_DIR}/scutil.a
   -lm
