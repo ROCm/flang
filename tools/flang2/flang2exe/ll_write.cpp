@@ -1464,7 +1464,7 @@ static const MDTemplate Tmpl_DICompositeType_pre34[] = {
 };
 
 static const MDTemplate Tmpl_DICompositeType[] = {
-  { "DICompositeType", TF, 18 },
+  { "DICompositeType", TF, 19 },
   { "tag",                      DWTagField },
   { "file",                     NodeField },
   { "scope",                    NodeField },
@@ -1482,7 +1482,8 @@ static const MDTemplate Tmpl_DICompositeType[] = {
   { "identifier",               StringField },
   { "dataLocation",             NodeField},
   { "associated",               NodeField},
-  { "allocated",                NodeField}
+  { "allocated",                NodeField},
+  { "rank",                     NodeField}
 };
 
 static const MDTemplate Tmpl_DIFortranArrayType[] = {
@@ -1509,6 +1510,14 @@ static const MDTemplate Tmpl_DISubrange[] = {
   { "lowerBound",               SignedOrMDField },
   { "upperBound",               SignedOrMDField },
   { "stride",                   SignedOrMDField }
+};
+
+static const MDTemplate Tmpl_DIGenericSubrange[] = {
+  { "DIGenericSubrange", TF, 4 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "lowerBound",               SignedOrMDField },
+  { "upperBound",               SignedOrMDField, FlgMandatory },
+  { "stride",                   SignedOrMDField, FlgMandatory }
 };
 
 static const MDTemplate Tmpl_DISubrange_pre37[] = {
@@ -1917,6 +1926,7 @@ static void emitDIGlobalVariableExpression(FILE *, LLVMModuleRef, MDNodeRef,
                                            unsigned);
 static void emitDIImportedEntity(FILE *, LLVMModuleRef, MDNodeRef, unsigned);
 static void emitDICommonBlock(FILE *, LLVMModuleRef, MDNodeRef, unsigned);
+static void emitDIGenericSubRange(FILE *, LLVMModuleRef, MDNodeRef, unsigned);
 
 typedef void (*MDDispatchMethod)(FILE *out, LLVMModuleRef mod, MDNodeRef mdnode,
                                  unsigned mdi);
@@ -1954,6 +1964,7 @@ static MDDispatch mdDispTable[LL_MDClass_MAX] = {
     {emitDIBasicStringType},          // LL_DIBasicType_string - deprecated
     {emitDIStringType},               // LL_DIStringType
     {emitDICommonBlock},              // LL_DICommonBlock
+    {emitDIGenericSubRange},          // LL_DIGenericSubRange
 };
 
 INLINE static void
@@ -2108,6 +2119,11 @@ emitDISubRange(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
     return;
   }
   emitTmpl(out, mod, mdnode, mdi, Tmpl_DISubrange_pre11);
+}
+
+static void emitDIGenericSubRange(FILE *out, LLVMModuleRef mod,
+                                  const LL_MDNode *mdnode, unsigned mdi) {
+  emitTmpl(out, mod, mdnode, mdi, Tmpl_DIGenericSubrange);
 }
 
 static void
@@ -2282,6 +2298,10 @@ ll_dw_op_to_name(LL_DW_OP_t op)
     return "DW_OP_push_object_address";
   case LL_DW_OP_mul:
     return "DW_OP_mul";
+  case LL_DW_OP_over:
+    return "DW_OP_over";
+  case LL_DW_OP_and:
+    return "DW_OP_and";
   default:
     break;
   }

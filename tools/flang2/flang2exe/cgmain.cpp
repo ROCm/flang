@@ -13740,8 +13740,9 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
                               ? NULL
                               : cons_expression_metadata_operand(llTy);
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
-      // For the assumed shape array, pass descriptor in place of base address.
-      if (ASSUMSHPG(sptr) && SDSCG(sptr))
+      // For assumed shape and assumed rank array, pass descriptor in place of
+      // base address.
+      if ((ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) && SDSCG(sptr))
         sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
     }
