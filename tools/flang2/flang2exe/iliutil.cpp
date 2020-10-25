@@ -2655,6 +2655,23 @@ addarth(ILI *ilip)
       (void)mk_prototype("llvm.maxnum.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.maxnum.f64", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
+  case IL_NINT:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("llvm.nearbyint.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.nearbyint.f32", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      }
+#endif
+      break;
+  case IL_IDNINT:
+#ifdef OMP_OFFLOAD_LLVM
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        (void)mk_prototype("llvm.nearbyint.f64", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.nearbyint.f64", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      }
+#endif
 
     default:
       break;
@@ -5872,6 +5889,13 @@ addarth(ILI *ilip)
     break;
 
   case IL_FTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("tanf", "f pure", DT_FLOAT, 1, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "tanf", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tan, &funcsptr, 1, false, DT_FLOAT, 1, DT_FLOAT);
       ilix = ad_func(IL_spfunc, IL_QJSR, fname, 1, op1);
@@ -5906,6 +5930,13 @@ addarth(ILI *ilip)
 #endif
 
   case IL_DTAN:
+ #ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    (void)mk_prototype("tan", "f pure", DT_DBLE, 1, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "tan", 1, op1);
+      return ad1altili(opc, op1, ilix);
+    }
+#endif
     if (XBIT_NEW_MATH_NAMES) {
       fname = make_math(MTH_tan, &funcsptr, 1, false, DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, fname, 1, op1);
