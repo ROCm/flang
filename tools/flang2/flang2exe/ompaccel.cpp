@@ -12,7 +12,7 @@
  * Date of Modification: 26th June 2019
  *
  * Changes to support AMDGPU OpenMP offloading
- * Last Modified : Oct 2020
+ * Last Modified :Aug 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020
@@ -505,48 +505,6 @@ mk_ompaccel_min(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
   assert(opc != IL_NONE, "Min reduction of this type not handled.", 0, ERR_Fatal);
   return ad2ili(opc, ili1, ili2);
 }
-
-/*
- * Returning max
- */
-int
-mk_ompaccel_max(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
-
-  ILI_OP opc = IL_NONE;
-  int dt = 0;
-  bool uu = FALSE;
-  if (!ili1)
-    return ili2;
-  if (!ili2)
-    return ili1;
-  if (_pointer_type(dtype1) || _pointer_type(dtype2)) {
-    assert(0, "Max reduction of this type not handled.", 0, ERR_Fatal);
-  } else {
-    _long_unsigned(ili1, &dt, &uu, dtype1);
-    _long_unsigned(ili2, &dt, &uu, dtype2);
-    /* signed */
-    if (!uu) {
-      if (dt == 1)
-        opc = IL_IMAX;
-      else if (dt == 2)
-        opc = IL_KMAX;
-      else if (dt == 3)
-        opc = IL_FMAX;
-      else if (dt == 4)
-        opc = IL_DMAX;
-      else if (dt == 5 || dt == 6)
-        assert(0, "Max reduction of this type not handled.", 0, ERR_Fatal);
-    } else {
-      if (dt == 1)
-        opc = IL_UIMAX;
-      else if (dt == 2)
-        opc = IL_UKMAX;
-    }
-  }
-  assert(opc != IL_NONE, "Max reduction of this type not handled.", 0,
-         ERR_Fatal);
-  return ad2ili(opc, ili1, ili2);
-}
 // AOCC End
 
 int
@@ -706,12 +664,10 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
     return mk_ompaccel_add(lili, dtype1, rili, dtype2);
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
-  //AOCC Begin
-  case 373:
-    return mk_ompaccel_max(lili, dtype1, rili, dtype2);
-  case 374:
+    //AOCC Begin
+  case 362:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
-  // AOCC End
+    // AOCC End
   default:
     ompaccelInternalFail("Unknown red op type"); // AOCC
     static_assert(true, "Rest of reduction operators are not implemented yet.");
@@ -2923,10 +2879,11 @@ static void emit_array_reduction(SPTR sptrReduceData) {
   ilix = mk_ompaccel_ldsptr(array_iv);
   ilix = mk_ompaccel_mul(ilix, DT_INT,
                          ad_icon(size_of(DDTG(dtypeReductionItem))), DT_INT);
-
+  /*
   if (SCG(sptrReductionItem) == SC_BASED && MIDNUMG(sptrReductionItem)) {
     sptrReductionItem = MIDNUMG(sptrReductionItem);
   }
+  */
 
   ili = mk_address(sptrReductionItem);
   ili = mk_ompaccel_add(ili, DT_ADDR, ilix, DT_ADDR);
@@ -2965,9 +2922,11 @@ static void emit_array_reduction(SPTR sptrReduceData) {
       ompaccel_tinfo_current_get()->reduction_symbols[0].private_sym;
   dtypeReductionItem = DDTG(DTYPEG(sptrReductionItem));
 
+  /*
   if (SCG(sptrReductionItem) == SC_BASED && MIDNUMG(sptrReductionItem)) {
     sptrReductionItem = MIDNUMG(sptrReductionItem);
   }
+  */
 
   bili = mk_ompaccel_load(bili, DT_ADDR, nmeReduceData);
   bili = mk_ompaccel_load(bili, dtypeReductionItem, nmeReduceData);
@@ -3131,13 +3090,7 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 373:
-        ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
-        ili = mk_ompaccel_store(ili, dtypeReductionItem,
-                                addnme(NT_VAR, sptrReductionItem, 0, 0),
-                                mk_address(sptrReductionItem));
-        break;
-      case 374:
+      case 362:
         ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
