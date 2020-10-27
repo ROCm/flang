@@ -122,7 +122,6 @@ static char *fn_sig_ptr = NULL;
 static void insert_entry_label(int);
 static void insert_jump_entry_instr(int);
 static void store_return_value_for_entry(OPERAND *, int);
-static void insert_llvm_dbg_value(OPERAND *, LL_MDRef, SPTR, LL_Type *);
 
 static int openacc_prefix_sptr = 0;
 static unsigned addressElementSize;
@@ -3001,15 +3000,37 @@ write_verbose_type(LL_Type *ll_type)
   print_token(ll_type->str);
 }
 
-/* whether it is llvm debug intrinsic */
-static bool is_llvm_debug_instrinsic(const char *fun_name) {
-  if (!fun_name)
+/* whether debug location should be suppressed */
+static bool should_suppress_debug_loc(INSTR_LIST *instrs) {
+  if (!instrs)
     return false;
 
-  return (
-      !strncmp(fun_name, "@llvm.dbg.value", strlen("@llvm.dbg.value")) ||
-      !strncmp(fun_name, "@llvm.dbg.declare", strlen("@llvm.dbg.declare")) ||
-      !strncmp(fun_name, "@llvm.dbg.addr", strlen("@llvm.dbg.addr")));
+  // return true if not a call instruction
+  switch (instrs->i_name) {
+  case I_INVOKE:
+    return false;
+  case I_CALL:
+    // f90 runtime functions fort_init and f90_* dont need debug location
+    if (instrs->prev && (instrs->operands->ot_type == OT_TMP) &&
+        (instrs->operands->tmps == instrs->prev->tmps) &&
+        (instrs->prev->operands->ot_type == OT_VAR)) {
+      // We dont need to expose those internals in prolog to user
+      // %1 = bitcast void (...)* @fort_init to void (i8*, ...)*
+      // call void (i8*, ...) %1(i8* %0)
+      // %8 = bitcast void (...)* @f90_template1_i8 to void (i8*, i8*, i8*, i8*,
+      //      i8*, i8*, ...)*
+      // call void (i8*, i8*, i8*, i8*, i8*, i8*, ...) %8(i8*
+      //      %2, i8* %3, i8* %4, i8* %5, i8* %6, i8* %7)
+
+      if (char *name_str = instrs->prev->operands->string) {
+        return (!strncmp(name_str, "@fort_init", strlen("@fort_init")) ||
+                !strncmp(name_str, "@f90_", strlen("@f90_")));
+      }
+    }
+    return false;
+  default:
+    return true;
+  }
 }
 
 /**
@@ -3550,14 +3571,13 @@ write_instructions(LL_Module *module)
      *  Do not dump debug location here if
      *  - it is NULL
      *  - it is already written (dbg_line_op_written) or
-     *  - it is a (non debug intrinsic) prolog instruction (debug location same
-     * as Subprogram's)
+     *  - it is a known internal (f90 runtime) call in prolog (fort_init &
+     * f90_*)
      */
-    if (!(LL_MDREF_IS_NULL(instrs->dbg_line_op) ||
-          dbg_line_op_written ||
+    if (!(LL_MDREF_IS_NULL(instrs->dbg_line_op) || dbg_line_op_written ||
           ((instrs->dbg_line_op ==
             lldbg_get_subprogram_line(module->debug_info)) &&
-           !is_llvm_debug_instrinsic(instrs->operands[0].string)))) {
+           should_suppress_debug_loc(instrs)))) {
       print_dbg_line(instrs->dbg_line_op);
     }
 #if DEBUG
@@ -5546,8 +5566,9 @@ gen_gep_index(OPERAND *base_op, LL_Type *llt, int index)
   return gen_gep_op(0, base_op, llt, make_constval32_op(index));
 }
 
-static void insert_llvm_dbg_value(OPERAND *load, LL_MDRef mdnode, SPTR sptr,
-                                  LL_Type *type) {
+void insert_llvm_dbg_value(OPERAND *load, LL_MDRef mdnode, SPTR sptr,
+                           LL_Type *type)
+{
   static bool defined = false;
   OPERAND *callOp;
   OPERAND *oper;
@@ -10944,7 +10965,8 @@ pointer_scalar_need_debug_info(SPTR sptr)
 {
   if ((sptr > NOSYM) && REVMIDLNKG(sptr)) {
     SPTR scalar_sptr = (SPTR)REVMIDLNKG(sptr);
-    if ((POINTERG(scalar_sptr) || ALLOCATTRG(scalar_sptr)) && (STYPEG(scalar_sptr) == ST_VAR))
+    if ((POINTERG(scalar_sptr) || ALLOCATTRG(scalar_sptr)) &&
+        ((STYPEG(scalar_sptr) == ST_VAR) || (STYPEG(scalar_sptr) == ST_STRUCT)))
       return true;
   }
   return false;
@@ -11066,9 +11088,18 @@ process_cmnblk_data(SPTR sptr, ISZ_T off)
   SPTR scope = SCOPEG(cmnblk);
 
   if (flg.debug && !CCSYMG(cmnblk) && (scope > 0)) {
+    /* For non-openmp applications, current_module is not used or is set to
+     * NULL, hence we can not use current_module for both openmp and non-openmp
+     * applications, instead we need to use respective LL_Module.
+     */
+    LL_Module *mod = cpu_llvm_module;
+#ifdef OMP_OFFLOAD_LLVM
+    if (flg.omptarget)
+      mod = current_module;
+#endif
     const char *name = new_debug_name(SYMNAME(scope), SYMNAME(cmnblk), NULL);
-    if (!ll_get_module_debug(current_module->common_debug_map, name))
-      lldbg_emit_common_block_mdnode(current_module->debug_info, cmnblk);
+    if (!ll_get_module_debug(mod->common_debug_map, name))
+      lldbg_emit_common_block_mdnode(mod->debug_info, cmnblk);
   }
 }
 
@@ -13194,6 +13225,9 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
                               ? NULL
                               : cons_expression_metadata_operand(llTy);
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
+      // For the assumed shape array, pass descriptor in place of base address.
+      if (ASSUMSHPG(sptr) && SDSCG(sptr))
+        sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
     }
   }
@@ -13226,8 +13260,10 @@ process_formal_arguments(LL_ABI_Info *abi)
     bool ftn_byval = false;
 
     assert(arg->sptr, "Unnamed function argument", i, ERR_Fatal);
+#if 0
     assert(SNAME(arg->sptr) == NULL, "Argument sptr already processed",
            arg->sptr, ERR_Fatal);
+#endif
     if ((SCG(arg->sptr) != SC_DUMMY) && formalsMidnumNotDummy(arg->sptr)) {
       process_sptr(arg->sptr);
       continue;
