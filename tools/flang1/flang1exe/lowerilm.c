@@ -5779,7 +5779,7 @@ lower_sptr(int sptr, int pointerval)
       }
     }
   } else {
-    if (STYPEG(sptr) == ST_MEMBER) {
+    if (STYPEG(sptr) == ST_MEMBER && pointerval != 0 /*AOCC*/) {
       /* special case this error: user has referenced an array
          with the wrong number of array indices */
       if (SYMNAME(sptr) && strstr(SYMNAME(sptr), "$sd") != 0)
