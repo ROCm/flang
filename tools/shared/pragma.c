@@ -425,6 +425,7 @@ p_pragma(char *pg, int pline)
 #define SW_SIMD 71
 // AOCC BEGIN
 #define SW_NOVECTOR 72
+#define SW_ALWAYSINLINE 73
 // AOCC END
 
 struct c {
@@ -444,6 +445,9 @@ struct c {
 static struct c table[] = {
     {"align", SW_ALIGN, false, S_NONE, S_NONE},
     {"altcode", SW_ALTCODE, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
+// AOCC BEGIN
+    {"alwaysinline", SW_ALWAYSINLINE, true, S_ROUTINE, S_ROUTINE | S_GLOBAL},
+// AOCC END
     {"assoc", SW_ASSOC, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"bounds", SW_BOUNDS, true, S_ROUTINE, S_ROUTINE | S_GLOBAL},
     {"c", SW_C, false, S_NONE, S_NONE},
@@ -696,6 +700,12 @@ do_sw(void)
       bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
     else
       bset(DIR_OFFSET(currdir, x[183]), 0x80000000);
+    break;
+  case SW_ALWAYSINLINE:
+    if (no_specified)
+      bclr(DIR_OFFSET(currdir, x[191]), 0x2);
+    else
+      bset(DIR_OFFSET(currdir, x[191]), 0x2);
     break;
 // AOCC END
   case SW_VINTR:

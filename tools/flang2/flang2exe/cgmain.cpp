@@ -14123,6 +14123,15 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
      * proprietary compilers. */
     print_token(" noinline");
   }
+// AOCC BEGIN
+  else if (XBIT(14, 0x8)) {
+    /* Apply noinline attribute if the pragma "noinline" is given */
+    print_token(" noinline");
+  } else if (XBIT(191, 0x2)) {
+    /* Apply alwaysinline attribute if the pragma "alwaysinline" is given */
+    print_token(" alwaysinline");
+  }
+// AOCC END
 
   if (func_sptr > NOSYM) {
 /* print_function_signature() can be called with func_sptr=0 */
