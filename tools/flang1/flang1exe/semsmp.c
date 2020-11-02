@@ -509,7 +509,7 @@ static struct cl_tag { /* clause table */
     {0, 0, NULL, NULL, "NUM_TEAMS", BT_TEAMS},
     {0, 0, NULL, NULL, "THREAD_LIMIT", BT_TEAMS},
     {0, 0, NULL, NULL, "DIST_SCHEDULE", BT_DISTRIBUTE},
-    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP},
+    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP | BT_TASK},  //AOCC
     {0, 0, NULL, NULL, "IS_DEVICE_PTR", BT_TARGET},
     {0, 0, NULL, NULL, "SIMD", BT_PDO | BT_PARDO | BT_SIMD},
     {0, 0, NULL, NULL, "THREADS", BT_TARGET},
