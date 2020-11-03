@@ -371,8 +371,9 @@ static void export(FILE *export_fd, char *export_name, int cleanup)
       case ST_IDENT:
         if (for_module) {
           if (SCG(sptr) == SC_DUMMY && SCOPEG(SCOPEG(sptr)) != sym_module &&
-              TBP_BOUND_TO_SMPG(SCOPEG(sptr))) {
-            queue_symbol(sptr);
+              (!IGNOREG(sptr)) &&  // AOCC
+              TBP_BOUND_TO_SMPG(SCOPEG(sptr)) && !IGNOREG(sptr)) {
+             queue_symbol(sptr);
           }
         }
         break;
