@@ -2751,7 +2751,7 @@ is_selector(SPTR sptr)
 
   for(i=doif; i > 0; --i) {
     if (DI_ID(i) == DI_ASSOC) { 
-      for (itemp = DI_ASSOCIATIONS(doif); itemp != NULL; 
+      for (itemp = DI_ASSOCIATIONS(i); itemp != NULL; 
            itemp = itemp->next) {
         if (itemp->t.sptr == sptr) {
           return true;
