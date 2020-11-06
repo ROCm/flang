@@ -465,6 +465,48 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
 } /* mk_ompaccel_add */
 
 // AOCC Begin
+
+/*
+ * Returning max
+ */
+int
+mk_ompaccel_max(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
+
+  ILI_OP opc = IL_NONE;
+  int dt = 0;
+  bool uu = FALSE;
+  if (!ili1)
+    return ili2;
+  if (!ili2)
+    return ili1;
+  if (_pointer_type(dtype1) || _pointer_type(dtype2)) {
+    assert(0, "Max reduction of this type not handled.", 0, ERR_Fatal);
+  } else {
+    _long_unsigned(ili1, &dt, &uu, dtype1);
+    _long_unsigned(ili2, &dt, &uu, dtype2);
+    /* signed */
+    if (!uu) {
+      if (dt == 1)
+        opc = IL_IMAX;
+      else if (dt == 2)
+        opc = IL_KMAX;
+      else if (dt == 3)
+        opc = IL_FMAX;
+      else if (dt == 4)
+        opc = IL_DMAX;
+      else if (dt == 5 || dt == 6)
+        assert(0, "Max reduction of this type not handled.", 0, ERR_Fatal);
+    } else {
+      if (dt == 1)
+        opc = IL_UIMAX;
+      else if (dt == 2)
+        opc = IL_UKMAX;
+    }
+  }
+  assert(opc != IL_NONE, "Max reduction of this type not handled.", 0,
+         ERR_Fatal);
+  return ad2ili(opc, ili1, ili2);
+}
 /*
  * Returning min
  */
@@ -665,6 +707,8 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
     //AOCC Begin
+  case 373:
+    return mk_ompaccel_max(lili, dtype1, rili, dtype2);
   case 374:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
     // AOCC End
@@ -1548,7 +1592,7 @@ dumptargetreduction(OMPACCEL_RED_SYM targetred)
   case 3:
     fprintf(gbl.dbgfil, "*:  ");
     break;
-  case 346:
+  case 373:
     fprintf(gbl.dbgfil, "max:");
     break;
   case 374:
@@ -2953,6 +2997,12 @@ static void emit_array_reduction(SPTR sptrReduceData) {
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
                             store_addr);
     break;
+  case 373:
+    ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
+    ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                            addnme(NT_VAR, sptrReductionItem, 0, 0),
+                            mk_address(sptrReductionItem));
+     break;
   case 374:
     ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
     ili = mk_ompaccel_store(ili, dtypeReductionItem,
@@ -3086,6 +3136,12 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
       // AOCC Begin
       case 3:
         ili = mk_ompaccel_mul(ili, dtypeReductionItem, bili, dtypeReductionItem);
+        ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                                addnme(NT_VAR, sptrReductionItem, 0, 0),
+                                mk_address(sptrReductionItem));
+        break;
+      case 373:
+        ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
