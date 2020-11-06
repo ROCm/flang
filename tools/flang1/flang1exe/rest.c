@@ -2234,6 +2234,9 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  // AOCC: It is possible to have newnargs > newj. reset it to number 
+  // of descriptors actually added.
+  if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */
 
