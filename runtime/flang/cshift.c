@@ -203,7 +203,7 @@ void ENTFTN(CSHIFTSC, cshiftsc)(DCHAR(rb),    /* result char base */
 
 void I8(cshift_loop)(void *rb,          /* result base */
                      void *ab,          /* array base */
-                     __INT_T *sb,       /* shift base */
+                     __INT4_T *sb,       /* shift base */
                      __INT_T shift_dim, /* dimension to shift */
                      F90_Desc *rs,      /* result descriptor */
                      F90_Desc *as,      /* array descriptor */
