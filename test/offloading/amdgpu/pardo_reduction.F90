@@ -10,7 +10,7 @@
 
 FUNCTION almost_equal(x, gold, tol) RESULT(b)
   implicit none
-  REAL, intent(in) :: x
+  REAL (kind=8), intent(in) :: x
   INTEGER,  intent(in) :: gold
   REAL,     intent(in) :: tol
   LOGICAL              :: b
