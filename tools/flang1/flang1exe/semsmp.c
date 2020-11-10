@@ -7527,7 +7527,6 @@ do_reduction(void)
       // AOCC Begin
       // FIXME: Remove when we support reduction of real*4 in GPUs
       if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
-        DTYPEP(reduc_symp->shared, DT_DBLE);
         DTYPEP(reduc_symp->Private, DT_DBLE);
       }
       // AOCC End
