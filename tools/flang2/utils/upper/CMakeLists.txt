@@ -12,12 +12,21 @@ add_executable(upperl
 
 # Generate upper tables
 
+if(${ARCHNAME} STREQUAL "ppc64le")
+add_custom_command(
+  OUTPUT ${UTILS_UPPER_BIN_DIR}/upperilm.h
+  COMMAND LC_ALL=C sort ${UTILS_UPPER_DIR}/upperilm_ppc64le.in | grep -v "^ *\#" > ${UTILS_UPPER_BIN_DIR}/upperilm.sort
+  COMMAND ${CMAKE_BINARY_DIR}/bin/upperl ${UTILS_UPPER_BIN_DIR}/upperilm.sort ${UTILS_UPPER_BIN_DIR}/upperilm.h
+  DEPENDS upperl ${UTILS_UPPER_DIR}/upperilm.in
+  )
+else()
 add_custom_command( 
   OUTPUT ${UTILS_UPPER_BIN_DIR}/upperilm.h
   COMMAND LC_ALL=C sort ${UTILS_UPPER_DIR}/upperilm.in | grep -v "^ *\#" > ${UTILS_UPPER_BIN_DIR}/upperilm.sort
   COMMAND ${CMAKE_BINARY_DIR}/bin/upperl ${UTILS_UPPER_BIN_DIR}/upperilm.sort ${UTILS_UPPER_BIN_DIR}/upperilm.h
   DEPENDS upperl ${UTILS_UPPER_DIR}/upperilm.in
   )
+endif()
 
 add_custom_target(gen_backend_upper
   SOURCES ${UTILS_UPPER_BIN_DIR}/upperilm.h

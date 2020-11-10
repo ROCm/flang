@@ -3124,11 +3124,13 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
   }
 
   // AOCC Begin
+#ifndef __PPC64__
   if (STYPEG(sptr) == ST_MEMBER && ILM_OPC(ilmp) == IM_MP_MAP_MEM) {
     base = ILM_OPND(ilmp, 3);
     base = ILI_OF(base);
     ili_sptr = ILI_OF(argilm);
   }
+#endif
   // AOCC End
 
   ompaccel_tinfo_current_addupdate_mapitem(sptr, label);

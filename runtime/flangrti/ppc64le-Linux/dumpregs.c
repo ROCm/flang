@@ -12,6 +12,10 @@
 #include <ctype.h>
 #include "stdioInterf.h"
 
+#ifdef __PPC64__
+#include <asm/ptrace.h>
+#endif
+
 typedef struct {
     int     rn;     // Register index in to "regs" pointer
     char    *s;     // Symbolic name of register

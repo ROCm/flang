@@ -2993,6 +2993,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         exp_ompaccel_looptripcount(ilmp, curilm);
       break;
     case IM_MP_MAP:
+#ifndef __PPC64__
     case IM_MP_MAP_MEM: // AOCC
       // AOCC : Modification
       // Removed gbl.ompaccel_intarget from condition or else it will disable
@@ -3000,6 +3001,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_map(ilmp, curilm, outlinedCnt);
       break;
+#endif
     case IM_MP_EMAP:
       // AOCC : Modification
       // Removed gbl.ompaccel_intarget from condition or else it will disable

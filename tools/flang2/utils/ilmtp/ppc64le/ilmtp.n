@@ -3124,13 +3124,6 @@ V(semaphore) - end a critical section.
 .nf
 sym - symbol table entry of a semaphore variable
 .AT spec trm
-.IL PREFETCH misc lnk stc
-Cache prefetch.
-.nf
-lnk1 - ILM link to an address
-stc2 - prefetch flag (for future use).
-.AT spec trm
-.OP PREFETCH null p1
 .IL BBND misc sym stc
 BBND begins the ILMs of the assignments of the bounds
 of an adjustable array when it's unknown by
@@ -3698,7 +3691,7 @@ sym Number of teams
 Number of threads symbol.
 sym Number of threads
 .AT spec trm
-.IL MP_DEFAULTMAP stc
+.IL MP_DEFAULTMAP SMP stc
 Default map construct.
 stc - Default map type
 .IL MP_TARGETDECLARE SMP

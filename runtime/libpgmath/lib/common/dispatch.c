@@ -1338,7 +1338,9 @@ __math_dispatch_init()
     while (false == __math_dispatch_is_init) {
 #if     defined(TARGET_X8664)
       __asm__("pause");
-#elif   defined(TARGET_LINUX_POWER) || defined(TARGET_LINUX_ARM64)
+#elif   defined(TARGET_LINUX_POWER)
+      sched_yield();
+#elif   defined(TARGET_LINUX_ARM64)
       __asm__("yield");     // or   27,27,27
 #else
       sched_yield();
