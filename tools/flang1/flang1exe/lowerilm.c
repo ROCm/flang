@@ -5383,7 +5383,7 @@ lower_stmt(int std, int ast, int lineno, int label)
       } else {
       // AOCC End
         //todo ompaccel need to pass size and base
-        plower("oini", "MP_MAP", lower_base(lop), flag);
+        plower("oin", "MP_MAP", lower_base(lop), flag);
       }
       lower_end_stmt(std);
     break;

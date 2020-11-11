@@ -38,6 +38,7 @@
 #include "llmputil.h"
 
 #define INSIDE_LOWER
+#define _LOWERSYM_CPP_
 #include "lower.h"
 #include "dbg_out.h"
 void scan_for_dwarf_module();
