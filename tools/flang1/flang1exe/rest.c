@@ -2224,6 +2224,7 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */
 
