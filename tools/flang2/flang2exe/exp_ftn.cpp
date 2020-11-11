@@ -171,6 +171,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
   // AOCC BEGIN
   /* Create isnan() isnanf() libm calls based on the argument types.
   */
+#ifndef __PPC64__
   case IM_RISNAN:
   case IM_DISNAN:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -181,6 +182,7 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
     tmp = ad2ili(IL_QJSR, op2, tmp);
     ILM_RESULT(curilm) = ad2ili(IL_DFRKR, tmp, KR_RETVAL);
     return;
+#endif
   // AOCC END
   case IM_LNOT:
     op1 = ILI_OF(ILM_OPND(ilmp, 1));
@@ -3991,6 +3993,7 @@ exp_misc(ILM_OP opc, ILM *ilmp, int curilm)
     break;
 #endif
 
+#ifndef __PPC64__
   case IM_PREFETCH:
     ilix = ILI_OF(ILM_OPND(ilmp, 1)); /* address */
     nme = NME_OF(ILM_OPND(ilmp, 1));
@@ -4005,6 +4008,7 @@ exp_misc(ILM_OP opc, ILM *ilmp, int curilm)
     }
     chk_block(ilix);
     break;
+#endif
   case IM_FARG:
     ILM_CLEN(curilm) = ILM_CLEN(ILM_OPND(ilmp, 1));
     ILM_RESULT(curilm) = ILM_RESULT(ILM_OPND(ilmp, 1));

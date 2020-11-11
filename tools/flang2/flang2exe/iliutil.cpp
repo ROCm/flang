@@ -3293,6 +3293,7 @@ addarth(ILI *ilip)
     break;
 
   // AOCC begin
+#ifndef __PPC64__
   case IL_FCMPZNZ:
     if (!IEEE_CMP && ILI_OPC(op1) == IL_FSUB)
       return ad3ili(IL_FCMP, (int)ILI_OPND(op1, 1), (int)ILI_OPND(op1, 2), op2);
@@ -3306,6 +3307,7 @@ addarth(ILI *ilip)
       return ad3ili(IL_FCMP, ad2altili(opc, fcon_one, op1, ilix), fcon_zero, op2);
     }
     break;
+#endif
   // AOCC end
 
   case IL_DCMPZ:
@@ -3326,6 +3328,7 @@ addarth(ILI *ilip)
     break;
 
   // AOCC begin
+#ifndef __PPC64__
   case IL_DCMPZNZ:
     if (!IEEE_CMP && ILI_OPC(op1) == IL_DSUB)
       return ad3ili(IL_DCMP, (int)ILI_OPND(op1, 1), (int)ILI_OPND(op1, 2), op2);
@@ -3341,6 +3344,7 @@ addarth(ILI *ilip)
       return ad3ili(IL_DCMP, ad2altili(opc, dcon_one, op1, ilix), dcon_zero, op2);
     }
     break;
+#endif
   // AOCC end
 
   case IL_ACMPZ:
