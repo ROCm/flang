@@ -367,6 +367,10 @@ static void export(FILE *export_fd, char *export_name, int cleanup)
             queue_symbol(sptr);
           }
         }
+        if (SCG(sptr) == SC_DUMMY && SCOPEG(SCOPEG(sptr)) != sym_module &&
+            TBP_BOUND_TO_SMPG(SCOPEG(sptr))) {
+           queue_symbol(sptr);
+        }
         break;
       case ST_IDENT:
         if (for_module) {

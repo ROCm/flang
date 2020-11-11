@@ -7524,6 +7524,9 @@ do_reduction(void)
         /* error - illegal reduction variable */
         continue;
       reduc_symp->Private = decl_private_sym(reduc_symp->shared);
+      if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
+         DTYPEP(reduc_symp->Private, DT_DBLE);
+      }
       set_parref_flag(reduc_symp->shared, reduc_symp->shared,
                       BLK_UPLEVEL_SPTR(sem.scope_level));
       (void)mk_storage(reduc_symp->Private, &lhs);
