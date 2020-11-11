@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 #include "dblint64.h"
 
@@ -27,7 +31,7 @@ typedef unsigned long long _ULONGLONG_T;
 #define I64_MSH(t) t[1]
 #define I64_LSH(t) t[0]
 
-int __ftn_32in64_;
+extern int __ftn_32in64_;
 
 #define VOID void
 

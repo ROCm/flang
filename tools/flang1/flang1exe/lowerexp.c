@@ -75,6 +75,7 @@
 #include "rtlRtns.h"
 
 #define INSIDE_LOWER
+#define _LOWEREXP_CPP_
 #include "lower.h"
 
 static LOGICAL lower_check_ast(int ast, int *unused);
