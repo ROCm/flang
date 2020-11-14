@@ -60,6 +60,17 @@ fndpath(const char *target, char *path, size_t max_length, const char *dirlist)
   if (target_length == 0)
     return -1;
 
+  // check for absolute path
+  if (target[0] == '/') {
+    if (access(target, 0) == 0) {
+      char *p = path;
+      memcpy(p, target, target_length);
+      p[target_length] = '\0';
+      return 0; /* path exists */
+    }
+    return -1;
+  }
+
   /* The legacy fndpath supplies a default dirlist of '.', which seems
    * unsafe.
    */
