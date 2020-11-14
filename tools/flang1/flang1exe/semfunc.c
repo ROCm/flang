@@ -9530,11 +9530,12 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
-
-    ast = ARG_AST(0);
-    ast = mk_convert(ast, DT_INT);
-    ast = mk_convert(ast, dtyper);
-    goto expr_val;
+    if (dtyper == DT_QUAD) {
+      ast = ARG_AST(0);
+      ast = mk_convert(ast, DT_INT);
+      ast = mk_convert(ast, dtyper);
+      goto expr_val;
+    }
 
     goto gen_call;
   
