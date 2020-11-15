@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 #include "stdioInterf.h"
 #include "fioMacros.h"
@@ -27,9 +31,13 @@ __fort_malloc_without_abort(size_t n)
 
   if (n == 0)
     return ZIP;
+  p = calloc(n,sizeof(char));  // AOCC: to be backward compatibility with host gcc compilation
+                    // gcc combines malloc+memset -> calloc call
+#if 0
   p = malloc(n);
   if (__fort_zmem && (p != NULL))
     memset(p, '\0', n);
+#endif
   return p;
 }
 
@@ -54,9 +62,13 @@ __fort_realloc(void *ptr, size_t n)
   if (ptr == (char *)0 | ptr == ZIP) {
     if (n == 0)
       return ZIP;
+    p = calloc(n,sizeof(char));  // AOCC to be backward compatible with host gcc compilation
+                    // gcc combines malloc+memset -> calloc call
+#if 0
     p = malloc(n);
     if (__fort_zmem && (p != NULL))
       memset(p, '\0', n);
+#endif
   } else {
     if (n == 0) {
       free(ptr);
