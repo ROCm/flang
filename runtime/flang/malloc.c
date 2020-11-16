@@ -41,7 +41,10 @@ __fort_malloc_without_abort(size_t n)
   if (__fort_zmem && (p != NULL))
     memset(p, '\0', n);
 #else
-  p = calloc(n,sizeof(char));
+  if (__fort_zmem)
+    p = calloc(n,sizeof(char));
+  else
+    p = malloc(n);
 #endif
   return p;
 }
@@ -77,7 +80,10 @@ __fort_realloc(void *ptr, size_t n)
     if (__fort_zmem && (p != NULL))
       memset(p, '\0', n);
 #else
-    p = calloc(n,sizeof(char));
+    if (__fort_zmem)
+      p = calloc(n,sizeof(char));
+    else
+      p = malloc(n);
 #endif
   } else {
     if (n == 0) {
