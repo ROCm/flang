@@ -31,12 +31,17 @@ __fort_malloc_without_abort(size_t n)
 
   if (n == 0)
     return ZIP;
-  p = calloc(n,sizeof(char));  // AOCC: to be backward compatibility with host gcc compilation
-                    // gcc combines malloc+memset -> calloc call
 #if 0
+  // AOCC
+  // gcc combines following two constructs to calloc call. some of the applications
+  // depend on this behaviour.
+  // clang doesnt do this.
+  // forcing PGHPF_ZMEM results in call to malloc+memset that makes the application slower.
   p = malloc(n);
   if (__fort_zmem && (p != NULL))
     memset(p, '\0', n);
+#else
+  p = calloc(n,sizeof(char));
 #endif
   return p;
 }
@@ -62,12 +67,17 @@ __fort_realloc(void *ptr, size_t n)
   if (ptr == (char *)0 | ptr == ZIP) {
     if (n == 0)
       return ZIP;
-    p = calloc(n,sizeof(char));  // AOCC to be backward compatible with host gcc compilation
-                    // gcc combines malloc+memset -> calloc call
 #if 0
-    p = malloc(n);
+    // AOCC
+    // gcc combines following two constructs to calloc call. some of the applications
+    // depend on this behaviour.
+    // clang doesnt do this.
+    // forcing PGHPF_ZMEM results in call to malloc+memset that makes the application slower.
+      p = malloc(n);
     if (__fort_zmem && (p != NULL))
       memset(p, '\0', n);
+#else
+    p = calloc(n,sizeof(char));
 #endif
   } else {
     if (n == 0) {
