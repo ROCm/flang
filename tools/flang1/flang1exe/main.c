@@ -901,13 +901,15 @@ init(int argc, char *argv[])
     } else if ((flg.dbg[0] & 1) || sourcefile == NULL) {
       gbl.dbgfil = stderr;
     } else {
-      if (ipa_import_mode) {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbh");
-      } else {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbf");
-        if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
-          errfatal(5);
-      }
+      int index;
+      for (index = strlen(sourcefile) - 1; index > 0; index--)
+        if (sourcefile[index] == '.')
+          break;
+      if (index == 0)
+        index = strlen(sourcefile) - 1; /* file name has no suffix */
+      tempfile = mkfname(sourcefile, &sourcefile[index], ".qdbf");
+      if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
+        errfatal(5);
     }
   }
 
