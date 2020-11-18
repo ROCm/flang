@@ -7026,6 +7026,10 @@ do_end(DOINFO *doinfo)
     switch (DI_ID(orig_doif)) {
     case DI_DO:
       (void)add_stmt(mk_stmt(A_ENDDO, 0));
+      if(DI_ID(par_doif) == DI_TARGET){
+        sem.close_pdo = TRUE;
+        sem.collapse = 0;
+      }
       break;
     case DI_DOCONCURRENT:
       std = add_stmt(mk_stmt(A_ENDDO, 0));

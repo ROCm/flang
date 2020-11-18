@@ -1218,6 +1218,11 @@ semant1(int rednum, SST *top)
           /* else ENDTASKLOOP pops the stack */
         }
         break;
+      case DI_TARGET:
+        if(scn.stmtyp != TK_MP_ENDTARGET && scn.stmtyp != TK_MP_ENDTARGSIMD){
+          end_target();
+        }
+        break;
       default:
         break;
       }
