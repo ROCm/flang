@@ -1319,7 +1319,7 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
           ? ADDRESSG(SDSCG(sptr)) - ADDRESSG(sptr)
           : 0;
 
-  const int target_size_offset = 8 * (DESC_HDR_BYTE_LEN - DESC_HDR_TAG);
+  const int F90_Desc_byte_len = 8 * (DESC_HDR_BYTE_LEN - DESC_HDR_TAG);
   const int F90_DescDim_size = 8 * DESC_DIM_LEN;    /* sizeof(F90_DescDim)*/
   const int F90_Desc_dim_offset = 8 * DESC_HDR_LEN; /* offsetof(F90_Desc, dim)*/
   const int ubound_offset_wrt_lbound =
@@ -1328,21 +1328,20 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
       8 *
       (DESC_DIM_LMULT - DESC_DIM_LOWER); /* offsetof(F90_DescDim, lstride)*/
 
+  const int target_size_offset = descr_offset_wrt_array + F90_Desc_byte_len;
   const int lower_offset =
       descr_offset_wrt_array + F90_Desc_dim_offset + (rank * F90_DescDim_size);
   const int upper_offset = lower_offset + ubound_offset_wrt_lbound;
   const int stride_offset = lower_offset + lstride_offset_wrt_lbound;
 
-  int size = zsize_of(DTYPEG(sptr));
   const unsigned v1 = lldbg_encode_expression_arg(LL_DW_OP_int, lower_offset);
   const unsigned v2 = lldbg_encode_expression_arg(LL_DW_OP_int, upper_offset);
   const unsigned v3 = lldbg_encode_expression_arg(LL_DW_OP_int, stride_offset);
-  const unsigned v4 = lldbg_encode_expression_arg(LL_DW_OP_int, size);
-  const unsigned v5 = lldbg_encode_expression_arg(LL_DW_OP_int, target_size_offset);
+  const unsigned v4 =
+      lldbg_encode_expression_arg(LL_DW_OP_int, target_size_offset);
 
   const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus_uconst, 0);
   const unsigned mul = lldbg_encode_expression_arg(LL_DW_OP_mul, 0);
-  const unsigned constu = lldbg_encode_expression_arg(LL_DW_OP_constu, 0);
   const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
   const unsigned pushobj =
       lldbg_encode_expression_arg(LL_DW_OP_push_object_address, 0);
@@ -1354,14 +1353,10 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
     *ubnd_expr_mdnode =
       lldbg_emit_expression_mdnode(db, 4, pushobj, add, v2, deref);
   if (stride_expr_mdnode) {
-    if (size > 0) {
-      if (POINTERG(sptr) && !ALLOCATTRG(sptr))
-        *stride_expr_mdnode = lldbg_emit_expression_mdnode(db, 9, pushobj, add, v3,
-                                                       deref, pushobj, add, v5, deref, mul);
-      else
-        *stride_expr_mdnode = lldbg_emit_expression_mdnode(db, 7, pushobj, add, v3,
-                                                       deref, constu, v4, mul);
-    } else
+    if (zsize_of(DTYPEG(sptr)) > 0)
+      *stride_expr_mdnode = lldbg_emit_expression_mdnode(
+          db, 9, pushobj, add, v3, deref, pushobj, add, v4, deref, mul);
+    else
       *stride_expr_mdnode = ll_get_md_null();
   }
 }
@@ -1370,7 +1365,7 @@ static void lldbg_get_bounds_for_assumed_rank_sdsc(
     LL_DebugInfo *db, SPTR sptr, LL_MDRef *lbnd_expr_mdnode,
     LL_MDRef *ubnd_expr_mdnode, LL_MDRef *stride_expr_mdnode) {
 
-  const int target_size_offset = 8 * (DESC_HDR_BYTE_LEN - DESC_HDR_TAG);
+  const int F90_Desc_byte_len = 8 * (DESC_HDR_BYTE_LEN - DESC_HDR_TAG);
   const int F90_DescDim_size = 8 * DESC_DIM_LEN;    /* sizeof(F90_DescDim)*/
   const int F90_Desc_dim_offset = 8 * DESC_HDR_LEN; /* offsetof(F90_Desc, dim)*/
   const int ubound_offset_wrt_lbound =
@@ -1378,18 +1373,17 @@ static void lldbg_get_bounds_for_assumed_rank_sdsc(
   const int lstride_offset_wrt_lbound =
       8 * (DESC_DIM_LMULT - DESC_DIM_LOWER); /* offsetof(F90_DescDim, lstride)*/
 
+  const int target_size_offset = F90_Desc_byte_len;
   const int lower_offset = F90_Desc_dim_offset;
   const int upper_offset = lower_offset + ubound_offset_wrt_lbound;
   const int stride_offset = lower_offset + lstride_offset_wrt_lbound;
 
-  int size = zsize_of(DTYPEG(sptr));
   const unsigned v0 =
       lldbg_encode_expression_arg(LL_DW_OP_int, F90_DescDim_size);
   const unsigned v1 = lldbg_encode_expression_arg(LL_DW_OP_int, lower_offset);
   const unsigned v2 = lldbg_encode_expression_arg(LL_DW_OP_int, upper_offset);
   const unsigned v3 = lldbg_encode_expression_arg(LL_DW_OP_int, stride_offset);
-  const unsigned v4 = lldbg_encode_expression_arg(LL_DW_OP_int, size);
-  const unsigned v5 =
+  const unsigned v4 =
       lldbg_encode_expression_arg(LL_DW_OP_int, target_size_offset);
 
   const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus_uconst, 0);
@@ -1408,16 +1402,11 @@ static void lldbg_get_bounds_for_assumed_rank_sdsc(
     *ubnd_expr_mdnode = lldbg_emit_expression_mdnode(
         db, 9, pushobj, over, constu, v0, mul, add, v2, plus, deref);
   if (stride_expr_mdnode) {
-    if (size > 0) {
-      if (POINTERG(sptr) && !ALLOCATTRG(sptr))
-        *stride_expr_mdnode = lldbg_emit_expression_mdnode(
-            db, 14, pushobj, over, constu, v0, mul, add, v3, plus, deref,
-            pushobj, add, v5, deref, mul);
-      else
-        *stride_expr_mdnode =
-            lldbg_emit_expression_mdnode(db, 12, pushobj, over, constu, v0, mul,
-                                         add, v3, plus, deref, constu, v4, mul);
-    } else
+    if (zsize_of(DTYPEG(sptr)) > 0)
+      *stride_expr_mdnode = lldbg_emit_expression_mdnode(
+          db, 14, pushobj, over, constu, v0, mul, add, v3, plus, deref, pushobj,
+          add, v4, deref, mul);
+    else
       *stride_expr_mdnode = ll_get_md_null();
   }
 }
