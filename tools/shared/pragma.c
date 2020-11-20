@@ -1324,10 +1324,21 @@ do_sw(void)
     break;
   case SW_SSE:
   case SW_SIMD:
-    if (no_specified)
-      bset(DIR_OFFSET(currdir, x[19]), 0x400);
-    else
-      bclr(DIR_OFFSET(currdir, x[19]), 0x400);
+    // AOCC Begin
+    if (flg.disable_loop_vectorize_pragmas) {
+      break;
+    }
+    // originally x[19], 0x400
+    // currently delegated to IVDEP (69, 0x200000)
+    // TODO: change to a new implementation, supporting clauses
+    // and combined with omp simd pragma
+    if (no_specified) {
+      bclr(DIR_OFFSET(currdir, x[69]), 0x200000);
+    } else {
+      bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+      assn(DIR_OFFSET(currdir, depchk), 0);
+    }
+    // AOCC End
     break;
   case SW_NOINLINE:
     /*

@@ -2299,7 +2299,7 @@ In the outliner used for KPMC openmp regions, when filling the argument
 .XB 0x100000:
 Enable nodepchk for simd construct/clause.
 .XB 0x200000:
-Enable nodepchk for ivdep pragma.
+Enable nodepchk for ivdep pragma (and SIMD pragma for now).
 
 .XF "70-79:"
 RESERVED FOR ALTERNATE CODE GENERATION
