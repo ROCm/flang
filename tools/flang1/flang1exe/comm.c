@@ -9,6 +9,9 @@
  * Notified per clause 4(b) of the license.
  *
  * Last Modified: May 2020
+ *
+ * Fixed Type bound procedure calls
+ * Date of modification: 21st November 2020
  */
 
 /**
@@ -1436,7 +1439,9 @@ again:
 
   DESCUSEDP(src_sptr, 1);
   DESCUSEDP(dest_sptr, 1);
-  if (!POINTERG(dest_sptr))
+  if(!POINTERG(dest_sptr) &&
+     /*check for type-bound procedure flag*/ /*AOCC*/
+     !(PNMPTRG(dest_sptr) == 2 || PNMPTRG(CMBLKG(dest_sptr)) == 2))
     error(155, 3, STD_LINENO(std), "must be POINTER", SYMNAME(dest_sptr));
 
   array_desc = 0;

@@ -27,6 +27,8 @@
  * Fix to assign right kind of dtype for derived types
  * Date of modification 06 October 2020
  *
+ * Fixed Type bound procedure calls
+ * Date of modification: 21st November 2020
  */
 
 /**
@@ -813,6 +815,11 @@ end_subprogram_checks()
 
 static int restored = 0;
 
+//AOCC Begin
+int contains_tbp = 0;
+int skip_pointer = 0;
+int skip_allocatable = 0;
+//AOCC End
 
 /** \brief Semantic actions - part 1.
     \param rednum reduction number
@@ -4870,6 +4877,13 @@ semant1(int rednum, SST *top)
    */
   case DATA_TYPE3:
     sptr = refsym((int)SST_SYMG(RHS(3)), OC_OTHER);
+    //AOCC Begin
+    if(contains_tbp && (ENCLFUNCG(sptr) == contains_tbp || sptr == contains_tbp)){
+      /*Set typebound procedure flags*/
+      skip_pointer = 1;
+      skip_allocatable = 1;
+    }
+    //AOCC End
   type_common:
     if (STYPEG(sptr) != ST_TYPEDEF) {
       np = SYMNAME(sptr);
@@ -8847,7 +8861,11 @@ semant1(int rednum, SST *top)
           }
         }
         ALLOCP(sptr, 1);
-        ALLOCATTRP(sptr, 1);
+        //AOCC Begin
+        if(!skip_allocatable)
+          ALLOCATTRP(sptr, 1);
+        skip_allocatable = 0;
+        //AOCC End
         if (STYPEG(sptr) == ST_MEMBER) {
           ALLOCFLDP(DTY(ENCLDTYPEG(sptr) + 3), 1);
         }
@@ -8960,6 +8978,13 @@ semant1(int rednum, SST *top)
       case ET_PARAMETER:
         break; /* handle after scanning all attributes */
       case ET_POINTER:
+        //AOCC Begin
+        if(skip_pointer){
+          PNMPTRP(sptr,2);
+          skip_pointer = 0;
+          break;
+        }
+        //AOCC End
         POINTERP(sptr, TRUE);
         if (sem.contiguous)
           CONTIGATTRP(sptr, 1);
@@ -11999,6 +12024,11 @@ proc_dcl_init:
          STYPEG(orig_sptr))) {
       pop_sym(sptr);
     }
+    //AOCC Begin
+    /*Type Bound procedure present*/
+    if(STYPEG(tag) == ST_TYPEDEF && STYPEG(sptr) == ST_PROC)
+      contains_tbp = tag;
+    //AOCC End
   } break;
   /* ------------------------------------------------------------------ */
   /*
@@ -13618,7 +13648,7 @@ init_allocatable_typedef_components(SPTR td_sptr)
     if (DTY(fld_dtype) == TY_DERIVED && ALLOCFLDG(sptr)) {
       init_allocatable_typedef_components(fld_sptr);
       aclp = get_getitem_p(get_struct_initialization_tree(fld_dtype));
-    } else if (ALLOCATTRG(fld_sptr)) {
+    } else if (ALLOCATTRG(fld_sptr) || MIDNUMG(fld_sptr) != 0 /*AOCC*/) {
       aclp = mk_init_intrinsic(AC_I_null);
     }
     if (aclp) {
