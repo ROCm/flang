@@ -1128,7 +1128,7 @@ semant1(int rednum, SST *top)
       sem.close_pdo = FALSE;
       switch (DI_ID(sem.doif_depth)) {
       case DI_PDO:
-        if (scn.stmtyp != TK_MP_ENDPDO) {
+        if (scn.stmtyp != TK_MP_ENDPDO && scn.stmtyp != TK_MP_ENDDOSIMD) {
           if (A_TYPEG(STD_AST(STD_PREV(0))) != A_MP_BARRIER)
             (void)add_stmt(mk_stmt(A_MP_BARRIER, 0));
           sem.doif_depth--; /* pop DOIF stack */
