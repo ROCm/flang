@@ -27,9 +27,6 @@
  *   last modified: feb 2020
  *
  * Last modified: Jun 2020
- *
- * Fixed Type bound procedure calls
- * Date of modification: 21st November 2020
  */
 
 
@@ -4377,11 +4374,8 @@ assign_pointer(SST *newtop, SST *stktop)
     return 0;
   }
   if (!POINTERG(pvar)) {
-    //AOCC Check pointer for typebound procedures
-    if(!(PNMPTRG(pvar) == 2 || PNMPTRG(CMBLKG(pvar)) == 2)){
-      error(72, 3, gbl.lineno, SYMNAME(pvar), "- must be a POINTER variable");
-      return 0;
-    }
+    error(72, 3, gbl.lineno, SYMNAME(pvar), "- must be a POINTER variable");
+    return 0;
   }
  
   if (is_procedure_ptr(pvar)) {

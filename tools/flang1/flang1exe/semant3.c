@@ -17,9 +17,6 @@
  *
  * Support for Associate Block in OpenMP
  * Date of modification : 9th May 2020
- *
- * Fixed Type bound procedure calls
- * Date of modification: 21st November 2020
  */
 
 /**
@@ -4681,12 +4678,9 @@ errorstop_shared:
           /* allocatable common block */
           ;
         else {
-          //AOCC Check for allocatable type bound procedure
-          if(!MIDNUMG(sptr)){
-            error(198, 3, gbl.lineno, "Illegal use of", SYMNAME(sptr));
-            alloc_error = TRUE;
-            break;
-          }
+          error(198, 3, gbl.lineno, "Illegal use of", SYMNAME(sptr));
+          alloc_error = TRUE;
+          break;
         }
       }
       if (STYPEG(sptr) == ST_ARRAY && ASUMSZG(sptr)) {
