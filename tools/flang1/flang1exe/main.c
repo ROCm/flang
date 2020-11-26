@@ -21,6 +21,9 @@
  * Disabling inliner for Offloading compilation
  * Date of modification : 01st June 2020
  *
+ * Adding a new pass to move variable allocations to host code
+ * Date of modification : 26th Novemeber 2020
+ *
  */
 
 /** \file main.c
@@ -458,6 +461,12 @@ main(int argc, char *argv[])
           if (XBIT(1, 0x100000))
             warn_uninit_use();
           /* AOCC end */
+
+#ifdef OMP_OFFLOAD_LLVM
+          if (flg.omptarget) {
+            ompaccel_ast_alloc_array();
+          }
+#endif
 
           TR(DNAME " CONVERT_OUTPUT begins\n");
           convert_output();
