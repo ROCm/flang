@@ -8552,9 +8552,15 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
 
       if (operand->ll_type->sub_types[0]->data_type == LL_PTR ||
           ILI_OPC(ld_ili) != IL_ACON) {
-        operand =
-            make_load(ilix, operand, operand->ll_type->sub_types[0], (MSZ)-2,
+           // AOCC Begin
+           if(!ISNVVMCODEGEN){
+            operand =  make_load(ilix, operand, operand->ll_type->sub_types[0], (MSZ)-2,
+                       ldst_instr_flags_from_dtype_nme(dtype, nme_ili));
+           } else if (ilix != IL_DCMPLXCON) {
+            operand = make_load(ilix, operand, operand->ll_type->sub_types[0], (MSZ)-2,
                       ldst_instr_flags_from_dtype_nme(dtype, nme_ili));
+           }
+           // AOCC End
       } else {
         if ((SCG(sptr) != SC_DUMMY))
         {
