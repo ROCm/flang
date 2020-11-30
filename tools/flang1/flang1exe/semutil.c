@@ -71,6 +71,7 @@ static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
 extern int distribute_doif;
 extern int distribute_pdo_ast;
 extern int tgt_distribute_ast;
+extern LOGICAL is_targsimd;
 //AOCC End
 
 
@@ -6828,6 +6829,11 @@ do_end(DOINFO *doinfo)
     switch (DI_ID(orig_doif)) {
     case DI_DO:
       (void)add_stmt(mk_stmt(A_ENDDO, 0));
+      if(is_targsimd && DI_ID(par_doif) == DI_TARGET){
+        sem.close_pdo = TRUE;
+        sem.collapse = 0;
+        is_targsimd = FALSE;
+      }
       break;
     case DI_DOCONCURRENT:
       std = add_stmt(mk_stmt(A_ENDDO, 0));
