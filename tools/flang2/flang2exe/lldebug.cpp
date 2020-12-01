@@ -83,6 +83,7 @@ const int DIFLAG_ISMAINPGM = 1 << 21; // removed in release_90
 static int DIFLAG_PURE;      // removed in release_80
 static int DIFLAG_ELEMENTAL; // removed in release_80
 static int DIFLAG_RECURSIVE; // removed in release_80
+const int DIFLAG_ALLCALLSDESCRIBED = 1 << 29; // added in release_80
 
 const int DISPFLAG_LOCALTOUNIT = 1 << 2; // added in release_80
 const int DISPFLAG_DEFINITION = 1 << 3;  // added in release_80
@@ -2248,14 +2249,20 @@ INLINE static int
 set_disubprogram_flags(LL_DebugInfo *db, int sptr)
 {
   int flags = 0;
-  if (CCSYMG(sptr))
-    flags |= DIFLAG_ARTIFICIAL;
-  if (!ll_feature_debug_info_ver90(&db->module->ir))
-    if (gbl.rutype == RU_PROG)
-      flags |= DIFLAG_ISMAINPGM;
-  if (!ll_feature_debug_info_ver80(&db->module->ir))
-    if (PUREG(sptr))
-      flags |= DIFLAG_PURE;
+  if (ll_feature_has_diextensions(&db->module->ir)) {
+    if (CCSYMG(sptr))
+      flags |= DIFLAG_ARTIFICIAL;
+    if (!ll_feature_debug_info_ver90(&db->module->ir))
+      if (gbl.rutype == RU_PROG)
+	flags |= DIFLAG_ISMAINPGM;
+    if (!ll_feature_debug_info_ver80(&db->module->ir))
+      if (PUREG(sptr))
+	flags |= DIFLAG_PURE;
+  }
+
+  if (db->module->ir.dwarf_version >= LL_DWARF_Version_4)
+    flags |= DIFLAG_ALLCALLSDESCRIBED;
+
   return flags;
 }
 
@@ -2306,8 +2313,7 @@ lldbg_emit_outlined_subprogram(LL_DebugInfo *db, int sptr, int findex,
   file_mdnode = lldbg_emit_file(db, findex);
   type_mdnode = lldbg_emit_outlined_subroutine(
       db, sptr, DTyReturnType(DTYPEG(sptr)), findex, file_mdnode);
-  if (ll_feature_has_diextensions(&db->module->ir))
-    flags = set_disubprogram_flags(db, sptr);
+  flags = set_disubprogram_flags(db, sptr);
   db->cur_line_mdnode = ll_get_md_null();
   lv_list_mdnode = ll_create_flexible_md_node(db->module);
   if (db->routine_idx >= db->routine_count)
@@ -2407,8 +2413,7 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
   db->llvm_dbg_lv_array[db->routine_idx++] = lv_list_mdnode;
 
   lineno = FUNCLINEG(sptr);
-  if (ll_feature_has_diextensions(&db->module->ir))
-    flags = set_disubprogram_flags(db, sptr);
+  flags = set_disubprogram_flags(db, sptr);
   get_extra_info_for_sptr(&func_name, &context_mdnode,
                           NULL /* pmk: &type_mdnode */, db, sptr);
   is_def = DEFDG(sptr);
