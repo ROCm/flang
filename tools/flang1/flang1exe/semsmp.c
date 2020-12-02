@@ -573,6 +573,7 @@ static int mp_iftype;
 static ISZ_T kernel_do_nest;
 static LOGICAL has_team = FALSE;
 LOGICAL has_target = FALSE;
+LOGICAL is_targsimd = FALSE;
 
 
 static LOGICAL any_pflsr_private = FALSE;
@@ -3767,6 +3768,7 @@ semsmp(int rednum, SST *top)
    *	<targsimd begin> ::= <mp targsimd>
    */
   case TARGSIMD_BEGIN1:
+    is_targsimd = TRUE;
     parstuff_init();
     doif = enter_dir(DI_TARGET, TRUE, 0, DI_B(DI_ATOMIC_CAPTURE));
     SST_CVALP(LHS, doif);
