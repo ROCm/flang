@@ -96,6 +96,7 @@
 #include "ccffinfo.h"
 #include "main.h"
 #include "symfun.h"
+#include "ilidir.h"
 // AOCC Begin
 #include "direct.h"
 // AOCC End
@@ -1379,7 +1380,7 @@ cons_no_depchk_metadata(void)
 INLINE static bool
 ignore_simd_block(int bih)
 {
-  return (!XBIT(183, 0x4000000)) && BIH_SIMD(bih);
+  return (!XBIT(183, 0x4000000)) && BIH_NOSIMD(bih);
 }
 
 /**
@@ -1575,12 +1576,10 @@ schedule(void)
 
   funcId++;
   assign_fortran_storage_classes();
-  if (XBIT(183, 0x10000000)) {
-    if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
-      widenAddressArith();
-    if (gbl.outlined && funcHasNoDepChk())
-      redundantLdLdElim();
-  }
+  if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
+    widenAddressArith();
+  if (gbl.outlined && funcHasNoDepChk())
+    redundantLdLdElim();
 
 restartConcur:
   FTN_HOST_REG() = 1;
@@ -1799,15 +1798,20 @@ restartConcur:
     clear_rw_nodepchk();
     // AOCC End
 
-    if (XBIT(183, 0x10000000)) {
-      if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
-          (!ignore_simd_block(bih))) {
-        fix_nodepchk_flag(bih);
-        mark_rw_nodepchk(bih);
-      } else {
-        clear_rw_nodepchk();
-      }
+    open_pragma(BIH_LINENO(bih));
+    BIH_NODEPCHK(bih) = !flg.depchk;
+    if (XBIT(19, 0x18))
+      BIH_NOSIMD(bih) = true;
+    else if (XBIT(19, 0x400))
+      BIH_SIMD(bih) = true;
+    if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
+        (!ignore_simd_block(bih))) {
+      fix_nodepchk_flag(bih);
+      mark_rw_nodepchk(bih);
+    } else {
+      clear_rw_nodepchk();
     }
+    close_pragma();
 
     // AOCC Begin
     /** \brief Flang codegen support for !dir$ ivdep
@@ -1936,12 +1940,12 @@ restartConcur:
             i->misc_metadata = loop_md;
           }
 
-        } else if ((XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
+        } else if (((!XBIT(69, 0x100000)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
                    (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
                    ||
-                   (is_ivdep_directive)) {
+                   (is_ivdep_directive) || BIH_SIMD(bih)) {
           LL_MDRef loop_md;
           // for ivdep pragma, rw_nodepcheck will be enabled.
           // Need to generate "llvm.loop.parallel_accesses" metadata as well.
