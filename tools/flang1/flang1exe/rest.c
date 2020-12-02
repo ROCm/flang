@@ -1703,6 +1703,8 @@ transform_call(int std, int ast)
               check_alloc_ptr_type(sptr, std, 0, unl_poly ? 2 : 1, 0, 0,
                                    STYPEG(sptr) == ST_MEMBER ? ele : 0);
               sptrsdsc = SDSCG(sptr);
+	      if (!sptrsdsc)
+                sptrsdsc = DESCRG(sptr);
             }
             if (sptrsdsc)
               tmp = mk_id(sptrsdsc);
