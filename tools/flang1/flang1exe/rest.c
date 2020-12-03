@@ -2234,6 +2234,9 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  // AOCC: it is possible that all descriptors are not populated. 
+  // resetting the newnargs count for this case
+  if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */
 
