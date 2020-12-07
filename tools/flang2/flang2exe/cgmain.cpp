@@ -25,7 +25,7 @@
  * Date of modification 19th September 2019
  *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 1st October 2019
+ * Date of modification Dec 2020
  *
  * Compile time improvement changes
  * Date of modification 14th November 2019
@@ -2093,14 +2093,22 @@ restartConcur:
   write_ftn_typedefs();
   write_global_and_static_defines();
 
+  FILE *backup_file; // AOCC
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
-    use_cpu_output_file();
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    use_gpu_output_file();
+    // AOCC Begin
+    backup_file = gbl.asmfil;
+    gbl.asmfil = gbl.ompaccfile;
+    // AOCC End
+  }
 #endif
   assem_data();
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    gbl.asmfil = backup_file; // AOCC
     use_gpu_output_file();
+  }
   if (flg.omptarget)
     write_libomtparget();
 #endif
@@ -11254,7 +11262,7 @@ static bool is_device_arg(int sptr) {
     return false;
   if (DESCARRAYG(sptr) && CLASSG(sptr))
     return false;
-  if (SCG(sptr) == SC_STATIC)
+  if (SCG(sptr) == SC_STATIC && OMPACCFUNCKERNELG(gbl.currsub))
     return true;
   return false;
 }

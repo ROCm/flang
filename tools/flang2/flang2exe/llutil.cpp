@@ -9,7 +9,7 @@
  * reserved. Notified per clause 4(b) of the license.
  *
  * Changes for AMD GPU OpenMP offloading and bug fixes.
- * Last Modified : 22nd June 2020
+ * Last Modified : Dec 2020
  *
  * Added support for quad precision
  *  Last modified: Feb 2020
@@ -4202,7 +4202,8 @@ get_ftn_static_lltype(SPTR sptr)
 
   // AOCC Begin
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
+  if (flg.amdgcn_target && gbl.ompaccel_isdevice &&
+                           OMPACCFUNCKERNELG(gbl.currsub)) {
     return make_lltype_from_dtype(DTYPEG(sptr));
   }
 #endif
