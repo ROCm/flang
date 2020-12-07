@@ -424,7 +424,6 @@ p_pragma(char *pg, int pline)
 #define SW_LIBM 70
 #define SW_SIMD 71
 // AOCC BEGIN
-#define SW_NOVECTOR 72
 #define SW_ALWAYSINLINE 73
 // AOCC END
 
@@ -481,9 +480,6 @@ static struct c table[] = {
     {"loopcount", SW_LOOPCOUNT, false, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"lstval", SW_LSTVAL, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"noinline", SW_NOINLINE, false, S_ROUTINE, S_ROUTINE | S_GLOBAL},
-// AOCC BEGIN
-    {"novector", SW_NOVECTOR, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
-// AOCC END
     {"opt", SW_OPT, false, S_ROUTINE, S_ROUTINE | S_GLOBAL},
 #ifdef FE90
     {"parallel_and_serial", SW_PARANDSER, false, S_ROUTINE, S_ROUTINE},
@@ -546,6 +542,7 @@ do_sw(void)
   int xval;
   SPTR sptr;
   int got_init;
+  int backup_nowarn;
 #if defined(TARGET_X8664) && (!defined(FE90) || defined(PGF90))
   int tpvalue[TPNVERSION];
 #endif
@@ -677,29 +674,36 @@ do_sw(void)
       bclr(DIR_OFFSET(currdir, x[19]), 0x40);
     break;
 // AOCC BEGIN
-  // x:183 0x4000000 is used to pass this pragma to flang2
-  case SW_NOVECTOR:
-    // Do not pass novector pragma to ilm file
-    // loop vectorizing pragmas are disabled
-    if (flg.disable_loop_vectorize_pragmas)
-      break;
-
-    if (no_specified)
-      bclr(DIR_OFFSET(currdir, x[183]), 0x4000000);
-    else
-      bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
-    break;
-  // x:183 0x80000000 is used to pass this pragma to flang2
+  // x:183 0x4000000 is used to pass NOVECTOR pragma to flang2
+  // x:183 0x80000000 is used to pass VECTOR pragma to flang2
   case SW_VECTOR:
     // Do not pass vector pragma to ilm file
     // loop vectorizing pragmas are disabled
     if (flg.disable_loop_vectorize_pragmas)
       break;
 
-    if (no_specified)
+    if (no_specified) {
+      bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
       bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
-    else
-      bset(DIR_OFFSET(currdir, x[183]), 0x80000000);
+    } else {
+      typ = gtok();
+      if (typ != T_IDENT) {
+        bclr(DIR_OFFSET(currdir, x[183]), 0x4000000);
+        bset(DIR_OFFSET(currdir, x[183]), 0x80000000);
+        break;
+      }
+      if (strcmp(ctok, "always") == 0) {
+        assn(DIR_OFFSET(currdir, depchk), 0);
+      } else if (strcmp(ctok, "never") == 0) {
+        bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
+        bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
+      } else {
+        backup_nowarn = gbl.nowarn;
+        gbl.nowarn = false;
+        errwarn((error_code_t)603);
+        gbl.nowarn = backup_nowarn;
+      }
+    }
     break;
   case SW_ALWAYSINLINE:
     if (no_specified)
