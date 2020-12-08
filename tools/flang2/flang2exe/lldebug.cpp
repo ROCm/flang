@@ -3088,10 +3088,9 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                 SPTR datasptr = MIDNUMG(sptr);
                 if (datasptr == NOSYM)
                   datasptr = SYMLKG(sptr);
-                if (SCG(datasptr) == SC_DUMMY) {
-                  // TODO: we want to generate local variable carrying
-                  // datalocation, but enclosing scope is not yet ready.
-                  // we shall solve it separately.
+                if ((SCG(datasptr) == SC_DUMMY) && !db->cur_subprogram_mdnode) {
+                  // If cur_subprogram_md is not yet ready, we are interested
+                  // only in type. datalocation is about value than type. So
                 } else {
                   LL_Type *dataloctype = LLTYPE(datasptr);
                   /* make_lltype_from_sptr() should have added a pointer to
@@ -3705,6 +3704,9 @@ lldbg_emit_param_variable(LL_DebugInfo *db, SPTR sptr, int findex, int parnum,
   if ((ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) && SDSCG(sptr)) {
     type_mdnode = lldbg_emit_type(db, dtype, SDSCG(sptr), findex, is_reference,
                                   true, false, sptr);
+  } else if (ALLOCATTRG(sptr) || POINTERG(sptr)) {
+    type_mdnode = lldbg_emit_type(db, dtype, sptr, findex, is_reference, true,
+                                  false, MIDNUMG(sptr));
   } else {
     type_mdnode =
         lldbg_emit_type(db, dtype, sptr, findex, is_reference, true, false);

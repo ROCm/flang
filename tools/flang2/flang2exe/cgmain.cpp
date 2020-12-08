@@ -13744,6 +13744,14 @@ INLINE static void
 formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
 {
   if (formalsNeedDebugInfo(sptr)) {
+    bool is_ptr_alc_arr = false;
+    SPTR new_sptr = (SPTR)REVMIDLNKG(sptr);
+    if ((new_sptr && (STYPEG(new_sptr) == ST_ARRAY) &&
+         (POINTERG(new_sptr) || ALLOCATTRG(new_sptr))) &&
+        SDSCG(new_sptr)) {
+      is_ptr_alc_arr = true;
+      sptr = new_sptr;
+    }
     LL_DebugInfo *db = current_module->debug_info;
     LL_MDRef param_md = lldbg_emit_param_variable(
         db, sptr, BIH_FINDEX(gbl.entbih), i, CCSYMG(sptr));
@@ -13755,7 +13763,8 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
       // For assumed shape and assumed rank array, pass descriptor in place of
       // base address.
-      if ((ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) && SDSCG(sptr))
+      if ((is_ptr_alc_arr || ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) &&
+          SDSCG(sptr))
         sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
     }
