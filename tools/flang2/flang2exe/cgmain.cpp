@@ -14012,6 +14012,12 @@ print_arg_attributes(LL_ABI_ArgInfo *arg)
     break;
   case LL_ARG_BYVAL:
     print_token(" byval");
+    print_token(" (");
+    if (arg->type->data_type == LL_PTR)
+      write_type(arg->type->sub_types[0]);
+    else
+      write_type(arg->type);
+    print_token(" )");
     break;
   default:
     interr("Unknown argument kind", arg->kind, ERR_Fatal);
