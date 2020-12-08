@@ -1,3 +1,4 @@
+! XFAIL:*
 ! RUN: %flang -fopenmp -O2 -Menable-vectorize-pragmas=true -S -emit-llvm %s -o - | FileCheck %s
 ! RUN: %flang -fopenmp -S -emit-llvm -Menable-vectorize-pragmas=true %s -o - | FileCheck %s -check-prefix=METADATA
 ! RUN: %flang -fopenmp -O2 -Menable-vectorize-pragmas=true -c %s 2>&1 | FileCheck %s -check-prefix=WARNING

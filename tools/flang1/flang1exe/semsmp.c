@@ -1569,10 +1569,12 @@ semsmp(int rednum, SST *top)
    */
   case MP_STMT41:
     clause_errchk(BT_SIMD, "OMP SIMD");
-   if (CL_PRESENT(CL_SAFELEN) || CL_PRESENT(CL_LINEAR) ||
+    sem.collapse = 0;
+    if (CL_PRESENT(CL_COLLAPSE)) {
+      sem.collapse = CL_VAL(CL_COLLAPSE);
+    } else if (CL_PRESENT(CL_SAFELEN) || CL_PRESENT(CL_LINEAR) ||
         CL_PRESENT(CL_ALIGNED) || CL_PRESENT(CL_PRIVATE) ||
-        CL_PRESENT(CL_LASTPRIVATE) || CL_PRESENT(CL_REDUCTION) ||
-        CL_PRESENT(CL_COLLAPSE)) {
+        CL_PRESENT(CL_LASTPRIVATE) || CL_PRESENT(CL_REDUCTION)){
       errwarn((error_code_t)604);
       sem.expect_simd_do = FALSE;
       par_push_scope(TRUE);
