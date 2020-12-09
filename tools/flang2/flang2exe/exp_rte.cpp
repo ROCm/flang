@@ -3793,33 +3793,34 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       ilmp2 = (ILM *)(ilmb.ilm_base + ilmarg);
       isptrarg=ILM_SymOPND(ilmp2,1);
       dtype = DTYPEG(isptrarg);
-      if(DTY(dtype)==TY_ARRAY)
       if (ILM_RESTYPE(ilm1) != ILM_ISCHAR || !pass_len) {
+#if 0
+#ifdef OMP_OFFLOAD_AMD
+	  // AOCC Begin
          if( flg.amdgcn_target && DTY(dtype)==TY_ARRAY){
-           #ifdef OMP_OFFLOAD_AMD
            SPTR tgt_arg;
            tgt_arg = installsym("tgtargtemp", strlen("temp"));
            if (STYPEG(tgt_arg) == ST_UNKNOWN)
              setimplicit(tgt_arg);
-            DTYPEP(tgt_arg , DT_ADDR);        
-            STYPEP(tgt_arg , ST_VAR);
-            SCP(tgt_arg , SC_LOCAL);
-            OMPACCDEVSYMP(tgt_arg , 1);
-            int nme = addnme(NT_VAR, tgt_arg , 0, (INT)0);
-            tgtargili = mk_address(tgt_arg);
-            ilix = mk_ompaccel_store(argili, DT_ADDR, nme, tgtargili);
-            chk_block(ilix);
-            ilix = mk_ompaccel_ldsptr(tgt_arg);
-            chk_block(ilix);
-            add_to_args(IL_ARGAR, tgtargili);
-            gargili = tgtargili;
-            break;
-            #endif
-            }else{
-              add_to_args(IL_ARGAR, argili);
-            }      
+           DTYPEP(tgt_arg , DT_ADDR);        
+           STYPEP(tgt_arg , ST_VAR);
+           SCP(tgt_arg , SC_LOCAL);
+           OMPACCDEVSYMP(tgt_arg , 1);
+           int nme = addnme(NT_VAR, tgt_arg , 0, (INT)0);
+           tgtargili = mk_address(tgt_arg);
+           ilix = mk_ompaccel_store(argili, DT_ADDR, nme, tgtargili);
+           chk_block(ilix);
+           ilix = mk_ompaccel_ldsptr(tgt_arg);
+           chk_block(ilix);
+           add_to_args(IL_ARGAR, tgtargili);
+           gargili = tgtargili;
+           break;
+          } else 
         //AOCC END  
-         } else {
+#endif
+#endif
+          add_to_args(IL_ARGAR, argili);
+      } else {
         pass_char_arg(IL_ARGAR, argili, ILM_CLEN(ilm1));
       }
       gargili = argili;
