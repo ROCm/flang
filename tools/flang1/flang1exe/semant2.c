@@ -52,7 +52,7 @@ static ITEM *mkitem(SST *stkp);
 void
 semant2(int rednum, SST *top)
 {
-  int sptr, sptr1, sptr2, dtype;
+  int sptr, sptr1, sptr2, sptr3, dtype;
   int acltype, stype, i;
   int begin, count;
   int opc;
@@ -600,6 +600,11 @@ semant2(int rednum, SST *top)
      * length or kind expression.
      */
     sptr = refsym((int)SST_SYMG(RHS(1)), OC_OTHER);
+    sptr3 = (int)SST_SYMG(RHS(1));
+    if((SCOPEG(sptr) != SCOPEG(sptr3)) && SCG(sptr) == SC_PRIVATE &&
+       STYPEG(sptr) != STYPEG(sptr3)){
+       sptr = sptr3;
+    }
     if (STYPEG(sptr) && sem.type_mode && queue_type_param(sptr, 0, 0, 3)) {
       sptr = insert_sym(sptr);
       STYPEP(sptr, ST_IDENT);
