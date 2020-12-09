@@ -3796,6 +3796,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       if(DTY(dtype)==TY_ARRAY)
       if (ILM_RESTYPE(ilm1) != ILM_ISCHAR || !pass_len) {
          if( flg.amdgcn_target && DTY(dtype)==TY_ARRAY){
+           #ifdef OMP_OFFLOAD_AMD
            SPTR tgt_arg;
            tgt_arg = installsym("tgtargtemp", strlen("temp"));
            if (STYPEG(tgt_arg) == ST_UNKNOWN)
@@ -3813,9 +3814,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
             add_to_args(IL_ARGAR, tgtargili);
             gargili = tgtargili;
             break;
+            #endif
             }else{
               add_to_args(IL_ARGAR, argili);
-            }    
+            }      
         //AOCC END  
          } else {
         pass_char_arg(IL_ARGAR, argili, ILM_CLEN(ilm1));
