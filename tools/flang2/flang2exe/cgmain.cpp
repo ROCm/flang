@@ -1941,6 +1941,7 @@ restartConcur:
           }
 
         } else if (((!XBIT(69, 0x100000)) &&
+                   (!(flg.omptarget && ISNVVMCODEGEN)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
                    (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
