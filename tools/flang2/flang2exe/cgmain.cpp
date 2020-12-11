@@ -1799,7 +1799,8 @@ restartConcur:
     // AOCC End
 
     open_pragma(BIH_LINENO(bih));
-    BIH_NODEPCHK(bih) = !flg.depchk;
+    if (!flg.omptarget)
+      BIH_NODEPCHK(bih) = !flg.depchk;
     if (XBIT(19, 0x18))
       BIH_NOSIMD(bih) = true;
     else if (XBIT(19, 0x400))
@@ -1941,7 +1942,6 @@ restartConcur:
           }
 
         } else if (((!XBIT(69, 0x100000)) &&
-                   (!(flg.omptarget && ISNVVMCODEGEN)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
                    (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
