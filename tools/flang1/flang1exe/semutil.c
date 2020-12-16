@@ -27,6 +27,9 @@
  *   last modified: feb 2020
  *
  * Last modified: Jun 2020
+ *
+ * Added support to identify generic functions in derived classes
+ * Last modified: Dec 2020
  */
 
 
@@ -7108,7 +7111,19 @@ mkmember(int structd, int base, int nmx)
       member = mk_id(sptr);
       ast = mk_member(base, mk_id(sptr), dtype);
       return ast;
-    } else if (PARENTG(sptr)) { /* type extension */
+    //AOCC Begin
+    } else if ((STYPEG(BINDG(sptr)) == ST_USERGENERIC) &&
+        (STYPEG(A_ALIASG(base)) == ST_USERGENERIC ||
+        STYPEG(A_ALIASG(base)) == ST_PROC)){
+      char* var = SYMNAME(A_ALIASG(base));
+      if(!strncmp(SYMNAME(sptr),var,strlen(var))){
+        A_ALIASP(base,0);
+        int ast = mk_member(base, mk_id(BINDG(sptr)), dtype);
+        return ast;
+      }
+    }
+    //AOCC End
+    else if (PARENTG(sptr)) { /* type extension */
       int ast = mkmember(DTYPEG(sptr), base, nmx);
       if (ast)
         return ast;
@@ -7415,4 +7430,3 @@ error83(int ty)
   else
     errsev(83);
 }
-
