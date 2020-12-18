@@ -2297,7 +2297,7 @@ has_pending_final_procedures(SPTR sptr)
   dtype = DTyArgType(dtype);
 
   for (mem = DTyAlgTyMember(dtype); mem > NOSYM; mem = SYMLKG(mem)) {
-    if (CLASSG(mem) && FINALG(mem) < 0)
+    if (CLASSG(mem) && FINALG(mem))  // AOCC : Changed from (FINALG(mem) < 0)
       return 1;
   }
   return 0;

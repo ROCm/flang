@@ -3719,7 +3719,10 @@ lower_stmt(int std, int ast, int lineno, int label)
         }
       }
       lower_reinit();
-      add_nullify(object);
+      // AOCC change
+      if ((A_MEM_ORDERG(A_SRCG(ast)) != A_SRCG(ast)) ) {
+         add_nullify(object);
+      }
     }
     lower_end_stmt(std);
     break;

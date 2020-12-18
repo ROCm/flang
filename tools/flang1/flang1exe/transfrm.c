@@ -3726,7 +3726,24 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
       astparent = mk_subscr_copy(ast, asd, DTY(dtype + 1));
     }
   }
-
+  // AOCC Begin
+  bool reorder_nullify=false;
+  for (sptrmem = DTY(DDTG(dtype) + 1); sptrmem > NOSYM;
+       sptrmem = SYMLKG(sptrmem)) {
+    if (is_tbp_or_final(sptrmem)) {
+      continue; /* skip tbp */
+    }
+    if (!ALLOCATTRG(sptrmem)) {
+      continue;
+    }
+    if (has_finalized_component(sptrmem))
+      reorder_nullify=true;
+  }
+  if (reorder_nullify) {
+    add_stmt_after(add_nullify_ast(ast), std);
+    A_MEM_ORDERP(ast,ast);
+  }
+  // AOCC End
   for (sptrmem = DTY(DDTG(dtype) + 1); sptrmem > NOSYM;
        sptrmem = SYMLKG(sptrmem)) {
     int astdealloc;
@@ -3744,9 +3761,12 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
     }
     astdealloc = mk_deallocate(astmem);
     A_DALLOCMEMP(astdealloc, 1);
-    add_stmt_before(astdealloc, std);
+    if (reorder_nullify) {  // AOCC
+      add_stmt_after(astdealloc, std);
+    } else {
+      add_stmt_before(astdealloc, std);
+    }
   }
-
   gen_do_ends(docnt, std);
   if (need_endif) {
     int astendif = mk_stmt(A_ENDIF, 0);
