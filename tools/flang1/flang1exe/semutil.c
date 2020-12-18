@@ -7109,6 +7109,7 @@ mkmember(int structd, int base, int nmx)
       if (flg.xref)
         xrefput(sptr, 'r');
       member = mk_id(sptr);
+      A_ALIASP(base,0);
       ast = mk_member(base, mk_id(sptr), dtype);
       return ast;
     //AOCC Begin
