@@ -13746,7 +13746,9 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
   if (formalsNeedDebugInfo(sptr)) {
     bool is_ptr_alc_arr = false;
     SPTR new_sptr = (SPTR)REVMIDLNKG(sptr);
-    if ((new_sptr && (STYPEG(new_sptr) == ST_ARRAY) &&
+    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+        CCSYMG(sptr) /* Otherwise it can be a cray pointer */ &&
+        (new_sptr && (STYPEG(new_sptr) == ST_ARRAY) &&
          (POINTERG(new_sptr) || ALLOCATTRG(new_sptr))) &&
         SDSCG(new_sptr)) {
       is_ptr_alc_arr = true;
@@ -13761,9 +13763,10 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
                               ? NULL
                               : cons_expression_metadata_operand(llTy);
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
-      // For assumed shape and assumed rank array, pass descriptor in place of
-      // base address.
-      if ((is_ptr_alc_arr || ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) &&
+      // For pointer, allocatable, assumed shape and assumed rank arrays, pass
+      // descriptor in place of base address.
+      if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+          (is_ptr_alc_arr || ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) &&
           SDSCG(sptr))
         sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
