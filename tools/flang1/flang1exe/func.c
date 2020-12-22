@@ -4304,7 +4304,7 @@ rewrite_calls(void)
         }
         sptr_lhs = memsym_of_ast(A_SRCG(ast));
         if (allocatable_member(sptr_lhs)) {
-          rewrite_deallocate(A_SRCG(ast), false, std);
+          rewrite_deallocate(A_SRCG(ast), false, std, true);
           if (!ALLOCG(sptr_lhs) && !ALLOCATTRG(sptr_lhs) &&
               !POINTERG(sptr_lhs)) {
             /* Has allocatable members but item itself is not

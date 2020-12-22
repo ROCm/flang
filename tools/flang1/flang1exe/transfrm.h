@@ -36,7 +36,7 @@ LOGICAL is_array_type(int sptr);
 int mk_conformable_test(int dest, int src, int optype);
 int mk_allocate(int ast);
 int mk_deallocate(int ast);
-void rewrite_deallocate(int ast, bool is_assign_lhs, int std);
+void rewrite_deallocate(int ast, bool is_assign_lhs, int std, bool can_reorder);
 void gen_dealloc_if_allocated(int ast, int std);
 
 #endif /* FE_TRANSFRM_H */
