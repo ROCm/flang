@@ -952,18 +952,19 @@ lldbg_create_aggregate_members_type(LL_DebugInfo *db, SPTR first, int findex,
        */
       base_sptr = element;
       if (ALLOCATTRG(element) && SDSCG(element)) {
-        if (db->gbl_var_sptr) {
+        if (!ll_feature_debug_info_ver11(&db->module->ir) && db->gbl_var_sptr) {
           contains_allocatable = true;
           db->need_dup_composite_type |= true;
         }
       } else {
-        if (!ll_feature_debug_info_ver11(&db->module->ir) || !SDSCG(element))
+        if (!ll_feature_debug_info_ver11(&db->module->ir)) {
           element = SYMLKG(element);
-        assert(element > NOSYM, 
-               "lldbg_create_aggregate_members_type: element not exists",
-               element, ERR_Fatal);
+          assert(element > NOSYM,
+                 "lldbg_create_aggregate_members_type: element not exists",
+                 element, ERR_Fatal);
+          db->need_dup_composite_type = false;
+        }
         is_desc_member = true;
-        db->need_dup_composite_type = false;
       }
     }
     elem_dtype = DTYPEG(element);
@@ -985,7 +986,7 @@ lldbg_create_aggregate_members_type(LL_DebugInfo *db, SPTR first, int findex,
       member = base_sptr;
       is_desc_member = false;
     }
-    if (contains_allocatable) {
+    if (!ll_feature_debug_info_ver11(&db->module->ir) && contains_allocatable) {
       db->need_dup_composite_type |= true;
     }
     if (base_sptr && SDSCG(element)) {
@@ -3195,8 +3196,10 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                      data_sptr && ASSUMRANKG(data_sptr)) ||
                     ALLOCATTRG(sptr) || POINTERG(sptr)) {
                   /* Create subrange mdnode based on array descriptor */
-                  subscript_mdnode =
-                      lldbg_create_subrange_via_sdsc(db, findex, sptr, i);
+                  subscript_mdnode = lldbg_create_subrange_via_sdsc(
+                      db, findex,
+                      (data_sptr && ASSUMRANKG(data_sptr)) ? data_sptr : sptr,
+                      i);
                 } else if ((SCG(sptr) == SC_DUMMY) && data_sptr &&
                            db->cur_subprogram_mdnode) {
                   // assumed shape array
@@ -3419,21 +3422,23 @@ lldbg_emit_global_variable(LL_DebugInfo *db, SPTR sptr, ISZ_T off, int findex,
       type_mdnode, is_local, DEFDG(sptr) || (sc != SC_EXTERN), value, -1, flags,
       off, sptr, fwd);
 
-  if (!LL_MDREF_IS_NULL(db->gbl_obj_mdnode)) {
-    if (LL_MDREF_IS_NULL(db->gbl_obj_exp_mdnode)) {
-      /* Create a dummy global var expression mdnode to be associated to
-       * the global static object.
-       */
-      db->gbl_obj_exp_mdnode = lldbg_create_global_variable_mdnode(
-          db, scope_mdnode, "", "", "", file_mdnode, 0, type_mdnode, 0, 0,
-          NULL, -1, DIFLAG_ARTIFICIAL, 0, SPTR_NULL, db->gbl_obj_mdnode);
-    }
-    if (db->need_dup_composite_type) {
-      /* erase dtype record to allow duplication for allocatable array type within
-       * derived type.
-       */
-      dtype_array_check_set(db, DTYPEG(sptr), ll_get_md_null());
-      db->need_dup_composite_type = false;
+  if (!ll_feature_debug_info_ver11(&db->module->ir)) {
+    if (!LL_MDREF_IS_NULL(db->gbl_obj_mdnode)) {
+      if (LL_MDREF_IS_NULL(db->gbl_obj_exp_mdnode)) {
+        /* Create a dummy global var expression mdnode to be associated to
+         * the global static object.
+         */
+        db->gbl_obj_exp_mdnode = lldbg_create_global_variable_mdnode(
+            db, scope_mdnode, "", "", "", file_mdnode, 0, type_mdnode, 0, 0,
+            NULL, -1, DIFLAG_ARTIFICIAL, 0, SPTR_NULL, db->gbl_obj_mdnode);
+      }
+      if (db->need_dup_composite_type) {
+        /* erase dtype record to allow duplication for allocatable array type
+         * within derived type.
+         */
+        dtype_array_check_set(db, DTYPEG(sptr), ll_get_md_null());
+        db->need_dup_composite_type = false;
+      }
     }
   }
   db->gbl_var_sptr = SPTR_NULL;
