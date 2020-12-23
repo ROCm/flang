@@ -12,7 +12,7 @@
  * Bug fixes.
  *  Date of Modification: September 2018
  * Changes to support AMDGPU OpenMP offloading
- *  Date of modification 05th November 2019
+ *  Date of modification : Dec 2020
  * Added support for quad precision
  *  Last modified: Feb 2020
  * Last Modified: Jun 2020
@@ -495,9 +495,9 @@ eval_ilm(int ilmx)
             // properly by identifying tinfo from function name.
             OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(gbl.currsub);
             OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
-            if (ompaccel_tinfo_current_get()->n_reduction_symbols == 0
-                                                                && tinfo)
+            if (tinfo) {
               ompaccel_tinfo_current_set(tinfo);
+            }
             exp_ompaccel_reduction(ilmpx, ilmx);
             ompaccel_tinfo_current_set(temp_tinfo);
             // AOCC End
