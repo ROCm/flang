@@ -7,12 +7,12 @@
 !CHECK: [[ELEMENTS]] = !{[[ELEMENT:![0-9]+]]}
 !CHECK: [[ELEMENT]] = !DISubrange(lowerBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 96, DW_OP_deref), upperBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 136, DW_OP_deref), stride: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 128, DW_OP_deref, DW_OP_push_object_address, DW_OP_plus_uconst, 40, DW_OP_deref, DW_OP_mul))
 
-module mod_vars
+module mod_vars1
   integer, pointer :: ptr_arr(:)
 end module
 
 program main
-use mod_vars
+use mod_vars1
   integer, target :: tgtarr(20)
   tgtarr(1:20:2) = 22
   tgtarr(2:20:2) = 33
