@@ -3373,8 +3373,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   int chain_pointer_arg = 0;
   int result_arg = 0;
   int tgtargili;
-  int ilmarg;
-  SPTR isptrarg;
+  int ilmarg1;
+  int ilmarg2;
+  SPTR isptrarg1;
+  SPTR isptrarg2; 
 
   nargs = ILM_OPND(ilmp, 1); /* # args */
   func_addr = 0;
@@ -3788,18 +3790,20 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
        * as an argument for the function inside target region
        */
       //AOCC BEGIN
-      ILM *ilmp2;
-      ilmarg = ILM_OPND(ilmlnk, 2);
-      ilmp2 = (ILM *)(ilmb.ilm_base + ilmarg);
-      isptrarg=ILM_SymOPND(ilmp2,1);
-      dtype = DTYPEG(isptrarg);
+      ILM *ilmp2, *ilmp1;
+      ilmarg1 = ILM_OPND(ilmlnk, 2);
+      ilmarg2 = ILM_OPND(ilmlnk, 1);
+      ilmp1 = (ILM *)(ilmb.ilm_base + ilmarg1);
+      ilmp2 = (ILM *)(ilmb.ilm_base + ilmarg2);
+      isptrarg1=ILM_SymOPND(ilmp1,1);
+      isptrarg2=ILM_SymOPND(ilmp2,1);
+      dtype = DTYPEG(isptrarg1);
       if (ILM_RESTYPE(ilm1) != ILM_ISCHAR || !pass_len) {
-#if 0
 #ifdef OMP_OFFLOAD_AMD
 	  // AOCC Begin
-         if( flg.amdgcn_target && DTY(dtype)==TY_ARRAY){
+         if( flg.amdgcn_target && DTY(dtype)==TY_ARRAY && SCG(isptrarg2)!= SC_LOCAL){
            SPTR tgt_arg;
-           tgt_arg = installsym("tgtargtemp", strlen("temp"));
+           tgt_arg = installsym("tgtargtemp", strlen("tgtargtemp"));
            if (STYPEG(tgt_arg) == ST_UNKNOWN)
              setimplicit(tgt_arg);
            DTYPEP(tgt_arg , DT_ADDR);        
@@ -3817,7 +3821,6 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
            break;
           } else 
         //AOCC END  
-#endif
 #endif
           add_to_args(IL_ARGAR, argili);
       } else {
