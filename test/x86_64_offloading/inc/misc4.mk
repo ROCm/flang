@@ -13,7 +13,7 @@ misc4.$(OBJX):  $(SRC)/misc4.f90
 	-$(RM) misc4.$(EXESUFFIX) core *.d *.mod FOR*.DAT FTN* ftn* fort.*
 	@echo ------------------------------------ building test $@
 	-$(CC) -c $(CFLAGS) $(SRC)/check.c -o check.$(OBJX)
-	-$(FC) -c -Mx,232,0x1 $(FFLAGS) $(LDFLAGS) $(SRC)/misc4.f90 -o misc4.$(OBJX)
+	-$(FC) -c $(FFLAGS) $(LDFLAGS) $(SRC)/misc4.f90 -o misc4.$(OBJX)
 	-$(FC) $(FFLAGS) $(LDFLAGS) misc4.$(OBJX) check.$(OBJX) $(LIBS) -o misc4.$(EXESUFFIX)
 
 
