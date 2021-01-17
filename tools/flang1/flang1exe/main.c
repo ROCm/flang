@@ -21,6 +21,9 @@
  * Disabling inliner for Offloading compilation
  * Date of modification : 01st June 2020
  *
+ * Adding a new pass to move variable allocations to host code
+ * Date of modification : 26th Novemeber 2020
+ *
  */
 
 /** \file main.c
@@ -459,6 +462,12 @@ main(int argc, char *argv[])
             warn_uninit_use();
           /* AOCC end */
 
+#ifdef OMP_OFFLOAD_LLVM
+          if (flg.omptarget) {
+            ompaccel_ast_alloc_array();
+          }
+#endif
+
           TR(DNAME " CONVERT_OUTPUT begins\n");
           convert_output();
           TR1("- after convert_output");
@@ -892,13 +901,15 @@ init(int argc, char *argv[])
     } else if ((flg.dbg[0] & 1) || sourcefile == NULL) {
       gbl.dbgfil = stderr;
     } else {
-      if (ipa_import_mode) {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbh");
-      } else {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbf");
-        if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
-          errfatal(5);
-      }
+      int index;
+      for (index = strlen(sourcefile) - 1; index > 0; index--)
+        if (sourcefile[index] == '.')
+          break;
+      if (index == 0)
+        index = strlen(sourcefile) - 1; /* file name has no suffix */
+      tempfile = mkfname(sourcefile, &sourcefile[index], ".qdbf");
+      if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
+        errfatal(5);
     }
   }
 

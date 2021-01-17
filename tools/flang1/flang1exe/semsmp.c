@@ -509,7 +509,7 @@ static struct cl_tag { /* clause table */
     {0, 0, NULL, NULL, "NUM_TEAMS", BT_TEAMS},
     {0, 0, NULL, NULL, "THREAD_LIMIT", BT_TEAMS},
     {0, 0, NULL, NULL, "DIST_SCHEDULE", BT_DISTRIBUTE},
-    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP},
+    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP | BT_TASK},  //AOCC
     {0, 0, NULL, NULL, "IS_DEVICE_PTR", BT_TARGET},
     {0, 0, NULL, NULL, "SIMD", BT_PDO | BT_PARDO | BT_SIMD},
     {0, 0, NULL, NULL, "THREADS", BT_TARGET},
@@ -573,6 +573,7 @@ static int mp_iftype;
 static ISZ_T kernel_do_nest;
 static LOGICAL has_team = FALSE;
 LOGICAL has_target = FALSE;
+LOGICAL is_targsimd = FALSE;
 
 
 static LOGICAL any_pflsr_private = FALSE;
@@ -1571,6 +1572,14 @@ semsmp(int rednum, SST *top)
     sem.collapse = 0;
     if (CL_PRESENT(CL_COLLAPSE)) {
       sem.collapse = CL_VAL(CL_COLLAPSE);
+    } else if (CL_PRESENT(CL_SAFELEN) || CL_PRESENT(CL_LINEAR) ||
+        CL_PRESENT(CL_ALIGNED) || CL_PRESENT(CL_PRIVATE) ||
+        CL_PRESENT(CL_LASTPRIVATE) || CL_PRESENT(CL_REDUCTION)){
+      errwarn((error_code_t)604);
+      sem.expect_simd_do = FALSE;
+      par_push_scope(TRUE);
+      SST_ASTP(LHS, 0);
+      break;
     }
     sem.expect_simd_do = TRUE;
     par_push_scope(TRUE);
@@ -3767,6 +3776,7 @@ semsmp(int rednum, SST *top)
    *	<targsimd begin> ::= <mp targsimd>
    */
   case TARGSIMD_BEGIN1:
+    is_targsimd = TRUE;
     parstuff_init();
     doif = enter_dir(DI_TARGET, TRUE, 0, DI_B(DI_ATOMIC_CAPTURE));
     SST_CVALP(LHS, doif);

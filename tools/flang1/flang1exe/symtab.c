@@ -2992,6 +2992,10 @@ instantiate_interface(SPTR iface)
         SCOPEP(arg, proc);
         if (DTY(DTYPEG(arg)) == TY_ARRAY && ASSUMSHPG(arg)) {
           DTYPE elem_dt = array_element_dtype(DTYPEG(arg));
+	  // AOCC Begin
+          ADSC *ad = AD_DPTR(DTYPEG(dec_def_map[j].dec_sptr));
+          sem.arrdim.ndim = sem.arrdim.ndefer = AD_NUMDIM(ad);
+	  // AOCC End
           int arr_dsc = mk_arrdsc();
           DTY(arr_dsc + 1) = elem_dt;
           DTYPEP(arg, arr_dsc);

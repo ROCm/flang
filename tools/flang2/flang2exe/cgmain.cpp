@@ -25,7 +25,7 @@
  * Date of modification 19th September 2019
  *
  * Changes to support AMDGPU OpenMP offloading
- * Date of modification 1st October 2019
+ * Date of modification Dec 2020
  *
  * Compile time improvement changes
  * Date of modification 14th November 2019
@@ -96,6 +96,7 @@
 #include "ccffinfo.h"
 #include "main.h"
 #include "symfun.h"
+#include "ilidir.h"
 // AOCC Begin
 #include "direct.h"
 // AOCC End
@@ -1379,7 +1380,7 @@ cons_no_depchk_metadata(void)
 INLINE static bool
 ignore_simd_block(int bih)
 {
-  return (!XBIT(183, 0x4000000)) && BIH_SIMD(bih);
+  return (!XBIT(183, 0x4000000)) && BIH_NOSIMD(bih);
 }
 
 /**
@@ -1575,12 +1576,10 @@ schedule(void)
 
   funcId++;
   assign_fortran_storage_classes();
-  if (XBIT(183, 0x10000000)) {
-    if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
-      widenAddressArith();
-    if (gbl.outlined && funcHasNoDepChk())
-      redundantLdLdElim();
-  }
+  if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
+    widenAddressArith();
+  if (gbl.outlined && funcHasNoDepChk())
+    redundantLdLdElim();
 
 restartConcur:
   FTN_HOST_REG() = 1;
@@ -1799,15 +1798,21 @@ restartConcur:
     clear_rw_nodepchk();
     // AOCC End
 
-    if (XBIT(183, 0x10000000)) {
-      if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
-          (!ignore_simd_block(bih))) {
-        fix_nodepchk_flag(bih);
-        mark_rw_nodepchk(bih);
-      } else {
-        clear_rw_nodepchk();
-      }
+    open_pragma(BIH_LINENO(bih));
+    if (!flg.omptarget)
+      BIH_NODEPCHK(bih) = !flg.depchk;
+    if (XBIT(19, 0x18))
+      BIH_NOSIMD(bih) = true;
+    else if (XBIT(19, 0x400))
+      BIH_SIMD(bih) = true;
+    if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
+        (!ignore_simd_block(bih))) {
+      fix_nodepchk_flag(bih);
+      mark_rw_nodepchk(bih);
+    } else {
+      clear_rw_nodepchk();
     }
+    close_pragma();
 
     // AOCC Begin
     /** \brief Flang codegen support for !dir$ ivdep
@@ -1936,12 +1941,12 @@ restartConcur:
             i->misc_metadata = loop_md;
           }
 
-        } else if ((XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
+        } else if (((!XBIT(69, 0x100000)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
                    (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
                    ||
-                   (is_ivdep_directive)) {
+                   (is_ivdep_directive) || BIH_SIMD(bih)) {
           LL_MDRef loop_md;
           // for ivdep pragma, rw_nodepcheck will be enabled.
           // Need to generate "llvm.loop.parallel_accesses" metadata as well.
@@ -2089,14 +2094,22 @@ restartConcur:
   write_ftn_typedefs();
   write_global_and_static_defines();
 
+  FILE *backup_file; // AOCC
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
-    use_cpu_output_file();
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    use_gpu_output_file();
+    // AOCC Begin
+    backup_file = gbl.asmfil;
+    gbl.asmfil = gbl.ompaccfile;
+    // AOCC End
+  }
 #endif
   assem_data();
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    gbl.asmfil = backup_file; // AOCC
     use_gpu_output_file();
+  }
   if (flg.omptarget)
     write_libomtparget();
 #endif
@@ -11250,7 +11263,7 @@ static bool is_device_arg(int sptr) {
     return false;
   if (DESCARRAYG(sptr) && CLASSG(sptr))
     return false;
-  if (SCG(sptr) == SC_STATIC)
+  if (SCG(sptr) == SC_STATIC && OMPACCFUNCKERNELG(gbl.currsub))
     return true;
   return false;
 }
@@ -13731,6 +13744,16 @@ INLINE static void
 formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
 {
   if (formalsNeedDebugInfo(sptr)) {
+    bool is_ptr_alc_arr = false;
+    SPTR new_sptr = (SPTR)REVMIDLNKG(sptr);
+    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+        CCSYMG(sptr) /* Otherwise it can be a cray pointer */ &&
+        (new_sptr && (STYPEG(new_sptr) == ST_ARRAY) &&
+         (POINTERG(new_sptr) || ALLOCATTRG(new_sptr))) &&
+        SDSCG(new_sptr)) {
+      is_ptr_alc_arr = true;
+      sptr = new_sptr;
+    }
     LL_DebugInfo *db = current_module->debug_info;
     LL_MDRef param_md = lldbg_emit_param_variable(
         db, sptr, BIH_FINDEX(gbl.entbih), i, CCSYMG(sptr));
@@ -13740,9 +13763,11 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
                               ? NULL
                               : cons_expression_metadata_operand(llTy);
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
-      // For assumed shape and assumed rank array, pass descriptor in place of
-      // base address.
-      if ((ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) && SDSCG(sptr))
+      // For pointer, allocatable, assumed shape and assumed rank arrays, pass
+      // descriptor in place of base address.
+      if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+          (is_ptr_alc_arr || ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) &&
+          SDSCG(sptr))
         sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
     }
@@ -14000,6 +14025,12 @@ print_arg_attributes(LL_ABI_ArgInfo *arg)
     break;
   case LL_ARG_BYVAL:
     print_token(" byval");
+    print_token(" (");
+    if (arg->type->data_type == LL_PTR)
+      write_type(arg->type->sub_types[0]);
+    else
+      write_type(arg->type);
+    print_token(" )");
     break;
   default:
     interr("Unknown argument kind", arg->kind, ERR_Fatal);

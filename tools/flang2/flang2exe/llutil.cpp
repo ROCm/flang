@@ -9,7 +9,7 @@
  * reserved. Notified per clause 4(b) of the license.
  *
  * Changes for AMD GPU OpenMP offloading and bug fixes.
- * Last Modified : 22nd June 2020
+ * Last Modified : Dec 2020
  *
  * Added support for quad precision
  *  Last modified: Feb 2020
@@ -2454,8 +2454,16 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
       write_type(pllt);
     if (p->flags & OPF_SRET_TYPE)
       print_token(" sret");
-    if (p->flags & OPF_SRARG_TYPE)
+    if (p->flags & OPF_SRARG_TYPE) {
       print_token(" byval");
+      print_token("(");
+      if (p->ll_type->data_type == LL_PTR)
+        write_type(p->ll_type->sub_types[0]);
+      else
+        write_type(p->ll_type);
+      print_token(") ");
+    }
+
     print_space(1);
     print_token(name);
     break;
@@ -2476,8 +2484,15 @@ write_operand(OPERAND *p, const char *punc_string, int flags)
     }
     if (p->flags & OPF_SRET_TYPE)
       print_token(" sret ");
-    if (p->flags & OPF_SRARG_TYPE)
+    if (p->flags & OPF_SRARG_TYPE) {
       print_token(" byval ");
+      print_token(" ( ");
+      if (p->ll_type->data_type == LL_PTR)
+        write_type(p->ll_type->sub_types[0]);
+      else
+        write_type(p->ll_type);
+      print_token(" ) ");
+    }
     if (p->tmps)
       print_tmp_name(p->tmps);
     else
@@ -4187,7 +4202,8 @@ get_ftn_static_lltype(SPTR sptr)
 
   // AOCC Begin
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.amdgcn_target && gbl.ompaccel_isdevice) {
+  if (flg.amdgcn_target && gbl.ompaccel_isdevice &&
+                           OMPACCFUNCKERNELG(gbl.currsub)) {
     return make_lltype_from_dtype(DTYPEG(sptr));
   }
 #endif

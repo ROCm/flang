@@ -868,7 +868,7 @@ independent loop (forall-independent loop).
 .XB "0x200"
 don't perform tail recursion elimination
 .XB "0x400"
-don't perform idiom vector recognition for the PIII
+perform loop vectorisation.
 .XB "Ox800"
 Perform zero trip elimination - will we ever be able to switch the sense?
 .XB "0x1000"
@@ -2299,7 +2299,7 @@ In the outliner used for KPMC openmp regions, when filling the argument
 .XB 0x100000:
 Enable nodepchk for simd construct/clause.
 .XB 0x200000:
-Enable nodepchk for ivdep pragma.
+Enable nodepchk for ivdep pragma (and SIMD pragma for now).
 
 .XF "70-79:"
 RESERVED FOR ALTERNATE CODE GENERATION

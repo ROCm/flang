@@ -1712,7 +1712,7 @@ transform_call(int std, int ast)
                */
               check_alloc_ptr_type(sptr, std, 0, unl_poly ? 2 : 1, 0, 0,
                                    STYPEG(sptr) == ST_MEMBER ? ele : 0);
-              sptrsdsc = SDSCG(sptr);
+              sptrsdsc = DESCRG(sptr); // AOCC
             }
             if (sptrsdsc)
               tmp = mk_id(sptrsdsc);
@@ -2234,6 +2234,9 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  // AOCC: it is possible that all descriptors are not populated. 
+  // resetting the newnargs count for this case
+  if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */
 

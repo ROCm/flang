@@ -5,6 +5,11 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
+
 /** \file
     \brief Routines for exporting symbols to .mod files and to IPA.
  */
@@ -366,13 +371,17 @@ static void export(FILE *export_fd, char *export_name, int cleanup)
           if (!IGNOREG(sptr) && SCOPEG(sptr) == sym_module) {
             queue_symbol(sptr);
           }
+          if (SCG(sptr) == SC_DUMMY && SCOPEG(SCOPEG(sptr)) != sym_module &&
+              TBP_BOUND_TO_SMPG(SCOPEG(sptr))) {
+             queue_symbol(sptr);
+          }
         }
         break;
       case ST_IDENT:
         if (for_module) {
           if (SCG(sptr) == SC_DUMMY && SCOPEG(SCOPEG(sptr)) != sym_module &&
               TBP_BOUND_TO_SMPG(SCOPEG(sptr))) {
-            queue_symbol(sptr);
+             queue_symbol(sptr);
           }
         }
         break;

@@ -3700,7 +3700,7 @@ mk_deallocate(int ast)
 
 /* is_assign_lhs is set when this is for the LHS of an assignment */
 void
-rewrite_deallocate(int ast, bool is_assign_lhs, int std)
+rewrite_deallocate(int ast, bool is_assign_lhs, int std, bool can_reorder)
 {
   int i;
   int sptrmem;
@@ -3726,7 +3726,25 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
       astparent = mk_subscr_copy(ast, asd, DTY(dtype + 1));
     }
   }
-
+  // AOCC Begin
+  bool reorder_nullify=false;
+  for (sptrmem = DTY(DDTG(dtype) + 1); sptrmem > NOSYM;
+       sptrmem = SYMLKG(sptrmem)) {
+    if (is_tbp_or_final(sptrmem)) {
+      continue; /* skip tbp */
+    }
+    if (!ALLOCATTRG(sptrmem)) {
+      continue;
+    }
+    if (can_reorder && has_finalized_component(sptrmem)) {
+       reorder_nullify=true;
+    }
+  }
+  if (reorder_nullify) {
+    add_stmt_after(add_nullify_ast(ast), std);
+    A_MEM_ORDERP(ast,ast);
+  }
+  // AOCC End
   for (sptrmem = DTY(DDTG(dtype) + 1); sptrmem > NOSYM;
        sptrmem = SYMLKG(sptrmem)) {
     int astdealloc;
@@ -3737,16 +3755,19 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
     astmem = mk_id(sptrmem);
     astmem = mk_member(astparent, astmem, A_DTYPEG(astmem));
     if (!POINTERG(sptrmem) && allocatable_member(sptrmem)) {
-      rewrite_deallocate(astmem, false, std);
+      rewrite_deallocate(astmem, false, std, false);
     }
     if (!ALLOCATTRG(sptrmem)) {
       continue;
     }
     astdealloc = mk_deallocate(astmem);
     A_DALLOCMEMP(astdealloc, 1);
-    add_stmt_before(astdealloc, std);
+    if (reorder_nullify) {  // AOCC
+      add_stmt_after(astdealloc, std);
+    } else {
+      add_stmt_before(astdealloc, std);
+    }
   }
-
   gen_do_ends(docnt, std);
   if (need_endif) {
     int astendif = mk_stmt(A_ENDIF, 0);
@@ -4007,7 +4028,7 @@ gen_dealloc_mbr(int ast, int std)
   int std_dealloc = add_stmt_before(astfunc, std);
   A_DALLOCMEMP(astfunc, 1);
   if (allocatable_member(memsym_of_ast(ast))) {
-    rewrite_deallocate(ast, true, std_dealloc);
+    rewrite_deallocate(ast, true, std_dealloc, true);
   }
 }
 

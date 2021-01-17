@@ -2172,7 +2172,7 @@ write_parent_pointers(int parent, int level)
 /* final table size is max dimensions plus 2. The 0th element holds the
  * scalar subroutine and the last element holds the elemental subroutine.
  */
-#define FINAL_TABLE_SZ 9
+#define FINAL_TABLE_SZ MAXSUBS + 2
 
 static int
 build_final_table(DTYPE dtype, SPTR ft[FINAL_TABLE_SZ])
@@ -2297,7 +2297,7 @@ has_pending_final_procedures(SPTR sptr)
   dtype = DTyArgType(dtype);
 
   for (mem = DTyAlgTyMember(dtype); mem > NOSYM; mem = SYMLKG(mem)) {
-    if (CLASSG(mem) && FINALG(mem) < 0)
+    if (CLASSG(mem) && FINALG(mem))  // AOCC : Changed from (FINALG(mem) < 0)
       return 1;
   }
   return 0;

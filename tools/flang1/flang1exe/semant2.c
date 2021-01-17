@@ -1521,6 +1521,11 @@ semant2(int rednum, SST *top)
       break;
     }
     i = NMPTRG(SST_SYMG(RHS(rhstop)));
+    //AOCC Begin
+    if (STYPEG(SST_SYMG(RHS(rhstop))) == ST_USERGENERIC ||
+        STYPEG(SST_SYMG(RHS(rhstop))) == ST_PROC)
+        A_ALIASP(ast,SST_SYMG(RHS(rhstop)));
+    //AOCC End
     ast = mkmember(dtype, ast, i);
     if (ast) {
       sptr1 = A_SPTRG(A_MEMG(ast));

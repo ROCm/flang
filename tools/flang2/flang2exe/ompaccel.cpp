@@ -12,7 +12,7 @@
  * Date of Modification: 26th June 2019
  *
  * Changes to support AMDGPU OpenMP offloading
- * Last Modified :Aug 2020
+ * Last Modified : Nov 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Apr 2020
@@ -2923,11 +2923,10 @@ static void emit_array_reduction(SPTR sptrReduceData) {
   ilix = mk_ompaccel_ldsptr(array_iv);
   ilix = mk_ompaccel_mul(ilix, DT_INT,
                          ad_icon(size_of(DDTG(dtypeReductionItem))), DT_INT);
-  /*
+
   if (SCG(sptrReductionItem) == SC_BASED && MIDNUMG(sptrReductionItem)) {
     sptrReductionItem = MIDNUMG(sptrReductionItem);
   }
-  */
 
   ili = mk_address(sptrReductionItem);
   ili = mk_ompaccel_add(ili, DT_ADDR, ilix, DT_ADDR);
@@ -2966,11 +2965,9 @@ static void emit_array_reduction(SPTR sptrReduceData) {
       ompaccel_tinfo_current_get()->reduction_symbols[0].private_sym;
   dtypeReductionItem = DDTG(DTYPEG(sptrReductionItem));
 
-  /*
   if (SCG(sptrReductionItem) == SC_BASED && MIDNUMG(sptrReductionItem)) {
     sptrReductionItem = MIDNUMG(sptrReductionItem);
   }
-  */
 
   bili = mk_ompaccel_load(bili, DT_ADDR, nmeReduceData);
   bili = mk_ompaccel_load(bili, dtypeReductionItem, nmeReduceData);
