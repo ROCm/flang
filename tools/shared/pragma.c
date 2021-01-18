@@ -712,12 +712,6 @@ do_sw(void)
     else
       bset(DIR_OFFSET(currdir, x[191]), 0x2);
     break;
-  case SW_ALWAYSINLINE:
-    if (no_specified)
-      bclr(DIR_OFFSET(currdir, x[191]), 0x2);
-    else
-      bset(DIR_OFFSET(currdir, x[191]), 0x2);
-    break;
 // AOCC END
   case SW_VINTR:
     if (no_specified)
