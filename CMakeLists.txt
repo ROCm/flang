@@ -3,6 +3,12 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+# 
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
+#
+# Last Modified: May 2020
+#
 
 cmake_minimum_required(VERSION 2.8)
 
@@ -186,8 +192,7 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
         set(LLVM_UTILS_PROVIDED ON)
         set(FLANG_TEST_DEPS FileCheck count not)
       endif()
-    endif()
-
+     endif()
       #set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
       #if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h
       #    AND NOT EXISTS ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -287,10 +292,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM")
   option(WITH_WERROR "Compile with '-Werror' C compiler flag" ON)
   if (WITH_WERROR)
-     #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+	  # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
   endif ()
 endif ()
 
@@ -314,7 +319,7 @@ macro(add_flang_library name)
   endif( LLVM_COMMON_DEPENDS )
 
   llvm_config( ${name} ${LLVM_LINK_COMPONENTS} )
-  target_link_libraries( ${name} ${LLVM_COMMON_LIBS} )
+  target_link_libraries( ${name} ${LLVM_COMMON_LIBS} -lquadmath)
 #  link_system_libs( ${name} )  # getd of cmake warning messages
 
   install(TARGETS ${name}

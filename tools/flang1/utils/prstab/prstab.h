@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 /** \file
  * \brief LR header files
  *
@@ -34,6 +38,13 @@
 #define SNPRINTF snprintf
 #endif
 
+#ifndef _PRSTAB_GLOBAL_
+#define EXTERN extern
+#else
+#define EXTERN 
+#endif
+
+
 #define MAXSHD 2000
 #define MAXSHDP1 2001
 #define MAXSHD2P1 4001
@@ -50,7 +61,7 @@
 
 /* Global Declarations */
 
-struct {
+EXTERN struct {
   FILE *infile;
   FILE *gramin;
   FILE *tokin;
@@ -61,32 +72,32 @@ struct {
   FILE *semfil;
 } files;
 
-INT *scrtch;
-INT *hashpt;
-CHAR *linech;
-char *filnambuf;
+EXTERN INT *scrtch;
+EXTERN INT *hashpt;
+EXTERN CHAR *linech;
+EXTERN char *filnambuf;
 
-struct {
+EXTERN struct {
   INT *item;
   INT *nextt;
 } s4;
 
-struct {
+EXTERN struct {
   INT *sstore;
   INT *sthead;
 } s1_1;
 
-struct {
+EXTERN struct {
   INT garbag;
   INT lstptr;
 } lstcom;
 
-struct {
+EXTERN struct {
   INT qhead;
   INT qtail;
 } qcom;
 
-struct {
+EXTERN struct {
   LOGICAL listsw;
   LOGICAL runosw;
   LOGICAL xrefsw;
@@ -102,11 +113,11 @@ struct {
   LOGICAL dbgesw;
 } switches;
 
-struct {
+EXTERN struct {
   INT adequt;
 } adqcom;
 
-struct {
+EXTERN struct {
   INT *lftuse;
   INT *rgtuse;
   INT *frsprd;
@@ -120,7 +131,7 @@ struct {
   INT nterms;
 } g_1;
 
-struct {
+EXTERN struct {
   INT nstate;
   INT nxttrn;
   INT nxtred;
@@ -137,19 +148,19 @@ struct {
   INT *red;
 } s_1;
 
-struct {
+EXTERN struct {
   INT sstptr;
   INT shdptr;
 } string_1;
 
-struct {
+EXTERN struct {
   INT linbuf[81];
   INT curchr;
   INT lineno;
   INT fstchr;
 } readcm;
 
-struct {
+EXTERN struct {
   INT pnum;
   INT brkflg;
   INT semnum;

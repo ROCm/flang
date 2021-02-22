@@ -1,8 +1,11 @@
-! 
+!
 ! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ! See https://llvm.org/LICENSE.txt for license information.
 ! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-! 
+!
+!  Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+!  Notified per clause 4(b) of the license.
+!  Last Modified: Oct 2020
 
 
 ! directives.h -- contains preprocessor directives for F90 rte files
@@ -24,6 +27,8 @@
 #define F90_matmul_cplx32_contvxm	PREFIX(_mm_cplx32_contvxm_i8)
 #define F90_matmul_cplx32_str1		PREFIX(_mm_cplx32_str1_i8)
 #define F90_matmul_cplx32_str1_mxv	PREFIX(_mm_cplx32_str1_mxv_i8)
+#define F90_matmul_cplx32_str1_mxv_t	PREFIX(_mm_cplx32_str1_mxv_t_i8)
+#define F90_matmul_cplx32_str1_vxm	PREFIX(_mm_cplx32_str1_vxm_i8)
 #define F90_matmul_cplx8_contmxm	PREFIX(_mm_cplx8_contmxm_i8)
 #define F90_matmul_cplx8_contmxv	PREFIX(_mm_cplx8_contmxv_i8)
 #define F90_matmul_cplx8_contvxm	PREFIX(_mm_cplx8_contvxm_i8)
@@ -89,6 +94,16 @@
 #define F90_matmul_real8_str1_mxv	PREFIX(_mm_real8_str1_mxv_i8)
 #define F90_matmul_real8_str1_mxv_t	PREFIX(_mm_real8_str1_mxv_t_i8)
 #define F90_matmul_real8_str1_vxm	PREFIX(_mm_real8_str1_vxm_i8)
+#define F90_matmul_real16_contmxm	PREFIX(_mm_real16_contmxm_i8)
+#define F90_matmul_real16_contmxv	PREFIX(_mm_real16_contmxv_i8)
+#define F90_matmul_real16_contvxm	PREFIX(_mm_real16_contvxm_i8)
+#define F90_matmul_real16_str1		PREFIX(_mm_real16_str1_i8)
+#define _F90_matmul_real16_str1a		_PREFIX(_mm_real16_str1a_i8)
+#define _F90_matmul_real16_str1b		_PREFIX(_mm_real16_str1b_i8)
+#define _F90_matmul_real16_str1c		_PREFIX(_mm_real16_str1c_i8)
+#define F90_matmul_real16_str1_mxv	PREFIX(_mm_real16_str1_mxv_i8)
+#define F90_matmul_real16_str1_mxv_t	PREFIX(_mm_real16_str1_mxv_t_i8)
+#define F90_matmul_real16_str1_vxm	PREFIX(_mm_real16_str1_vxm_i8)
 #else
 #define DESC_INT INTEGER(4)
 #define F90_matmul_cplx16_contmxm	PREFIX(_mm_cplx16_contmxm)
@@ -103,6 +118,8 @@
 #define F90_matmul_cplx32_contvxm	PREFIX(_mm_cplx32_contvxm)
 #define F90_matmul_cplx32_str1		PREFIX(_mm_cplx32_str1)
 #define F90_matmul_cplx32_str1_mxv	PREFIX(_mm_cplx32_str1_mxv)
+#define F90_matmul_cplx32_str1_mxv_t	PREFIX(_mm_cplx32_str1_mxv_t)
+#define F90_matmul_cplx32_str1_vxm	PREFIX(_mm_cplx32_str1_vxm)
 #define F90_matmul_cplx8_contmxm	PREFIX(_mm_cplx8_contmxm)
 #define F90_matmul_cplx8_contmxv	PREFIX(_mm_cplx8_contmxv)
 #define F90_matmul_cplx8_contvxm	PREFIX(_mm_cplx8_contvxm)
@@ -168,4 +185,14 @@
 #define F90_matmul_real8_str1_mxv	PREFIX(_mm_real8_str1_mxv)
 #define F90_matmul_real8_str1_mxv_t	PREFIX(_mm_real8_str1_mxv_t)
 #define F90_matmul_real8_str1_vxm	PREFIX(_mm_real8_str1_vxm)
+#define F90_matmul_real16_contmxm	PREFIX(_mm_real16_contmxm)
+#define F90_matmul_real16_contmxv	PREFIX(_mm_real16_contmxv)
+#define F90_matmul_real16_contvxm	PREFIX(_mm_real16_contvxm)
+#define F90_matmul_real16_str1		PREFIX(_mm_real16_str1)
+#define _F90_matmul_real16_str1a		_PREFIX(_mm_real16_str1a)
+#define _F90_matmul_real16_str1b		_PREFIX(_mm_real16_str1b)
+#define _F90_matmul_real16_str1c		_PREFIX(_mm_real16_str1c)
+#define F90_matmul_real16_str1_mxv	PREFIX(_mm_real16_str1_mxv)
+#define F90_matmul_real16_str1_mxv_t	PREFIX(_mm_real16_str1_mxv_t)
+#define F90_matmul_real16_str1_vxm	PREFIX(_mm_real16_str1_vxm)
 #endif /* DESC_I8 */

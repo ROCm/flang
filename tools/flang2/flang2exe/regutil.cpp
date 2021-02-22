@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last Modified: Jun 2020
+ *
+ */
 
 /** \file
  * \brief Register allocation module used by the expander and the optimizer
@@ -59,7 +68,7 @@ int il_rtype_df[RATA_RTYPES_TOTAL] = {
     IL_IRDF, IL_SPDF, /* RATA_IR   , RATA_SP */
     IL_DPDF, IL_ARDF, /* RATA_DP   , RATA_AR */
     IL_KRDF, 0,       /* RATA_KR   , RATA_VECT */
-    0,       0,       /* RATA_QP   , RATA_CSP */
+    IL_QPDF, 0,       /* RATA_QP   , RATA_CSP */
     0,       0,       /* RATA_CDP  , RATA_CQP */
     0,       0,       /* RATA_X87  , RATA_CX87*/
 };
@@ -67,7 +76,7 @@ int il_mv_rtype[RATA_RTYPES_TOTAL] = {
     IL_MVIR, IL_MVSP, /* RATA_IR   , RATA_SP */
     IL_MVDP, IL_MVAR, /* RATA_DP   , RATA_AR */
     IL_MVKR, 0,       /* RATA_KR   , RATA_VECT */
-    0,       0,       /* RATA_QP   , RATA_CSP */
+    IL_MVQP,  0,     /* RATA_QP   , RATA_CSP */
     0,       0,       /* RATA_CDP  , RATA_CQP */
     0,       0,       /* RATA_X87  , RATA_CX87*/
 };
@@ -150,6 +159,17 @@ addrcand(int ilix)
   case IL_LDDP: /* load double precision */
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto ac_load;
+
+  // AOCC begin
+  case IL_LDQCMPLX:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto ac_load;
+  case IL_LDQP: /* load quad precision */
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
 
   ac_load: /* common entry for the loads */
 
@@ -261,6 +281,16 @@ addrcand(int ilix)
   case IL_DSTS_SCALAR:
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto ac_store;
+  // AOCC begin
+  case IL_STQCMPLX:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto ac_store;
+  case IL_STQP: /* store quad precision */
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
   ac_store: /* common entry for the stores	 */
     if ((rcand = NME_RAT(nme = ILI_OPND(ilix, 3))) != 0)
       if (RCAND_MSIZE(rcand) != msize) {
@@ -312,6 +342,16 @@ addrcand(int ilix)
   case IL_DCON:
     rtype = RATA_DP;
     msize = MSZ_F8;
+    goto add_constant;
+  // AOCC begin
+  case IL_QCMPLXCON:
+    rtype = RATA_CQP;
+    msize = MSZ_F32;
+    goto add_constant;
+  case IL_QCON:
+    rtype = RATA_QP;
+    msize = MSZ_F16;
+  // AOCC end
   add_constant:
     rcand = ILI_RAT(ilix);
     if (rcand) {
@@ -803,12 +843,22 @@ storedums(int exitbih, int first_rat)
     case RATA_DP:
       (void)addilt(0, ad4ili(IL_STDP, i, addr, nme, MSZ_F8));
       break;
+    // AOCC begin
+    case RATA_QP:
+      (void)addilt(0, ad4ili(IL_STQP, i, addr, nme, MSZ_F16));
+      break;
+    // AOCC end
     case RATA_CSP:
       (void)addilt(0, ad4ili(IL_STSCMPLX, i, addr, nme, MSZ_F8));
       break;
     case RATA_CDP:
       (void)addilt(0, ad4ili(IL_STDCMPLX, i, addr, nme, MSZ_F16));
       break;
+    // AOCC begin
+    case RATA_CQP:
+      (void)addilt(0, ad4ili(IL_STQCMPLX, i, addr, nme, MSZ_F16));
+      break;
+    // AOCC end
     }
   }
   BIH_SMOVE(exitbih) = 1; /* (temp) mark block so sched limits scratch set */
@@ -857,7 +907,7 @@ static struct {  /* Register temporary information */
     {'g', "ga", DT_INT8, 0, 0, -1},   /* 4: integer*8 temps */
     {'h', "ha", DT_CMPLX, 0, 0, -1},  /* 5: complex temps */
     {'k', "ka", DT_DCMPLX, 0, 0, -1}, /* 6: double complex temps */
-    {'h', "ha", DT_NONE, 0, 0, -1},   /* 7: filler */
+    {'h', "ha", DT_QCMPLX, 0, 0, -1}, /* 7: quad complex temps */
     {'v', "va", DT_NONE, 0, 0, -1},   /* 8: vector temps */
 #if   defined LONG_DOUBLE_FLOAT128
     {'X', "Xa", DT_FLOAT128, 0, 0, -1}, /* 9: float128 temps */
@@ -866,6 +916,7 @@ static struct {  /* Register temporary information */
     {'X', "Xa", DT_NONE, 0, 0, -1}, /* 9 and 10: filler */
     {'x', "xa", DT_NONE, 0, 0, -1}, /* 9 and 10: filler */
 #endif
+    {'q', "qa", DT_QCMPLX, 0, 0, -1}  /* 11: quad complex temps */  //AOCC
 };
 
 static int select_rtemp(int);
@@ -962,6 +1013,11 @@ mkrtemp_cpx_sc(DTYPE dtype, SC_KIND sc)
   case DT_DCMPLX:
     type = 6;
     break;
+  // AOCC begin
+  case DT_QCMPLX:
+    type = 7;
+    break;
+  // AOOC end
 #ifdef LONG_DOUBLE_FLOAT128
   case DT_CMPLX128:
     type = 10;
@@ -1003,6 +1059,10 @@ mkrtemp_arg1_sc(DTYPE dtype, SC_KIND sc)
     type = 5;
   else if (dtype == DT_DCMPLX)
     type = 6;
+  // AOCC begin
+  else if (dtype == DT_QCMPLX)
+    type = 7;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   else if (dtype == DT_CMPLX128)
     type = 6;
@@ -1122,6 +1182,11 @@ _assn_rtemp(int ili, int temp)
   case IL_STDP:
     opc = IL_LDDP;
     break;
+  // AOCC begin
+  case IL_STQP:
+    opc = IL_LDQP;
+    break;
+  // AOCC end
   case IL_VST:
     opc = IL_VLD;
     break;
@@ -1134,6 +1199,11 @@ _assn_rtemp(int ili, int temp)
   case IL_STDCMPLX:
     opc = IL_LDDCMPLX;
     break;
+  // AOCC begin
+  case IL_STQCMPLX:
+    opc = IL_LDQCMPLX;
+    break;
+  // AOCC end
   }
 
   switch (IL_RES(opc)) {
@@ -1153,6 +1223,12 @@ _assn_rtemp(int ili, int temp)
     rtype = RCAND_RTYPE(rcand) = RATA_DP;
     RCAND_MSIZE(rcand) = MSZ_F8;
     break;
+  // AOCC begin
+  case ILIA_QP:
+    rtype = RCAND_RTYPE(rcand) = RATA_QP;
+    RCAND_MSIZE(rcand) = MSZ_F16;
+    break;
+  // AOCC end
   case ILIA_KR:
     rtype = RCAND_RTYPE(rcand) = RATA_KR;
     RCAND_MSIZE(rcand) = MSZ_I8;
@@ -1169,6 +1245,14 @@ _assn_rtemp(int ili, int temp)
     RCAND_MSIZE(rcand) = MSZ_F16;
     break;
 #endif
+  // AOCC begin
+#ifdef ILIA_CQ
+  case ILIA_CQ:
+    rtype = RCAND_RTYPE(rcand) = RATA_CQP;
+    RCAND_MSIZE(rcand) = MSZ_F16;
+    break;
+#endif
+  // AOCC end
   case ILIA_LNK:
     if (IL_VECT(ILI_OPC(ili))) {
       RCAND_MSIZE(rcand) = ili_get_vect_dtype(ili);
@@ -1288,6 +1372,16 @@ select_rtemp(int ili)
     type = 6;
     break;
 #endif
+  // AOCC begin
+  case ILIA_QP:
+    type = 7;
+    break;
+#ifdef ILIA_CQ
+  case ILIA_CQ:
+    type = 11;
+    break;
+#endif
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case ILIA_FLOAT128:
     type = 9;

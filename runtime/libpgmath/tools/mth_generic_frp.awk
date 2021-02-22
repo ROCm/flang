@@ -150,6 +150,7 @@ function do_all_rr()
       func_rr_def("aint", frp, sd, one_arg)
       func_rr_def("ceil", frp, sd, one_arg)
       func_rr_def("floor", frp, sd, one_arg)
+      func_rr_def("cotan", frp, sd, one_arg)
     }
   }
 }
@@ -301,7 +302,8 @@ if (0) {
   old_do_all_rr("div", two_args)
   old_do_all_rr("sqrt", one_arg)
   old_do_all_rr("mod", two_args)
-
+  old_do_all_rr("cotan", one_arg)
+  
 }
 #  if (MAX_VREG_SIZE == 128) {
     do_all_rr()

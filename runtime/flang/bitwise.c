@@ -5,10 +5,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for Bit Sequence Comparsion intrinsics.
+ * Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ * Month of Modification: May 2019
+ *
  */
+
 /* clang-format off */
 
 /** \file
@@ -72,12 +80,24 @@ int ENTF90(BITCMP, bitcmp)(long *ptr_a, long *ptr_b, int *ptr_a_nbits, int *ptr_
   return unsigned_a > unsigned_b ? 1 : -1;
 }
 
-unsigned long ENTF90(BITMASK, bitmask)(int *ptr_n, int *ptr_kind, int *ptr_is_left) {
-  long n = *ptr_n;
+unsigned long ENTF90(BITMASK, bitmask)(unsigned int *ptr_n, int *ptr_kind, int *ptr_is_left) {
+  unsigned long n = *ptr_n;
   int kind = *ptr_kind;
   int is_left = *ptr_is_left;
   unsigned long ret = 0;
+  unsigned long mask_n = 0;
 
+  if (kind == 1) {
+    mask_n = 0xff;
+  } else if (kind == 2) {
+    mask_n = 0xffff;
+  } else if (kind == 4) {
+    mask_n = 0xffffffff;
+  } else if (kind == 8) {
+    mask_n = 0xffffffffffffff;
+  }
+ 
+  n = n & mask_n;
   if (is_left) {
     for (unsigned long i = ((kind * 8) - 1), j = 0; j < n; i--, j++) {
       ret |= ((unsigned long) 0x1 << i);

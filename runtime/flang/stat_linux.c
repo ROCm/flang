@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Using clock_gettime to gather CPU times of all threads.
+ * Date of modification 9th Dec 2019
+ *
+ */
 
 /** \file
  * \brief Fill in statistics structure (Linux version)
@@ -121,6 +130,27 @@ __fort_second()
   }
   return (d - first);
 }
+
+/* AOCC begin */
+double
+__fort_sysclk_second()
+{
+  struct timeval v;
+  struct timezone t;
+  double d;
+  int s;
+
+  s = gettimeofday(&v, &t);
+  if (s == -1) {
+    __fort_abortp("gettimeofday");
+  }
+  d = (double)v.tv_sec + (double)v.tv_usec / 1000000;
+  if (first == 0.0) {
+    first = d;
+  }
+  return (d - first);
+}
+/* AOCC end */
 
 void
 __fort_set_second(double d)

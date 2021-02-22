@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /** \file
  * \brief mw's dump routines
@@ -13,6 +21,7 @@
 #include "error.h"
 #include "machar.h"
 #include "global.h"
+#include "gbldefs.h"
 #include "symtab.h"
 #include "ilm.h"
 #include "fih.h"
@@ -1839,10 +1848,6 @@ dsym(int sptr)
     GINTP(0, 0);
     putnsym("gint8", GINT8G(0));
     GINT8P(0, 0);
-#ifdef GQCMPLXG
-    putnsym("gqcmplx", GQCMPLXG(0));
-    GQCMPLXP(0, 0);
-#endif
 #ifdef GQUADG
     putnsym("gquad", GQUADG(0));
     GQUADP(0, 0);
@@ -2806,6 +2811,11 @@ putdty(TY_KIND dty)
   case TY_DCMPLX:
     r = appendstring1("double complex");
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    r = appendstring1("quad complex");
+    break;
+  // AOCC end
   case TY_CMPLX128:
     r = appendstring1("cmplx128");
     break;
@@ -3231,6 +3241,10 @@ smsz(int m)
   case MSZ_F8:
     msz = "db";
     break;
+  // AOCC
+  case MSZ_F16:
+    msz = "qd";
+    break;
 #ifdef MSZ_I8
   case MSZ_I8:
     msz = "i8";
@@ -3284,7 +3298,9 @@ optype(int opc)
   case IL_UKNEG:
   case IL_SCMPLXNEG:
   case IL_DCMPLXNEG:
+  case IL_QCMPLXNEG:   // AOCC
   case IL_FNEG:
+  case IL_QNEG:    // AOCC
   case IL_DNEG:
     return OT_UNARY;
 
@@ -3296,6 +3312,7 @@ optype(int opc)
   case IL_ICON:
   case IL_KCON:
   case IL_DCON:
+  case IL_QCON:    // AOCC
   case IL_FCON:
   case IL_ACON:
     return OT_LEAF;
@@ -3469,6 +3486,7 @@ _printili(int i)
   case IL_UKADD:
   case IL_FADD:
   case IL_DADD:
+  case IL_QADD:   // AOCC
   case IL_UIADD:
   case IL_AADD:
     opval = "+";
@@ -3479,6 +3497,7 @@ _printili(int i)
   case IL_UKSUB:
   case IL_FSUB:
   case IL_DSUB:
+  case IL_QSUB:   // AOCC
   case IL_UISUB:
   case IL_ASUB:
     opval = "-";
@@ -3489,11 +3508,13 @@ _printili(int i)
   case IL_UKMUL:
   case IL_FMUL:
   case IL_DMUL:
+  case IL_QMUL:   // AOCC
   case IL_UIMUL:
     opval = "*";
     typ = BINOP;
     break;
   case IL_DDIV:
+  case IL_QDIV:   // AOCC
   case IL_KDIV:
   case IL_UKDIV:
   case IL_FDIV:
@@ -3544,6 +3565,8 @@ _printili(int i)
   case IL_FCMP:
   case IL_SCMPLXCMP:
   case IL_DCMPLXCMP:
+  case IL_QCMPLXCMP:       // AOCC
+  case IL_QCMP:            // AOCC
   case IL_DCMP:
   case IL_ACMP:
   case IL_UICMP:
@@ -3554,11 +3577,13 @@ _printili(int i)
   case IL_INEG:
   case IL_KNEG:
   case IL_UKNEG:
+  case IL_QNEG:
   case IL_DNEG:
   case IL_UINEG:
   case IL_FNEG:
   case IL_SCMPLXNEG:
   case IL_DCMPLXNEG:
+  case IL_QCMPLXNEG:      // AOCC
     opval = "-";
     typ = UNOP;
     break;
@@ -3574,6 +3599,7 @@ _printili(int i)
   case IL_UKCMPZ:
   case IL_FCMPZ:
   case IL_DCMPZ:
+  case IL_QCMPZ:         // AOCC
   case IL_ACMPZ:
   case IL_UICMPZ:
     opval = ccvalzero[ILI_OPND(i, 2)];
@@ -3598,6 +3624,13 @@ _printili(int i)
     opval = "min";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QUAD:
+    n = 1;
+    opval = "quad";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DBLE:
     n = 1;
     opval = "dble";
@@ -3645,12 +3678,33 @@ _printili(int i)
     opval = "dfloat";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QFIX:
+  case IL_QFIXU:
+    n = 1;
+    opval = "qfix";
+    typ = INTRINSIC;
+    break;
+  case IL_QFLOAT:
+  case IL_QFLOATU:
+    n = 1;
+    opval = "qfloat";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DNEWT:
   case IL_FNEWT:
     n = 1;
     opval = "recip";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QABS:
+    n = 1;
+    opval = "abs";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
   case IL_DABS:
     n = 1;
     opval = "abs";
@@ -3681,6 +3735,13 @@ _printili(int i)
     opval = "dsqrt";
     typ = INTRINSIC;
     break;
+  // AOCC begin
+  case IL_QSQRT:
+    n = 1;
+    opval = "qsqrt";
+    typ = INTRINSIC;
+    break;
+  // AOCC end
 
   case IL_KCJMP:
   case IL_UKCJMP:
@@ -3755,6 +3816,7 @@ _printili(int i)
       case IL_DAKR:
       case IL_DAAR:
       case IL_DADP:
+      case IL_DAQP:   // AOCC
 #ifdef IL_DA128
       case IL_DA128:
 #endif
@@ -3770,6 +3832,7 @@ _printili(int i)
       case IL_ARGIR:
       case IL_ARGSP:
       case IL_ARGDP:
+      case IL_ARGQP:
       case IL_ARGAR:
         _printili(ILI_OPND(j, 1));
         j = ILI_OPND(j, 2);
@@ -3813,6 +3876,12 @@ _printili(int i)
     opval = "MVDP";
     typ = MVREG;
     break;
+  // AOCC begin
+  case IL_MVQP:
+    opval = "MVQP";
+    typ = MVREG;
+    break;
+  // AOCC end
   case IL_MVAR:
     opval = "MVAR";
     typ = MVREG;
@@ -3838,6 +3907,12 @@ _printili(int i)
     opval = "DPDF";
     typ = DFREG;
     break;
+  // AOCC begin
+  case IL_QPDF:
+    opval = "QPDF";
+    typ = DFREG;
+    break;
+  // AOCC end
   case IL_ARDF:
     opval = "ARDF";
     typ = DFREG;
@@ -3872,6 +3947,7 @@ _printili(int i)
   case IL_CSEAR:
   case IL_CSECS:
   case IL_CSECD:
+  case IL_CSECQ:  // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CSE:
 #endif
@@ -3883,6 +3959,12 @@ _printili(int i)
     opval = "FREEKR";
     typ = PSCOMM;
     break;
+  // AOCC begin
+  case IL_FREEQP:
+    opval = "FREEQP";
+    typ = PSCOMM;
+    break;
+  // AOCC end
   case IL_FREEDP:
     opval = "FREEDP";
     typ = PSCOMM;
@@ -3918,6 +4000,7 @@ _printili(int i)
   case IL_ICON:
   case IL_FCON:
   case IL_DCON:
+  case IL_QCON:    // AOCC
     appendstring1(printname(ILI_OPND(i, 1)));
     break;
 
@@ -3949,6 +4032,7 @@ _printili(int i)
   case IL_LD:
   case IL_LDSP:
   case IL_LDDP:
+  case IL_LDQP:    // AOCC
   case IL_LDKR:
   case IL_LDA:
     _printnme(ILI_OPND(i, 2));
@@ -3962,6 +4046,7 @@ _printili(int i)
   case IL_STKR:
   case IL_ST:
   case IL_STDP:
+  case IL_STQP:   // AOCC
   case IL_STSP:
   case IL_SSTS_SCALAR:
   case IL_DSTS_SCALAR:
@@ -4608,6 +4693,11 @@ dili(int ilix)
       case ILIO_DP:
         putint("dp", opnd);
         break;
+      // AOCC begin
+      case ILIO_QP:
+        putint("qp", opnd);
+        break;
+      // AOCC end
       default:
         put2int("Unknown", IL_OPRFLAG(opc, j), opnd);
         break;
@@ -4669,6 +4759,7 @@ dilitreex(int ilix, int l, int notlast)
   case IL_CSEDP:
   case IL_CSECS:
   case IL_CSECD:
+  case IL_CSECQ:     // AOCC
   case IL_CSEAR:
   case IL_CSEKR:
   case IL_CSE:
@@ -4893,6 +4984,7 @@ db(int block)
   putbit("resid", BIH_RESID(block));
   putbit("ujres", BIH_UJRES(block));
   putbit("simd", BIH_SIMD(block));
+  putbit("nosimd", BIH_NOSIMD(block));
   putbit("ldvol", BIH_LDVOL(block));
   putbit("stvol", BIH_STVOL(block));
   putbit("task", BIH_TASK(block));
@@ -5349,7 +5441,7 @@ printname(int sptr)
   }
 
   if (STYPEG(sptr) == ST_CONST) {
-    INT num[2], cons1, cons2;
+    INT num[4], cons1, cons2, cons3, cons4;
     int pointee;
     char *bb, *ee;
     switch (DTY(DTYPEG(sptr))) {
@@ -5444,10 +5536,55 @@ printname(int sptr)
       break;
 
     case TY_QUAD:
-      num[0] = CONVAL1G(sptr);
+    /*num[0] = CONVAL1G(sptr);
       num[1] = CONVAL2G(sptr);
-      cprintf(b, "%.17le", num);
+    // AOCC begin
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
+      cprintf(b, "%.37Lf", num);*/
+      sprintf(b, "%08x %08x %08x %08x", CONVAL1G(sptr), CONVAL2G(sptr),
+                          CONVAL3G(sptr), CONVAL4G(sptr));
+    // AOCC end
       break;
+
+    #if 0
+    case TY_QCMPLX:
+      cons1 = CONVAL1G(sptr);
+      cons2 = CONVAL2G(sptr);
+      cons3 = CONVAL3G(sptr);
+      cons4 = CONVAL4G(sptr);
+      num[0] = CONVAL1G(cons1);
+      num[1] = CONVAL2G(cons1);
+      num[2] = CONVAL3G(cons1);
+      num[3] = CONVAL4G(cons1);
+      if ((num[0] & 0x7ff00000) == 0x7ff00000) {
+        /* Infinity or NaN */
+        int len;
+        len = snprintf(b, 200, "(0x%8.8x%8.8x%8.8x%8.8xLL, ", num[0], num[1]);
+        bb = b + len;
+
+      } else {
+        b[0] = '(';
+        cprintf(&b[1], "%44.37Lf", num);
+        b[25] = ',';
+        b[26] = ' ';
+        bb = &b[27];
+      }
+
+      num[0] = CONVAL1G(cons2);
+      num[1] = CONVAL2G(cons2);
+      if ((num[0] & 0x7ff00000) == 0x7ff00000) {
+        /* Infinity or NaN */
+        snprintf(bb, 200, "0x%8.8x%8.8xLL", num[0], num[1]);
+      } else {
+        cprintf(bb, "%24.17le", num);
+        bb += 24;
+        *bb++ = ')';
+        *bb = '\0';
+      }
+
+      break;
+    #endif
 
     case TY_PTR:
       pointee = CONVAL1G(sptr);

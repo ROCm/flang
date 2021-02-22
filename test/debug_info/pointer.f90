@@ -5,6 +5,7 @@
 !CHECK-DAG: ![[DOUBLE:[0-9]+]] = !DIBasicType(name: "double precision"
 !CHECK-DAG: ![[COMPLEX:[0-9]+]] = !DIBasicType(name: "complex"
 !CHECK-DAG: ![[LOGICAL:[0-9]+]] =  !DIBasicType(name: "logical"
+!CHECK-DAG: ![[CHARACTER:[0-9]+]] =  !DIBasicType(tag: DW_TAG_string_type, name: "character"
 
 !CHECK-DAG: DILocalVariable(name: "integer_ptr"{{.*}}, type: ![[DERIVEDINTEGER:[0-9]+]]
 !CHECK-DAG: ![[DERIVEDINTEGER]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[INTEGER]]
@@ -16,6 +17,8 @@
 !CHECK-DAG: ![[DERIVEDCOMPLEX]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[COMPLEX]]
 !CHECK-DAG: DILocalVariable(name: "logical_ptr"{{.*}}, type: ![[DERIVEDLOGICAL:[0-9]+]]
 !CHECK-DAG: ![[DERIVEDLOGICAL]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[LOGICAL]]
+!CHECK-DAG: DILocalVariable(name: "character_ptr"{{.*}}, type: ![[DERIVEDCHARACTER:[0-9]+]]
+!CHECK-DAG: ![[DERIVEDCHARACTER]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[CHARACTER]]
 
 PROGRAM main
 
@@ -24,28 +27,33 @@ PROGRAM main
       DOUBLE PRECISION, POINTER :: double_ptr
       COMPLEX, POINTER :: complex_ptr
       LOGICAL, POINTER :: logical_ptr
+      CHARACTER(LEN=3), POINTER :: character_ptr
 
       INTEGER, TARGET :: integer_target
       REAL, TARGET :: real_target
       DOUBLE PRECISION, TARGET :: double_target
       COMPLEX, TARGET :: complex_target
       LOGICAL, TARGET :: logical_target
+      CHARACTER(LEN=3), TARGET :: character_target
 
       integer_ptr => integer_target
       real_ptr => real_target
       double_ptr => double_target
       complex_ptr => complex_target
       logical_ptr => logical_target
+      character_ptr => character_target
 
       integer_target  = 5
       real_target  = 5
       double_target  = 5
       complex_target = CMPLX(1,2)
       logical_target  = .true.
+      character_target = 'H'
 
       PRINT*, integer_target
       PRINT*, real_target
       PRINT*, double_target
       PRINT*, complex_target
       PRINT*, logical_target
+      PRINT*, character_target
 END PROGRAM

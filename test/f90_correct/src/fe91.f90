@@ -3,9 +3,15 @@
 ! See https://llvm.org/LICENSE.txt for license information.
 ! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 !
-
+!  Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+!
+!  Added support for quad precision
+!  Last modified: Feb 2020
+!
 !
 ! Test F2008 iso_fortran_env constants/kinds
+!
+! Date of Modification: Feb 2020
 !
 MODULE m
   IMPLICIT NONE
@@ -36,9 +42,9 @@ program p
   CHARACTER(10) :: internal_file
   INTEGER :: iostat
 
-  integer, parameter :: N = 21
+  integer, parameter :: N = 22
   integer :: rslts(N)
-  integer :: expect(N) = (/ 1, 2, 4, 8, 1, 2, 4, 8, 4, 8, 1, 2, 4, 8, 1, 2, 4, 8, 4, 8, 99/)
+  integer :: expect(N) = (/ 1, 2, 4, 8, 1, 2, 4, 8, 4, 8, 1, 2, 4, 8, 1, 2, 4, 8, 4, 8, 16, 99/)
 
 
   integer(INT8) :: i1
@@ -67,10 +73,10 @@ program p
 
   rslts(11:14) = INTEGER_KINDS
   rslts(15:18) = LOGICAL_KINDS
-  rslts(19:20) = REAL_KINDS
+  rslts(19:21) = REAL_KINDS
 
   WRITE(internal_file, *, iostat = iostat) d
-  rslts(21) = iostat
+  rslts(22) = iostat
 
   call check(rslts, expect, N)
   !print*,rslts

@@ -25,7 +25,7 @@ void cprintf(char *s, const char *format, INT *val);
   ((s) == ST_STRUCT || (s) == ST_UNION || (s) == ST_ARRAY)
 #define AGGREGATE_DTYPE(d) \
   ((DTY(d)) == TY_STRUCT || (DTY(d)) == TY_UNION || (DTY(d)) == TY_ARRAY)
-#define COMPLEX_DTYPE(d) ((DTY(d)) == TY_CMPLX || (DTY(d)) == TY_DCMPLX)
+#define COMPLEX_DTYPE(d) ((DTY(d)) == TY_CMPLX || (DTY(d)) == TY_DCMPLX || (DTY(d)) == TY_QCMPLX)
 #define VECTOR_DTYPE(d) ((DTY(d)) == TY_VECT)
 
 #define LLCCF_NEG                                                         \

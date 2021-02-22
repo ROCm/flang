@@ -3,10 +3,29 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #
-#Complex data types support for acosh, asinh and atanh
-#Date of Modification:08 January 2020
+# Complex data types support for acosh, asinh and atanh
+# Date of Modification:08 January 2020
+#
+# Complex datatype support for atan2 under flag f2008
+# Modified on 13th March 2020
+#
+# Added support for quad precision
+# Last modified: Feb 2020
+#
+# Added code to support SHIFTA intrinsic
+# Last modified: April 2020
+#
+# Added quad support for floor and ceiling intrinsics
+# Last modified: August 2020
+#
+# Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+# Last modified: 19th August 2020
+#
+# Added code support for cotan and cotand
+# Last modified: Oct 2020
 #
 ABS	ilm
 ACON	sym
@@ -29,18 +48,24 @@ ATAN2	ilm	ilm
 ATAN2D	ilm	ilm
 ATAND	ilm
 ERF	ilm
-DERF	ilm
 ERFC	ilm
 ERFC_SCALED	ilm
+DERF	ilm
 DERFC	ilm
 DERFC_SCALED	ilm
+QERF	ilm
+QERFC	ilm
+QERFC_SCALED	ilm
 GAMMA	ilm
 DGAMMA	ilm
+QGAMMA	ilm
 LOG_GAMMA	ilm
 LSECTION	ilm	sym	sym
 DLOG_GAMMA	ilm
+QLOG_GAMMA	ilm
 HYPOT	ilm	ilm
 DHYPOT	ilm	ilm
+QHYPOT	ilm	ilm
 ACOSH	ilm
 DACOSH	ilm
 ASINH	ilm
@@ -49,16 +74,23 @@ ATANH	ilm
 DATANH	ilm
 BESSEL_J0	ilm
 DBESSEL_J0	ilm
+DBESSEL_J0	ilm
+QBESSEL_J0	ilm
 BESSEL_J1	ilm
 DBESSEL_J1	ilm
+QBESSEL_J1	ilm
 BESSEL_JN	ilm	ilm
 DBESSEL_JN	ilm	ilm
+QBESSEL_JN	ilm	ilm
 BESSEL_Y0	ilm
 DBESSEL_Y0	ilm
+QBESSEL_Y0	ilm
 BESSEL_Y1	ilm
 DBESSEL_Y1	ilm
+QBESSEL_Y1	ilm
 BESSEL_YN	ilm	ilm
 DBESSEL_YN	ilm	ilm
+QBESSEL_YN	ilm	ilm
 BARRIER
 BASE	sym
 BCOPYIN
@@ -90,6 +122,7 @@ BTEAMSN ilm	ilm
 BTARGET	ilm	num
 BTARGETDATA	ilm
 BTEST	ilm	ilm
+BTRAILZ ilm
 BYVAL	ilm	dtype
 CABS	ilm
 CACOS	ilm
@@ -101,6 +134,7 @@ CCOSH	ilm
 CSINH	ilm
 CTANH	ilm
 CTAN	ilm
+CCOTAN    ilm
 CADD	ilm	ilm
 CALL	num	sym	ilms
 CALLA	num	num	ilm	ilms
@@ -116,10 +150,12 @@ CDASIN	ilm
 CASINH ilm
 CDATAN	ilm
 CATANH ilm
+CATAN2   ilm    ilm
 CDCOSH   ilm
 CDSINH   ilm
 CDTANH   ilm
 CDTAN    ilm
+CDCOTAN  ilm
 CDADD	ilm	ilm
 CDCMP	ilm	ilm
 CDCON	sym
@@ -148,6 +184,55 @@ CDUFUNC/CDFUNC	num	sym	args
 CDUFUNCA/CDFUNCA	num	num	ilm	args
 PCDUFUNCA/PCDFUNCA	num	num	sym	ilm	args
 CDUVFUNCA/CDVFUNCA	num	num	sym	ilm	sym	args
+# AOCC BEGIN
+CQABS	ilm
+#CQACOS	ilm
+#CACOSH ilm
+#CQASIN	ilm
+#CASINH ilm
+#CQATAN	ilm
+#CATANH ilm
+CQCOSH   ilm
+CQSINH   ilm
+CQTANH   ilm
+CQTAN    ilm
+CQCOTAN  ilm
+CQATAN   ilm
+CQATAN2   ilm ilm
+CQATANH  ilm
+CQADD    ilm	ilm
+CQCMP	ilm	ilm
+CQCON	sym
+CQCOS	ilm
+CQACOS  ilm
+CQACOSH ilm
+CQDIV	ilm	ilm
+CQEXP	ilm
+CQFUNC	num	sym	ilms
+CQFUNCA	num	num	ilm	ilms
+PCQFUNCA	num	num	sym	ilm	ilms
+CQVFUNCA	num	num	sym	ilm	sym	ilms
+#CDIV	ilm	ilm
+CQLD	ilm
+CQLOG	ilm
+CQMERGE	ilm	ilm	ilm
+CQMUL	ilm	ilm
+CQNEG	ilm
+CQSIN	ilm
+CQASIN  ilm
+CQASINH ilm
+CQSQRT	ilm
+CQST	ilm	ilm
+CQSUB	ilm	ilm
+CQTOCQ	ilm	ilm
+CQTOI	ilm	ilm
+#CQTOK	ilm	ilm
+#CQTOUDI	ilm
+CQUFUNC/CQFUNC	num	sym	args
+CQUFUNCA/CQFUNCA	num	num	ilm	args
+PCQUFUNCA/PCQFUNCA	num	num	sym	ilm	args
+CQUVFUNCA/CQVFUNCA	num	num	sym	ilm	sym	args
+# AOCC END
 CEXP	ilm
 CFUNC	num	sym	ilms
 CFUNCA	num	num	ilm	ilms
@@ -196,14 +281,18 @@ D2K	ilm
 DABS	ilm
 DACOS	ilm
 DACOSD	ilm
+QACOSD	ilm
 DADD	ilm	ilm
 DAIF	ilm	sym	sym	sym
 DASIN	ilm
 DASIND	ilm
+QASIND	ilm
 DATAN	ilm
 DATAN2	ilm	ilm
 DATAN2D	ilm	ilm
+QATAN2D	ilm	ilm
 DATAND	ilm
+QATAND	ilm
 DBLE	ilm
 DCEIL	ilm
 DCMP	ilm	ilm
@@ -218,9 +307,12 @@ DDIV	ilm	ilm
 DEALLOCA	ilm	sym	sym	num
 DEXP	ilm
 DFIX	ilm
+QFIX    ilm
 DFLOAT	ilm
 DFLOATK	ilm
 DFLOOR	ilm
+QFLOOR  ilm
+QCEIL   ilm
 DFUNC	num	sym	ilms
 DFUNCA	num	num	ilm	ilms
 PDFUNCA	num	num	sym	ilm	ilms
@@ -260,7 +352,9 @@ DSQRT	ilm
 DST	ilm	ilm
 DSUB	ilm	ilm
 DTAN	ilm
+DCOTAN    ilm
 DTAND	ilm
+DCOTAND   ilm
 DTANH	ilm
 DTOD	ilm	ilm
 DTOI	ilm	ilm
@@ -358,6 +452,7 @@ ITOS	ilm
 ITOSC	ilm
 ITOUDI	ilm
 ITOUI	ilm
+ITRAILZ ilm
 IUFUNC/IFUNC	num	sym	args
 IUFUNCA/IFUNCA	num	num	ilm	args
 PIUFUNCA/PIFUNCA	num	num	sym	ilm	args
@@ -378,6 +473,7 @@ KBTEST	ilm	ilm
 KCMP	ilm	ilm
 KCON	sym
 KDFIX	ilm
+KQFIX	ilm
 KDIM	ilm	ilm
 KDIV	ilm	ilm
 KDNINT	ilm
@@ -412,6 +508,7 @@ KST	ilm	ilm
 KSUB	ilm	ilm
 KTOI	ilm	ilm
 KTOK	ilm	ilm
+KTRAILZ ilm
 KUFUNC/KFUNC	num	sym	args
 KUFUNCA/KFUNCA	num	num	ilm	args
 PKUFUNCA/PKFUNCA	num	num	sym	ilm	args
@@ -455,6 +552,9 @@ PLUFUNCA/PLFUNCA	num	num	sym	ilm	args
 LUVFUNCA/LVFUNCA	num	num	sym	ilm	sym	args
 MASTER	sym
 MEMBER	ilm	sym
+# AOCC begin
+MM_PREFETCH	ilm	ilm
+# AOCC end
 MOD	ilm	ilm
 MPBORDERED
 MPEORDERED
@@ -516,6 +616,80 @@ PUFUNC/PFUNC	num	sym	args
 PUFUNCA/PFUNCA	num	num	ilm	args
 PPUFUNCA/PPFUNCA	num	num	sym	ilm	args
 PUVFUNCA/PVFUNCA	num	num	sym	ilm	sym	args
+#AOCC begin
+QABS	ilm
+QPLD	ilm
+QLOG	ilm
+QLOG10	ilm
+QUAD	ilm
+QADD	ilm	ilm
+QAIF	ilm	sym	sym	sym
+QCON	sym
+QCONJG	ilm
+QCMP	ilm	ilm
+QDIV	ilm	ilm
+QMAX	ilm	ilm
+QMERGE	ilm	ilm	ilm
+QMIN	ilm	ilm
+QMOD	ilm	ilm
+QMUL	ilm	ilm
+QNEG	ilm
+QNINT	ilm
+QDIM	ilm	ilm
+#QOBEG	ilm	sym	sym
+QFLOAT	ilm
+QFLOATK	ilm
+QFUNC	num	sym	ilms
+QUFUNC/QFUNC	num	sym	args
+QUFUNCA/QFUNCA	num	num	ilm	args
+PQUFUNCA/PQFUNCA	num	num	sym	ilm	args
+QUVFUNCA/QVFUNCA	num	num	sym	ilm	sym	args
+#QOBEGNZ	ilm	sym	sym	ilm
+#QOEND	sym	sym
+#QOENDNZ	sym	sym
+#QPNULL
+#QPREF	ilm
+#QPROD	ilm	ilm
+#QPSCON	num
+#QPVAL	ilm
+QMAX	ilm	ilm
+QMIN	ilm	ilm
+QREAL	ilm
+QSIGN	ilm	ilm
+#QSIGNNZ	ilm	ilm
+QCOS  ilm
+QCOSD  ilm
+QCOSH ilm
+QACOS ilm
+QACOSH ilm
+QEXP	ilm
+QSIN	ilm
+QSINH ilm
+QASIN ilm
+QASINH ilm
+QSIND	ilm
+#QSINH	ilm
+QSQRT	ilm
+QPST	ilm	ilm
+QSUB	ilm	ilm
+QTAN	ilm
+QCOTAN  ilm
+QTANH ilm
+QATAN ilm
+QATAN2 ilm ilm
+QATANH ilm
+QCMPLX	ilm	ilm
+QIMAG	ilm
+QTAND	ilm
+QCOTAND ilm
+#QTANH	ilm
+QTOQ	ilm	ilm
+QTOI	ilm	ilm
+#QTOK	ilm	ilm
+#QTOUDI	ilm
+#QTOUI	ilm
+QISNAN ilm
+#AOCC end
 R2K	ilm
 RADD	ilm	ilm
 RAIF	ilm	sym	sym	sym
@@ -581,9 +755,12 @@ SST	ilm	ilm
 STOI	ilm
 STOUDI	ilm
 STOUI	ilm
+STRAILZ ilm
 SUBS	ilm	ilm	ilm
 TAN	ilm
+COTAN   ilm
 TAND	ilm
+COTAND    ilm
 TANH	ilm
 TARGETENTERDATA	ilm	num
 TARGETEXITDATA	ilm	num
@@ -615,6 +792,7 @@ UITOSC	ilm
 UITOUDI	ilm
 ULSHIFT	ilm	ilm
 URSHIFT	ilm	ilm
+SHIFTA  ilm     ilm
 V	sym
 XNOR/EQV	ilm	ilm
 XNOR64	ilm	ilm

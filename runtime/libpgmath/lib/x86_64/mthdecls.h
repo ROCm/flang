@@ -4,11 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
- /*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Complex type support for acosh , asinh , atanh
  * Date of Modification: 08 January 2020
+ *
+ * Complex datatype support for atan2 under flag f2008
+ * Modified on 13th March 2020`
  *
  */
 /**
@@ -415,6 +419,7 @@ float __mth_i_rpowr(float f, float g);
 float __mth_i_sin(float f);
 float __mth_i_sinh(float f);
 float __mth_i_sqrt(float f);
+float __mth_i_cotan(float f);
 float __mth_i_tan(float f);
 float __mth_i_tanh(float f);
 float __mth_i_amod(float f, float g);
@@ -490,6 +495,9 @@ double __mth_i_dcosd(double f);
 double __mth_i_derf(double f);
 double __mth_i_derfc(double f);
 double __mth_i_derfc_scaled(double f);
+__float128 __mth_i_qerf(__float128 f);
+__float128 __mth_i_qerfc(__float128 f);
+__float128 __mth_i_qerfc_scaled(__float128 f);
 double __mth_i_dgamma(double f);
 double __mth_i_dlog_gamma(double f);
 double __mth_i_dhypot(double, double);
@@ -502,6 +510,14 @@ double __mth_i_dbessel_y0(double arg);
 double __mth_i_dbessel_y1(double arg);
 double __mth_i_dbessel_yn(int n, double arg);
 double __f90_dbessel_yn(int n1, int n, double d);
+__float128 __mth_i_qbessel_j0(__float128 arg);
+__float128 __mth_i_qbessel_j1(__float128 arg);
+__float128 __mth_i_qbessel_jn(int n, __float128 arg);
+__float128 __f90_qbessel_jn(int n1, int n, __float128 d);
+__float128 __mth_i_qbessel_y0(__float128 arg);
+__float128 __mth_i_qbessel_y1(__float128 arg);
+__float128 __mth_i_qbessel_yn(int n, __float128 arg);
+__float128 __f90_qbessel_yn(int n1, int n, __float128 d);
 double __mth_i_dceil(double);
 double __mth_i_dfloor(double);
 
@@ -548,6 +564,7 @@ CMPLXDECL_C(__mth_i_ctanh);
 CMPLXDECL_C(__mth_i_cacosh);
 CMPLXDECL_C(__mth_i_casinh);
 CMPLXDECL_C(__mth_i_catanh);
+CMPLXDECL_C_C(__mth_i_catan2);
 //AOCC End
 
 DBLDECL_C(__mth_i_cdabs);
@@ -588,6 +605,7 @@ extern float_complex_t ctanhf(float_complex_t);
 extern double_complex_t ctanh(double_complex_t);
 extern float_complex_t ctanf(float_complex_t);
 extern double_complex_t ctan(double_complex_t);
+extern double_complex_t ccotan(double_complex_t);
 //AOCC begin
 extern float_complex_t cacoshf(float_complex_t);
 extern double_complex_t cacosh(double_complex_t);
@@ -595,6 +613,7 @@ extern float_complex_t casinhf(float_complex_t);
 extern double_complex_t casinh(double_complex_t);
 extern float_complex_t catanhf(float_complex_t);
 extern double_complex_t catanh(double_complex_t);
+extern double_complex_t catan2(double_complex_t, double_complex_t);
 //AOCC end
 #endif		/* #if	! defined(_C_COMPLEX_T) */
 #endif		/* #if	defined(TARGET_WIN) */

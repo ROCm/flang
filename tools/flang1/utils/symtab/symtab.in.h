@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified : Jun 2020
+ */
 
 #ifndef SYMTAB_H_
 #define SYMTAB_H_
@@ -43,6 +49,7 @@
 #define DT_LOG stb.dt_log
 #define DT_DBLE stb.dt_dble
 #define DT_DCMPLX stb.dt_dcmplx
+#define DT_QCMPLX stb.dt_qcmplx    // AOCC
 #define DT_PTR stb.dt_ptr
 
 #define DT_FLOAT DT_REAL4

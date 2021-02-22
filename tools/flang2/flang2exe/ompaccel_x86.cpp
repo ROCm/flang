@@ -7,6 +7,9 @@
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last Modified: Jun 2020
  */
 #ifdef OMP_OFFLOAD_LLVM
 

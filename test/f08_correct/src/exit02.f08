@@ -1,0 +1,80 @@
+!
+! Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+!
+! CPUPC-2013: F2008-Exit statement-Execution control
+!
+! Date of Modification: 23rd Sep 2019
+!
+! CPUPC-2013: Testing 'NAMED' IF construct.
+!
+PROGRAM EXIT_TEST_02
+  IMPLICIT NONE
+  INTEGER, PARAMETER :: N = 1
+  LOGICAL EXP(N), RES(N)
+
+  CALL SIMPLE_IF_TEST
+  CALL NAMED_IF_TEST1
+  CALL NAMED_IF_TEST2
+
+  CALL CHECK(RES, EXP, N)
+END PROGRAM
+
+IMPURE SUBROUTINE SIMPLE_IF_TEST
+  IMPLICIT NONE
+
+  INTEGER I
+
+  DO I=1,5
+    IC: IF (I == 3) THEN
+      PRINT *, 'SIMPLE_IF_TEST: Before calling EXIT', I
+      EXIT
+      PRINT *, 'SIMPLE_IF_TEST: After EXIT', I
+      PRINT *, 'SIMPLE_IF_TEST: Before IF END IC'
+    END IF IC
+    PRINT *, 'SIMPLE_IF_TEST: After IF I = ', I
+  END DO
+END SUBROUTINE
+
+IMPURE SUBROUTINE NAMED_IF_TEST1
+  IMPLICIT NONE
+
+  INTEGER I
+
+  DO I=1,5
+    IC: IF (I == 3) THEN
+      PRINT *, 'NAMED_IF_TEST1: Before calling EXIT', I
+      EXIT IC
+      PRINT *, 'NAMED_IF_TEST1: After EXIT', I
+      PRINT *, 'NAMED_IF_TEST1: Before IF END IC'
+    END IF IC
+    PRINT *, 'NAMED_IF_TEST1: After IF I = ', I
+  END DO
+END SUBROUTINE
+
+IMPURE SUBROUTINE NAMED_IF_TEST2
+  IMPLICIT NONE
+
+  INTEGER I, J
+
+  DO I = 1, 5
+    DO J = 1, 5
+      IC1: IF (I == J) THEN
+        PRINT *, 'NAMED_IF_TEST2: CALLING EXIT IC1'
+        EXIT IC1
+        PRINT *, 'NAMED_IF_TEST2: After call to EXIT IC1'
+        PRINT *, 'NAMED_IF_TEST2: Before END IF IC1'
+      END IF IC1
+
+      IC2: IF (I > J) THEN
+        PRINT *, 'NAMED_IF_TEST2: CALLING EXIT IC2'
+        EXIT IC2
+        PRINT *, 'NAMED_IF_TEST2: After call to EXIT IC2'
+        PRINT *, 'NAMED_IF_TEST2: Before END IF IC2'
+      END IF IC2
+
+      PRINT *, 'NAMED_IF_TEST2: END of NAMED_IF_TEST'
+    END DO
+  END DO
+END SUBROUTINE
+
+! EOF

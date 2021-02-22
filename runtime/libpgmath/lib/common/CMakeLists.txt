@@ -3,7 +3,9 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
+#
 #
 #Complex type support for acosh , asinh , atanh
 #Modified on 07 January 2020
@@ -40,9 +42,10 @@ if(${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES "x86_64" AND NOT ${LIBPGMATH_WITH_GENER
   if(${LIBPGMATH_SYSTEM_NAME} MATCHES "Linux")
     add_subdirectory("sincosf")
     add_subdirectory("tanf")
+    add_subdirectory("cotanf")
 
     # Specific definition, will probably need to remove when we create a single file for each def
-    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh}{,f} -fno-builtin-{ceil,floor}{,f}")
+    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh,cotan}{,f} -fno-builtin-{ceil,floor}{,f}")
     set_property(SOURCE dispatch.c APPEND PROPERTY COMPILE_DEFINITIONS PGFLANG)
     set_property(SOURCE mth_xintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-march=core2 ")
     set_property(SOURCE mth_yintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-march=sandybridge ")
@@ -80,9 +83,10 @@ if(${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES "x86_64" AND NOT ${LIBPGMATH_WITH_GENER
   elseif(${LIBPGMATH_SYSTEM_NAME} MATCHES "Darwin|Windows")
     add_subdirectory("sincosf")
     add_subdirectory("tanf")
+    add_subdirectory("cotanf")
 
     # Specific definition, will probably need to remove when we create a single file for each def
-    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh}{,f} -fno-builtin-{ceil,floor}{,f}")
+    set_property(SOURCE dispatch.c APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-builtin-c{sqrt,pow,log,exp,acos,asin,atan,cos,sin,tan,cosh,sinh,tanh,cotan}{,f} -fno-builtin-{ceil,floor}{,f}")
     set_property(SOURCE dispatch.c APPEND PROPERTY COMPILE_DEFINITIONS PGFLANG)
     set_property(SOURCE mth_xintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-msse2 ")
     set_property(SOURCE mth_yintrinsics.c APPEND_STRING PROPERTY COMPILE_FLAGS "-mavx ")
@@ -180,6 +184,7 @@ set(MTH_CMPLX_SRCS
   casinh.c
   cacosh.c
   catanh.c
+  catan2.c
   #AOCC End
   cdabs.c
   cdacos.c
@@ -200,6 +205,7 @@ set(MTH_CMPLX_SRCS
   cdsinh.c
   cdsqrt.c
   cdtan.c
+  cdcotan.c
   cdtanh.c
   cexp.c
   clog.c
@@ -210,7 +216,11 @@ set(MTH_CMPLX_SRCS
   csinh.c
   csqrt.c
   ctan.c
-  ctanh.c)
+  ccotan.c
+  ctanh.c
+  cqdiv.c
+  cqpowi.c
+  cqpowk.c)
 
 set(SRCS
   ${SRCS}
@@ -233,41 +243,62 @@ set(SRCS
   dasind.c
   datan2d.c
   datand.c
+  qacosd.c
+  qasind.c
+  qatan2d.c
+  qatand.c
   dbessel_j0.c
   dbessel_j1.c
   dbessel_jn.c
   dbessel_y0.c
   dbessel_y1.c
   dbessel_yn.c
+  qbessel_j0.c
+  qbessel_j1.c
+  qbessel_jn.c
+  qbessel_y0.c
+  qbessel_y1.c
+  qbessel_yn.c
+  qnint.c
   dceil.c
   dcosd.c
+  qcosd.c
   dfloor.c
   dmod.c
   dpowi.c
+  qpowi.c
   dpowk.c
   dsign.c
   dsind.c
+  qsind.c
   dtand.c
+  qtand.c
   erf.c
   erfc.c
   erfc_scaled.c
   erfc_scaledf.c
   erfcf.c
   erff.c
+  erfc_scaledq.c
+  erfcq.c
+  erfq.c
   floor.c
   fltfenv.c
   fltmanip.c
   fpcvt.c
   gamma.c
   gammaf.c
+  gammaq.c
   hypot.c
   hypotf.c
+  hypotq.c
   i2powi.c
   ipowi.c
   kpowi.c
   kpowk.c
   log_gamma.c
   log_gammaf.c
+  log_gammaq.c
   mod.c
   mth_vreturns.c
   mth_xintrinsics.c
@@ -277,7 +308,11 @@ set(SRCS
   rpowk.c
   sign.c
   sind.c
-  tand.c)
+  tand.c
+  cotand.c
+  dcotand.c
+  qcotand.c
+  qcotan.c)
 libmath_add_object_library("${SRCS}" "${FLAGS}" "${DEFINITIONS}" "")
 
 set(DEFINITIONS_CMPLX ${DEFINITIONS} MTH_CMPLX_C99_ABI)

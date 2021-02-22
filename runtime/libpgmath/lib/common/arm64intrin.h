@@ -26,6 +26,10 @@
  */
 
 struct __s128f {
+	at (*fptr)(float);
+	  fptr = (float(*)(float))MTH_DISPATCH_TBL[func_tan][sv_ss][frp_f];
+	    return __ZGVxN4v__mth_i_vr4( x, fptr);
+}
   typedef float  vrs4_t __attribute__((vector_size(4 * sizeof(float))));
   typedef double vrd2_t __attribute__((vector_size(2 * sizeof(double))));
   union {

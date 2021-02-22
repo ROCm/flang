@@ -46,6 +46,17 @@ dotp_real8(__REAL8_T *c, int nj, __REAL8_T *a, int ai, int ais, __REAL8_T *b,
 }
 
 static void
+dotp_real16(__REAL16_T *c, int nj, __REAL16_T *a, int ai, int ais, __REAL16_T *b,
+           int bk, int bks)
+{
+  register __float128 cc;
+  cc = *c;
+  for (; --nj >= 0; ai += ais, bk += bks)
+    cc += a[ai] * b[bk];
+  *c = cc;
+}
+
+static void
 dotp_cplx8(__CPLX8_T *c, int nj, __CPLX8_T *a, int ai, int ais, __CPLX8_T *b,
            int bk, int bks)
 {
@@ -91,6 +102,21 @@ dotp_cplx16(__CPLX16_T *c, int nj, __CPLX16_T *a, int ai, int ais,
 }
 
 static void
+dotp_cplx32(__CPLX32_T *c, int nj, __CPLX32_T *a, int ai, int ais,
+            __CPLX32_T *b, int bk, int bks)
+{
+  register __float128 cr, ci;
+  cr = c->r;
+  ci = c->i;
+  for (; --nj >= 0; ai += ais, bk += bks) {
+    cr += (__float128) a[ai].r * (__float128) b[bk].r + (__float128) a[ai].i * (__float128) b[bk].i;
+    ci += (__float128) a[ai].r * (__float128) b[bk].i - (__float128) a[ai].i * (__float128) b[bk].r;
+  }
+  c->r = cr;
+  c->i = ci;
+}
+
+static void
 mmul_cplx16(__CPLX16_T *c, int nj, __CPLX16_T *a, int ai, int ais,
             __CPLX16_T *b, int bk, int bks)
 {
@@ -104,6 +130,23 @@ mmul_cplx16(__CPLX16_T *c, int nj, __CPLX16_T *a, int ai, int ais,
   c->r = cr;
   c->i = ci;
 }
+
+// AOCC begin
+static void
+mmul_cplx32(__CPLX32_T *c, int nj, __CPLX32_T *a, int ai, int ais,
+            __CPLX32_T *b, int bk, int bks)
+{
+  register __float128 cr, ci;
+  cr = c->r;
+  ci = c->i;
+  for (; --nj >= 0; ai += ais, bk += bks) {
+    cr += a[ai].r * b[bk].r - a[ai].i * b[bk].i;
+    ci += a[ai].r * b[bk].i + a[ai].i * b[bk].r;
+  }
+  c->r = cr;
+  c->i = ci;
+}
+// AOCC end
 
 static void
 dotp_int1(__INT1_T *c, int nj, __INT1_T *a, int ai, int ais, __INT1_T *b,
@@ -276,11 +319,17 @@ void ENTFTN(DOTPR, dotpr)(char *cb, char *ab0, char *bb0, F90_Desc *cs,
   case __REAL8:
     dotp = dotp_real8;
     break;
+  case __REAL16:
+    dotp = dotp_real16;
+    break;
   case __CPLX8:
     dotp = dotp_cplx8;
     break;
   case __CPLX16:
     dotp = dotp_cplx16;
+    break;
+  case __CPLX32:
+    dotp = dotp_cplx32;
     break;
   case __INT1:
     dotp = dotp_int1;
@@ -458,11 +507,17 @@ static void I8(mmul_mxm)(char *cb0, char *ab0, char *bb0, F90_Desc *cs0,
   case __REAL8:
     mmul = dotp_real8;
     break;
+  case __REAL16:
+    mmul = dotp_real16;
+    break;
   case __CPLX8:
     mmul = mmul_cplx8;
     break;
   case __CPLX16:
     mmul = mmul_cplx16;
+    break;
+  case __CPLX32:
+    mmul = mmul_cplx32;
     break;
   case __INT1:
     mmul = dotp_int1;
@@ -682,11 +737,17 @@ static void I8(mmul_vxm)(char *cb0, char *ab0, char *bb0, F90_Desc *cs0,
   case __REAL8:
     mmul = dotp_real8;
     break;
+  case __REAL16:
+    mmul = dotp_real16;
+    break;
   case __CPLX8:
     mmul = mmul_cplx8;
     break;
   case __CPLX16:
     mmul = mmul_cplx16;
+    break;
+  case __CPLX32:
+    mmul = mmul_cplx32;
     break;
   case __INT1:
     mmul = dotp_int1;
@@ -930,11 +991,17 @@ static void I8(mmul_mxv)(char *cb0, char *ab0, char *bb0, F90_Desc *cs0,
   case __REAL8:
     mmul = dotp_real8;
     break;
+  case __REAL16:
+    mmul = dotp_real16;
+    break;
   case __CPLX8:
     mmul = mmul_cplx8;
     break;
   case __CPLX16:
     mmul = mmul_cplx16;
+    break;
+  case __CPLX32:
+    mmul = mmul_cplx32;
     break;
   case __INT1:
     mmul = dotp_int1;

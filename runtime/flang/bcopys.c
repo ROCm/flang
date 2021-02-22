@@ -41,11 +41,12 @@ __fort_bcopysl(char *to, char *fr, size_t cnt, size_t tostr, size_t frstr,
   if (to < fr) {
     if ((n & ALIGNMASK(double)) == 0) {
       if (len == 2 * sizeof(double)) {
+	/*AOCC Begin
         tostr *= 2;
         frstr *= 2;
+	AOCC End*/
         for (i = j = 0; cnt > 0; cnt--, i += tostr, j += frstr) {
-          ((double *)to)[i] = ((double *)fr)[j];
-          ((double *)to)[i + 1] = ((double *)fr)[j + 1];
+          ((__float128 *)to)[i] = ((__float128 *)fr)[j];
         }
         return;
       }
@@ -109,13 +110,14 @@ __fort_bcopysl(char *to, char *fr, size_t cnt, size_t tostr, size_t frstr,
 
     if ((n & ALIGNMASK(double)) == 0) {
       if (len == 2 * sizeof(double)) {
-        tostr *= 2;
+        /*AOCC Begin
+	tostr *= 2;
         frstr *= 2;
         i *= 2;
         j *= 2;
+	AOCC End*/
         for (; cnt > 0; cnt--, i -= tostr, j -= frstr) {
-          ((double *)to)[i + 1] = ((double *)fr)[j + 1];
-          ((double *)to)[i] = ((double *)fr)[j];
+          ((__float128 *)to)[i] = ((__float128 *)fr)[j];
         }
         return;
       }

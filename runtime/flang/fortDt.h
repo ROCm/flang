@@ -2,7 +2,11 @@
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
+ */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ * Last modified: July 2020
  */
 
 /**
@@ -55,7 +59,7 @@ typedef enum {
   __REAL2 = 45,      /**< Fortran real*2, half */
   __REAL4 = 27,      /**< Fortran real*4, real */
   __REAL8 = 28,      /**< Fortran real*8, double precision */
-  __REAL16 = 29,     /**< Fortran real*16 */
+  __REAL16 = 29,     /**< Fortran real*16 quad precision */
   __CPLX32 = 30,     /**< Fortran complex*32 (2x real*16) */
   __WORD16 = 31,     /**< Fortran quad typeless */
   __INT1 = 32,       /**< Fortran integer*1 */
@@ -148,8 +152,11 @@ typedef unsigned short __REAL2_T; /* 45 __REAL2      real*2 */
 typedef float __REAL4_T; /* 27 __REAL4      real*4 */
 
 typedef double __REAL8_T; /* 28 __REAL8      real*8 */
-
+#ifdef LONG_DOUBLE_FLOAT128
 typedef double __REAL16_T; /* 29 __REAL16     real*16 */
+#else
+typedef __float128  __REAL16_T; /* 29 __REAL16     real*16 */
+#endif
 
 typedef struct {
   __REAL4_T r, i;
@@ -260,6 +267,7 @@ typedef __LOG4_T __BIGLOG_T;
 #define __BIGREAL __REAL8
 #define __BIGCPLX __CPLX16
 typedef __REAL8_T __BIGREAL_T;
+typedef __REAL16_T __BIGREAL16_T;    // AOCC
 typedef __CPLX16_T __BIGCPLX_T;
 #define BIGREAL_IS_LONGDOUBLE 0
 

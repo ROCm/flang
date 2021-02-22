@@ -398,6 +398,7 @@ BEGIN {
   do_all_rr("aint", 0, one_arg)
   do_all_rr("ceil", 0, one_arg)
   do_all_rr("floor", 0, one_arg)
+  do_all_rr("cotan", 0, one_arg)
 
   do_all_pow_r2i()
 }

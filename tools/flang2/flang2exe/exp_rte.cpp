@@ -4,11 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Last modified: Nov 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last Modified: Jun 2020
+ *
+ * 
+ * Added IM_QFUNC
+ * Date of modification: 18th July 2020
  */
+
 /**
    \file
    \brief Fortran expander routines
@@ -94,6 +105,7 @@ static int add_gargl_closure(SPTR sdsc);
 #define CLASS_MEM 13
 
 #define MAX_PASS_STRUCT_SIZE 16
+#define ISNVVMCODEGEN gbl.ompaccel_isdevice
 
 #define mk_prototype mk_prototype_llvm
 
@@ -101,7 +113,7 @@ static int add_gargl_closure(SPTR sdsc);
   (opc == IM_PCALLA || opc == IM_PCHFUNCA || opc == IM_PNCHFUNCA || \
    opc == IM_PKFUNCA || opc == IM_PLFUNCA || opc == IM_PIFUNCA ||   \
    opc == IM_PRFUNCA || opc == IM_PDFUNCA || opc == IM_PCFUNCA ||   \
-   opc == IM_PCDFUNCA || opc == IM_PPFUNCA)
+   opc == IM_PCDFUNCA || opc == IM_PPFUNCA || opc == IM_PQFUNCA)
 
 static SPTR exp_call_sym; /**< sptr subprogram being called */
 static SPTR fptr_iface;   /**< sptr of function pointer's interface */
@@ -1593,6 +1605,9 @@ scan_args:
         pf->mem_off += 8;
       else if (argdtype == DT_DCMPLX)
         pf->mem_off += 16;
+      // AOCC
+      else if (argdtype == DT_QCMPLX)
+        pf->mem_off += 32;
       else if (DTY(argdtype) == TY_STRUCT)
         pf->mem_off += size_of(argdtype);
       else
@@ -1730,6 +1745,7 @@ pp_params_mixedstrlen(int func)
     break;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:         // AOCC
     /*
      * If this is a function which returns complex, the first arg is
      * also for the return value.  The last entry in the function's
@@ -1811,6 +1827,8 @@ scan_args:
         pf->mem_off += 8;
       else if (argdtype == DT_DCMPLX)
         pf->mem_off += 16;
+      else if (argdtype == DT_QCMPLX)   // AOCC
+        pf->mem_off += 32;
       else if (DTY(argdtype) == TY_STRUCT)
         pf->mem_off += size_of(argdtype);
       else
@@ -1908,6 +1926,12 @@ ldst_size(DTYPE dtype, ILI_OP *ldo, ILI_OP *sto, int *siz)
     *sto = IL_STKR;
     break;
   case TY_QUAD:
+  // AOCC begin
+    *siz = MSZ_F16;
+    *ldo = IL_LDQP;
+    *sto = IL_STQP;
+    break;
+  // AOCC end
   case TY_DBLE:
   case TY_DCMPLX:
     *siz = MSZ_F8;
@@ -1954,6 +1978,12 @@ ldst_size(DTYPE dtype, ILI_OP *ldo, ILI_OP *sto, int *siz)
     *ldo = IL_LDDP;
     *sto = IL_STDP;
     break;
+  // AOCC begin
+  case MSZ_F16:
+    *ldo = IL_LDQP;
+    *sto = IL_STQP;
+    break;
+  // AOCC end
   }
 } /* ldst_size */
 
@@ -2408,6 +2438,20 @@ gen_bindC_retval(finfo_t *fp)
         ilix = ad2ili(IL_MVQ, ilix, RES_XR(0)); /*m128*/
       }
       break;
+    // AOCC begin
+    case ILIA_QP:
+      if (ILI_OPC(ilix) != IL_LDQP && ILI_OPC(ilix) != IL_QCON) {
+        const SPTR sfval = fp->fval;
+        ilix = ad4ili(IL_STQP, ilix, ad_acon(sfval, 0),
+                      addnme(NT_VAR, sfval, 0, 0), MSZ_F16);
+        chk_block(ilix);
+        ilix = ad3ili(IL_LDQP, ad_acon(sfval, 0),
+                      addnme(NT_VAR, sfval, 0, 0), MSZ_F16);
+      } else {
+        ilix = ad2ili(IL_MVQP, ilix, RES_XR(0)); /*m128*/
+      }
+      break;
+    // AOCC end
     case ILIA_KR:
       ilix = ad2ili(IL_MVKR, ilix, RES_IR(0));
       break;
@@ -2453,6 +2497,7 @@ gen_funcret(finfo_t *fp)
     return;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
     if (!CFUNCG(gbl.currsub) && !CMPLXFUNC_C)
       return;
     move = ad2ili(IL_MVAR, addr, RES_IR(0));
@@ -2471,6 +2516,12 @@ gen_funcret(finfo_t *fp)
     ili1 = ad3ili(IL_LDDP, addr, nme, MSZ_F8);
     move = ad2ili(IL_MVDP, ili1, FR_RETVAL);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ili1 = ad3ili(IL_LDQP, addr, nme, MSZ_F16);
+    move = ad2ili(IL_MVQP, ili1, FR_RETVAL);
+    break;
+  // AOCC end
   case TY_BINT:
   case TY_BLOG:
     ili1 = ad3ili(IL_LD, addr, nme, MSZ_SBYTE);
@@ -2821,6 +2872,7 @@ static void arg_ar(int, ainfo_t *, int);
 static void arg_hp(int, ainfo_t *);
 static void arg_sp(int, ainfo_t *);
 static void arg_dp(int, ainfo_t *);
+static void arg_qp(int, ainfo_t *);    // AOCC
 static void arg_charlen(int, ainfo_t *);
 static void arg_length(STRDESC *, ainfo_t *);
 
@@ -2898,6 +2950,11 @@ add_arg_ili(int ilix, int nme, int dtype)
   case ILIA_DP:
     add_to_args(IL_ARGDP, ilix);
     break;
+  // AOCC begin
+  case ILIA_QP:
+    add_to_args(IL_ARGQP, ilix);
+    break;
+  // AOCC end
   case ILIA_AR:
     add_to_args(IL_ARGAR, ilix);
     break;
@@ -2933,6 +2990,11 @@ put_arg_ili(int i, ainfo_t *ainfo)
   case IL_ARGDP:
     arg_dp(arg_ili[i].ili_arg, ainfo);
     break;
+  // AOCC begin
+  case IL_ARGQP:
+    arg_qp(arg_ili[i].ili_arg, ainfo);
+    break;
+  // AOCC end
   default:
     interr("exp_call: ili arg type not cased", arg_ili[i].ili_arg, ERR_Severe);
     break;
@@ -3069,7 +3131,7 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
       store = IL_STSP;
       msz = MSZ_F4;
     }
-  } else {
+  } else if (DTY(dtype) == TY_DCMPLX) {
     if (XBIT(70, 0x40000000) && !imag) {
       load = IL_LDDCMPLX;
       store = IL_STDCMPLX;
@@ -3079,7 +3141,19 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
       store = IL_STDP;
       msz = MSZ_F8;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000) && !imag) {
+      load = IL_LDQCMPLX;
+      store = IL_STQCMPLX;
+      msz = MSZ_F32;
+    } else {
+      load = IL_LDQP;
+      store = IL_STQP;
+      msz = MSZ_F16;
+    }
   }
+  // AOCC end
   if (!XBIT(70, 0x40000000)) {
     size = size_of(dtype) / 2;
   } else {
@@ -3137,8 +3211,10 @@ cmplx_to_mem(int real, int imag, DTYPE dtype, int *addr, int *nme)
   if (XBIT(70, 0x40000000) && !imag) {
     if (dtype == DT_CMPLX)
       chk_block(ad4ili(IL_STSCMPLX, real, *addr, *nme, msz));
-    else
+    else if (dtype == DT_DCMPLX)
       chk_block(ad4ili(IL_STDCMPLX, real, *addr, *nme, msz));
+    else
+      chk_block(ad4ili(IL_STQCMPLX, real, *addr, *nme, msz));
   } else {
     chk_block(ad4ili(store, real, *addr, addnme(NT_MEM, SPTR_NULL, *nme, 0), msz));
     chk_block(ad4ili(store, imag,
@@ -3296,10 +3372,30 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   int struct_tmp;
   int chain_pointer_arg = 0;
   int result_arg = 0;
+  int tgtargili;
+  int ilmarg;
+  SPTR isptrarg;
 
   nargs = ILM_OPND(ilmp, 1); /* # args */
   func_addr = 0;
   funcptr_flags = 0;
+
+  // AOCC begin
+#ifdef OMP_OFFLOAD_LLVM
+  // We can't do this evaulation at ast since for omp target-if the same
+  // ast-block is used for the outlined target function and host function.
+  // Since this evalutation must only happen at the outlined target function, we
+  // perform it here under gbl.ompaccel_intarget so that we're guaranteed not
+  // to modify the same call(if any) in the host.
+  if (gbl.ompaccel_intarget && flg.x86_64_omptarget) {
+    SPTR func_sptr = ILM_SymOPND(ilmp, 2);
+    if (strcmp(SYMNAME(func_sptr), "omp_is_initial_device") == 0) {
+      ILI_OF(curilm) = ad_icon(0); // ie. return false
+      return;
+    }
+  }
+#endif
+  // AOCC end
   switch (opc) {
   case IM_CALL:
     exp_call_sym = ILM_SymOPND(ilmp, 2); /* external reference  */
@@ -3315,8 +3411,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_IFUNC:
   case IM_RFUNC:
   case IM_DFUNC:
+  case IM_QFUNC:        // AOCC
   case IM_CFUNC:
   case IM_CDFUNC:
+  case IM_CQFUNC:       // AOCC
   case IM_PFUNC:
   case IM_SFUNC:
     exp_call_sym = ILM_SymOPND(ilmp, 2); /* external reference  */
@@ -3343,6 +3441,11 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_PCDFUNCA:
   case IM_PFUNCA:
   case IM_PPFUNCA:
+  // AOCC begin
+  case IM_QFUNCA:
+  case IM_CQFUNCA:
+  case IM_PQFUNCA:
+  // AOCC end
     funcptr_flags = ILM_OPND(ilmp, 2);
     exp_call_sym = SPTR_NULL; /* via procedure ptr */
     if (!IS_INTERNAL_PROC_CALL(opc)) {
@@ -3392,6 +3495,14 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DVFUNCA:
     descno = 5;
     goto vcalla_common;
+  // AOCC begin
+  case IM_QVFUNCA:
+    descno = 5;
+    goto vcalla_common;
+  case IM_CQVFUNCA:
+    descno = 5;
+    goto vcalla_common;
+  // AOCC end
   case IM_CVFUNCA:
     descno = 5;
     goto vcalla_common;
@@ -3494,14 +3605,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     break;
   case IM_CFUNC:
   case IM_CDFUNC:
+  case IM_CQFUNC:     // AOCC
     i = 3;
     goto share_cfunc;
   case IM_PCFUNCA:
   case IM_PCDFUNCA:
+  case IM_PCQFUNCA:
     i = 5;
     goto share_cfunc;
   case IM_CFUNCA:
   case IM_CDFUNCA:
+  case IM_CQFUNCA:    // AOCC
     i = 4;
   share_cfunc:
     ilm1 = ILM_OPND(ilmp, i);
@@ -3513,7 +3627,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     if (CFUNCG(exp_call_sym) || (funcptr_flags & FUNCPTR_BINDC) ||
         CMPLXFUNC_C) {
       ADDRTKNP(IILM_OPND(ilm1, 1), 1);
-      if (opc == IM_CFUNCA || opc == IM_CDFUNCA) {
+      if (opc == IM_CFUNCA || opc == IM_CDFUNCA || opc == IM_CQFUNCA) {
         ilm1 = ILM_OPND(ilmp, i);
       } else {
         ilm1 = ILM_OPND(ilmp, (i + 2));
@@ -3560,6 +3674,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     break;
   case IM_CVFUNCA:
   case IM_CDVFUNCA:
+  case IM_CQVFUNCA:      // AOCC
     ilm1 = ILM_OPND(ilmp, 6);
     if (IILM_OPC(ilm1) == IM_FARG)
       ilm1 = IILM_OPND(ilm1, 1);
@@ -3577,6 +3692,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_IVFUNCA:
   case IM_RVFUNCA:
   case IM_DVFUNCA:
+  case IM_QVFUNCA:       // AOCC
   case IM_PVFUNCA:
     i = 6;
     break;
@@ -3618,6 +3734,7 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_PIFUNCA:
   case IM_PRFUNCA:
   case IM_PDFUNCA:
+  case IM_PQFUNCA:        // AOCC
   case IM_PLFUNCA:
   case IM_PPFUNCA:
   case IM_PKFUNCA:
@@ -3665,8 +3782,44 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       loc_of(NME_OF(ilm1));
       argili = ILI_OF(ilm1);
       ilm1 = ILM_OPND(ilmlnk, 2); /* BASE ILM of the object */
+      
+      /* special case for handling allocatable array in GPU
+       * temporary alloca for the allocatable array is created and passed
+       * as an argument for the function inside target region
+       */
+      //AOCC BEGIN
+      ILM *ilmp2;
+      ilmarg = ILM_OPND(ilmlnk, 2);
+      ilmp2 = (ILM *)(ilmb.ilm_base + ilmarg);
+      isptrarg=ILM_SymOPND(ilmp2,1);
+      dtype = DTYPEG(isptrarg);
       if (ILM_RESTYPE(ilm1) != ILM_ISCHAR || !pass_len) {
-        add_to_args(IL_ARGAR, argili);
+#if 0
+#ifdef OMP_OFFLOAD_AMD
+	  // AOCC Begin
+         if( flg.amdgcn_target && DTY(dtype)==TY_ARRAY){
+           SPTR tgt_arg;
+           tgt_arg = installsym("tgtargtemp", strlen("temp"));
+           if (STYPEG(tgt_arg) == ST_UNKNOWN)
+             setimplicit(tgt_arg);
+           DTYPEP(tgt_arg , DT_ADDR);        
+           STYPEP(tgt_arg , ST_VAR);
+           SCP(tgt_arg , SC_LOCAL);
+           OMPACCDEVSYMP(tgt_arg , 1);
+           int nme = addnme(NT_VAR, tgt_arg , 0, (INT)0);
+           tgtargili = mk_address(tgt_arg);
+           ilix = mk_ompaccel_store(argili, DT_ADDR, nme, tgtargili);
+           chk_block(ilix);
+           ilix = mk_ompaccel_ldsptr(tgt_arg);
+           chk_block(ilix);
+           add_to_args(IL_ARGAR, tgtargili);
+           gargili = tgtargili;
+           break;
+          } else 
+        //AOCC END  
+#endif
+#endif
+          add_to_args(IL_ARGAR, argili);
       } else {
         pass_char_arg(IL_ARGAR, argili, ILM_CLEN(ilm1));
       }
@@ -3714,14 +3867,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       }
       if (ILM_RESTYPE(ilm1) == ILM_ISCMPLX ||
           ILM_RESTYPE(ilm1) == ILM_ISDCMPLX || dtype == DT_CMPLX ||
-          dtype == DT_DCMPLX) {
+          dtype == DT_DCMPLX || dtype == DT_QCMPLX) {
         int res, mem_msz, msz;
         ILI_OP st_opc, ld_opc, arg_opc;
         argili = ILM_RRESULT(ilm1);
         if (ILM_RESTYPE(ilm1) == ILM_ISCMPLX)
           arg_opc = IL_ARGSP;
-        else
+        else if (ILM_RESTYPE(ilm1) == ILM_ISDCMPLX)
           arg_opc = IL_ARGDP;
+        // AOCC
+        else
+          arg_opc = IL_ARGQP;
 
         if (XBIT(70, 0x40000000)) {
           int rili;
@@ -3739,11 +3895,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
             add_to_args(arg_opc, argili);
             argili = ad1ili(IL_SCMPLX2REAL, rili);
             add_to_args(arg_opc, argili);
-          } else {
+          } else if (dtype == DT_DCMPLX) {
             arg_opc = IL_ARGDP;
             argili = ad1ili(IL_DCMPLX2IMAG, rili);
             add_to_args(arg_opc, argili);
             argili = ad1ili(IL_DCMPLX2REAL, rili);
+            add_to_args(arg_opc, argili);
+          } else {
+            arg_opc = IL_ARGQP;
+            argili = ad1ili(IL_QCMPLX2IMAG, rili);
+            add_to_args(arg_opc, argili);
+            argili = ad1ili(IL_QCMPLX2REAL, rili);
             add_to_args(arg_opc, argili);
           }
           cmplx_to_mem(ILM_RESULT(ilm1), 0, dtype, &addr, &nme);
@@ -3756,14 +3918,17 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
 #if   defined(IL_GJSR) && defined(USE_LLVM_CMPLX) /* New functionality */
         res = ILI_OPND(ILM_RESULT(ilm1), 1);
         basenm = 0;
-        dtype = ILM_RESTYPE(ilm1) == ILM_ISCMPLX ? DT_CMPLX : DT_DCMPLX;
-        ld_opc = dtype == DT_CMPLX ? IL_LDSCMPLX : IL_LDDCMPLX;
-        msz = dtype == DT_CMPLX ? MSZ_F8 : MSZ_F16;
-        mem_msz = dtype == DT_CMPLX ? MSZ_F4 : MSZ_F8;
+        dtype = ILM_RESTYPE(ilm1) == ILM_ISCMPLX ? DT_CMPLX :
+                ILM_RESTYPE(ilm1) == ILM_ISDCMPLX ? DT_DCMPLX : DT_QCMPLX;
+        ld_opc = dtype == DT_CMPLX ? IL_LDSCMPLX : dtype == DT_DCMPLX
+                                   ? IL_LDDCMPLX : IL_LDQCMPLX;
+        msz = dtype == DT_CMPLX ? MSZ_F8 : dtype == DT_DCMPLX ? MSZ_F16 : MSZ_F32;
+        mem_msz = dtype == DT_CMPLX ? MSZ_F4 : dtype == DT_DCMPLX ? MSZ_F8 : MSZ_F16;
         if (!ILIA_ISAR(IL_RES(ILI_OPC(res)))) {
           /* Not an address, so we need to add a temp store */
-          st_opc = dtype == DT_CMPLX ? IL_STSP : IL_STDP;
-          skip = dtype == DT_CMPLX ? size_of(DT_FLOAT) : size_of(DT_DBLE);
+          st_opc = dtype == DT_CMPLX ? IL_STSP : dtype == DT_DCMPLX ? IL_STDP : IL_STQP;
+          skip = dtype == DT_CMPLX ? size_of(DT_FLOAT) : dtype == DT_DCMPLX
+                                   ? size_of(DT_DBLE) : size_of(DT_QUAD);
           sym = mkrtemp_cpx_sc(dtype, expb.sc);
           ADDRTKNP(sym, 1);
           basenm = addnme(NT_VAR, sym, 0, 0);
@@ -3882,6 +4047,24 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         add_to_args(IL_ARGDP, argili);
         break;
       }
+      // AOCC begin
+      if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+        dtype = DT_QUAD;
+        argili = ILM_RRESULT(ilm1);
+        add_to_args(IL_ARGQP, argili);
+        if (XBIT(121, 0x800)) {
+          garg_ili[gi].ilix = gargili;
+          garg_ili[gi].dtype = dtype;
+          garg_ili[gi].val_flag = NME_VOL;
+          gi++;
+          ngargs++;
+        }
+        argili = ILM_IRESULT(ilm1);
+        gargili = argili;
+        add_to_args(IL_ARGQP, argili);
+        break;
+      }
+      // AOCC end
       /* word expression by value */
       argili = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(argili))) {
@@ -3901,6 +4084,12 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         add_to_args(IL_ARGDP, argili);
         dtype = DT_DBLE;
         break;
+      // AOCC begin
+      case ILIA_QP:
+        add_to_args(IL_ARGQP, argili);
+        dtype = DT_QUAD;
+        break;
+      // AOCC end
       case ILIA_AR:
         add_to_args(IL_ARGAR, argili);
         dtype = DT_ADDR;
@@ -3937,6 +4126,22 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
         gargili = argili;
         add_to_args(IL_ARGDP, argili);
         break;
+      // AOCC begin
+      case ILIA_CQ:
+        dtype = DT_QUAD;
+        argili = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        add_to_args(IL_ARGQP, argili);
+        if (XBIT(121, 0x800)) {
+          garg_ili[gi].ilix = argili;
+          garg_ili[gi].dtype = dtype;
+          gi++;
+          ngargs++;
+        }
+        argili = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        gargili = argili;
+        add_to_args(IL_ARGQP, argili);
+        break;
+      // AOCC end
       default:
         interr("exp_call:bad ili for DPVAL", argili, ERR_Severe);
       }
@@ -4010,6 +4215,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           sym = mkrtemp_cpx_sc(DT_CMPLX, expb.sc);
         } else if (ILM_RESTYPE(ilm1) == ILM_ISDCMPLX) {
           sym = mkrtemp_cpx_sc(DT_DCMPLX, expb.sc);
+        // AOCC begin
+        } else if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+          sym = mkrtemp_cpx_sc(DT_QCMPLX, expb.sc);
+        // AOCC end
         } else
           sym = mkrtemp_sc(ILM_RESULT(ilm1), expb.sc);
         ADDRTKNP(sym, 1);
@@ -4036,6 +4245,18 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           ilix = ad4ili(IL_STDP, ilix, ad_acon(sym, skip),
                         addnme(NT_MEM, NOSYM, basenm, skip), MSZ_F8);
           chk_block(ilix);
+        // AOCC begin
+        } else if (ILM_RESTYPE(ilm1) == ILM_ISQCMPLX) {
+          skip = size_of(DT_QUAD);
+          ilix = ILM_RRESULT(ilm1);
+          ilix = ad4ili(IL_STQP, ilix, argili,
+                        addnme(NT_MEM, SPTR_NULL, basenm, 0), MSZ_F16);
+          chk_block(ilix);
+          ilix = ILM_IRESULT(ilm1);
+          ilix = ad4ili(IL_STQP, ilix, ad_acon(sym, skip),
+                        addnme(NT_MEM, NOSYM, basenm, skip), MSZ_F16);
+          chk_block(ilix);
+        // AOCC end
         } else {
           ilix = ILM_RESULT(ilm1);
           switch (IL_RES(ILI_OPC(ilix))) {
@@ -4054,12 +4275,22 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
           case ILIA_DP:
             ilix = ad4ili(IL_STDP, ilix, argili, basenm, MSZ_F8);
             break;
+            // AOCC begin
+          case ILIA_QP:
+            ilix = ad4ili(IL_STQP, ilix, argili, basenm, MSZ_F16);
+            break;
+            // AOCC end
           case ILIA_CS:
             ilix = ad4ili(IL_STSCMPLX, ilix, argili, basenm, MSZ_F8);
             break;
           case ILIA_CD:
             ilix = ad4ili(IL_STDCMPLX, ilix, argili, basenm, MSZ_F16);
             break;
+          // AOCC begin
+          case ILIA_CQ:
+            ilix = ad4ili(IL_STQCMPLX, ilix, argili, basenm, MSZ_F32);
+            break;
+          // AOCC end
           default:
             // in exp_call for IM_SFUNC, we decide to save IL_JSR
             // in the ILI_OF(or ILM_RESULT) field.
@@ -4265,8 +4496,10 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
     case IM_IVFUNCA:
     case IM_RVFUNCA:
     case IM_DVFUNCA:
+    case IM_QVFUNCA:         // AOCC
     case IM_CVFUNCA:
     case IM_CDVFUNCA:
+    case IM_CQVFUNCA:         // AOCC
     case IM_PVFUNCA: {
       SPTR sptr_descno = (SPTR) descno;
       ililnk = exp_type_bound_proc_call(exp_call_sym, sptr_descno, vtoff, arglnk);
@@ -4350,6 +4583,13 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_DVFUNCA:
     ILI_OF(curilm) = ad2ili(IL_DFRDP, ililnk, FR_RETVAL);
     break;
+  //AOCC Begin
+  case IM_PQFUNCA:
+  case IM_QVFUNCA:
+  case IM_QFUNC:
+    ILI_OF(curilm) = ad2ili(IL_DFRQP, ililnk, FR_RETVAL);
+    break;
+  //AOCC End
   case IM_CFUNC:
   case IM_CFUNCA:
   case IM_PCFUNCA:
@@ -4379,6 +4619,23 @@ exp_call(ILM_OP opc, ILM *ilmp, int curilm)
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
     break;
+  // AOCC begin
+  case IM_CQFUNC:
+  case IM_CQFUNCA:
+  case IM_PCQFUNCA:
+  case IM_CQVFUNCA:
+    chk_block(ililnk);
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, cfunc, cfunc_nme, MSZ_F32);
+    } else {
+      ILM_RRESULT(curilm) = ad3ili(IL_LDQP, cfunc, addnme(NT_MEM, SPTR_NULL, cfunc_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) =
+          ad3ili(IL_LDQP, ad3ili(IL_AADD, cfunc, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, cfunc_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
+    break;
+  // AOCC end
   case IM_PFUNC:
   case IM_PFUNCA:
   case IM_PPFUNCA:
@@ -4492,6 +4749,12 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       arg_dp(ILM_IRESULT(ilm1), &ainfo);
       arg_dp(ILM_RRESULT(ilm1), &ainfo);
       break;
+    // AOCC begin
+    case ILM_ISQCMPLX:
+      arg_qp(ILM_IRESULT(ilm1), &ainfo);
+      arg_qp(ILM_RRESULT(ilm1), &ainfo);
+      break;
+    // AOCC end
     default:
       ilix = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(ilix))) {
@@ -4507,6 +4770,11 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       case ILIA_DP:
         arg_dp(ilix, &ainfo);
         break;
+    // AOCC begin
+      case ILIA_QP:
+        arg_qp(ilix, &ainfo);
+        break;
+    // AOCC end
       case ILIA_KR:
         arg_kr(ilix, &ainfo);
         break;
@@ -4523,6 +4791,14 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
         ilix = ad1ili(IL_DCMPLX2REAL, ILM_RESULT(ilm1));
         arg_dp(ilix, &ainfo);
         break;
+    // AOCC begin
+      case ILIA_CQ:
+        ilix = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        ilix = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        break;
+    // AOCC end
 #endif
       default:
         interr("exp_qjsr: ili ret type not cased", ilix, ERR_Severe);
@@ -4547,7 +4823,7 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 4), MSZ_F4);
       ILM_RESTYPE(curilm) = ILM_ISCMPLX;
     }
-  } else {
+  } else if (res_dtype == DT_DCMPLX) {
     if (XBIT(70, 0x40000000)) {
       ILM_RESULT(curilm) = ad3ili(IL_LDDCMPLX, res_addr, res_nme, MSZ_F16);
     } else {
@@ -4558,7 +4834,20 @@ exp_qjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 8), MSZ_F8);
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, res_addr, res_nme, MSZ_F32);
+    } else {
+
+      ILM_RRESULT(curilm) = ad3ili(IL_LDQP, res_addr, addnme(NT_MEM, SPTR_NULL, res_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) =
+          ad3ili(IL_LDQP, ad3ili(IL_AADD, res_addr, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, res_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
   }
+  // AOCC end
 
   end_ainfo(&ainfo);
 }
@@ -4622,6 +4911,12 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       arg_dp(ILM_IRESULT(ilm1), &ainfo);
       arg_dp(ILM_RRESULT(ilm1), &ainfo);
       break;
+    // AOCC begin
+    case ILM_ISQCMPLX:
+      arg_qp(ILM_IRESULT(ilm1), &ainfo);
+      arg_qp(ILM_RRESULT(ilm1), &ainfo);
+      break;
+    // AOCC end
     default:
       ilix = ILM_RESULT(ilm1);
       switch (IL_RES(ILI_OPC(ilix))) {
@@ -4637,6 +4932,11 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
       case ILIA_DP:
         arg_dp(ilix, &ainfo);
         break;
+      // AOCC begin
+      case ILIA_QP:
+        arg_qp(ilix, &ainfo);
+        break;
+      // AOCC end
       case ILIA_KR:
         arg_kr(ilix, &ainfo);
         break;
@@ -4654,6 +4954,14 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
         arg_dp(ilix, &ainfo);
         break;
 #endif
+      // AOCC begin
+      case ILIA_CQ:
+        ilix = ad1ili(IL_QCMPLX2IMAG, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        ilix = ad1ili(IL_QCMPLX2REAL, ILM_RESULT(ilm1));
+        arg_qp(ilix, &ainfo);
+        break;
+      // AOCC end
       default:
         interr("exp_zqjsr: ili ret type not cased", ilix, ERR_Severe);
         break;
@@ -4678,7 +4986,7 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 4), MSZ_F4);
       ILM_RESTYPE(curilm) = ILM_ISCMPLX;
     }
-  } else {
+  } else if (res_dtype == DT_DCMPLX) {
     if (XBIT(70, 0x40000000)) {
       ILM_RESULT(curilm) = ad3ili(IL_LDDCMPLX, res_addr, res_nme, MSZ_F16);
     } else {
@@ -4688,7 +4996,19 @@ exp_zqjsr(char *ext, DTYPE res_dtype, ILM *ilmp, int curilm)
                  addnme(NT_MEM, NOSYM, res_nme, 8), MSZ_F8);
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
+  // AOCC begin
+  } else {
+    if (XBIT(70, 0x40000000)) {
+      ILM_RESULT(curilm) = ad3ili(IL_LDQCMPLX, res_addr, res_nme, MSZ_F32);
+    } else {
+      ILM_RRESULT(curilm) =
+          ad3ili(IL_LDQP, res_addr, addnme(NT_MEM, SPTR_NULL, res_nme, 0), MSZ_F16);
+      ILM_IRESULT(curilm) = ad3ili(IL_LDQP, ad3ili(IL_AADD, res_addr, ad_aconi(16), 0),
+                 addnme(NT_MEM, NOSYM, res_nme, 16), MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
   }
+  // AOCC end
 
   end_ainfo(&ainfo);
 }
@@ -4724,6 +5044,14 @@ arg_dp(int ilix, ainfo_t *ap)
 {
   ap->lnk = ad2ili(IL_ARGDP, ilix, ap->lnk);
 }
+
+// AOCC begin
+static void
+arg_qp(int ilix, ainfo_t *ap)
+{
+  ap->lnk = ad2ili(IL_ARGQP, ilix, ap->lnk);
+}
+// AOCC end
 
 static void
 arg_charlen(int ilix, ainfo_t *ap)
@@ -5301,10 +5629,10 @@ exp_strcpy(STRDESC *str1, STRDESC *str2)
 /*
  * single source, no overlap
  */
-#define STR_MOVE_THRESH 120 // AOCC
+#define STR_MOVE_THRESH 256 // AOCC
       if (!XBIT(125, 0x800) && str1->liscon && str2->liscon &&
 	  // AOCC (allow strcpy inlining for target offloading )
-          (flg.omptarget || str1->lval <= STR_MOVE_THRESH)) { 
+          (flg.omptarget && str1->lval <= STR_MOVE_THRESH)) { 
         /*
          * perform a 'block move' of the rhs to the lhs -- the move
          * will move a combination of 8 (64-bit only) 4, 2, and 1

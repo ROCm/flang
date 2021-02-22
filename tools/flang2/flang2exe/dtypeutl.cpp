@@ -5,6 +5,15 @@
  *
  */
 
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ *
+ */
+
 /** \file
  * \brief data type utility functions.
  */
@@ -16,7 +25,7 @@
 #include "symfun.h"
 
 static int size_sym = 0;
-/* The no_data_components() function and its supporting predicate functions 
+/* The no_data_components() function and its supporting predicate functions
  * are mirrored from the front end */
 struct visit_list {
   DTYPE dtype;
@@ -222,9 +231,10 @@ _size_of(DTYPE dtype)
   case TY_UBINT:
   case TY_BLOG:
   case TY_DBLE:
-  case TY_QUAD:
+  case TY_QUAD:   // AOCC
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX: // AOCC
   case TY_INT8:
   case TY_UINT8:
   case TY_LOG8:
@@ -358,6 +368,7 @@ dlen(TY_KIND dty)
   case TY_CMPLX:
   case TY_DBLE:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
   case TY_DWORD:
   case TY_HOLL:
   case TY_INT:
@@ -488,6 +499,7 @@ alignment(DTYPE dtype)
   case TY_UINT128:
   case TY_LOG128:
   case TY_FLOAT128:
+  case TY_QCMPLX:    // AOCC
   case TY_CMPLX128:
     return dtypeinfo[ty].align;
   case TY_INT8:
@@ -960,6 +972,7 @@ _dmp_dent(DTYPE dtypeind, FILE *outfile)
   case TY_QUAD:
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
   case TY_BLOG:
   case TY_SLOG:
   case TY_LOG:
@@ -1109,8 +1122,10 @@ Scale_Of(DTYPE dtype, ISZ_T *size)
   case TY_UBINT:
   case TY_BLOG:
   case TY_DBLE:
+  case TY_QUAD:
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:    // AOCC
   case TY_INT8:
   case TY_UINT8:
   case TY_LOG8:

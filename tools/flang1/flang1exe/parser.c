@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ */
+
 /**
  * \file
  * \brief Fortran parser module
@@ -479,11 +488,17 @@ prettytoken(int tkntyp, INT tknval)
   case TK_DCON:
     sprintf(symbuf, "doubleprecision constant %s", getprint((int)tknval));
     break;
+  case TK_QCON:   // AOCC
+    sprintf(symbuf, "quadprecision constant %s", getprint((int)tknval));
+    break;
   case TK_CCON:
     sprintf(symbuf, "complex constant %s", getprint((int)tknval));
     break;
   case TK_DCCON:
     sprintf(symbuf, "doublecomplex constant %s", getprint((int)tknval));
+    break;
+  case TK_QCCON:  // AOCC
+    sprintf(symbuf, "quadcomplex constant %s", getprint((int)tknval));
     break;
   case TK_HOLLERITH:
     sprintf(symbuf, "hollerith constant %10.10s",

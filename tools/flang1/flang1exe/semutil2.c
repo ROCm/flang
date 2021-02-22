@@ -4,10 +4,38 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
+/*
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for transpose intrinsic during initialization
+ *   Date of Modification: 1st March 2019
+ *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ *   Date of Modification: 24th October 2019
+ *   Date of Modification: 5th November 2019
+ *
+ * Added code to support reshape with implied dos inside target region
+ *   Date of Modification: 23rd January 2020
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ * Support for nearest intrinsic
+ *   Last modified: 01 March 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ *   Last modified : April 2020
+ *
+ * Last modified: Jun 2020
+ *
+ * Added code support for COTAN intrinsic
+ *   Last modified : Oct 2020
  */
+
 /** \file
     \brief Utility routines used by Fortran Semantic Analyzer.
 */
@@ -81,6 +109,8 @@ static int init_intrin_type_desc(int ast, SPTR sptr, int std);
 /*
  * semant-created temporaries which are re-used across statements.
  */
+
+extern int nearest_status;
 
 static int temps_ctr[3];
 #define TEMPS_CTR(n) (temps_ctr[n]++)
@@ -892,6 +922,9 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
       if (!XBIT(57, 0x2))
         out_dtype = DT_INT8;
       break;
+    case 16:
+      out_dtype = DT_QUAD;
+      break;
     case 4:
       out_dtype = DT_INT4;
       break;
@@ -905,14 +938,14 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
     break;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:
     switch (kind_val) {
     case 16:
-      if (!XBIT(57, 0x8))
-        out_dtype = DT_QCMPLX;
-      if (XBIT(57, 0x10)) {
+        out_dtype = DT_CMPLX32;
+      /*if (XBIT(57, 0x10)) {
         error(437, 2, gbl.lineno, "COMPLEX(16)", "COMPLEX(8)");
         out_dtype = DT_CMPLX16;
-      }
+      }*/
       break;
     case 8:
       out_dtype = DT_CMPLX16;
@@ -924,14 +957,10 @@ select_kind(DTYPE dtype, int ty, INT kind_val)
     break;
   case TY_REAL:
   case TY_DBLE:
+  case TY_QUAD:
     switch (kind_val) {
     case 16:
-      if (!XBIT(57, 0x4))
-        out_dtype = DT_QUAD;
-      if (XBIT(57, 0x10)) {
-        error(437, 2, gbl.lineno, "REAL(16)", "REAL(8)");
-        out_dtype = DT_REAL8;
-      }
+      out_dtype = DT_QUAD;  // AOCC
       break;
     case 8:
       out_dtype = DT_REAL8;
@@ -3668,7 +3697,7 @@ construct_arg_list(int ast)
   ACL *argroot = NULL;
   ACL **curarg = &argroot;
   int i;
-
+   
   for (i = 0; i < A_ARGCNTG(ast); i++) {
     int argast = ARGT_ARG(argt, i);
     /* argast is 0 for optional args */
@@ -3701,33 +3730,65 @@ static ACL *
 mk_elem_init_intrinsic(AC_INTRINSIC init_intr, int ast, DTYPE dtype,
                        int parent_acltype)
 {
-  ACL *arg1acl;
-  ACL *a;
-  DTYPE arg1dtype;
-  DTYPE dtypebase = DDTG(dtype);
-  ACL *expracl = mk_init_intrinsic(init_intr);
-  ACL *arglist = construct_arg_list(ast);
-
-  if (!arglist) {
-    sem.dinit_error = TRUE;
-    return 0;
+  // AOCC begin
+  if (nearest_status == 1) {
+    ACL *expracl = mk_init_intrinsic(init_intr);
+    int argt = A_ARGSG(ast);
+    ACL *argroot = NULL;
+    ACL **curarg = &argroot;
+    int argast = ARGT_ARG(argt, 0);
+    if (argast) {
+      *curarg = construct_acl_from_ast(argast, A_DTYPEG(argast), 0);
+      if (!*curarg) {
+        return 0;
+      }
+      curarg = &(*curarg)->next;
+    }
+    argast = ARGT_ARG(argt, 1);
+    if (argast) {
+      *curarg = construct_acl_from_ast(argast-2, A_DTYPEG(argast), 0);
+      if (!*curarg) {
+        return 0;
+      }
+      curarg = &(*curarg)->next;
+    }
+    if (sem.dinit_error) {
+      return 0;
+    }
+    expracl->dtype = dtype;
+    expracl->u1.expr->rop = argroot;
+    return expracl;
   }
+  else {
+    ACL *arg1acl;
+    ACL *a;
+    DTYPE arg1dtype;
+    DTYPE dtypebase = DDTG(dtype);
+    ACL *expracl = mk_init_intrinsic(init_intr);
+    ACL *arglist = construct_arg_list(ast);
 
-  arg1acl = arglist;
-  arg1dtype = arg1acl->dtype;
-  expracl->dtype = dtypebase;
-  expracl->u1.expr->rop = arglist;
+    if (!arglist) {
+      sem.dinit_error = TRUE;
+      return 0;
+    }
+    arg1acl = arglist;
+    arg1dtype = arg1acl->dtype;
+    expracl->dtype = dtypebase;
+    expracl->u1.expr->rop = arglist;
 
-  if (DTY(dtype) == TY_ARRAY) {
-    if (DTY(arg1dtype) != TY_ARRAY && parent_acltype != AC_ACONST)
-      expracl->repeatc = ADD_NUMELM(dtype);
-    a = GET_ACL(15);
-    a->id = AC_ACONST;
-    a->dtype = dtype;
-    a->subc = expracl;
-    expracl = a;
+    if (DTY(dtype) == TY_ARRAY) {
+      if (DTY(arg1dtype) != TY_ARRAY && parent_acltype != AC_ACONST)
+        expracl->repeatc = ADD_NUMELM(dtype);
+      a = GET_ACL(15);
+      a->id = AC_ACONST;
+      a->dtype = dtype;
+      a->subc = expracl;
+      expracl = a;
+    }
+    return expracl;
   }
-  return expracl;
+  nearest_status = 0;
+  // AOCC end
 }
 
 static AC_INTRINSIC
@@ -3766,6 +3827,10 @@ map_I_to_AC(int intrin)
     return AC_I_lshift;
   case I_RSHIFT:
     return AC_I_rshift;
+  /* AOCC begin */
+  case I_SHIFTA:
+      return AC_I_shifta;
+  /* AOCC end */
   case I_IMIN0:
   case I_MIN0:
   case I_AMIN1:
@@ -3827,6 +3892,11 @@ map_I_to_AC(int intrin)
   case I_COS:
   case I_DCOS:
     return AC_I_cos;
+  /* AOCC begin */
+  case I_COTAN:
+  case I_DCOTAN:
+    return AC_I_cotan;
+  /* AOCC end */
   case I_TAN:
   case I_DTAN:
     return AC_I_tan;
@@ -3860,6 +3930,8 @@ map_I_to_AC(int intrin)
     return AC_I_minloc;
   case I_MINVAL:
     return AC_I_minval;
+  case I_NEAREST:
+    return AC_I_nearest;  //AOCC
   default:
     return AC_I_NONE;
   }
@@ -3897,6 +3969,12 @@ map_PD_to_AC(int pdnum)
     return AC_I_ichar;
   case PD_int:
     return AC_I_int;
+  // AOCC begin
+  case PD_anint:
+    return AC_I_anint;
+  case PD_aint:
+    return AC_I_aint;
+  // AOCC end
   case PD_nint:
     return AC_I_nint;
   case PD_char:
@@ -3949,6 +4027,8 @@ map_PD_to_AC(int pdnum)
     return AC_I_minloc;
   case PD_minval:
     return AC_I_minval;
+  case PD_nearest:
+    return AC_I_nearest;  //AOCC
   default:
     return AC_I_NONE;
   }
@@ -3998,6 +4078,8 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_merge_bits:
   case AC_I_dshiftl:
   case AC_I_dshiftr:
+  case AC_I_aint:
+  case AC_I_anint:
   /* AOCC end */
     return mk_elem_init_intrinsic(intrin, ast, dtype, parent_acltype);
   case AC_I_maxloc:
@@ -4017,6 +4099,16 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
     int new_ast = ast_intr(I_ISHFT, A_DTYPEG(ast), 2, val, new_shift);
     return mk_elem_init_intrinsic(AC_I_ishft, new_ast, dtype, parent_acltype);
   }
+  /* AOCC begin */
+  case AC_I_shifta: {
+    int argt = A_ARGSG(ast);
+    int val = ARGT_ARG(argt, 0);
+    int shift = ARGT_ARG(argt, 1);
+    int new_shift = mk_unop(OP_SUB, shift, A_DTYPEG(shift));
+    int new_ast = ast_intr(I_ISHFT, A_DTYPEG(ast), 2, val, new_shift);
+    return mk_elem_init_intrinsic(AC_I_ishft, new_ast, dtype, parent_acltype);
+  }
+  /* AOCC end */
   case AC_I_len:
   case AC_I_lbound:
   case AC_I_ubound:
@@ -4028,6 +4120,10 @@ construct_intrinsic_acl(int ast, DTYPE dtype, int parent_acltype)
   case AC_I_selected_real_kind:
   case AC_I_selected_char_kind:
     return mk_nonelem_init_intrinsic(intrin, ast, A_DTYPEG(ast));
+  //AOCC Begin
+  case AC_I_nearest:
+    return mk_elem_init_intrinsic(AC_I_nearest, ast, dtype, parent_acltype);
+  //AOCC End
   case AC_I_size:
     return mk_size_intrin(ast);
   // AOCC begin
@@ -4191,6 +4287,7 @@ get_ac_op(int ast)
       break;
     case DT_REAL4:
     case DT_REAL8:
+    case DT_QUAD:          //AOCC
       ac_op = AC_EXPX;
       break;
     default:
@@ -6604,7 +6701,7 @@ dinit_getval1(int ast, DTYPE dtype)
     if (dtype == 0)
       dtype = A_DTYPEG(ast);
     aval = const_eval(ast);
-    ast = mk_cval1(aval, A_DTYPEG(ast));
+    ast = mk_cval(aval, A_DTYPEG(ast)); // AOCC
   }
   if (dtype == 0)
     return ast;
@@ -8473,6 +8570,57 @@ eval_dshift(ACL *arg, DTYPE dtype, bool is_left)
   }
 }
 /* AOCC end */
+//AOCC Begin
+static ACL *
+eval_nearest(ACL *arg, DTYPE dtype)
+{
+    ACL *rslt = arg;
+    ACL *arg1, *arg2;
+    INT conval;
+    arg1 = eval_init_expr_item(arg);
+    arg2 = eval_init_expr_item(arg->next);
+    rslt = clone_init_const(arg1, TRUE);
+    arg1 = (rslt->id == AC_ACONST ? rslt->subc : rslt);
+    arg2 = (arg2->id == AC_ACONST ? arg2->subc : arg2);
+
+    for (; arg1; arg1 = arg1->next, arg2 = arg2->next) {
+      INT num1[4], num2[4];
+      INT res[4];
+      INT con1, con2;
+      con1 = arg1->conval;
+      con2 = arg2->conval;
+      switch (DTY(arg1->dtype)) {
+      case TY_REAL:
+        xfnearest(con1, con2, &res[0]);
+        conval = res[0];
+        break;
+      case TY_DBLE:
+        num1[0] = CONVAL1G(con1);
+        num1[1] = CONVAL2G(con1);
+        num2[0] = CONVAL1G(con2);
+        num2[1] = CONVAL2G(con2);
+        xdnearest(num1, num2, res);
+        conval = getcon(res, DT_DBLE);
+        break;
+      case TY_CMPLX:
+      case TY_DCMPLX:
+        error(155, 3, gbl.lineno,
+              "Intrinsic not supported in initialization:", "nearest");
+        break;
+      case TY_HALF:
+      /* fallthrough to error */
+      default:
+        error(155, 3, gbl.lineno,
+              "Intrinsic not supported in initialization:", "nearest");
+        break;
+      }
+      conval = cngcon(conval, arg1->dtype, dtype);
+      arg1->conval = conval;
+      arg1->dtype = dtype;
+    }
+    return rslt;
+}
+//AOCC End
 
 static ACL *
 eval_ichar(ACL *arg, DTYPE dtype)
@@ -8621,6 +8769,14 @@ eval_abs(ACL *arg, DTYPE dtype)
       xdabsv(num1, res);
       con1 = getcon(res, dtype);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      con1 = wrkarg->conval;
+      GET_QUAD(num1, con1);
+      xqabsv(num1, res);
+      con1 = getcon(res, dtype);
+      break;
+    // AOCC end
     case TY_CMPLX:
       con1 = wrkarg->conval;
       f1 = CONVAL1G(con1);
@@ -8636,6 +8792,12 @@ eval_abs(ACL *arg, DTYPE dtype)
       con1 = wrkarg->conval;
       rsltdtype = DT_REAL;
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      con1 = wrkarg->conval;
+      rsltdtype = DT_REAL;
+      break;
+    // AOCC end
     default:
       con1 = wrkarg->conval;
       break;
@@ -8758,6 +8920,7 @@ cmp_acl(DTYPE dtype, ACL *x, ACL *y, bool want_max, bool back)
     break;
   case TY_INT8:
   case TY_DBLE:
+  case TY_QUAD:   // AOCC
     cmp = const_fold(OP_CMP, x->conval, y->conval, dtype);
     break;
   default:
@@ -9238,6 +9401,13 @@ eval_floor(ACL *arg, DTYPE dtype)
           adjust = 1;
       }
       break;
+    case TY_QUAD:
+      conval = cngcon(con1, DT_QUAD, dtype);
+      if (const_fold(OP_CMP, con1, stb.quad0, DT_QUAD) < 0) {
+        con1 = cngcon(conval, dtype, DT_QUAD);
+        if (const_fold(OP_CMP, con1, wrkarg->conval, DT_QUAD) != 0)
+          adjust = 1;
+      }
     }
     if (adjust) {
       if (DT_ISWORD(dtype))
@@ -9391,7 +9561,14 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[0] = CONVAL2G(conval);
     dest[1] = CONVAL1G(conval);
     break;
-
+  // AOCC begin
+  case TY_QUAD:
+    dest[0] = CONVAL4G(conval);
+    dest[1] = CONVAL3G(conval);
+    dest[2] = CONVAL2G(conval);
+    dest[3] = CONVAL1G(conval);
+    break;
+  // AOCC end
   case TY_CMPLX:
     dest[0] = CONVAL1G(conval);
     dest[1] = CONVAL2G(conval);
@@ -9405,6 +9582,21 @@ transfer_store(INT conval, DTYPE dtype, char *destination)
     dest[2] = CONVAL2G(imag);
     dest[3] = CONVAL1G(imag);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    real = CONVAL1G(conval);
+    imag = CONVAL2G(conval);
+    dest[0] = CONVAL4G(real);
+    dest[1] = CONVAL3G(real);
+    dest[2] = CONVAL2G(real);
+    dest[3] = CONVAL1G(real);
+    dest[0] = CONVAL4G(imag);
+    dest[1] = CONVAL3G(imag);
+    dest[2] = CONVAL2G(imag);
+    dest[3] = CONVAL1G(imag);
+    break;
+  // AOCC end
 
   case TY_CHAR:
     memcpy(dest, stb.n_base + CONVAL1G(conval), size_of(dtype));
@@ -9420,7 +9612,7 @@ static INT
 transfer_load(DTYPE dtype, char *source)
 {
   int *src = (int *)source;
-  INT num[2], real[2], imag[2];
+  INT num[4], real[4], imag[4];
 
   if (DT_ISWORD(dtype))
     return src[0];
@@ -9447,6 +9639,27 @@ transfer_load(DTYPE dtype, char *source)
     num[0] = getcon(real, DT_REAL8);
     num[1] = getcon(imag, DT_REAL8);
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+    num[3] = src[0];
+    num[2] = src[1];
+    num[1] = src[2];
+    num[0] = src[3];
+    break;
+  case TY_QCMPLX:
+    real[3] = src[0];
+    real[2] = src[1];
+    real[1] = src[2];
+    real[0] = src[3];
+    imag[3] = src[0];
+    imag[2] = src[1];
+    imag[1] = src[2];
+    imag[0] = src[3];
+    num[0] = getcon(real, DT_QUAD);
+    num[1] = getcon(imag, DT_QUAD);
+    break;
+  // AOCC end
 
   case TY_CHAR:
     return getstring(source, size_of(dtype));
@@ -9598,8 +9811,8 @@ eval_selected_real_kind(ACL *arg)
     r = 4;
   else if (con <= 15)
     r = 8;
-  /*else if (con <= 33 && !XBIT(57, 4))
-    r = 16; Currently real 16 is not supported*/
+  else if (con <= 33 && (!XBIT(57, 0x4)))
+    r = 16;
   else {
     r = -1;
     pre = -1;
@@ -9614,10 +9827,10 @@ eval_selected_real_kind(ACL *arg)
     } else if (con <= 307) {
       if (r > 0 && r <= 8)
         r = 8;
-    } /*else if (con <= 4931 && !XBIT(57, 4)) {
+    } else if ((con <= 4931) && (!XBIT(57, 0x4))) {
       if (r > 0 && r <= 16)
         r = 16;
-    }*/ else {
+    } else {
       if (r > 0)
         r = 0;
       range = -2;
@@ -9634,8 +9847,8 @@ eval_selected_real_kind(ACL *arg)
         r = 4;
       else if (r > 0 && r <= 8)
         r = 8;
-      /*else if (r > 0 && r <= 16)
-        r = 16;*/
+      else if (r > 0 && r <= 16)
+        r = 16;
       else if (pre < 0 && range < 0)
         r = -3;
     }
@@ -10356,8 +10569,19 @@ eval_sqrt(ACL *arg, DTYPE dtype)
       xdsqrt(num1, res);
       conval = getcon(res, DT_DBLE);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      num1[0] = CONVAL1G(con1);
+      num1[1] = CONVAL2G(con1);
+      num1[2] = CONVAL3G(con1);
+      num1[3] = CONVAL4G(con1);
+      xqsqrt(num1, res);
+      conval = getcon(res, DT_QUAD);
+      break;
+    // AOCC end
     case TY_CMPLX:
     case TY_DCMPLX:
+    case TY_QCMPLX:  // AOCC
       /*
           a = sqrt(real**2 + imag**2);  "hypot(real,imag)
           if (a == 0) {
@@ -10395,7 +10619,8 @@ eval_sqrt(ACL *arg, DTYPE dtype)
 
 /*---------------------------------------------------------------------*/
 
-#define FPINTRIN1(iname, ent, fscutil, dscutil)                     \
+// AOCC parameter: qscutil
+#define FPINTRIN1(iname, ent, fscutil, dscutil, qscutil)                     \
   static ACL *ent(ACL *arg, DTYPE dtype)                            \
   {                                                                 \
     ACL *rslt;                                                      \
@@ -10419,8 +10644,19 @@ eval_sqrt(ACL *arg, DTYPE dtype)
         dscutil(num1, res);                                         \
         conval = getcon(res, DT_DBLE);                              \
         break;                                                      \
+      /* AOCC begin */                                              \
+      case TY_QUAD:                                                 \
+        num1[0] = CONVAL1G(con1);                                   \
+        num1[1] = CONVAL2G(con1);                                   \
+        num1[2] = CONVAL3G(con1);                                   \
+        num1[3] = CONVAL4G(con1);                                   \
+        qscutil(num1, res);                                         \
+        conval = getcon(res, DT_QUAD);                              \
+        break;                                                      \
+      /* AOCC end   */                                              \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \
@@ -10438,25 +10674,28 @@ eval_sqrt(ACL *arg, DTYPE dtype)
     return rslt;                                                    \
   }
 
-FPINTRIN1("exp", eval_exp, xfexp, xdexp)
+FPINTRIN1("exp", eval_exp, xfexp, xdexp, xqexp)
 
-FPINTRIN1("log", eval_log, xflog, xdlog)
+FPINTRIN1("log", eval_log, xflog, xdlog, xqlog)
 
-FPINTRIN1("log10", eval_log10, xflog10, xdlog10)
+FPINTRIN1("log10", eval_log10, xflog10, xdlog10, xqlog10)
 
-FPINTRIN1("sin", eval_sin, xfsin, xdsin)
+FPINTRIN1("sin", eval_sin, xfsin, xdsin, xqsin)
 
-FPINTRIN1("cos", eval_cos, xfcos, xdcos)
+FPINTRIN1("cos", eval_cos, xfcos, xdcos, xqcos)
 
-FPINTRIN1("tan", eval_tan, xftan, xdtan)
+FPINTRIN1("tan", eval_tan, xftan, xdtan, xqtan)
 
-FPINTRIN1("asin", eval_asin, xfasin, xdasin)
+FPINTRIN1("asin", eval_asin, xfasin, xdasin, xqasin)
 
-FPINTRIN1("acos", eval_acos, xfacos, xdacos)
+FPINTRIN1("acos", eval_acos, xfacos, xdacos, xdacos)
 
-FPINTRIN1("atan", eval_atan, xfatan, xdatan)
+FPINTRIN1("atan", eval_atan, xfatan, xdatan, xqatan)
 
-#define FPINTRIN2(iname, ent, fscutil, dscutil)                     \
+FPINTRIN1("cotan", eval_cotan, xfcotan, xdcotan, xqcotan)
+
+// AOCC parameter: qscutil
+#define FPINTRIN2(iname, ent, fscutil, dscutil, qscutil)            \
   static ACL *ent(ACL *arg, DTYPE dtype)                            \
   {                                                                 \
     ACL *rslt = arg;                                                \
@@ -10486,8 +10725,23 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan)
         dscutil(num1, num2, res);                                   \
         conval = getcon(res, DT_DBLE);                              \
         break;                                                      \
+      /* AOCC begin */                                              \
+      case TY_QUAD:                                                 \
+        num1[0] = CONVAL1G(con1);                                   \
+        num1[1] = CONVAL2G(con1);                                   \
+        num1[2] = CONVAL3G(con1);                                   \
+        num1[3] = CONVAL4G(con1);                                   \
+        num2[0] = CONVAL1G(con2);                                   \
+        num2[1] = CONVAL2G(con2);                                   \
+        num2[2] = CONVAL3G(con2);                                   \
+        num2[3] = CONVAL4G(con2);                                   \
+        qscutil(num1, num2, res);                                   \
+        conval = getcon(res, DT_QUAD);                              \
+        break;                                                      \
+      /* AOCC end */                                                \
       case TY_CMPLX:                                                \
       case TY_DCMPLX:                                               \
+      case TY_QCMPLX:                                               \
         error(155, 3, gbl.lineno,                                   \
               "Intrinsic not supported in initialization:", iname); \
         break;                                                      \
@@ -10505,7 +10759,7 @@ FPINTRIN1("atan", eval_atan, xfatan, xdatan)
     return rslt;                                                    \
   }
 
-FPINTRIN2("atan2", eval_atan2, xfatan2, xdatan2)
+FPINTRIN2("atan2", eval_atan2, xfatan2, xdatan2, xqatan2)
 
 static INT
 get_const_from_ast(int ast)
@@ -11008,6 +11262,14 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case AC_I_nint:
       root = eval_nint(rop, dtype);
       break;
+    // AOCC begin
+    case AC_I_anint:
+      root = eval_nint(rop, dtype);
+      break;
+    case AC_I_aint:
+      root = eval_nint(rop, dtype);
+      break;
+    // AOCC end
     case AC_I_null:
       root = eval_null(sptr);
       break;
@@ -11046,6 +11308,11 @@ eval_init_op(int op, ACL *lop, DTYPE ldtype, ACL *rop, DTYPE rdtype, SPTR sptr,
     case AC_I_selected_char_kind:
       root = eval_selected_char_kind(rop);
       break;
+    //AOCC Begin
+    case AC_I_nearest:
+      root = eval_nearest(rop, dtype);
+      break;
+    //AOCC End
     case AC_I_scan:
       root = eval_scan(rop);
       break;

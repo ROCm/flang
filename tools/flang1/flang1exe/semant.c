@@ -4,10 +4,31 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for AMDGPU OpenMP offloading
+ *   Date of Modification : 9th July 2019
+ *
+ * Suppressed a duplicate diagnostic message: "Redundant specification of array"
+ *   Date of Modification: 16th July 2019
+ *
+ * Fix for allowing atomic read/write construct inside omp critical construct
+ *   Date of Modification: November 2019
+ *
+ * Support for AMDGPU OpenMP offloading
+ *   Date of modification 04th April 2020
+ *   Date of modification 10th April 2020
+ *
+ * Support for assumed size array as parameter
+ *   Date of modification 9th June 2020
+ *
+ * Fix to assign right kind of dtype for derived types
+ * Date of modification 06 October 2020
+ *
  */
+
 /**
     \file
     \brief This file contains part 1 of the compiler's semantic actions
@@ -104,7 +125,6 @@ static void record_func_result(int func_sptr, int func_result_sptr,
 static bool bindingNameRequiresOverloading(SPTR sptr);
 static void clear_iface(int i, SPTR iface);
 static bool do_fixup_param_vars_for_derived_arrays(bool, SPTR, int);
-static bool valid_base_type_intrinsic(char *np);
 static void gen_unique_func_ast(int ast, SPTR sptr, SST *stkptr);
 
 static IFACE *iface_base;
@@ -426,6 +446,17 @@ static void do_iface_module(void);
 static void _do_iface(int, int);
 static void fix_iface(int);
 static void fix_iface0();
+
+//AOCC begin
+// variables used in assumed size expression computation
+extern int asz_count;    /* number of rhs elements */
+int asz_status = 0;      /* lhs is assumed size expression */
+int asz_arrdsc;          /* array descriptor of assumed size lhs expression */
+int asz_string = 0;          /* indicator to indicate assumed length string */
+int asz_id_elem;         /* variable element in assumed size array */
+extern int asz_id_elem_count_tot; /* total number of elements in assumed size 
+				     array when variables are its elements */
+//AOCC end
 
 /** \brief Initialize semantic analyzer for new user subprogram unit.
  */
@@ -790,8 +821,9 @@ static int restored = 0;
 void
 semant1(int rednum, SST *top)
 {
-  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab;
-  int dtype, dtypeset, ss, numss;
+
+  SPTR sptr, sptr1, sptr2, block_sptr, sptr_temp, lab, sptras, asz_sptr;
+  int dtype, dtypeset, ss, numss, dtypeas;
   int stype, stype1, i;
   int begin, end, count;
   int opc;
@@ -804,12 +836,15 @@ semant1(int rednum, SST *top)
   int doif;
   int evp;
   ADSC *ad;
+  ADSC *adas;
   char *np, *np2; /* char ptrs to symbol names area */
   int name_prefix_char;
   char *nmptr;
   VAR *ivl;        /* Initializer Variable List */
   ACL *ict, *ict1; /* Initializer Constant Tree */
   int ast, alias;
+  int asz_ast;
+  int res;
   static int et_type; /* one of ET_...; '<attr>::=' passes up */
   int et_bitv;
   LOGICAL no_init; /* init not allowed for entity decl */
@@ -841,6 +876,13 @@ semant1(int rednum, SST *top)
   int newshapeid;
   int idptemp, newsubidx;
   int symi;
+
+  //AOCC begin
+  SST *asz_sst;
+  SST *asz_rhssst;
+  asz_sst = (SST *)getitem(sem.ssa_area, sizeof(SST));
+  asz_rhssst = (SST *)getitem(sem.ssa_area, sizeof(SST));
+  //AOCC end
 
   switch (rednum) {
 
@@ -2036,7 +2078,14 @@ semant1(int rednum, SST *top)
    *	<id> ::= <id name>
    */
   case ID1:
-    np = scn.id.name + SST_CVALG(RHS(1));
+    np = scn.id.name + SST_CVALG(RHS(1)); 
+    /* AOCC begin
+     * a variable is the element of an assumed size array
+     */
+    if (asz_status == 1 && sem.in_array_const == true) {
+      asz_id_elem = 1;
+    }
+    //AOCC end
     sptr = getsymbol(np);
     if (sem.in_dim && sem.type_mode && !KINDG(sptr) &&
         STYPEG(sptr) != ST_MEMBER) {
@@ -4826,11 +4875,6 @@ semant1(int rednum, SST *top)
       np = SYMNAME(sptr);
       if (STYPEG(sptr) == ST_USERGENERIC && GTYPEG(sptr)) {
         sptr = GTYPEG(sptr);
-      }
-      // AOCC begin
-      // Added support for f2008 feature: Type statement for intrinsic types
-      else if ((STYPEG(sptr) == ST_UNKNOWN) && valid_base_type_intrinsic(np)) {
-      // AOCC end
       } else if (STYPEG(sptr) == ST_UNKNOWN && sem.pgphase == PHASE_INIT) {
         sem.deferred_dertype = sptr;
         sem.deferred_kind_len_lineno = gbl.lineno;
@@ -4886,8 +4930,8 @@ semant1(int rednum, SST *top)
       sem.gdtype = sem.ogdtype = sem.stag_dtype;
     }
     defer_put_kind_type_param(0, 0, NULL, 0, 0, 0);
-    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype) &&
-        defer_pt_decl(0, 2)) {
+    if (!sem.new_param_dt && has_type_parameter(sem.stag_dtype)
+        /*&& defer_pt_decl(0, 2)*/ /*AOCC*/) {
       /* In this case we're using just the default type
        * of a parameterized derived type. We need to make sure we
        * create another instance of it so we don't pollute the
@@ -5222,6 +5266,7 @@ semant1(int rednum, SST *top)
    */
   case TPV2:
     /* flag that a '*' was seen: id field is 1, sym field is zero. */
+    asz_string = 1;
     SST_IDP(LHS, 1);
     SST_SYMP(LHS, 0);
     SST_ASTP(LHS, 0); /* not expression */
@@ -5510,14 +5555,27 @@ semant1(int rednum, SST *top)
     }
 
     set_char_attributes(sptr, &dtype);
-    if (DTY(DTYPEG(sptr)) == TY_ARRAY) {
-      DTY(DTYPEG(sptr) + 1) = dtype;
-      if (DTY(dtype) == TY_DERIVED && DTY(dtype + 3) &&
-          DISTMEMG(DTY(dtype + 3))) {
-        error(451, 3, gbl.lineno, SYMNAME(sptr), CNULL);
+    //AOCC Begin
+    if (sem.new_param_dt) {
+      dtype = DTYPEG(sptr);
+      if (DTY(dtype) == TY_ARRAY) {
+        DTY(dtype + 1) = sem.new_param_dt;
+      } else {
+        DTYPEP(sptr, sem.new_param_dt);
       }
-    } else {
-      DTYPEP(sptr, dtype);
+      fix_type_param_members(sptr, sem.new_param_dt);
+    }
+    //AOCC End
+    else {
+      if (DTY(DTYPEG(sptr)) == TY_ARRAY) {
+        DTY(DTYPEG(sptr) + 1) = dtype;
+        if (DTY(dtype) == TY_DERIVED && DTY(dtype + 3) &&
+          DISTMEMG(DTY(dtype + 3))) {
+          error(451, 3, gbl.lineno, SYMNAME(sptr), CNULL);
+        }
+      } else {
+        DTYPEP(sptr, dtype);
+      }
     }
     if (STYPEG(sptr) == ST_ENTRY && FVALG(sptr)) {
 #if DEBUG
@@ -6127,6 +6185,14 @@ semant1(int rednum, SST *top)
   case DIM_SPEC3:
     rhstop = 1;
     SST_IDP(RHS(1), S_STAR);
+    //AOCC begin
+    // For Assumed size arrays save the lhs and rhs sst
+     *asz_sst = *top;
+     *asz_rhssst = *RHS(1);
+     asz_arrdsc = aux.arrdsc_avl;
+     asz_status = 1;
+    //AOCC end
+
   dim_spec:
     if (sem.arrdim.ndim >= get_legal_maxdim()) { /* AOCC */
       error(47, 3, gbl.lineno, CNULL, CNULL);
@@ -8536,8 +8602,69 @@ semant1(int rednum, SST *top)
         break;
       SST_SYMP(LHS, sptr);
     }
+
+    //AOCC begin
+    //assumed size arrays. modify the saved lhs SST using the rhs sst
+    if (asz_status) {
+      sptras = SST_SYMG(top);
+      dtypeas = DTYPEG(sptras);
+      adas = AD_DPTR(dtypeas);
+      if (entity_attr.exist & ET_B(ET_PARAMETER)) {
+        // check if array is a parameter
+        if (AD_ASSUMSZ(adas)) { //check if array is an assumed size array
+          /* the size of the assumed size array when
+	   * its elements are variables 
+	   */
+          if (asz_count == 0 && asz_id_elem_count_tot != 0) {
+            asz_count = asz_id_elem_count_tot;
+          }
+          sptras = SST_SYMG(asz_sst);
+          SST_LSYMP(asz_sst, 0);
+          SST_DTYPEP(asz_sst, DT_INT);
+	  SST_DTYPEP(asz_rhssst, DT_INT);
+          SST_ACLP(asz_sst, 0);
+          SST_CVALP(asz_sst, asz_count);
+	  SST_CVALP(asz_rhssst, asz_count);
+	  asz_ast =  mk_cval1(SST_CVALG(asz_sst), (int)SST_DTYPEG(asz_sst));
+          SST_SHAPEP(asz_sst, 0);
+          SST_IDP(asz_rhssst, S_CONST);
+          SST_PARENP(LHS, 0);
+	  SST_ASTP(asz_rhssst, 0);
+
+          arraysize = 0;
+          if (SST_IDG(asz_rhssst) == S_CONST) {
+            sem.bounds[sem.arrdim.ndim].uptype = S_CONST;
+            int uptyp;
+            uptyp = SST_DTYPEG(asz_rhssst);
+            if (!DT_ISINT(uptyp)) {
+              error(170, 2, gbl.lineno, "array upper bound", "is not integer");
+            }
+            // assign the lhs using the size of array computed from the rhs
+            arraysize = sem.bounds[sem.arrdim.ndim].upb =
+              chkcon_to_isz(asz_rhssst, FALSE);
+            asz_ast = sem.bounds[sem.arrdim.ndim].upast = mk_bnd_int(SST_ASTG(asz_rhssst));
+            asz_sptr = A_SPTRG(sem.bounds[sem.arrdim.ndim].upast - 1);
+	    CONVAL2P(asz_sptr, arraysize);
+	    SST_ASTP(asz_rhssst, asz_ast);
+            SST_ASTP(asz_sst, asz_ast);
+          }
+	  int savedsc_val = aux.arrdsc_avl;
+          if (asz_status) aux.arrdsc_avl = asz_arrdsc ;
+          dtypeas = mk_arrdsc();
+	  // update the lhs array descriptor
+          SST_DTYPEP(asz_sst, dtypeas);
+	  aux.arrdsc_avl = savedsc_val;
+        }
+      } 
+      asz_status = 0;
+      asz_id_elem_count_tot = 0;
+    }
+    //AOCC end
+
     inited = TRUE;
     sem.dinit_data = FALSE;
+    asz_string = 0;  // AOCC: reset the assumed size computation  status
+    asz_count = 0;
     goto entity_decl_shared;
   /*
    *	<entity decl> ::= <entity id> '=>' <id> ( )
@@ -16805,51 +16932,3 @@ do_fixup_param_vars_for_derived_arrays(bool inited, SPTR sptr, int sst_idg)
          /* found the tag has been initialized already with a valid sptr*/
          DINITG(DTY(DTY(DTYPEG(sptr)+1)+3));
 }
-
-// AOCC begin
-/** \brief
-       Added support for f2008 feature: Type statement for intrinsic types
-       <data type> ::= TYPE ( <id> <opt base type spec> )
-*/
-static bool
-valid_base_type_intrinsic(char *np)
-{
-  if (flg.std == F2008) {
-    /*
-     *      <base type> ::= INTEGER |
-     */
-    if (strcmp(np, "integer") == 0) {
-      sem.gdtype = sem.ogdtype = stb.user.dt_int;
-      sem.gty = TY_INT;
-      return true;
-    }
-    /*
-     *      <base type> ::= COMPLEX |
-     */
-    if (strcmp(np, "complex") == 0) {
-      sem.gdtype = sem.ogdtype = stb.user.dt_cmplx;
-      sem.gty = TY_CMPLX;
-      return true;
-    }
-    /*
-     *      <base type> ::= CHARACTER |
-     */
-    if (strcmp(np, "character") == 0) {
-      sem.gdtype = sem.ogdtype = DT_CHAR;
-      sem.gty = TY_CHAR;
-      return true;
-    }
-    /*
-     *      <base type> ::= BYTE
-     */
-    if (strcmp(np, "byte") == 0) {
-      if (flg.standard)
-        error(171, 2, gbl.lineno, "BYTE", CNULL);
-      sem.gdtype = sem.ogdtype = DT_BINT;
-      sem.gty = TY_BINT;
-      return true;
-    }
-  }
-  return false;
-}
-// AOCC end

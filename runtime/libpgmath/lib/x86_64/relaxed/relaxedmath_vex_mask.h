@@ -198,6 +198,69 @@ LBL(.L_rvd_exp_256_done):
         ELF_SIZE(ASM_CONCAT3(__rvd_exp_,TARGET_VEX_OR_FMA,_256_mask))
 
 
+/*
+ *   __rvs_cotan_vex_256_mask(argument, mask)
+ *   __rvs_cotan_fma4_256_mask(argument, mask)
+ *
+ *   argument:   ymm0
+ *   mask:       ymm1
+ *
+ *   Compute the cotangent of the arguments whose mask is non-zero
+ *
+ */
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256_mask))
+ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256_mask)):
+
+        subq $8, %rsp
+
+        vptest  .L_zeromask(%rip), %ymm1
+        je      LBL(.L_rvs_cotan_256_done)
+
+        vandpd  %ymm0,%ymm1,%ymm0
+        CALL(ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256)))
+
+
+LBL(.L_rvs_cotan_256_done):
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256_mask))
+        ELF_SIZE(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_256_mask))
+
+
+/*
+ *   __rvs_cotan_vex_mask(argument, mask)
+ *   __rvs_cotan_fma4_mask(argument, mask)
+ *
+ *   argument:   ymm0
+ *   mask:       ymm1
+ *
+ *   Compute the cotangent of the arguments whose mask is non-zero
+ *
+ */
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_mask))
+ENT(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_mask)):
+
+        subq $8, %rsp
+
+        vptest  .L_zeromask(%rip), %xmm1
+        je      LBL(.L_rvs_cotan_done)
+
+        vandpd  %xmm0,%xmm1,%xmm0
+        CALL(ENT(ASM_CONCAT(__rvs_cotan_,TARGET_VEX_OR_FMA)))
+
+
+LBL(.L_rvs_cotan_done):
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_mask))
+        ELF_SIZE(ASM_CONCAT3(__rvs_cotan_,TARGET_VEX_OR_FMA,_mask))
+
 
 /*
  *   __rvs_tan_vex_256_mask(argument, mask)

@@ -5,6 +5,20 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last modified: March 2020
+ * Added support for QFLOAT
+ *
+ * Support for TRAILZ intrinsic.
+ * Month of Modification: July 2019
+ *
+ * Support for COTAN intrinsic
+ * Modified on Oct 2020
+ */
+
 #ifndef MTH_H_
 #define MTH_H_
 
@@ -79,7 +93,8 @@ typedef enum MTH_FN {
   MTH_mod,
   MTH_floor,
   MTH_ceil,
-  MTH_aint
+  MTH_aint,
+  MTH_cotan //AOCC 
 } MTH_FN;
 
 #define MTH_I_DFIXK "__mth_i_dfixk"
@@ -114,27 +129,32 @@ typedef enum MTH_FN {
 #define MTH_I_SIN "__mth_i_sin"
 #define MTH_I_COS "__mth_i_cos"
 #define MTH_I_SINCOS "__mth_i_sincos"
+#define MTH_I_COTAN "__mth_i_cotan" // AOCC
 #define MTH_I_TAN "__mth_i_tan"
 #define MTH_I_DSIN "__mth_i_dsin"
 #define MTH_I_DCOS "__mth_i_dcos"
 #define MTH_I_DSINCOS "__mth_i_dsincos"
 #define MTH_I_DTAN "__mth_i_dtan"
+#define MTH_I_DCOTAN "__mth_i_dcotan" // AOCC
 #define MTH_I_RPOWI "__mth_i_rpowi"
 #define MTH_I_RPOWK "__mth_i_rpowk"
 #define MTH_I_RPOWF "__mth_i_rpowr"
 #define MTH_I_DPOWI "__mth_i_dpowi"
 #define MTH_I_DPOWK "__mth_i_dpowk"
 #define MTH_I_DPOWD "__mth_i_dpowd"
+#define MTH_I_QPOWI "__mth_i_qpowi" //AOCC
 #define MTH_I_FSIGN "__mth_i_sign"
 #define MTH_I_DSIGN "__mth_i_dsign"
 #define MTH_I_EXP "__mth_i_exp"
 #define MTH_I_DEXP "__mth_i_dexp"
+#define MTH_I_QEXP "__mth_i_qexp"          // AOCC
 #define MTH_I_ALOG "__mth_i_alog"
 #define MTH_I_DLOG "__mth_i_dlog"
 #define MTH_I_ALOG10 "__mth_i_alog10"
 #define MTH_I_DLOG10 "__mth_i_dlog10"
 #define MTH_I_AMOD "__mth_i_amod"
 #define MTH_I_DMOD "__mth_i_dmod"
+#define MTH_I_QMOD "__mth_i_qmod"          // AOCC
 #define MTH_I_SINH "__mth_i_sinh"
 #define MTH_I_COSH "__mth_i_cosh"
 #define MTH_I_TANH "__mth_i_tanh"
@@ -150,13 +170,16 @@ typedef enum MTH_FN {
 
 #define MTH_I_JN "__mth_i_bessel_jn"
 #define MTH_I_DJN "__mth_i_dbessel_jn"
+#define MTH_I_QJN "__mth_i_qbessel_jn"
 #define MTH_I_YN "__mth_i_bessel_yn"
 #define MTH_I_DYN "__mth_i_dbessel_yn"
+#define MTH_I_QYN "__mth_i_qbessel_yn"
 
 #define FMTH_I_RPOWF "__fmth_i_rpowr"
 #define FMTH_I_DPOWD "__fmth_i_dpowd"
 #define FMTH_I_EXP "__fmth_i_exp"
 #define FMTH_I_DEXP "__fmth_i_dexp"
+#define FMTH_I_QEXP "__fmth_i_qexp"       // AOCC
 #define FMTH_I_ALOG "__fmth_i_alog"
 #define FMTH_I_DLOG "__fmth_i_dlog"
 #define FMTH_I_ALOG10 "__fmth_i_alog10"
@@ -164,6 +187,7 @@ typedef enum MTH_FN {
 #define FMTH_I_CBRT "__fmth_i_cbrt"
 #define FMTH_I_AMOD "__fmth_i_amod"
 #define FMTH_I_DMOD "__fmth_i_dmod"
+#define FMTH_I_QMOD "__fmth_i_qmod"      // AOCC
 #define FMTH_I_SIN "__fmth_i_sin"
 #define FMTH_I_DSIN "__fmth_i_dsin"
 #define FMTH_I_COS "__fmth_i_cos"
@@ -178,6 +202,7 @@ typedef enum MTH_FN {
 #define FMTH_I_DTAN "__fmth_i_dtan"
 #define FMTH_I_CSDIV "__fsc_div"
 #define FMTH_I_CDDIV "__fsz_div"
+#define FMTH_I_CQDIV "__fsq_div"       // AOCC
 
 #define MTH_I_ACOS "__mth_i_acos"
 #define MTH_I_ASIN "__mth_i_asin"
@@ -196,8 +221,12 @@ typedef enum MTH_FN {
 #define MTH_I_DFLOAT "__mth_i_dfloat"
 #define MTH_I_DFLOATK "__mth_i_dfloatk"
 #define MTH_I_DFLOATUK "__mth_i_dfloatuk"
+#define MTH_I_QDIV "__mth_i_qdiv"
+#define MTH_I_QFLOAT "__mth_i_qfloat"       // AOCC
+#define MTH_I_QFLOATK "__mth_i_qfloatk"     // AOCC
 #define MTH_I_DMUL "__mth_i_dmul"
 #define MTH_I_DSQRT "__mth_i_dsqrt"
+#define MTH_I_QSQRT "__mth_i_qsqrt"         // AOCC
 #define MTH_I_DSUB "__mth_i_dsub"
 #define MTH_I_FADD "__mth_i_fadd"
 #define MTH_I_FCMP "__mth_i_fcmp"
@@ -236,6 +265,11 @@ typedef enum MTH_FN {
 #define MTH_I_ILEADZI "__mth_i_ileadzi"
 #define MTH_I_ILEADZ "__mth_i_ileadz"
 #define MTH_I_KLEADZ "__mth_i_kleadz"
+// AOCC begin
+#define MTH_I_ITRAILZI "__mth_i_itrailzi"
+#define MTH_I_ITRAILZ "__mth_i_itrailz"
+#define MTH_I_KTRAILZ "__mth_i_ktrailz"
+// AOCC end
 #define MTH_I_IPOPCNTI "__mth_i_ipopcnti"
 #define MTH_I_IPOPCNT "__mth_i_ipopcnt"
 #define MTH_I_KPOPCNT "__mth_i_kpopcnt"

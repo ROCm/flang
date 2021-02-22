@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last Modified: Jun 2020
+ *
+ */
 
 /* symbol initialization for Fortran */
 #include "scutil.h"
@@ -33,7 +42,7 @@
  * out2 -  generated macros which define the predeclared numbers (pd.h)
  *---------------------------------------------------------------------*/
 
-STB stb;
+extern STB stb;
 
 /**
  * Formats of lines in the symini*.n input file:
@@ -67,8 +76,10 @@ public:
     argtype["I"] = DT_INT;
     argtype["R"] = DT_REAL;
     argtype["D"] = DT_DBLE;
+    argtype["Q"] = DT_QUAD;   // AOCC
     argtype["C"] = DT_CMPLX;
     argtype["CD"] = DT_DCMPLX;
+    argtype["CQ"] = DT_QCMPLX;  // AOCC
     argtype["SI"] = DT_SINT;
     argtype["H"] = DT_CHAR;
     argtype["N"] = DT_NUMERIC;
@@ -406,6 +417,18 @@ private:
           printError(SEVERE, "Non-existent CD intrinsic");
         GDCMPLXP(sptr, sptr1);
       }
+      // AOCC begin
+      /* cqname */
+      tok = makeLower(getToken());
+      if (tok.length() == 0 || tok[0] == '-')
+        GDCMPLXP(sptr, 0);
+      else {
+        auto sptr1 = installsym(tok.c_str(), tok.length());
+        if (STYPEG(sptr1) != ST_INTRIN)
+          printError(SEVERE, "Non-existent CQ intrinsic");
+        GDCMPLXP(sptr, sptr1);
+      }
+      // AOCC end
       /* i8name */
       tok = makeLower(getToken());
 #ifdef TM_I8

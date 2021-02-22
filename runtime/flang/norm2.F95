@@ -118,6 +118,25 @@ module I8(__norm2)
     end do
   end function sum_of_squares_real8
 
+! AOCC begin
+! calculate sum of squares of elements of a single dimensional real(16) array
+! at REAL(16) precision, it is called by routines that calculate norm2 of
+! arrays with rank 1 to 7
+  function sum_of_squares_real16(array) result(res)
+    implicit none
+
+    real(16) :: array(:), res
+    integer(8) :: i, array_lbnd(1), array_ubnd(1)
+
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+    res = zero
+    do i = array_lbnd(1), array_ubnd(1)
+      res = res + (array(i) * array(i))
+    end do
+  end function sum_of_squares_real16
+! AOCC end
+
 ! calculate norm2() of a single real(4) dimensional array. It is called by 
 ! routines of the form norm2(array, dim) where arrays rank >= 1 and <= 7 
 ! and dim <= rank.
@@ -191,6 +210,27 @@ module I8(__norm2)
         call restore_unf_state(unf_save)
     end select
   end function norm_real8
+
+  ! AOCC begin
+  ! calculate norm2() of a single real(16) dimensional array. It is called by
+  ! routines of the form norm2(array, dim) where arrays rank >= 1 and <= 7
+  ! and dim <= rank.
+  function norm_real16(array) result(res)
+    implicit none
+
+    real(16) :: array(:), sum, res
+    integer(8) :: start, array_size
+
+    if (is_contiguous(array)) then
+      start = loc(array(:))
+      array_size = size(array)
+      call I8(stride_1_norm2_real16) (start, array_size, res)
+    else
+      sum = sum_of_squares_real16 (array)
+      res = sqrt(sum)
+    endif
+  end function norm_real16
+  ! AOCC end
 
   subroutine save_unf_state (unf_save, unf)
     use ieee_arithmetic
@@ -411,6 +451,19 @@ subroutine F90(nodim_1_real8) (res, array, pfr)
   res = norm_real8(array, pfr)
 end subroutine F90(nodim_1_real8)
 
+! AOCC begin
+subroutine F90(nodim_1_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:), res, sum
+  integer(8) :: start, array_size
+  integer(4) :: pfr
+
+  res = norm_real16(array)
+end subroutine F90(nodim_1_real16)
+! AOCC end
+
 subroutine F90(nodim_2_real4) (res, array)
   use I8(__norm2)
   implicit none
@@ -501,6 +554,31 @@ subroutine F90(nodim_2_real8) (res, array, pfr)
     end select
   endif
 end subroutine F90(nodim_2_real8)
+
+! AOCC begin
+subroutine F90(nodim_2_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:), res, sum
+  integer(8) :: start, i, array_size, array_lbnd(2), array_ubnd(2)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      sum = sum + sum_of_squares_real16 (array(i,:))
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_2_real16)
+! AOCC end
 
 subroutine F90(nodim_3_real4) (res, array)
   use I8(__norm2)
@@ -595,6 +673,33 @@ subroutine F90(nodim_3_real8) (res, array, pfr)
       call restore_unf_state(unf_save)
   end select
 end subroutine F90(nodim_3_real8)
+
+! AOCC begin
+subroutine F90(nodim_3_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:), res, sum
+  integer(8) :: start, i, j, array_size, array_lbnd(3), array_ubnd(3)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        sum = sum + sum_of_squares_real16 (array(i,j,:))
+      end do
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_3_real16)
+! AOCC end
 
 subroutine F90(nodim_4_real4) (res, array)
   use I8(__norm2)
@@ -697,6 +802,35 @@ subroutine F90(nodim_4_real8) (res, array, pfr)
       call restore_unf_state(unf_save)
   end select
 end subroutine F90(nodim_4_real8)
+
+! AOCC begin
+subroutine F90(nodim_4_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:), res, sum
+  integer(8) :: start, i, j, k, array_size, array_lbnd(4), array_ubnd(4)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:,:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          sum = sum + sum_of_squares_real16 (array(i,j,k,:))
+        end do
+      end do
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_4_real16)
+! AOCC end
 
 subroutine F90(nodim_5_real4) (res, array)
   use I8(__norm2)
@@ -807,6 +941,37 @@ subroutine F90(nodim_5_real8) (res, array, pfr)
       call restore_unf_state(unf_save)
   end select
 end subroutine F90(nodim_5_real8)
+
+! AOCC begin
+subroutine F90(nodim_5_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:), res, sum
+  integer(8) :: start, i, j, k, l, array_size, array_lbnd(5), array_ubnd(5)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:,:,:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            sum = sum + sum_of_squares_real16 (array(i,j,k,l,:))
+          end do
+        end do
+      end do
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_5_real16)
+! AOCC end
 
 subroutine F90(nodim_6_real4) (res, array)
   use I8(__norm2)
@@ -925,6 +1090,39 @@ subroutine F90(nodim_6_real8) (res, array, pfr)
       call restore_unf_state(unf_save)
   end select
 end subroutine F90(nodim_6_real8)
+
+! AOCC begin
+subroutine F90(nodim_6_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:,:), res, sum
+  integer(8) :: start, i, j, k, l, m, array_size, array_lbnd(6), array_ubnd(6)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:,:,:,:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(5), array_ubnd(5)
+              sum = sum + sum_of_squares_real16 (array(i,j,k,l,m,:))
+            end do
+          end do
+        end do
+      end do
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_6_real16)
+! AOCC end
 
 subroutine F90(nodim_7_real4) (res, array)
   use I8(__norm2)
@@ -1052,8 +1250,43 @@ subroutine F90(nodim_7_real8) (res, array, pfr)
   end select 
 end subroutine F90(nodim_7_real8)
 
+! AOCC begin
+subroutine F90(nodim_7_real16) (res, array)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:,:,:), res, sum
+  integer(8) :: start, i, j, k, l, m, n, array_size, array_lbnd(7), array_ubnd(7)
+
+  if (is_contiguous(array)) then
+    start = loc(array(:,:,:,:,:,:,:))
+    array_size = size(array)
+    call I8(stride_1_norm2_real16) (start, array_size, res)
+  else
+    sum = zero
+    array_lbnd = lbound(array)
+    array_ubnd = ubound(array)
+
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(5), array_ubnd(5)
+              do n = array_lbnd(6), array_ubnd(6)
+                sum = sum + sum_of_squares_real16 (array(i,j,k,l,m,n,:))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+    res = sqrt(sum)
+  endif
+end subroutine F90(nodim_7_real16)
+! AOCC end
+
 ! The next few routines actually handle dim version of norm2() calls
-! for each rank of real(4) and real(8) arrays
+! for each rank of real(4), real(8) and real(16) arrays ! AOCC
 
 subroutine F90(dim_2_real4) (res, array, dim)
   use I8(__norm2)
@@ -1100,6 +1333,31 @@ subroutine F90(dim_2_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_2_real8)
+
+! AOCC begin
+subroutine F90(dim_2_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:), res(:)
+  integer(4) :: dim
+  integer(8) :: i
+  integer(8) :: array_lbnd(2), array_ubnd(2)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      res(i) = norm_real16(array(:,i))
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      res(i) = norm_real16(array(i,:))
+    end do
+  endif
+end subroutine F90(dim_2_real16)
+! AOCC end
 
 subroutine F90(dim_3_real4) (res, array, dim)
   use I8(__norm2)
@@ -1166,6 +1424,41 @@ subroutine F90(dim_3_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_3_real8)
+
+! AOCC begin
+subroutine F90(dim_3_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:), res(:,:)
+  integer(4) :: dim
+  integer(8) :: i, j
+  integer(8) :: array_lbnd(3), array_ubnd(3)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      do j = array_lbnd(3), array_ubnd(3)
+        res(i,j) = norm_real16(array(:,i,j))
+      end do
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(3), array_ubnd(3)
+        res(i,j) = norm_real16(array(i,:,j))
+      end do
+    end do
+  else if (dim .eq. 3) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        res(i,j) = norm_real16(array(i,j,:))
+      end do
+    end do
+  endif
+end subroutine F90(dim_3_real16)
+! AOCC end
 
 subroutine F90(dim_4_real4) (res, array, dim)
   use I8(__norm2)
@@ -1260,6 +1553,55 @@ subroutine F90(dim_4_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_4_real8)
+
+! AOCC begin
+subroutine F90(dim_4_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:), res(:,:,:)
+  integer(4) :: dim
+  integer(8) :: i, j, k
+  integer(8) :: array_lbnd(4), array_ubnd(4)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          res(i,j,k) = norm_real16(array(:,i,j,k))
+        end do
+      end do
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          res(i,j,k) = norm_real16(array(i,:,j,k))
+        end do
+      end do
+    end do
+  else if (dim .eq. 3) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(4), array_ubnd(4)
+          res(i,j,k) = norm_real16(array(i,j,:,k))
+        end do
+      end do
+    end do
+  else if (dim .eq. 4) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          res(i,j,k) = norm_real16(array(i,j,k,:))
+        end do
+      end do
+    end do
+  endif
+end subroutine F90(dim_4_real16)
+! AOCC end
 
 subroutine F90(dim_5_real4) (res, array, dim)
   use I8(__norm2)
@@ -1390,6 +1732,73 @@ subroutine F90(dim_5_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_5_real8)
+
+! AOCC begin
+subroutine F90(dim_5_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:), res(:,:,:,:)
+  integer(4) :: dim
+  integer(8) :: i, j, k, l
+  integer(8) :: array_lbnd(5), array_ubnd(5)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            res(i,j,k,l) = norm_real16(array(:,i,j,k,l))
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            res(i,j,k,l) = norm_real16(array(i,:,j,k,l))
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 3) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            res(i,j,k,l) = norm_real16(array(i,j,:,k,l))
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 4) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(5), array_ubnd(5)
+            res(i,j,k,l) = norm_real16(array(i,j,k,:,l))
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 5) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            res(i,j,k,l) = norm_real16(array(i,j,k,l,:))
+          end do
+        end do
+      end do
+    end do
+  endif
+end subroutine F90(dim_5_real16)
+! AOCC end
 
 subroutine F90(dim_6_real4) (res, array, dim)
   use I8(__norm2)
@@ -1564,6 +1973,95 @@ subroutine F90(dim_6_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_6_real8)
+
+! AOCC begin
+subroutine F90(dim_6_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:,:), res(:,:,:,:,:)
+  integer(4) :: dim
+  integer(8) :: i, j, k, l, m
+  integer(8) :: array_lbnd(6), array_ubnd(6)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              res(i,j,k,l,m) = norm_real16(array(:,i,j,k,l,m))
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              res(i,j,k,l,m) = norm_real16(array(i,:,j,k,l,m))
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 3) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              res(i,j,k,l,m) = norm_real16(array(i,j,:,k,l,m))
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 4) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              res(i,j,k,l,m) = norm_real16(array(i,j,k,:,l,m))
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 5) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(6), array_ubnd(6)
+              res(i,j,k,l,m) = norm_real16(array(i,j,k,l,:,m))
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 6) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(5), array_ubnd(5)
+              res(i,j,k,l,m) = norm_real16(array(i,j,k,l,m,:))
+            end do
+          end do
+        end do
+      end do
+    end do
+  endif
+end subroutine F90(dim_6_real16)
+! AOCC end
 
 subroutine F90(dim_7_real4) (res, array, dim)
   use I8(__norm2)
@@ -1790,3 +2288,118 @@ subroutine F90(dim_7_real8) (res, array, pfr, dim)
     end do
   endif
 end subroutine F90(dim_7_real8)
+
+! AOCC begin
+subroutine F90(dim_7_real16) (res, array, dim)
+  use I8(__norm2)
+  implicit none
+
+  real(16) :: array(:,:,:,:,:,:,:), res(:,:,:,:,:,:)
+  integer(4) :: dim
+  integer(8) :: i, j, k, l, m, n
+  integer(8) :: array_lbnd(7), array_ubnd(7)
+
+  array_lbnd = lbound(array)
+  array_ubnd = ubound(array)
+
+  if (dim .eq. 1) then
+    do i = array_lbnd(2), array_ubnd(2)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(:,i,j,k,l,m,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 2) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(3), array_ubnd(3)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(i,:,j,k,l,m,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 3) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(4), array_ubnd(4)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(i,j,:,k,l,m,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 4) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(5), array_ubnd(5)
+            do m = array_lbnd(6), array_ubnd(6)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(i,j,k,:,l,m,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 5) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(6), array_ubnd(6)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(i,j,k,l,:,m,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 6) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(5), array_ubnd(5)
+              do n = array_lbnd(7), array_ubnd(7)
+                res(i,j,k,l,m,n) = norm_real16(array(i,j,k,l,m,:,n))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  else if (dim .eq. 7) then
+    do i = array_lbnd(1), array_ubnd(1)
+      do j = array_lbnd(2), array_ubnd(2)
+        do k = array_lbnd(3), array_ubnd(3)
+          do l = array_lbnd(4), array_ubnd(4)
+            do m = array_lbnd(5), array_ubnd(5)
+              do n = array_lbnd(6), array_ubnd(6)
+                res(i,j,k,l,m,n) = norm_real16(array(i,j,k,l,m,n,:))
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+  endif
+end subroutine F90(dim_7_real16)
+! AOCC end
