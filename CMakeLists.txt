@@ -139,6 +139,9 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
     "Only include toolchain files in the 'install' target." OFF)
 
+  option(LLVM_INSTALL_RUNTIME
+     "Build and install the flang runtime. Do this last" OFF)
+
   option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
     "Set to ON to force using an old, unsupported host toolchain." OFF)
 
@@ -178,6 +181,8 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       set(LLVM_UTILS_PROVIDED ON)
     endif()
 
+   if (NOT LLVM_INSTALL_RUNTIME)
+
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       if(NOT LLVM_UTILS_PROVIDED)
@@ -187,6 +192,7 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
         set(LLVM_UTILS_PROVIDED ON)
         set(FLANG_TEST_DEPS FileCheck count not)
       endif()
+     endif()
       #set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
       #if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h
       #    AND NOT EXISTS ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -282,12 +288,14 @@ else()
   set(FLANG_HAS_VERSION_PATCHLEVEL 0)
 endif()
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
+
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM")
   option(WITH_WERROR "Compile with '-Werror' C compiler flag" ON)
   if (WITH_WERROR)
-     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+	  # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
   endif ()
 endif ()
 
@@ -334,10 +342,12 @@ include_directories(BEFORE
 # Direct module files to build include directory
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
+if (FLANG_BUILD_RUNTIME)
 # Install Fortran module files
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
   DESTINATION include
   )
+endif()
 
 # Install Fortran OpenMP include file
 # Copy omp_lib.h file, not the symlink
@@ -380,11 +390,14 @@ set(FLANG_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(FLANG_RTE_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_definitions( -DPGFLANG )
 
-add_subdirectory(lib)
-add_subdirectory(runtime)
-add_subdirectory(utils)
-add_subdirectory(tools)
-#add_subdirectory(test)
+if (LLVM_INSTALL_RUNTIME)
+   add_subdirectory(runtime)
+else()
+   add_subdirectory(lib)
+   add_subdirectory(utils)
+   add_subdirectory(tools)
+   #add_subdirectory(test)
+endif()
 
 #option(FLANG_BUILD_EXAMPLES "Build FLANG example programs by default." OFF)
 #if (FLANG_BUILD_EXAMPLES)
