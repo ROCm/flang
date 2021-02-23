@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /**
    \file
@@ -756,10 +764,14 @@ trav_struct(int dtype, int off)
     regclass[regi] = CLASS_SSEQ;
     return;
   case TY_QUAD:
-#if DEBUG
+  // AOCC begin
+    regclass[regi] = CLASS_SSEQ;
+    return;
+  // AOCC end
+/*#if DEBUG
     if (sizeof(DT_QUAD) == 16)
       interr("trav_struct: update handling of long doubles", dtype, 3);
-#endif
+#endif*/
   /* we're treating this like DBLE for now. */
   case TY_DBLE:
     regclass[regi] = CLASS_SSEDP;
@@ -775,6 +787,13 @@ trav_struct(int dtype, int off)
     regclass[0] = CLASS_SSEDP;
     regclass[1] = CLASS_SSEDP;
     return;
+  // AOCC begin
+  case TY_QCMPLX:
+    assert(regi == 0, "trav_struct - bad offset for QCMPLX", off, 3);
+    regclass[0] = CLASS_SSEQP;
+    regclass[1] = CLASS_SSEQP;
+    return;
+  // AOCC end
   case TY_STRUCT:
   case TY_DERIVED:
     /* regclass will be the sum of the members in its eightbyte */

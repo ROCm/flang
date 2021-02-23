@@ -20,9 +20,11 @@
 #elif defined(DESC_I8) // implies !defined(__AVX2__)
 #define NORM2_REAL4 norm2_real4_i8_
 #define NORM2_REAL8 norm2_real8_i8_
+#define NORM2_REAL16 norm2_real16_i8_ // AOCC
 #else // implies !defined(__AVX2__) && !defined(DESC_I8)
 #define NORM2_REAL4 norm2_real4_
 #define NORM2_REAL8 norm2_real8_
+#define NORM2_REAL16 norm2_real16_ // AOCC
 #endif
 
 #endif

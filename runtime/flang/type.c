@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ */
 
 /* clang-format off */
 
@@ -778,8 +784,10 @@ void ENTF90(DEALLOC_POLY_MBR03A,
   OBJECT_DESC *src = (OBJECT_DESC *)sd;
   TYPE_DESC *src_td;
 
-  if (!I8(__fort_allocated)(area))
+  if (!I8(__fort_allocated)(area)) {
+    if (ISPRESENT(stat)) *stat = 2;  // AOCC
     return;
+  }
 
   if (src) {
     src_td = (src->type) ? src->type : 0;
@@ -847,8 +855,10 @@ void ENTF90(DEALLOC_POLY03A, dealloc_poly03a)(F90_Desc *sd, __STAT_T *stat,
   OBJECT_DESC *src = (OBJECT_DESC *)sd;
   TYPE_DESC *src_td;
 
-  if (!I8(__fort_allocated)(area))
+  if (!I8(__fort_allocated)(area)) {
+    if (ISPRESENT(stat)) *stat = 2; // AOCC
     return;
+  }
 
   if (src) {
     src_td = (src->type) ? src->type : 0;

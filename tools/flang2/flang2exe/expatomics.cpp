@@ -11,6 +11,9 @@
  * Added support for quad precision
  * Last modified: Feb 2020
  *
+ * Fixing bugs with complex reduction variables.
+ * Last modified: Aug 2020
+ *
  */
 
 /** \file
@@ -454,6 +457,10 @@ get_atomic_function(ILI_OP opcode)
     return mk_prototype("atomicexchf", "pure", DT_FLOAT, 2, DT_CPTR, DT_FLOAT);
   case IL_STDP:
     return mk_prototype("atomicexchd", "pure", DT_DBLE, 2, DT_CPTR, DT_DBLE);
+  // AOCC begin
+  case IL_STQP:
+    return mk_prototype("atomicexchq", "pure", DT_QUAD, 2, DT_CPTR, DT_QUAD);
+  // AOCC end
   case IL_STKR:
     return mk_prototype("atomicexchul", "pure", DT_INT8, 2, DT_CPTR, DT_INT8);
   case IL_SCMPLXADD:
@@ -649,11 +656,13 @@ create_atomic_capture_seq(int update_ili, int read_ili, int capture_first)
   intarg_opcode = IL_DAIR;
   floatarg_opcode = IL_DASP;
   doublearg_opcode = IL_DADP;
+  quadarg_opcode = IL_DAQP;    // AOCC
   longarg_opcode = IL_DAKR;
 #else
   intarg_opcode = IL_ARGIR;
   floatarg_opcode = IL_ARGSP;
   doublearg_opcode = IL_ARGDP;
+  quadarg_opcode = IL_ARGQP;  // AOCC
   longarg_opcode = IL_ARGKR;
 #endif
 

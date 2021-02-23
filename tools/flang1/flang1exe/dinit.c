@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ */
+
 /**
    \file
    \brief Process data initialization statements.  Called by semant.
@@ -656,8 +665,8 @@ process_real_kind(int sptr, ACL *ict, int op)
       conval = 4;
     else if (con1 <= 15)
       conval = 8;
-    /*else if (con1 <= 31 && !XBIT(57, 4))
-      conval = 16; Currently real 16 is not supported */
+    else if (con1 <= 31 && (!XBIT(57, 0x4)))
+      conval = 16;
     else {
       conval = -1;
       p = -1;
@@ -693,10 +702,10 @@ process_real_kind(int sptr, ACL *ict, int op)
         } else if (con1 <= 307) {
           if (conval > 0 && conval <= 8)
             conval = 8;
-        } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+        } else if ((con1 <= 4931) && (!XBIT(57, 0x4))) {
           if (conval > 0 && conval <= 16)
             conval = 16;
-        }*/ else {
+        } else {
           if (conval > 0)
             conval = 0;
           conval = -2;
@@ -732,10 +741,10 @@ process_real_kind(int sptr, ACL *ict, int op)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    /*else if (conval > 0 && conval <= 16)
-              conval = 16;*/
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
             else if (p < 0 && r < 0)
-	    conval = -3;
+	      conval = -3;
           }
 	  else if (con1 != 2)
             conval = -5;
@@ -818,21 +827,21 @@ dinit_acl_val2(int sptr, int dtype, ACL *ict, int op)
           case AC_I_selected_real_kind:
             process_real_kind(sptr, subict, op);
             break;
-          case AC_I_selected_char_kind:
-            ast = subict->u1.ast;
-            if (A_TYPEG(ast) == A_CNST) {
-              int dty;
-              con1 = A_SPTRG(ast);
-              dty = DTY(DTYPEG(con1));
-              if (dty == TY_CHAR || dty == TY_NCHAR)
-                conval = _selected_char_kind(con1);
-              else
-                break;
-            }
-            setConval(sptr, conval, op);
-            break;
+        case AC_I_selected_char_kind:
+          ast = subict->u1.ast;
+          if (A_TYPEG(ast) == A_CNST) {
+            int dty;
+            con1 = A_SPTRG(ast);
+            dty = DTY(DTYPEG(con1));
+            if (dty == TY_CHAR || dty == TY_NCHAR)
+              conval = _selected_char_kind(con1);
+            else
+              break;
           }
-	}
+          setConval(sptr, conval, op);
+          break;
+        }
+      }
       }
       dinit_intr_call(sptr, dtype, ict);
       break;

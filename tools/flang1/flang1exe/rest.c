@@ -7,7 +7,17 @@
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *
+ * Date of Modification: March 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
+ *
  */
+
 
 /** \file rest.c
     \brief various ast transformations
@@ -1702,9 +1712,7 @@ transform_call(int std, int ast)
                */
               check_alloc_ptr_type(sptr, std, 0, unl_poly ? 2 : 1, 0, 0,
                                    STYPEG(sptr) == ST_MEMBER ? ele : 0);
-              sptrsdsc = SDSCG(sptr);
-	      if (!sptrsdsc)
-                sptrsdsc = DESCRG(sptr);
+              sptrsdsc = DESCRG(sptr); // AOCC
             }
             if (sptrsdsc)
               tmp = mk_id(sptrsdsc);
@@ -2226,6 +2234,8 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  // AOCC: it is possible that all descriptors are not populated. 
+  // resetting the newnargs count for this case
   if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */

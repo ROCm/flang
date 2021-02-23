@@ -4,10 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Fixes for CP2K application build
+ *  Month of Modification: November 2019
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ *  Date of Modification: December 2019
  */
+
 /** \file
     \brief Fortran utility routines used by Semantic Analyzer to process
            user-defined generics including overloaded operators
@@ -446,8 +453,8 @@ find_best_generic(int gnr, ITEM *list, int arg_cnt, int try_device,
                                  try_device == 1);
       }
       if (found && func && found != func && *min_argdistance != INF_DISTANCE &&
-          (!PRIVATEG(SCOPEG(func))) && 
-          (!is_conflicted_generic(func_sptrgen, found_sptrgen)) && // AOCC
+          (!PRIVATEG(SCOPEG(func))) && // AOCC
+          (!is_conflicted_generic(func_sptrgen, found_sptrgen)) &&
           cmp_arg_score(argdistance, min_argdistance, distance_sz) == 0) {
         int len;
         char *name, *name_cpy;
@@ -1122,6 +1129,8 @@ is_intrinsic_opr(int val, SST *stktop, SST *lop, SST *rop, int tkn_alias)
   ITEM *list;
   int rank, dtype;
   char buf[100];
+  int copy , copy_ast;        //AOCC
+  SST *copy_rhs;              //AOCC
 
   opr = optab[val].opr;
   if (opr) {

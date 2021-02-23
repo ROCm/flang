@@ -4,9 +4,34 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for DNORM intrinsic
+ *  Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ *  Month of Modification: May 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *  Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *  Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ *
+ * Support for TRAILZ intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for real*16 intrinsics
+ * Date of modification: 18th July 2020
  */
 
 #ifndef FORTRAN_RTLRTNS_H_
@@ -117,6 +142,7 @@ typedef enum {
   RTE_dfloorv,
   RTE_dmodulev,
   RTE_dmodulov,
+  RTE_qmodulov,
   RTE_errorstop08a_char,
   RTE_errorstop08a_int,
   RTE_execcmdline,
@@ -124,6 +150,7 @@ typedef enum {
   RTE_expon,
   RTE_expond,
   RTE_expondx,
+  RTE_exponqx,
   RTE_exponx,
   RTE_extends_type_of,
   RTE_finalize,
@@ -132,6 +159,8 @@ typedef enum {
   RTE_frac,
   RTE_fracd,
   RTE_fracdx,
+  RTE_fracq,
+  RTE_fracqx,
   RTE_fracx,
   RTE_get_cmda,
   RTE_get_cmd_arga,
@@ -195,6 +224,7 @@ typedef enum {
   RTE_matmul_cplx16,
   RTE_matmul_cplx16mxv_t,
   RTE_matmul_cplx32,
+  RTE_matmul_cplx32mxv_t,
   RTE_matmul_cplx8,
   RTE_matmul_cplx8mxv_t,
   RTE_matmul_int1,
@@ -210,11 +240,13 @@ typedef enum {
   RTE_matmul_real4mxv_t,
   RTE_matmul_real8,
   RTE_matmul_real8mxv_t,
+  RTE_matmul_real16mxv_t,
   RTE_max,
   RTE_mcopy1,
   RTE_mcopy2,
   RTE_mcopy4,
   RTE_mcopy8,
+  RTE_mcopyz32,
   RTE_mcopyz16,
   RTE_mcopyz4,
   RTE_mcopyz8,
@@ -232,8 +264,10 @@ typedef enum {
   RTE_mergel2,
   RTE_mergel8,
   RTE_mergeq,
+  RTE_mergeqc,           // AOCC
   RTE_merger,
   RTE_min,
+  RTE_mmul_cmplx32,      // AOCC
   RTE_mmul_cmplx16,
   RTE_mmul_cmplx8,
   RTE_mmul_real4,
@@ -246,6 +280,7 @@ typedef enum {
   RTE_mset2,
   RTE_mset4,
   RTE_mset8,
+  RTE_msetz32,
   RTE_msetz16,
   RTE_msetz4,
   RTE_msetz8,
@@ -254,6 +289,7 @@ typedef enum {
   RTE_mzero2,
   RTE_mzero4,
   RTE_mzero8,
+  RTE_mzeroz32,
   RTE_mzeroz16,
   RTE_mzeroz4,
   RTE_mzeroz8,
@@ -264,6 +300,10 @@ typedef enum {
   RTE_nearestd,
   RTE_nearestdx,
   RTE_nearestx,
+  //AOCC Begin
+  RTE_nearestq,
+  RTE_nearestqx,
+  //AOCC End
   RTE_nlena,
   RTE_nlentrim,
   // AOCC Begin
@@ -272,6 +312,8 @@ typedef enum {
   RTE_norm2_real4_dim,
   RTE_norm2_real8,
   RTE_norm2_real8_dim,
+  RTE_norm2_real16,
+  RTE_norm2_real16_dim,
   // AOCC End
   RTE_nrepeat,
   RTE_nscan,
@@ -315,6 +357,7 @@ typedef enum {
   RTE_ptrchk,
   RTE_ptrcp,
   RTE_real,
+  RTE_real32,
   RTE_real16,
   RTE_real4,
   RTE_real8,
@@ -322,6 +365,8 @@ typedef enum {
   RTE_rrspacing,
   RTE_rrspacingd,
   RTE_rrspacingdx,
+  RTE_rrspacingq,
+  RTE_rrspacingqx,
   RTE_rrspacingx,
   RTE_rtn_name,
   RTE_same_intrin_type_as,
@@ -329,6 +374,10 @@ typedef enum {
   RTE_scale,
   RTE_scaled,
   RTE_scaledx,
+  //AOCC Begin
+  RTE_scaleq,
+  RTE_scaleqx,
+  //AOCC End
   RTE_scalex,
   RTE_scana,
   RTE_sect,
@@ -346,6 +395,8 @@ typedef enum {
   RTE_setexp,
   RTE_setexpd,
   RTE_setexpdx,
+  RTE_setexpq,
+  RTE_setexpqx,
   RTE_setexpx,
   RTE_shape,
   RTE_shape1,
@@ -357,6 +408,8 @@ typedef enum {
   RTE_spacing,
   RTE_spacingd,
   RTE_spacingdx,
+  RTE_spacingq,
+  RTE_spacingqx,
   RTE_spacingx,
   RTE_stopa,
   RTE_stop08a,
@@ -435,6 +488,7 @@ typedef enum {
   RTE_counts,
   RTE_cpu_time,
   RTE_cpu_timed,
+  RTE_cpu_timeq,
   RTE_cshift,
   RTE_cshiftca,
   RTE_cshifts,
@@ -600,6 +654,7 @@ typedef enum {
   RTE_reshapeca,
   RTE_rnum,
   RTE_rnumd,
+  RTE_rnumq,           // AOCC
   RTE_rseed,
   RTE_secnds,
   RTE_secndsd,
@@ -615,6 +670,9 @@ typedef enum {
   RTE_sums,
   RTE_sysclk,
   RTE_templateDsc,
+  /* AOCC begin */
+  RTE_trailz,
+  /* AOCC end */
   RTE_transfer,
   RTE_type,
   RTE_typep,
@@ -718,6 +776,8 @@ typedef enum {
   RTE_f90io_open_sharea,
   RTE_f90io_print_init,
   RTE_f90io_rewind,
+  RTE_f90io_sc_cq_fmt_write,  // AOCC
+  RTE_f90io_sc_cq_ldw,        // AOCC
   RTE_f90io_sc_cd_fmt_write,
   RTE_f90io_sc_cd_ldw,
   RTE_f90io_sc_cf_fmt_write,
@@ -726,6 +786,8 @@ typedef enum {
   RTE_f90io_sc_ch_ldw,
   RTE_f90io_sc_d_fmt_write,
   RTE_f90io_sc_d_ldw,
+  RTE_f90io_sc_q_fmt_write,   // AOCC
+  RTE_f90io_sc_q_ldw,         // AOCC
   RTE_f90io_sc_f_fmt_write,
   RTE_f90io_sc_f_ldw,
   RTE_f90io_sc_fmt_write,

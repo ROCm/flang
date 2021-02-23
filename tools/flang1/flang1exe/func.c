@@ -4,10 +4,57 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Implemented the minloc/maxloc inlining support
+ *   Date of Modification: August 2018
+ *
+ * Support for DNORM intrinsic
+ *   Date of Modification: 21st February 2019
+ *
+ * Support for array expression in norm2
+ *   Date of Modification: 28th October 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *   Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ *   Month of Modification: May 2019
+ *
+ * Support for Bit Shifting intrinsics.
+ *   Month of Modification: June 2019
+ *
+ * Support for MERGE_BITS intrinsic.
+ *   Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *   Month of Modification: July 2019
+ *
+ * Support for Combined Bit Shifting intrinsic.
+ *   Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ *   Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *   Month of Modification: July 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *   Date of modification 12th February  2020
+ *   Date of modification 04th April     2020
+ *
+ * Support for "nearest" intrinsic
+ *   Last modified: Feb 2020
+ *
+ *   Last modified: Jun 2020
+ *
+ * Support for CPU_TIME for real128
+ * Last modified: Sept 2020
  */
+
 /**
    \file
    \brief rewrite function args, etc
@@ -1844,6 +1891,10 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       return -1;
     case I_NULLIFY:
       return -1;
+    /* AOCC begin */
+    case I_MM_PREFETCH:
+      return -1;
+    /* AOCC end */
 #ifdef I_C_F_POINTER
     case I_C_F_POINTER:
       transform_c_f_pointer(func_ast, func_args);
@@ -1955,24 +2006,22 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
       return bitmask_temp_result;
     }
 
-    case I_SHIFTL:
-      if (flg.std == F2008) {
-        int val = ARGT_ARG(func_args, 0);
-        int shift = ARGT_ARG(func_args, 1);
+    case I_SHIFTL: {
+      int val = ARGT_ARG(func_args, 0);
+      int shift = ARGT_ARG(func_args, 1);
 
-        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
-        return shift_func;
-      }
+      int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, shift);
+      return shift_func;
+    }
 
-    case I_SHIFTR:
-      if (flg.std == F2008) {
-        int val = ARGT_ARG(func_args, 0);
-        int shift = ARGT_ARG(func_args, 1);
-        int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
+    case I_SHIFTR: {
+      int val = ARGT_ARG(func_args, 0);
+      int shift = ARGT_ARG(func_args, 1);
+      int negated_shift = mk_binop(OP_SUB, mk_cnst(stb.i0), shift, A_DTYPEG(shift));
 
-        int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
-        return shift_func;
-      }
+      int shift_func = ast_intr(I_ISHFT, A_DTYPEG(val), 2, val, negated_shift);
+      return shift_func;
+    }
 
     case I_MERGE_BITS: {
       int i = ARGT_ARG(func_args, 0);
@@ -1985,7 +2034,13 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
 
       return ast_intr(I_IOR, A_DTYPEG(i), 2, iand_i, iand_j);
     }
-
+    //AOCC Begin
+    case I_NEAREST: {
+      int i = ARGT_ARG(func_args, 0);
+      int j = ARGT_ARG(func_args, 1);
+      return ast_intr(I_NEAREST , A_DTYPEG(i), 2 , j , i);
+    }
+    //AOCC End
     case I_DSHIFTL:
     case I_DSHIFTR: {
       if (flg.std != F2008) {
@@ -2803,13 +2858,16 @@ rewrite_func_ast(int func_ast, int func_args, int lhs)
   case I_CPU_TIME:
     is_icall = FALSE;
     arg1 = ARGT_ARG(func_args, 0);
-    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_cpu_timed : RTE_cpu_time;
+    //AOCC
+    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_cpu_timed :
+              DTYG(A_DTYPEG(arg1)) == TY_QUAD ? RTE_cpu_timeq : RTE_cpu_time;
     nargs = 1;
     goto opt_common;
   case I_RANDOM_NUMBER:
     is_icall = FALSE;
     arg1 = ARGT_ARG(func_args, 0);
-    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_rnumd : RTE_rnum;
+    rtlRtn = DTYG(A_DTYPEG(arg1)) == TY_DBLE ? RTE_rnumd :
+             DTYG(A_DTYPEG(arg1)) == TY_QUAD ? RTE_rnumq : RTE_rnum;
     nargs = 1;
     goto opt_common;
   case I_RANDOM_SEED:
@@ -3573,11 +3631,10 @@ can_inline_minloc(int dest, int args) {
   int shape = A_SHAPEG(dest);
   if (!shape) return false;
   if (A_TYPEG(dest) == A_SUBSCR) {
-       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
-       return false;
-   } else if (A_TYPEG(dest) != A_ID) {
-       return false;
-   }
+    return false;
+  } else if (A_TYPEG(dest) != A_ID) {
+    return false;
+  }
 
   if (arg_gbl.inforall)
       if (contiguous_section_array(srcarray))
@@ -3587,7 +3644,7 @@ can_inline_minloc(int dest, int args) {
    if (A_TYPEG(astdim) != A_CNST) {
      return false;
    }
-    dim = get_int_cval(A_SPTRG(astdim));
+   dim = get_int_cval(A_SPTRG(astdim));
   }
 
   int astback = ARGT_ARG(args, 3);
@@ -3601,7 +3658,6 @@ can_inline_minloc(int dest, int args) {
 
   if (dim >= 1) {
      if (A_TYPEG(dest) == A_SUBSCR) {
-       if (SHD_NDIM(shape) != 1 || SHD_LWB(shape, 0) != SHD_UPB(shape, 0))
        return false;
     } else if (A_TYPEG(dest) == A_ID) {
       int sptr = A_SPTRG(dest);
@@ -4248,7 +4304,7 @@ rewrite_calls(void)
         }
         sptr_lhs = memsym_of_ast(A_SRCG(ast));
         if (allocatable_member(sptr_lhs)) {
-          rewrite_deallocate(A_SRCG(ast), false, std);
+          rewrite_deallocate(A_SRCG(ast), false, std, true);
           if (!ALLOCG(sptr_lhs) && !ALLOCATTRG(sptr_lhs) &&
               !POINTERG(sptr_lhs)) {
             /* Has allocatable members but item itself is not
@@ -6134,6 +6190,10 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         conjg = I_CONJG;
       } else if (dtyperes == DT_CMPLX16) {
         conjg = I_DCONJG;
+        // AOCC begin
+      } else if (dtyperes == DT_CMPLX32) {
+        conjg = I_QCONJG;
+       // AOCC end
       } else {
         return ast;
       }
@@ -7154,8 +7214,17 @@ emit_norm2(int func_ast, int func_args, int lhs) {
       else
         rtlRtn = RTE_norm2_real8;
       break;
+
+    case TY_QUAD:
+      if (nargs == 3)
+        rtlRtn = RTE_norm2_real16_dim;
+      else
+        rtlRtn = RTE_norm2_real16;
+      break;
+
     default:
       error(456, 3, gbl.lineno, CNULL, CNULL);
+    // AOCC end
   }
 
   newargt = mk_argt(nargs);
@@ -7271,6 +7340,15 @@ matmul(int func_ast, int func_args, int lhs)
       rtlRtn = RTE_matmul_real8;
     }
     break;
+  // AOCC begin
+  case TY_QUAD:
+    if (matmul_transpose) {
+      rtlRtn = RTE_matmul_real16mxv_t;
+    } else {
+      rtlRtn = RTE_matmul_real16;
+    }
+    break;
+  // AOCC end
   case TY_CMPLX:
     if (matmul_transpose) {
       rtlRtn = RTE_matmul_cplx8mxv_t;
@@ -7285,6 +7363,15 @@ matmul(int func_ast, int func_args, int lhs)
       rtlRtn = RTE_matmul_cplx16;
     }
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    if (matmul_transpose) {
+      rtlRtn = RTE_matmul_cplx32mxv_t;
+    } else {
+      rtlRtn = RTE_matmul_cplx32;
+    }
+    break;
+  // AOCC end
   case TY_BLOG:
     rtlRtn = RTE_matmul_log1;
     break;
@@ -7501,6 +7588,17 @@ mmul(int func_ast, int func_args, int lhs)
     beta = getcon(num, DT_CMPLX16);
     rtlRtn = RTE_mmul_cmplx16;
     break;
+  // AOCC begin
+  case DT_CMPLX32:
+    num[0] = stb.quad0;
+    num[1] = stb.quad0;
+    alpha = getcon(num, DT_CMPLX32);
+    num[0] = stb.quad0;
+    num[1] = stb.quad0;
+    beta = getcon(num, DT_CMPLX32);
+    rtlRtn = RTE_mmul_cmplx32;
+    break;
+  // AOCC end
   default:
     return -1;
   }

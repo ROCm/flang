@@ -4,9 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes made to create single team for omp target parallel block as well
+ * Date of Modification: 26th June 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Last Modified : Nov 2020
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
 /**
  *  \file
@@ -45,8 +58,9 @@
 #include "symfun.h"
 // AOCC Begin
 #include <set>
-#include <vector>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 // Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
 #define GV_Warp_Size 64
@@ -86,6 +100,7 @@ OMPACCEL_TINFO *old_tinfo = nullptr;
 // Store index of last emited tifno
 int last_tinfo_index = 0;
 int next_default_map_type = 0;
+SPTR curr_teams_outlined_sptr = (SPTR)0; // AOCC
 // AOCC End
 
 OMP_TARGET_MODE NextTargetMode = mode_none_target;
@@ -120,10 +135,14 @@ _long_unsigned(int lilix, int *dt, bool *punsigned, DTYPE dtype)
     *dt = 2;
   } else if (dty == TY_DBLE) {
     *dt = 4;
+  // AOCC begin
   } else if (dty == TY_CMPLX) {
     *dt = 5;
   } else if (dty == TY_DCMPLX) {
     *dt = 6;
+  } else if (dty == TY_QUAD) {
+    *dt = 7;
+  // AOCC end
   }
 
   // todo ompaccel I don't know how to handle others
@@ -217,10 +236,12 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
     case DT_DBLE:
       return ad3ili(IL_LDDP, ili, nme, MSZ_DBLE);
       break;
-    case DT_CMPLX:
-      return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F8);
+    // AOCC begin
+    case DT_QUAD:
+      return ad3ili(IL_LDQP, ili, nme, MSZ_F16);
       break;
-    case DT_DCMPLX:
+    // AOCC end
+    case DT_CMPLX:
       return ad3ili(IL_LDDCMPLX, ili, nme, MSZ_F16);
       break;
     case DT_NONE:
@@ -264,12 +285,19 @@ mk_ompaccel_store(int ili_value, DTYPE dtype, int nme, int ili_address)
     case DT_CMPLX:
       return ad4ili(IL_STSCMPLX, ili_value, ili_address, nme, MSZ_F8);
     // AOCC End
+    case DT_DCMPLX:
+      return ad4ili(IL_STDCMPLX, ili_value, ili_address, nme, MSZ_F16);
     case DT_REAL:
       return ad4ili(IL_STSP, ili_value, ili_address, nme, MSZ_F4);
       break;
     case DT_DBLE:
       return ad4ili(IL_STDP, ili_value, ili_address, nme, MSZ_DBLE);
       break;
+    // AOCC begin
+    case DT_QUAD:
+      return ad4ili(IL_STQP, ili_value, ili_address, nme, MSZ_F16);
+      break;
+    // AOCC end
     case DT_INT8:
       return ad4ili(IL_STKR, ili_value, ili_address, nme, MSZ_I8);
       break;
@@ -417,6 +445,10 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_FADD;
       else if (dt == 4)
         opc = IL_DADD;
+      // AOCC begin
+      else if (dt == 7)
+        opc = IL_QADD;
+      // AOCC end
       else if (dt == 5)
         opc = IL_SCMPLXADD;
       else if (dt == 6)
@@ -433,6 +465,7 @@ mk_ompaccel_add(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
 } /* mk_ompaccel_add */
 
 // AOCC Begin
+
 /*
  * Returning max
  */
@@ -474,7 +507,6 @@ mk_ompaccel_max(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
          ERR_Fatal);
   return ad2ili(opc, ili1, ili2);
 }
-
 /*
  * Returning min
  */
@@ -547,6 +579,10 @@ mk_ompaccel_mul(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
         opc = IL_SCMPLXMUL;
       else if (dt == 6)
         opc = IL_DCMPLXMUL;
+      // AOCC begin
+      else if (dt == 7)
+        opc = IL_QMUL;
+      // AOCC end
     } else {
       if (dt == 1)
         opc = IL_UIMUL;
@@ -671,12 +707,13 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
     //AOCC Begin
-  case 346:
+  case 373:
     return mk_ompaccel_max(lili, dtype1, rili, dtype2);
-  case 347:
+  case 374:
     return mk_ompaccel_min(lili, dtype1, rili, dtype2);
     // AOCC End
   default:
+    ompaccelInternalFail("Unknown red op type"); // AOCC
     static_assert(true, "Rest of reduction operators are not implemented yet.");
     break;
   }
@@ -977,6 +1014,7 @@ ompaccel_tinfo_create(SPTR func_sptr, int max_nargs)
   info->nowait = false;
   info->n_quiet_symbols = 0;
   NEW(info->reduction_symbols, OMPACCEL_RED_SYM, tinfo_size_reductions);
+  info->sz_reduction_symbols = tinfo_size_reductions; // AOCC
   info->n_reduction_symbols = 0;
   // AOCC Begin
   info->num_teams = SPTR_NULL;
@@ -1157,12 +1195,30 @@ add_symbol_to_function(SPTR func, SPTR sym)
   aux.dpdsc_avl += 1;
 }
 
+// AOCC Begin
+std::vector<OMPACCEL_TINFO* > tinfo_vector;
+// AOCC End
+
 INLINE static SPTR
 get_devsptr(OMPACCEL_TINFO *tinfo, SPTR host_symbol)
 {
   int i;
   if (tinfo == nullptr)
     return host_symbol;
+
+  // AOCC Begin
+  if (std::find(tinfo_vector.begin(), tinfo_vector.end(), tinfo)
+                                                  == tinfo_vector.end()) {
+    tinfo_vector.push_back(tinfo);
+    for (i = 0; i < tinfo->n_symbols; ++i) {
+      if (tinfo->symbols[i].device_sym == NOSYM) {
+        tinfo->symbols[i].device_sym =
+            ompaccel_create_device_symbol(tinfo->symbols[i].host_sym, i);
+        add_symbol_to_function(tinfo->func_sptr, tinfo->symbols[i].device_sym);
+      }
+    }
+  }
+  // AOCC End
 
   for (i = 0; i < tinfo->n_symbols; ++i) {
     if (tinfo->symbols[i].host_sym == host_symbol) {
@@ -1318,6 +1374,21 @@ ompaccel_tinfo_current_get_devsptr(SPTR host_symbol)
   return device_symbol;
 }
 
+// AOCC begin
+SPTR
+ompaccel_tinfo_current_get_hostsptr(SPTR dev_symbol)
+{
+  int i;
+  for (i = 0; i < current_tinfo->n_symbols; ++i) {
+    if (current_tinfo->symbols[i].device_sym == dev_symbol) {
+      return current_tinfo->symbols[i].host_sym;
+    }
+  }
+
+  return NOSYM;
+}
+// AOCC end
+
 static bool
 tinfo_update_maptype(OMPACCEL_SYM *tsyms, int nargs, SPTR host_symbol,
                      int map_type)
@@ -1344,6 +1415,15 @@ ompaccel_tinfo_current_add_reductionitem(SPTR private_sym, SPTR shared_sym,
 {
   if (current_tinfo == nullptr)
     ompaccel_msg_interr("XXX", "Current target info is not found.\n");
+
+  // AOCC begin
+  // Dynamically allocate reduction symbols
+  if (current_tinfo->sz_reduction_symbols <= current_tinfo->n_reduction_symbols) {
+    NEED((current_tinfo->n_reduction_symbols + 1), current_tinfo->reduction_symbols,
+        OMPACCEL_RED_SYM, current_tinfo->sz_reduction_symbols,
+        current_tinfo->sz_reduction_symbols * INC_EXP);
+  }
+  // AOCC end
 
   current_tinfo->reduction_symbols[current_tinfo->n_reduction_symbols]
       .private_sym = private_sym;
@@ -1512,10 +1592,10 @@ dumptargetreduction(OMPACCEL_RED_SYM targetred)
   case 3:
     fprintf(gbl.dbgfil, "*:  ");
     break;
-  case 346:
+  case 373:
     fprintf(gbl.dbgfil, "max:");
     break;
-  case 347:
+  case 374:
     fprintf(gbl.dbgfil, "min:");
     break;
   case 327:
@@ -2446,6 +2526,22 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
     ll_rewrite_ilms(-1, curilm, 0);
     return;
   }
+
+  // AOCC begin
+  //
+  // Force the parallel codegen on the outlined function of teams for now.
+  if (flg.x86_64_omptarget && gbl.currsub == curr_teams_outlined_sptr) {
+    outlinedCnt = incrOutlinedCnt();
+    BIH_FT(expb.curbih) = TRUE;
+    BIH_QJSR(expb.curbih) = TRUE;
+    BIH_NOMERGE(expb.curbih) = TRUE;
+    if (gbl.outlined)
+      expb.sc = SC_PRIVATE;
+
+    ll_rewrite_ilms(-1, curilm, 0);
+    return;
+  }
+  // AOCC end
   outlinedCnt = incrOutlinedCnt();
   BIH_FT(expb.curbih) = TRUE;
   BIH_QJSR(expb.curbih) = TRUE;
@@ -2453,18 +2549,27 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
   if (gbl.outlined)
     expb.sc = SC_PRIVATE;
   if (outlinedCnt == 1) {
-    sptr = ll_make_outlined_ompaccel_func(uplevel_sptr, scopeSptr, FALSE);
+    sptr = ll_make_outlined_ompaccel_func2(uplevel_sptr,
+        scopeSptr, FALSE); // AOCC
 
     if (!PARENCLFUNCG(scopeSptr))
       PARENCLFUNCP(scopeSptr, sptr);
     ll_write_ilm_header(sptr, curilm);
 
-    ili = ompaccel_nvvm_get(threadIdX);
-    ili = ll_make_kmpc_spmd_kernel_init(ili);
-    iltb.callfg = 1;
-    chk_block(ili);
+    // AOCC begin
+    if (!flg.x86_64_omptarget) {
+      ili = ompaccel_nvvm_get(threadIdX);
+      ili = ll_make_kmpc_spmd_kernel_init(ili);
+      iltb.callfg = 1;
+      chk_block(ili);
+    }
 
-    ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+    if (flg.x86_64_omptarget)
+      ili = ompaccel_x86_fork_call(sptr);
+    else
+      ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+    // AOCC end
+
     iltb.callfg = 1;
     chk_block(ili);
     gbl.ompoutlinedfunc = sptr;
@@ -2578,6 +2683,20 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   loop_args.last = ILM_SymOPND(ilmp, 5);
   loop_args.dtype = (DTYPE)ILM_OPND(ilmp, 6); // ???
   loop_args.sched = (kmpc_sched_e)ILM_OPND(ilmp, 7);
+
+  // AOCC begin
+  // For -Mx,232,0x1 on x86 offloading we emit the teams distribute code
+  // just like a parallel region (ie. only one invocation of for_static_init).
+  // The codegen for emitting the fork_teams with a callback to fork_call (ie.
+  // the one with 2 for_static_inits like -fopenmp) has lots of issues (like the
+  // bounds are not properly propagated from the teams callback to the fork_call
+  // callback etc.)
+  if (flg.x86_64_omptarget && XBIT(232, 0x1) &&
+      mp_sched_to_kmpc_sched(loop_args.sched) == KMP_DISTRIBUTE_STATIC) {
+    loop_args.sched = (kmpc_sched_e) MP_SCH_STATIC;
+  }
+  // AOCC end
+
   sched = mp_sched_to_kmpc_sched(loop_args.sched);
   switch (sched) {
   case KMP_SCH_STATIC:
@@ -2591,11 +2710,7 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   case KMP_DISTRIBUTE_STATIC_CHUNKED:
   case KMP_DISTRIBUTE_STATIC:
   case KMP_DISTRIBUTE_STATIC_CHUNKED_CHUNKONE: // AOCC
-    // Force static scheduling if this is a target teams-distribute without a
-    // parallel do.
-    if (ompaccel_tinfo_current_target_mode() == mode_target_teams_distribute) {
-      loop_args.sched = (kmpc_sched_e)MP_SCH_STATIC;
-    }
+    // AOCC begin
     if (flg.x86_64_omptarget) {
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end
@@ -2736,7 +2851,7 @@ exp_ompaccel_etarget(ILM *ilmp, int curilm, SPTR targetfunc_sptr,
 static void emit_array_reduction(SPTR sptrReduceData) {
 
   int ili, bili, nmeReduceData, sizeRed = 0;
-  SPTR lAssignReduction, sptrReductionItem;
+  SPTR lAssignReduction = (SPTR)0, sptrReductionItem;
   DTYPE dtypeReductionItem;
 
   sptrReductionItem =
@@ -2879,13 +2994,13 @@ static void emit_array_reduction(SPTR sptrReduceData) {
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
                             store_addr);
     break;
-  case 346:
+  case 373:
     ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
     ili = mk_ompaccel_store(ili, dtypeReductionItem,
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
-                            store_addr);
-    break;
-  case 347:
+                            mk_address(sptrReductionItem));
+     break;
+  case 374:
     ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
     ili = mk_ompaccel_store(ili, dtypeReductionItem,
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
@@ -3022,21 +3137,20 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 346:
+      case 373:
         ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
-      case 347:
+      case 374:
         ili = mk_ompaccel_min(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
       default:
-        fprintf(stderr, "ERROR : This reduction type is not supported yet\n");
-        exit(1);
+        ompaccelInternalFail("Unknown red op type");
       // AOCC End
       }
 
@@ -3065,7 +3179,7 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     cr_block();
   }
 
-  if (flg.omptarget) {
+  if (flg.omptarget && !XBIT(232, 0x1)) { // AOCC
     ll_rewrite_ilms(-1, curilm, 0);
     return;
   }
@@ -3080,18 +3194,29 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     expb.sc = SC_PRIVATE;
   if (outlinedCnt == 1) {
     if (flg.omptarget)
-      sptr = ll_make_outlined_ompaccel_func(uplevel_sptr, scopeSptr, FALSE);
+      sptr = ll_make_outlined_ompaccel_func2(uplevel_sptr,
+          scopeSptr, FALSE); // AOCC
     else
       sptr = ll_make_outlined_func(uplevel_sptr, scopeSptr);
+    curr_teams_outlined_sptr = sptr; // AOCC
     if (!PARENCLFUNCG(scopeSptr))
       PARENCLFUNCP(scopeSptr, sptr);
     ll_write_ilm_header(sptr, curilm);
     if (flg.omptarget) {
-      ili = ompaccel_nvvm_get(threadIdX);
-      ili = ll_make_kmpc_spmd_kernel_init(ili);
-      iltb.callfg = 1;
-      chk_block(ili);
-      ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+      // AOCC begin
+      if (!flg.x86_64_omptarget) {
+        ili = ompaccel_nvvm_get(threadIdX);
+        ili = ll_make_kmpc_spmd_kernel_init(ili);
+        iltb.callfg = 1;
+        chk_block(ili);
+      }
+
+      if (flg.x86_64_omptarget)
+        ili = ompaccel_x86_fork_call(sptr);
+      else
+        ili = ll_make_outlined_ompaccel_call(gbl.ompoutlinedfunc, sptr);
+
+      // AOCC end
       iltb.callfg = 1;
       chk_block(ili);
       gbl.ompoutlinedfunc = sptr;
@@ -3123,13 +3248,11 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
   }
 
   // AOCC Begin
-#ifndef __PPC64__
   if (STYPEG(sptr) == ST_MEMBER && ILM_OPC(ilmp) == IM_MP_MAP_MEM) {
     base = ILM_OPND(ilmp, 3);
     base = ILI_OF(base);
     ili_sptr = ILI_OF(argilm);
   }
-#endif
   // AOCC End
 
   ompaccel_tinfo_current_addupdate_mapitem(sptr, label);

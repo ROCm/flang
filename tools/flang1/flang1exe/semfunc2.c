@@ -4,6 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ * Added support for F2008 feature complex type arguments for atan2
+ *   Date of modification : March 2020
+ *
+ * Fixed flang throws unexpected CE 'Illegal number or type of arguments' for ST_IDENT
+ * Date of modification : 29th June 2020
+ *
+ * Added code support for dasinh
+ * Modified on 31st Aug 2020
+ *
+ * Added code support for cotan
+ * Modified on Oct 2020
+ */
 
 /** \file
  *  \brief Utility routines used by semantic analyzer.
@@ -856,7 +875,6 @@ intrinsic_as_arg(int intr)
   int sp2;
   int cp;
   FtnRtlEnum rtlRtn;
-
   sp2 = intr;
   switch (STYPEG(intr)) {
   case ST_GENERIC:
@@ -865,7 +883,12 @@ intrinsic_as_arg(int intr)
       return 0;
   case ST_PD:
   case ST_INTRIN:
-    cp = PNMPTRG(sp2);
+    //AOCC begin
+    if ((strcmp(SYMNAME(intr), "atan2")) == 0)
+      cp = PNMPTRG(GREALG(intr));
+    else
+      cp = PNMPTRG(sp2);
+    //AOCC end
     if (cp == 0 || stb.n_base[cp] == '-')
       return 0;
     if (stb.n_base[cp] != '*' || stb.n_base[++cp] != '\0') {
@@ -1006,6 +1029,11 @@ intrinsic_as_arg(int intr)
       case I_COS:
         sp2 = intast_sym[I_DCOS];
         break;
+      /* AOCC begin */
+      case I_COTAN:
+        sp2 = intast_sym[I_DCOTAN];
+        break;
+      /* AOCC end */
       case I_TAN:
         sp2 = intast_sym[I_DTAN];
         break;
@@ -1042,6 +1070,11 @@ intrinsic_as_arg(int intr)
       case I_COSD:
         sp2 = intast_sym[I_DCOSD];
         break;
+      /* AOCC begin */
+      case I_COTAND:
+        sp2 = intast_sym[I_DCOTAND];
+        break;
+      /* AOCC end */
       case I_TAND:
         sp2 = intast_sym[I_DTAND];
         break;
@@ -1400,6 +1433,12 @@ select_gsame(int gnr)
   } else if (XBIT(124, 0x8)) {
     if (ARGTYPG(spec) == DT_REAL)
       spec = GDBLEG(gnr);
+    // AOCC begin
+    else if (ARGTYPG(spec) == DT_QUAD)
+      spec = GQUADG(gnr);
+    else if (ARGTYPG(spec) == DT_QCMPLX)
+      spec = GQCMPLXG(gnr);
+    // AOCC end
     else if (ARGTYPG(spec) == DT_CMPLX)
       spec = GDCMPLXG(gnr);
   }
@@ -2111,7 +2150,8 @@ compat_arg_lists(int formal, int actual)
     aarg = *(aux.dpdsc_base + adscptr);
     if (STYPEG(farg) == ST_PROC) {
       if (STYPEG(aarg) != ST_PROC && STYPEG(aarg) != ST_ENTRY &&
-          STYPEG(aarg) != ST_INTRIN && STYPEG(aarg) != ST_GENERIC)
+          STYPEG(aarg) != ST_INTRIN && STYPEG(aarg) != ST_GENERIC &&
+          STYPEG(aarg) != ST_IDENT)         //AOCC
         return FALSE;
       if (!compat_arg_lists(farg, aarg))
         return FALSE;
@@ -2914,11 +2954,25 @@ iface_intrinsic(int sptr)
     dtyper = DT_DBLE;
     argdtype = DT_DBLE;
     break;
+  // AOCC begin
+  case I_DASINH:
+    paramct = 1;
+    dtyper = DT_DBLE;
+    argdtype = DT_DBLE;
+    break;
+  // AOCC end
   case I_DSQRT: /* dsqrt */
     paramct = 1;
     dtyper = DT_DBLE;
     argdtype = DT_DBLE;
     break;
+  /* AOCC begin */
+  case I_DCOTAN: /* dcotan */
+    paramct = 1;
+    dtyper = DT_DBLE;
+    argdtype = DT_DBLE;
+    break;
+  /* AOCC end */
   case I_DTAN: /* dtan */
     paramct = 1;
     dtyper = DT_DBLE;
@@ -2999,6 +3053,13 @@ iface_intrinsic(int sptr)
     dtyper = DT_REAL;
     argdtype = DT_REAL;
     break;
+  /* AOCC begin */
+  case I_COTAN: /* cotan */
+    paramct = 1;
+    dtyper = DT_REAL;
+    argdtype = DT_REAL;
+    break;
+  /* AOCC end */
   case I_TANH: /* tanh */
     paramct = 1;
     dtyper = DT_REAL;

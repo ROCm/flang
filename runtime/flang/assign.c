@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 #include "global.h"
 #include <string.h>

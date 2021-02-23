@@ -4,6 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ * Support for "nearest" intrinsic
+ * Last modified: 01 March 2020
+ */
 /** \file
  * \brief Implement legacy folding interfaces
  *
@@ -21,6 +31,7 @@
  *  implementation is new, and comprises mostly conversions between
  *  the operand and result types of these legacy interfaces and those
  *  of the underlying integer and floating-point folding packages.
+ *
  */
 
 #include "legacy-folding-api.h"
@@ -32,6 +43,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <math.h>
+#include <quadmath.h>      // AOCC
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -691,6 +703,15 @@ xfcos(IEEE32 f, IEEE32 *r)
 }
 
 void
+xfcotan(IEEE32 f, IEEE32 *r)
+{
+  float32_t x, y;
+  unwrap_f(&y, &f);
+  check(fold_real32_cotan(&x, &y));
+  wrap_f(r, &x);
+}
+
+void
 xftan(IEEE32 f, IEEE32 *r)
 {
   float32_t x, y;
@@ -762,7 +783,17 @@ xflog10(IEEE32 f, IEEE32 *r)
   check(fold_real32_log10(&x, &y));
   wrap_f(r, &x);
 }
-
+//AOCC Begin
+void
+xfnearest(IEEE32 f1, IEEE32 f2, IEEE32 *r)
+{
+  float32_t x, y, z;
+  unwrap_f(&y, &f1);
+  unwrap_f(&z, &f2);
+  check(fold_real32_nearest(&x, &y, &z)); 
+  wrap_f(r, &x); 
+}
+//AOCC End
 int
 xfcmp(IEEE32 f1, IEEE32 f2)
 {
@@ -814,6 +845,10 @@ get_literal(char *buffer, size_t length, const char *s, int n, bool is_hex)
     --n;
     if (!is_hex && (ch == 'd' || ch == 'D'))
       ch = 'e';
+    // AOCC begin
+    if (!is_hex && (ch == 'q' || ch == 'Q'))
+      ch = 'e';
+    // AOCC end
     *p++ = ch;
     --length;
   }
@@ -1067,6 +1102,15 @@ xdcos(IEEE64 d, IEEE64 r)
 }
 
 void
+xdcotan(IEEE64 d, IEEE64 r)
+{
+  float64_t x, y;
+  unwrap_d(&y, d);
+  check(fold_real64_cotan(&x, &y));
+  wrap_d(r, &x);
+}
+
+void
 xdtan(IEEE64 d, IEEE64 r)
 {
   float64_t x, y;
@@ -1111,6 +1155,18 @@ xdatan2(IEEE64 d1, IEEE64 d2, IEEE64 r)
   check(fold_real64_atan2(&x, &y, &z));
   wrap_d(r, &x);
 }
+
+//AOCC Begin
+void
+xdnearest(IEEE64 d1, IEEE64 d2, IEEE64 r)
+{
+  float64_t x, y, z;
+  unwrap_d(&y, d1);
+  unwrap_d(&z, d2);
+  check(fold_real64_nearest(&x, &y, &z));
+  wrap_d(r, &x);
+}
+//AOCC End
 
 void
 xdexp(IEEE64 d, IEEE64 r)
@@ -1881,7 +1937,7 @@ static void
 unwrap_q(float128_t *x, IEEE128 q)
 {
   union {
-    float128_t x;
+   float128_t  x;
     uint32_t i[4];
   } u;
   int le = (int) is_host_little_endian() * 3;
@@ -2071,7 +2127,7 @@ xqdiv(IEEE128 q1, IEEE128 q2, IEEE128 r)
 }
 
 void
-xqabs(IEEE128 q, IEEE128 r)
+xqabsv(IEEE128 q, IEEE128 r)
 {
   float128_t x, y;
   unwrap_q(&y, q);
@@ -2094,8 +2150,8 @@ xqpow(IEEE128 q1, IEEE128 q2, IEEE128 r)
   float128_t x, y, z;
   unwrap_q(&x, q1);
   unwrap_q(&y, q2);
-  check(fold_real128_pow(&x, &y, &z));
-  wrap_q(r, &x);
+  check(fold_real128_pow(&z, &x, &y));
+  wrap_q(r, &z);
 }
 
 void
@@ -2113,6 +2169,15 @@ xqcos(IEEE128 q, IEEE128 r)
   float128_t x, y;
   unwrap_q(&y, q);
   check(fold_real128_cos(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqcotan(IEEE128 q, IEEE128 r)
+{
+  float128_t x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_cotan(&x, &y));
   wrap_q(r, &x);
 }
 
@@ -2161,6 +2226,18 @@ xqatan2(IEEE128 q1, IEEE128 q2, IEEE128 r)
   check(fold_real128_atan2(&x, &y, &z));
   wrap_q(r, &x);
 }
+
+//AOCC Begin
+void
+xqnearest(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  float128_t x, y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  check(fold_real128_nearest(&x, &y, &z));
+  wrap_q(r, &x);
+}
+//AOCC End
 
 void
 xqexp(IEEE128 q, IEEE128 r)
@@ -2223,7 +2300,395 @@ hxatoxq(const char *s, IEEE128 q, int n)
 {
   return parse_q(s, q, n, true);
 }
-#endif /* FOLD_LDBL_128BIT */
+#else /* FOLD_LDBL_128BIT */
+// AOCC begin
+// To support quad precision REAL128 type
+static void
+unwrap_q(__float128 *x, IEEE128 q)
+{
+  union {
+   __float128  x;
+    uint32_t i[4];
+  } u;
+  int le = (int) is_host_little_endian() * 3;
+  u.i[le ^ 0] = q[0]; /* big end */
+  u.i[le ^ 1] = q[1];
+  u.i[le ^ 2] = q[2];
+  u.i[le ^ 3] = q[3];
+  *x = u.x;
+}
+
+static void
+wrap_q(IEEE128 res, __float128 *x)
+{
+  union {
+    __float128 q;
+    uint32_t i[4];
+  } u;
+  int le = (int) is_host_little_endian() * 3;
+  u.i[0] = 0; u.i[1] =0; u.i[2]=0; u.i[3]= 0;
+  u.q = *x;
+  res[0] = u.i[le ^ 0]; /* big end */
+  res[1] = u.i[le ^ 1];
+  res[2] = u.i[le ^ 2];
+  res[3] = u.i[le ^ 3];
+}
+
+void
+xqfix(IEEE128 q, INT *i)
+{
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_int32_from_real128(i, &y));
+}
+
+void
+xqfixu(IEEE128 q, UINT *u)
+{
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_uint32_from_real128(u, &y));
+}
+
+void
+xqfix64(IEEE128 q, DBLINT64 l)
+{
+  int64_t x;
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_int64_from_real128(&x, &y));
+  wrap_l(l, &x);
+}
+
+void
+xqfixu64(IEEE128 q, DBLUINT64 u)
+{
+  uint64_t x;
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_uint64_from_real128(&x, &y));
+  wrap_l(u, &x);
+}
+
+void
+xqflt64(DBLINT64 l, IEEE128 q)
+{
+  __float128 x;
+  int64_t y;
+  unwrap_l(&y, l);
+  check(fold_real128_from_int64(&x, &y));
+  wrap_q(q, &x);
+}
+
+void
+xqfloat(INT i, IEEE128 q)
+{
+  __float128 x;
+  int64_t li = i;
+  check(fold_real128_from_int64(&x, &li));
+  wrap_q(q, &x);
+}
+
+void
+xqfloatu(UINT u, IEEE128 q)
+{
+  __float128 x;
+  int64_t li = u;
+  check(fold_real128_from_int64(&x, &li));
+  wrap_q(q, &x);
+}
+
+void
+xqfltu64(DBLUINT64 u, IEEE128 q)
+{
+  __float128 x;
+  uint64_t y;
+  unwrap_u(&y, u);
+  check(fold_real128_from_uint64(&x, &y));
+  wrap_q(q, &x);
+}
+
+void
+xftoq(IEEE32 f, IEEE128 q)
+{
+  __float128 x;
+  float32_t y;
+  unwrap_f(&y, &f);
+  check(fold_real128_from_real32(&x, &y));
+  wrap_q(q, &x);
+}
+
+void
+xdtoq(IEEE64 d, IEEE128 q)
+{
+  __float128 x;
+  float64_t y;
+  unwrap_d(&y, d);
+  check(fold_real128_from_real64(&x, &y));
+  wrap_q(q, &x);
+}
+
+void
+xqtof(IEEE128 q, IEEE32 *r)
+{
+  float32_t x;
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_real32_from_real128(&x, &y));
+  wrap_f(r, &x);
+}
+
+void
+xqtod(IEEE128 q, IEEE64 d)
+{
+  float64_t x;
+  __float128 y;
+  unwrap_q(&y, q);
+  check(fold_real64_from_real128(&x, &y));
+  wrap_d(d, &x);
+}
+
+void
+xqadd(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&x, q1);
+  unwrap_q(&y, q2);
+  check(fold_real128_add(&z, &x, &y));
+  wrap_q(r, &z);
+}
+
+void
+xqsub(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&x, q1);
+  unwrap_q(&y, q2);
+  check(fold_real128_subtract(&z, &x, &y));
+  wrap_q(r, &z);
+}
+
+void
+xqneg(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_negate(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqmul(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&x, q1);
+  unwrap_q(&y, q2);
+  check(fold_real128_multiply(&z, &x, &y));
+  wrap_q(r, &z);
+}
+
+void
+xqdiv(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&x, q1);
+  unwrap_q(&y, q2);
+  check(fold_real128_divide(&z, &x, &y));
+  wrap_q(r, &z);
+}
+
+void
+xqabsv(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_abs(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqpow(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  check(fold_real128_pow(&x, &y, &z));
+  wrap_q(r, &x);
+}
+
+void
+xqsqrt(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_sqrt(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqexp(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_exp(&x, &y));
+  wrap_q(r, &x);
+}
+
+int
+xqcmp(IEEE128 q1, IEEE128 q2)
+{
+  __float128 y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  return fold_real128_compare(&y, &z);
+}
+
+void
+xqsin(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_sin(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqcos(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_cos(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqcotan(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_cotan(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqtan(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_tan(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqasin(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_asin(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqacos(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_acos(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqatan(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_atan(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqatan2(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&x, q1);
+  unwrap_q(&y, q2);
+  check(fold_real128_atan2(&x, &y, &z));
+  wrap_q(r, &x);
+}
+
+void
+xqlog(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_log(&x, &y));
+  wrap_q(r, &x);
+}
+
+void
+xqlog10(IEEE128 q, IEEE128 r)
+{
+  __float128 x, y;
+  unwrap_q(&y, q);
+  check(fold_real128_log10(&x, &y));
+  wrap_q(r, &x);
+}
+
+static int
+parse_q(const char *s, IEEE128 q, int n, bool is_hex)
+{
+  __float128 x;
+  char buffer[256], *end;
+  int errno_capture;
+  get_literal(buffer, sizeof buffer, s, n, is_hex);
+  errno = 0;
+  x = strtoflt128(buffer, &end);
+  errno_capture = errno;
+  wrap_q(q, &x);
+  return handle_parsing_errors(buffer, end, errno_capture, x == 0);
+}
+
+int
+atoxq(const char *s, IEEE128 q, int n)
+{
+  return parse_q(s, q, n, false);
+}
+
+void
+xqnearest(IEEE128 q1, IEEE128 q2, IEEE128 r)
+{
+  __float128 x, y, z;
+  unwrap_q(&y, q1);
+  unwrap_q(&z, q2);
+  check(fold_real128_nearest(&x, &y, &z));
+  wrap_q(r, &x);
+}
+
+int
+xqisint(IEEE128 q, int *i)
+{
+  __float128 x, y;
+  int64_t k;
+  unwrap_q(&x, q);
+  check(fold_int32_from_real128(i, &x));
+  k = *i;
+  check(fold_real128_from_int64(&y, &k));
+  return fold_real128_compare(&x, &y) == FOLD_EQ;
+}
+
+void
+xqtomq(IEEE128 q, __float128 *mq)
+{
+  unwrap_q(mq, q);
+}
+
+void
+xmqtoq(__float128 mq, IEEE128 q)
+{
+  wrap_q(q, &mq);
+}
+// AOCC end
+#endif
 
 /*
  *  Miscellaneous, possibly unused

@@ -131,6 +131,7 @@ typedef enum {
 	func_aint,
 	func_ceil,
 	func_floor,
+	func_cotan,
 	func_size,
 } func_e;
 

@@ -5,6 +5,13 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ */
+
 /**
    \file
    \brief Fortran communications optimizer module

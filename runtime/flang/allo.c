@@ -11,6 +11,16 @@
  * Runtime memory allocation routines
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Changes to return allocation status
+ * Date of Modification: February 2020
+ */
+
+
 #include <string.h>
 #include <stdlib.h>
 #include "stdioInterf.h"
@@ -921,8 +931,11 @@ ENTF90(ALLOC03_CHKA, alloc03_chka)(__INT_T *nelem, __INT_T *kind, __INT_T *len,
   } else if (ISPRESENT(stat) && *firsttime) {
     *stat = 0;
   }
+  // AOCC Begin
+  __INT_T first_time=0;
   ENTF90(ALLOC03,alloc03)(nelem, kind, len, stat, pointer, offset,
-                            firsttime,CADR(errmsg), CLEN(errmsg));
+                            &first_time,CADR(errmsg), CLEN(errmsg));
+  // AOCC End
 }
 
 /* 32 bit CLEN version */
@@ -944,8 +957,6 @@ ENTF90(ALLOC04A, alloc04a)(__NELEM_T *nelem, __INT_T *kind, __INT_T *len,
 {
   ALLHDR();
 
-  // AOCC
-  // if (ISPRESENT(stat) && *firsttime && *stat != 2)
   if (ISPRESENT(stat) && *firsttime)
     *stat = 0;
 
@@ -994,8 +1005,11 @@ ENTF90(ALLOC04_CHKA, alloc04_chka)(__NELEM_T *nelem, __INT_T *kind,
   } else if (ISPRESENT(stat) && *firsttime) {
     *stat = 0;
   }
-  ENTF90(ALLOC04,alloc04)(nelem, kind, len, stat, pointer, offset, firsttime,
+  // AOCC Begin
+  __INT_T first_time=0;
+  ENTF90(ALLOC04,alloc04)(nelem, kind, len, stat, pointer, offset, &first_time,
            align, CADR(errmsg), CLEN(errmsg));
+  // AOCC End
 }
 
 /* 32 bit CLEN version */

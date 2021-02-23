@@ -53,3 +53,7 @@
 
 #undef DCMPLX
 #define DCMPLX(r,i) cmplx(r,i,kind=8)
+
+#undef QCMPLX
+#define QCMPLX(r,i) cmplx(r,i,kind=16)
+

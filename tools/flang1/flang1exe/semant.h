@@ -4,10 +4,27 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes made to create single team for omp target parallel block as well
+ *   Date of Modification: 26th June 2019
+ *
+ * Changes to support AMD GPU Offloading
+ * Added code to avoid allocations for implied do inside target region
+ *   Date of Modification: 24th October 2019
+ *   Date of Modification: 5th November 2019
+ *
+ * Added code to support reshape with implied dos inside target region
+ *   Date of Modification: 23rd January 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ *   Last modified: April 2020
+ *
  */
+
 /**
     \file
     \brief Semantic analyzer data definitions.
@@ -619,8 +636,13 @@ typedef enum {
   AC_I_shiftl,
   AC_I_shiftr,
   AC_I_dshiftl,
-  AC_I_dshiftr
-  /* AOCC end */
+  AC_I_dshiftr,
+  AC_I_nearest,
+  AC_I_shifta,
+  AC_I_aint,
+  AC_I_anint,
+  AC_I_cotan
+  // AOCC end
 } AC_INTRINSIC;
 
 #define BINOP(p) ((p)->op != AC_NEG && (p)->op != AC_CONV)

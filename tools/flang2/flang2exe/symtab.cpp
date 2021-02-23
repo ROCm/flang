@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /** \file
  *  \brief Fortran symbol table access module
@@ -346,7 +354,8 @@ getcon(INT *value, DTYPE dtype)
   if (hashval < 0)
     hashval = -hashval;
   for (sptr = stb.hashtb[hashval]; sptr != 0; sptr = HASHLKG(sptr)) {
-    if (DTY(dtype) == TY_128) {
+    if (DTY(dtype) == TY_128 || DTY(dtype) == TY_QUAD ||
+        DTY(dtype) == TY_QCMPLX) {
       if (DTYPEG(sptr) != dtype || STYPEG(sptr) != ST_CONST ||
           CONVAL1G(sptr) != value[0] || CONVAL2G(sptr) != value[1] ||
           CONVAL3G(sptr) != value[2] || CONVAL4G(sptr) != value[3])
@@ -369,7 +378,8 @@ getcon(INT *value, DTYPE dtype)
   ADDSYM(sptr, hashval);
   CONVAL1P(sptr, value[0]);
   CONVAL2P(sptr, value[1]);
-  if (DTY(dtype) == TY_128) {
+  // AOCC: DT_QUAD
+  if (DTY(dtype) == TY_128 || DTY(dtype) == DT_QUAD) {
     CONVAL3P(sptr, value[2]);
     CONVAL4P(sptr, value[3]);
   }
@@ -560,6 +570,11 @@ get_vcon1(DTYPE dtype)
   case TY_DBLE:
     one = stb.dbl1;
     break;
+  // AOCC begin
+  case TY_QUAD:
+    one = stb.quad1;
+    break;
+  // AOCC end
   default:
     one = 1;
     break;
@@ -894,7 +909,7 @@ getprint(int sptr)
   static char *b = NULL;
   char *from, *end, *to;
   int c;
-  INT num[2];
+  INT num[4];
   DTYPE dtype;
 
   if (STYPEG(sptr) != ST_CONST) {
@@ -959,6 +974,23 @@ getprint(int sptr)
     cprintf(&b[26], "%24.17le", num);
     break;
 
+  // AOCC begin
+  case TY_QCMPLX:
+    num[0] = CONVAL1G(CONVAL1G(sptr));
+    num[1] = CONVAL2G(CONVAL1G(sptr));
+    num[2] = CONVAL3G(CONVAL1G(sptr));
+    num[3] = CONVAL4G(CONVAL1G(sptr));
+    cprintf(b, "%44.37Lf", num);
+    b[44] = ',';
+    b[45] = ' ';
+    num[0] = CONVAL1G(CONVAL2G(sptr));
+    num[1] = CONVAL2G(CONVAL2G(sptr));
+    num[2] = CONVAL3G(CONVAL2G(sptr));
+    num[3] = CONVAL4G(CONVAL2G(sptr));
+    cprintf(&b[46], "%44.37Lf", num);
+    break;
+  // AOCC end
+
   case TY_NCHAR:
     sptr = CONVAL1G(sptr); /* sptr to char string constant */
     dtype = DTYPEG(sptr);
@@ -989,6 +1021,18 @@ getprint(int sptr)
     *to++ = '\"';
     *to = '\0';
     break;
+
+  // AOCC begin
+  case TY_QUAD:
+  /*num[0] = CONVAL1G(sptr);
+    num[1] = CONVAL2G(sptr);
+    num[2] = CONVAL3G(sptr);
+    num[3] = CONVAL4G(sptr);
+    cprintf(b, "%44.37Lf", num);*/
+    sprintf(b, "%08x %08x %08x %08x", CONVAL1G(sptr), CONVAL2G(sptr),
+            CONVAL3G(sptr), CONVAL4G(sptr));
+    break;
+  // AOCC end
 
   case TY_128:
     sprintf(b, "%08x %08x %08x %08x", CONVAL1G(sptr), CONVAL2G(sptr),

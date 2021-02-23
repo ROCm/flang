@@ -4,10 +4,24 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *   Date of modification 12th February  2020
+ *   Date of modification 04th April     2020
+ *
+ * Support for TRAILZ intrinsic.
+ *   Month of Modification: July 2019
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ * Support for real*16 intrinsics
+ * Date of modification: !8th July 2020
  */
+
 /**
    \file
    \brief Abstract syntax tree output module.
@@ -103,6 +117,7 @@ static void put_int8(int);
 static void put_logical(LOGICAL, int);
 static void put_float(INT);
 static void put_double(int);
+static void put_quad(int);                // AOCC
 static void char_to_text(int);
 static void put_u_to_l(char *);
 static void put_l_to_u(char *);
@@ -244,6 +259,7 @@ negative_constant(int ast)
 {
   DBLINT64 inum1, inum2;
   DBLE dnum1, dnum2;
+  QUAD qnum1, qnum2;     // AOCC
 
   if (A_TYPEG(ast) == A_CNST) {
     int sptr;
@@ -265,6 +281,20 @@ negative_constant(int ast)
       if (xdcmp(dnum1, dnum2) < 0)
         return TRUE;
       break;
+    // AOCC begin
+    case TY_QUAD:
+      dnum1[0] = CONVAL1G(sptr);
+      dnum1[1] = CONVAL2G(sptr);
+      dnum1[2] = CONVAL3G(sptr);
+      dnum1[3] = CONVAL4G(sptr);
+      dnum2[0] = CONVAL1G(stb.quad0);
+      dnum2[1] = CONVAL2G(stb.quad0);
+      dnum2[2] = CONVAL3G(stb.quad0);
+      dnum2[3] = CONVAL4G(stb.quad0);
+      if (xqcmp(dnum1, dnum2) < 0)
+        return TRUE;
+      break;
+    // AOCC end
     case TY_INT8:
       inum1[0] = CONVAL1G(sptr);
       inum1[1] = CONVAL2G(sptr);
@@ -921,6 +951,12 @@ print_ast(int ast)
       /* since LOP may be aimag, force the name 'dimag' */
       put_call(ast, 0, "dimag", 0);
       break;
+    // AOCC begin
+    case I_QIMAG:
+      /* since LOP may be aimag, force the name 'qimag' */
+      put_call(ast, 0, "qimag", 0);
+      break;
+    // AOCC end
     case I_INDEX:
       if (A_ARGCNTG(ast) != 2) {
         rtlRtn = RTE_indexa;
@@ -953,7 +989,9 @@ print_ast(int ast)
     case I_FRACTION:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_frac;
-      else
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_fracq;
+      else                            //AOCC
         rtlRtn = RTE_fracd;
       goto make_func_name;
     case I_IACHAR:
@@ -962,32 +1000,42 @@ print_ast(int ast)
     case I_RRSPACING:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_rrspacing;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_rrspacingq;
       else
-        rtlRtn = RTE_rrspacingd;
+        rtlRtn = RTE_rrspacingd;      //AOCC
       goto make_func_name;
     case I_SPACING:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_spacing;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_spacingq;
       else
-        rtlRtn = RTE_spacingd;
+        rtlRtn = RTE_spacingd;        //AOCC
       goto make_func_name;
     case I_NEAREST:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_nearest;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_nearestq;
       else
-        rtlRtn = RTE_nearestd;
+        rtlRtn = RTE_nearestd;        //AOCC
       goto make_func_name;
     case I_SCALE:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_scale;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_scaleq;
       else
-        rtlRtn = RTE_scaled;
+        rtlRtn = RTE_scaled;          //AOCC
       goto make_func_name;
     case I_SET_EXPONENT:
       if (DTY(DDTG(A_DTYPEG(ast))) == TY_REAL)
         rtlRtn = RTE_setexp;
+      else if (DTY(DDTG(A_DTYPEG(ast))) == TY_QUAD)
+        rtlRtn = RTE_setexpq;
       else
-        rtlRtn = RTE_setexpd;
+        rtlRtn = RTE_setexpd;         //AOCC
       goto make_func_name;
     case I_VERIFY:
       argt = A_ARGSG(ast);
@@ -1027,6 +1075,18 @@ print_ast(int ast)
       rtlRtn = RTE_leadz;
       goto make_func_name;
 #endif
+/* AOCC begin */
+#ifdef I_TRAILZ
+    case I_TRAILZ:
+      if (XBIT(49, 0x1040000)) {
+        /* T3D/T3E or C90 Cray targets */
+        put_call(ast, 0, NULL, 0);
+        break;
+      }
+      rtlRtn = RTE_trailz;
+      goto make_func_name;
+#endif
+/* AOCC end */
 #ifdef I_POPCNT
     case I_POPCNT:
       if (XBIT(49, 0x1040000)) {
@@ -3897,6 +3957,15 @@ put_const(int sptr)
     }
     put_double(sptr);
     return;
+  // AOCC begin
+  case TY_QUAD:
+    if (NMPTRG(sptr)) {
+      put_string(SYMNAME(sptr));
+      return;
+    }
+    put_quad(sptr);
+    return;
+  // AOCC end
 
   case TY_CMPLX:
     if (NMPTRG(sptr)) {
@@ -3921,6 +3990,20 @@ put_const(int sptr)
     put_const((int)CONVAL2G(sptr));
     put_char(')');
     return;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    if (NMPTRG(sptr)) {
+      put_string(SYMNAME(sptr));
+      return;
+    }
+    put_char('(');
+    put_const((int)CONVAL1G(sptr));
+    put_char(',');
+    put_const((int)CONVAL2G(sptr));
+    put_char(')');
+    return;
+  // AOCC end
 
   case TY_HOLL:
     sptr2 = CONVAL1G(sptr);
@@ -4220,6 +4303,80 @@ put_double(int sptr)
   *end = '\0';
   put_string(start);
 }
+
+// AOCC begin
+static void
+put_quad(int sptr)
+{
+  INT num[4];
+  char b[128];
+  char *start;
+  char *end;
+  char *exp;
+  int expw;
+  int i;
+
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+
+
+  if (XBIT(49, 0x40000)) /* C90 */
+    cprintf(b, "%.15Lf", num);
+  else
+    cprintf(b, "%.37Lf", num);
+
+  for (start = b; *start == ' '; start++) /* skip leading blanks */
+    ;
+  /* only leave the sign if it's '-' */
+  if (*start == '+')
+    start++;
+
+  /* locate beginning of exponent */
+  exp = &b[strlen(b) - 1];
+  expw = -1; /* width of exponent less 'D' and the sign */
+  while (*exp != 'E' && *exp != 'e' && *exp != 'Q' && *exp != 'q') {
+    if (exp <= start) {
+      /* output from cprintf is [-]INF */
+      if (*start == '-')
+        put_char('-');
+      put_string("1d+309");
+      return;
+    }
+    exp--;
+    expw++;
+  }
+
+  i = (exp - b) - 1; /* last decimal digit */
+                     /*
+                      * omit trailing 0's; don't omit digit after the decimal point.
+                      */
+  while (b[i] == '0' && i > 3)
+    i--;
+  end = &b[i + 1];
+  /* exp locates 'D' */
+  if (DTY(DT_REAL) == TY_QUAD && XBIT(49, 0x800000))
+    /* change 'f' to 'e' only if default real is quad precision for
+     * the cray systems.
+     */
+    *end++ = 'e';
+  else
+    *end++ = 'q';
+  if (*++exp == '-') /* sign */
+    *end++ = '-';
+  if (expw == 2) {
+    if (*++exp != '0')
+      *end++ = *exp;
+    *end++ = *++exp;
+  } else {
+    while (expw--)
+      *end++ = *++exp;
+  }
+  *end = '\0';
+  put_string(start);
+}
+// AOCC end
 
 /*
  * emit a character with consideration given to the ', escape sequences,

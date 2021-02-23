@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /** \file
  * \brief Expander utility routines
@@ -644,6 +652,12 @@ check_ilm(int ilmx, int ilix)
           case IL_FREEDP:
             ilix = ad4ili(IL_STDP, cse, base, nme, MSZ_F8);
             break;
+            // AOCC begin
+          case IL_STQP:
+          case IL_FREEQP:
+            ilix = ad4ili(IL_STQP, cse, base, nme, MSZ_F16);
+            break;
+            // AOCC end
           case IL_STSCMPLX:
           case IL_FREECS:
             ilix = ad4ili(IL_STSCMPLX, cse, base, nme, MSZ_F8);
@@ -652,6 +666,12 @@ check_ilm(int ilmx, int ilix)
           case IL_FREECD:
             ilix = ad4ili(IL_STDCMPLX, cse, base, nme, MSZ_F16);
             break;
+          // AOCC begin
+          case IL_STQCMPLX:
+          case IL_FREECQ:
+            ilix = ad4ili(IL_STQCMPLX, cse, base, nme, MSZ_F32);
+            break;
+          // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
           case IL_FLOAT128ST:
           case IL_FLOAT128FREE:
@@ -1269,6 +1289,11 @@ add_reg_arg_ili(int arglist, int argili, int nmex, DTYPE dtype)
     if (DTY(dtype) == TY_DBLE) {
       opc = IL_DADP;
       avail_freg++;
+    // AOCC begin
+    } else if (DTY(dtype) == TY_QUAD) {
+      opc = IL_DAQP;
+      avail_freg++;
+    // AOCC end
     } else {
       opc = IL_DASP;
     }

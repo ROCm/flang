@@ -4,6 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ * Support for "nearest" intrinsic
+ * Last modified: Feb 2020
+ */
 /** \file
  * \brief Legacy constant folding API.
  *
@@ -58,6 +69,8 @@ void fperror(int errcode);
 #define mftof(mf,f) (*((float *)&(f))=(mf))
 void xdtomd(IEEE64 d, double *md);
 void xmdtod(double md, IEEE64 d);
+void xqtomq(IEEE128 q, __float128 *mq);
+void xmqtoq(__float128 mq, IEEE128 q);
 
 int cmp64(DBLINT64 arg1, DBLINT64 arg2);
 int ucmp64(DBLUINT64 arg1, DBLUINT64 arg2);
@@ -149,6 +162,7 @@ void xesub(IEEE80 e1, IEEE80 e2, IEEE80 r);
 void xddsub(IEEE6464 dd1, IEEE6464 dd2, IEEE6464 r);
 void xqsub(IEEE128 q1, IEEE128 q2, IEEE128 r);
 int xdisint(IEEE64 d, int *r);
+int xqisint(IEEE64 d, int *r);              // AOCC
 void xfneg(IEEE32 f1, IEEE32 *r);
 void xdneg(IEEE64 d1, IEEE64 r);
 void xeneg(IEEE80 e1, IEEE80 r);
@@ -173,6 +187,7 @@ void xdabsv(IEEE64 f, IEEE64 r);
 void xeabsv(IEEE80 e, IEEE80 r);
 void xddabsv(IEEE6464 dd, IEEE6464 r);
 void xqabsv(IEEE128 f, IEEE128 r);
+void xqsqrt(IEEE128 f, IEEE128 r);      // AOCC
 void xdsqrt(IEEE64 f, IEEE64 r);
 void xfpow(IEEE32 f1, IEEE32 f2, IEEE32 *r);
 void xdpow(IEEE64 d1, IEEE64 d2, IEEE64 r);
@@ -189,6 +204,9 @@ void xdcos(IEEE64 , IEEE64  );
 void xecos(IEEE80 , IEEE80  );
 void xddcos(IEEE6464, IEEE6464);
 void xqcos(IEEE128, IEEE128 );
+void xfcotan(IEEE32 , IEEE32 *);
+void xdcotan(IEEE64 , IEEE64  );
+void xqcotan(IEEE128, IEEE128 );
 void xftan(IEEE32 , IEEE32 *);
 void xdtan(IEEE64 , IEEE64  );
 void xetan(IEEE80 , IEEE80  );
@@ -211,9 +229,11 @@ void xddatan(IEEE6464, IEEE6464);
 void xqatan (IEEE128, IEEE128 );
 void xfatan2(IEEE32 , IEEE32 , IEEE32  *);
 void xdatan2(IEEE64 , IEEE64 , IEEE64   );
+void xdnearest(IEEE64 , IEEE64 , IEEE64); //AOCC
 void xeatan2(IEEE80 , IEEE80 , IEEE80   );
 void xddatan2(IEEE6464, IEEE6464, IEEE6464);
 void xqatan2(IEEE128, IEEE128, IEEE128  );
+void xqnearest(IEEE128 , IEEE128 , IEEE128); //AOCC
 void xfexp   (IEEE32 , IEEE32 *);
 void xdexp   (IEEE64 , IEEE64  );
 void xeexp   (IEEE80 , IEEE80  );
@@ -229,6 +249,7 @@ void xdlog10 (IEEE64 , IEEE64  );
 void xelog10 (IEEE80 , IEEE80  );
 void xddlog10(IEEE6464, IEEE6464);
 void xqlog10 (IEEE128, IEEE128 );
+void xfnearest(IEEE32 , IEEE32 , IEEE32 *);  //AOCC
 
 void xffloat(INT i, IEEE32 *f);
 void xdfloat(INT i, IEEE64 d);

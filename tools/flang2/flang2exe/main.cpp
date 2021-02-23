@@ -4,10 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *  Last modified: 02nd June 2020
+ *
+ * Support for x86-64 OpenMP offloading
+ *  Last modified: Apr 2020
  */
+
 
 /**
    \file
@@ -337,6 +345,8 @@ process_input(char *argv0, bool *need_cuda_constructor)
         // And, in some scenarios there are assertion failures as well.
         // So doing it right before the final schedule.
         if (flg.omptarget) {
+          // TODO: maybe rename this if we're sure that all -fopenmp-targets
+          // require this ?
           ompaccel_x86_fix_arg_types(gbl.currsub);
         }
         // AOCC end
@@ -351,15 +361,14 @@ process_input(char *argv0, bool *need_cuda_constructor)
           gbl.ompaccel_isdevice = true;
           schedule();
           gbl.ompaccel_isdevice = orig;
-          if (flg.amdgcn_target)
+	  if (flg.omptarget && !gbl.ompaccel_isdevice)
             schedule();
         } else {
           schedule();
         }
 #else
-        // AOCC End
         schedule();
-#endif // AOCC
+#endif
         xtimes[5] += get_rutime();
         DUMP("schedule");
       } /* CUDAG(GBL_CURRFUNC) & CUDA_HOST */
@@ -372,7 +381,7 @@ process_input(char *argv0, bool *need_cuda_constructor)
 
   // AOCC begin
 #if defined(OMP_OFFLOAD_LLVM)
-  if (flg.x86_64_omptarget) {
+  if (flg.x86_64_omptarget && !XBIT(232, 0x1)) {
     bool orig = gbl.ompaccel_isdevice;
     gbl.ompaccel_isdevice = true;
     ompaccel_x86_gen_fork_wrapper(gbl.currsub);
@@ -818,8 +827,14 @@ init(int argc, char *argv[])
 #endif
   // Force -Mx,232,0x40 for amdgcn offloading
   if (flg.amdgcn_target) {
-    flg.x[232] = 0x40;
+    flg.x[232] |= 0x40;
   }
+
+  // alias settings
+  flg.x[53] |= 0x800000;
+
+  // aggressive gep folding
+  // flg.x[2] |= 0x2000000;
   // AOCC End
 
 #endif

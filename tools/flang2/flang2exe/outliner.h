@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
+ */
+
 #ifndef OUTLINER_H_
 #define OUTLINER_H_
 
@@ -339,6 +348,18 @@ ISZ_T getTaskSharedSize(SPTR scope_sptr);
    \brief Create an outlining function, which has function parameter for each symbol.
  */
 SPTR ll_make_outlined_ompaccel_func(SPTR, SPTR, bool);
+
+/* AOCC begin */
+/**
+  \brief Create an outlining function that works for -Mx,232,0x1 implementing
+  functions. This functions fetches every symbol from the uplevel chain and
+  adds it to the outlined function. This is not important for regular -fopenmp
+  implementation, but imperative for -fopenmp-target since the symbols for the
+  outer uplevel (say the target uplevel that holds a parallel region) must be
+  accessible in the inner ones.
+  */
+SPTR ll_make_outlined_ompaccel_func2(SPTR, SPTR, bool);
+/* AOCC end */
 
 /**
    \brief Create an function call to the outlininin function.

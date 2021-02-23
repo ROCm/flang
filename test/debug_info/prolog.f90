@@ -5,8 +5,7 @@
 !CHECK: call void @llvm.dbg.declare
 !CHECK-SAME: , !dbg {{![0-9]+}}
 !CHECK-NOT: bitcast i64* %"array$sd" to i8*, !dbg
-!CHECK: %[[LD:[0-9]+]] = load i64, i64* %{{.*}}, align 8
-!CHECK: store i64 %[[LD]], i64* %z_b_{{.*}}, align 8
+!CHECK: store i64 {{%[0-9]+}}, i64* %z_b_3_{{[0-9]+}}, align 8
 !CHECK: br label
 !CHECK: ret void, !dbg {{![0-9]+}}
 subroutine show (message, array)
