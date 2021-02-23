@@ -125,6 +125,7 @@ extern float chgsignf(float x);
 
 extern double copysign(double x, double y);
 extern float copysignf(float x, float y);
+extern float copysignq(__float128 x, __float128 y);
 
 extern double cos(double x);
 extern float cosf(float x);
@@ -161,6 +162,7 @@ extern float fminf(float x, float y);
 extern double fmod(double x, double y);
 extern float fmodf(float x, float y);
 
+extern double hypotq(__float128 x, __float128 y);
 extern double hypot(double x, double y);
 extern float hypotf(float x, float y);
 
@@ -207,6 +209,7 @@ extern float sinhf(float x);
 
 extern double sqrt(double x);
 extern float sqrtf(float x);
+extern float sqrtq(__float128 x);
 
 extern double tan(double x);
 extern float tanf(float x);

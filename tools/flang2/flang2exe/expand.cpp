@@ -4,10 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *  Date of Modification: September 2018
+ * Changes to support AMDGPU OpenMP offloading
+ *  Date of modification : Dec 2020
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ * Last Modified: Jun 2020
+ *
  */
+
 
 /** \file
  * \brief Common expander routines
@@ -484,9 +495,9 @@ eval_ilm(int ilmx)
             // properly by identifying tinfo from function name.
             OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(gbl.currsub);
             OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
-            if (ompaccel_tinfo_current_get()->n_reduction_symbols == 0
-                                                                && tinfo)
+            if (tinfo) {
               ompaccel_tinfo_current_set(tinfo);
+            }
             exp_ompaccel_reduction(ilmpx, ilmx);
             ompaccel_tinfo_current_set(temp_tinfo);
             // AOCC End
@@ -506,7 +517,7 @@ eval_ilm(int ilmx)
      * For each operand which is a link to another ilm, recurse (evaluate it)
      * if not already evaluated
      */
-    if (opcx == IM_DCMPLX || opcx == IM_CMPLX) {
+    if (opcx == IM_DCMPLX || opcx == IM_CMPLX || opcx == IM_QCMPLX) {
       for (tmp = 1, noprs = 1; noprs <= ilms[opcx].oprs; ++tmp, ++noprs) {
         if (IM_OPRFLAG(opcx, noprs) == OPR_LNK) {
           eval_ilm_argument1(noprs, ilmpx, ilmx);
@@ -539,6 +550,7 @@ eval_ilm(int ilmx)
           ILM_EXPANDED_FOR(op1) = ilmx;
         } else if (ilix && ILM_EXPANDED_FOR(op1) != ilmx) {
           if (ILM_RESTYPE(op1) != ILM_ISCMPLX &&
+              ILM_RESTYPE(op1) != ILM_ISQCMPLX &&         // AOCC
               ILM_RESTYPE(op1) != ILM_ISDCMPLX
 #ifdef LONG_DOUBLE_FLOAT128
               && ILM_RESTYPE(op1) != ILM_ISFLOAT128CMPLX
@@ -564,7 +576,8 @@ eval_ilm(int ilmx)
           ILM_EXPANDED_FOR(op1) = ilmx;
         } else if (ilix && ILM_EXPANDED_FOR(op1) != ilmx) {
           if (ILM_RESTYPE(op1) != ILM_ISCMPLX &&
-              ILM_RESTYPE(op1) != ILM_ISDCMPLX
+              ILM_RESTYPE(op1) != ILM_ISDCMPLX &&
+              ILM_RESTYPE(op1) != ILM_ISQCMPLX              // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
               && ILM_RESTYPE(op1) != ILM_ISFLOAT128CMPLX
 #endif
@@ -1010,6 +1023,16 @@ replace_by_zero(ILM_OP opc, ILM *ilmp, int curilm)
     zero = getcon(num, DT_DCMPLX);
     newopc = IM_CCON;
     break;
+  // AOCC begin
+  case IM_CQLD:
+    num[0] = stb.quad0;
+    num[1] = stb.quad0;
+    num[2] = stb.quad0;
+    num[3] = stb.quad0;
+    zero = getcon(num, DT_QCMPLX);
+    newopc = IM_CCON;
+    break;
+  // AOCC end
   case IM_ILD:
   case IM_LLD:
   case IM_LFUNC: /* LFUNC, for PRESENT calls replaced by zero */
@@ -1039,6 +1062,13 @@ replace_by_zero(ILM_OP opc, ILM *ilmp, int curilm)
     zero = stb.dbl0;
     newopc = IM_DCON;
     break;
+
+// AOCC begin
+  case IM_QPLD:
+    zero = stb.quad0;
+    newopc = IM_QCON;
+    break;
+// AoCC end
 
   case IM_PLD:
     zero = stb.i0;
@@ -1243,6 +1273,29 @@ exp_load(ILM_OP opc, ILM *ilmp, int curilm)
     CHECK_NME(nme, dt_nme(nme) != DT_DBLE);
     load = ad3ili(IL_LDDP, addr, nme, MSZ_F8);
     goto cand_load;
+
+  // AOCC begin
+  // Load quad value
+  case IM_QPLD:
+    CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
+    load = ad3ili(IL_LDQP, addr, nme, MSZ_F16);
+    goto cand_load;
+  case IM_CQLD:
+    if (XBIT(70, 0x40000000)) {
+      CHECK_NME(nme, dt_nme(nme) != DT_QCMPLX);
+      load = ad3ili(IL_LDQCMPLX, addr, nme, MSZ_F16);
+      goto cand_load;
+    } else {
+      imag = ad3ili(IL_AADD, addr, ad_aconi(size_of(DT_QUAD)), 0);
+      tmp = addnme(NT_MEM, SPTR_NULL, nme, 0);
+      ILM_RRESULT(curilm) = ad3ili(IL_LDQP, addr, tmp, MSZ_F16);
+      tmp = addnme(NT_MEM, NOSYM, nme, 8);
+      ILM_IRESULT(curilm) = ad3ili(IL_LDQP, imag, tmp, MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+      return;
+    }
+  // AOCC end
+
   case IM_QLD: /*m128*/
     CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
     load = ad3ili(IL_LDQ, addr, nme, MSZ_F16);
@@ -1611,12 +1664,24 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
     CHECK_NME(nme, dt_nme(nme) != DT_DBLE);
     store = ad4ili(IL_STDP, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F8);
     goto cand_store;
+
+  // AOCC begin
+  // quad store
+  case IM_QPST:
+    if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
+      nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
+    CHECK_NME(nme, dt_nme(nme) != DT_QUAD);
+    store = ad4ili(IL_STQP, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F16);
+    goto cand_store;
+  // AOCC end
+
   case IM_QST: /*m128*/
     if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
       nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
     CHECK_NME(nme, DTY(dt_nme(nme)) != TY_128);
     store = ad4ili(IL_STQ, (int)ILI_OF(op2), (int)ILI_OF(op1), nme, MSZ_F16);
     goto cand_store;
+
   case IM_M256ST: /*m256*/
     if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
       nme = add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
@@ -1718,6 +1783,22 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
       }
       store = ad1ili(IL_FREEDP, expr);
       break;
+
+    // AOCC begin
+    case ILIA_QP:
+      if (ILM_RESTYPE(op2) == ILM_ISQCMPLX) {
+        store = ad1ili(IL_FREEQP, (int)ILM_IRESULT(op2));
+        chk_block(store);
+        ILM_IRESULT(curilm) = store;
+        ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+        if (EXPDBG(8, 16))
+          fprintf(gbl.dbgfil, "store imag: ilm %d, block %d, ili %d\n", curilm,
+                  expb.curbih, store);
+      }
+      store = ad1ili(IL_FREEQP, expr);
+      break;
+    // AOCC end
+
 #ifdef ILIA_CS
     case ILIA_CS:
       store = ad1ili(IL_FREECS, expr);
@@ -1725,6 +1806,11 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
     case ILIA_CD:
       store = ad1ili(IL_FREECD, expr);
       break;
+    // AOCC begin
+    case ILIA_CQ:
+      store = ad1ili(IL_FREECQ, expr);
+      break;
+    // AOCC end
 #endif
     case ILIA_AR:
       store = ad1ili(IL_FREEAR, expr);
@@ -1837,6 +1923,41 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
                      nme, MSZ_F8);
       ILM_RESTYPE(curilm) = ILM_ISDCMPLX;
     }
+    goto cmplx_shared;
+  // AOCC begin
+  case IM_CQST:
+    if (XBIT(70, 0x40000000)) {
+      if (NME_TYPE(nme) == NT_VAR && DTY(DTYPEG(NME_SYM(nme))) == TY_ARRAY)
+        nme =
+            add_arrnme(NT_ARR, SPTR_NULL, nme, 0, ad_icon(0), NME_INLARR(nme));
+      CHECK_NME(nme, dt_nme(nme) != DT_QCMPLX);
+      store = ad4ili(IL_STQCMPLX, ILI_OF(op2), ILI_OF(op1), nme, MSZ_F16);
+      goto cand_store;
+    } else {
+      tmp = expb.curilt;
+      store = ad1ili(IL_FREEQP, (int)ILM_RRESULT(op2));
+      chk_block(store);
+      if (tmp != expb.curilt)
+        ILT_CPLX(expb.curilt) = 1;
+
+      nme = addnme(NT_MEM, NOSYM, NME_OF(op1), 8);
+      imag = ad3ili(IL_AADD, ILI_OF(op1), ad_aconi(size_of(DT_QUAD)), 0);
+      store = ad4ili(IL_STQP, ILM_IRESULT(op2), imag, nme, MSZ_F16);
+      tmp = expb.curilt;
+      chk_block(store);
+      if (tmp != expb.curilt)
+        ILT_CPLX(expb.curilt) = 1;
+      ILM_IRESULT(curilm) = store;
+      if (EXPDBG(8, 16))
+        fprintf(gbl.dbgfil, "store imag: ilm %d, block %d, ili %d\n", curilm,
+                expb.curbih, store);
+
+      nme = addnme(NT_MEM, SPTR_NULL, NME_OF(op1), 0);
+      store = ad4ili(IL_STQP, ad1ili(IL_CSEQP, ILM_RRESULT(op2)), ILI_OF(op1),
+                     nme, MSZ_F16);
+      ILM_RESTYPE(curilm) = ILM_ISQCMPLX;
+    }
+  // AOCC end
   cmplx_shared:
     SET_ASSN(NME_OF(op1));
     tmp = expb.curilt;
@@ -1906,6 +2027,33 @@ exp_store(ILM_OP opc, ILM *ilmp, int curilm)
               expb.curbih, store);
     SET_ASSN(nme);
     break;
+    // AOCC begin
+  case IM_CQSTR:
+    /* ONLY store the real part of a complex */
+    nme = NME_OF(op1);
+    nme = addnme(NT_MEM, SPTR_NULL, nme, 0);
+    addr = ILI_OF(op1);
+    store = ad4ili(IL_STQP, ILI_OF(op2), addr, nme, MSZ_F16);
+    ILM_RESULT(curilm) = store;
+    if (EXPDBG(8, 16))
+      fprintf(gbl.dbgfil, "ONLY store real: ilm %d, block %d, ili %d\n", curilm,
+              expb.curbih, store);
+    SET_ASSN(nme);
+    break;
+  case IM_CQSTI:
+    /* ONLY store the imaginary part of a complex */
+    nme = NME_OF(op1);
+    nme = addnme(NT_MEM, NOSYM, nme, 16);
+    addr = ILI_OF(op1);
+    addr = ad3ili(IL_AADD, addr, ad_aconi(size_of(DT_QUAD)), 0);
+    store = ad4ili(IL_STQP, ILI_OF(op2), addr, nme, MSZ_F16);
+    ILM_RESULT(curilm) = store;
+    if (EXPDBG(8, 16))
+      fprintf(gbl.dbgfil, "ONLY store imag: ilm %d, block %d, ili %d\n", curilm,
+              expb.curbih, store);
+    SET_ASSN(nme);
+    break;
+    // AOCC end
 
 #ifdef LONG_DOUBLE_FLOAT128
   case IM_CFLOAT128ST: {
@@ -2061,6 +2209,14 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
       case ILMO_DP:
         newili.opnd[i] = DP(ilmopr->aux);
         break;
+      // AOCC begin
+      case ILMO_QP:
+        newili.opnd[i] = QP(ilmopr->aux);
+        break;
+      case ILMO_IQP:
+        newili.opnd[i] = IQP(ilmopr->aux);
+        break;
+      // AOCC end
       case ILMO_ISP:
         newili.opnd[i] = ISP(ilmopr->aux);
         break;
@@ -2068,6 +2224,7 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
         newili.opnd[i] = IDP(ilmopr->aux);
         break;
 
+#define IQP(i) (i + 100)
       case ILMO_SZ:
         dtype = DT_INT;
         num.numi[0] = 0;
@@ -2192,6 +2349,13 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
         interr("exp_mac: need DP_RETVAL", (int)ilmopr->type, ERR_Severe);
 #endif
         break;
+      case ILMO_QPRET:
+#if defined(QP_RETVAL)
+        newili.opnd[i] = QP_RETVAL;
+#else
+        interr("exp_mac: need QP_RETVAL", (int)ilmopr->type, ERR_Severe);
+#endif
+        break;
       case ILMO_KRRET:
 #if defined(KR_RETVAL)
         newili.opnd[i] = KR_RETVAL;
@@ -2228,7 +2392,16 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
         newili.opnd[i] = DP((ilmopr->aux) & 0xff);
 #endif
         break;
+      // AOCC begin
+      case ILMO_QPPOS:
+#if defined(TARGET_WIN)
+        newili.opnd[i] = QP((ilmopr->aux >> 8) & 0xff);
+#else
+        newili.opnd[i] = QP((ilmopr->aux) & 0xff);
 #endif
+        break;
+#endif
+      // AOCC end
 
       default:
         interr("exp_mac: opnd not handled", opc /*(int)ilmopr->type*/,
@@ -2270,12 +2443,14 @@ exp_mac(ILM_OP opc, ILM *ilmp, int curilm)
 
     case ILMO_RR:
       ILM_RRESULT(curilm) = index;
-      ILM_RESTYPE(curilm) = IM_DCPLX(opc) ? ILM_ISDCMPLX : ILM_ISCMPLX;
+      ILM_RESTYPE(curilm) = IM_DCPLX(opc) ? ILM_ISDCMPLX : ILM_RESTYPE(curilm)
+                          = IM_QCPLX(opc) ? ILM_ISQCMPLX : ILM_ISCMPLX;
       break;
 
     case ILMO_IR:
       ILM_IRESULT(curilm) = index;
-      ILM_RESTYPE(curilm) = IM_DCPLX(opc) ? ILM_ISDCMPLX : ILM_ISCMPLX;
+      ILM_RESTYPE(curilm) = IM_DCPLX(opc) ? ILM_ISDCMPLX : ILM_RESTYPE(curilm)
+                          = IM_QCPLX(opc) ? ILM_ISQCMPLX : ILM_ISCMPLX;
       break;
 
     default:
@@ -2316,6 +2491,9 @@ efunc(const char *nm)
       break;
     case 'l':
       resdt = DT_INT8;
+      break;
+    case 'q':
+      resdt = DT_QUAD;
       break;
     case 'u':
       p++;

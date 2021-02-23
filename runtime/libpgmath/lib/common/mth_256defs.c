@@ -848,6 +848,126 @@ MTH_DISPATCH_FUNC(__pd_tan_4m)(vrd4_t x, vid4_t m)
 }
 
 vrs8_t
+MTH_DISPATCH_FUNC(__fs_cotan_8)(vrs8_t x)
+{
+  vrs8_t (*fptr)(vrs8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8,frp_f);
+  fptr = (vrs8_t(*)(vrs8_t))MTH_DISPATCH_TBL[func_cotan][sv_sv8][frp_f];
+  return (fptr(x));
+}
+
+vrs8_t
+MTH_DISPATCH_FUNC(__rs_cotan_8)(vrs8_t x)
+{
+  vrs8_t (*fptr)(vrs8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8,frp_r);
+  fptr = (vrs8_t(*)(vrs8_t))MTH_DISPATCH_TBL[func_cotan][sv_sv8][frp_r];
+  return (fptr(x));
+}
+
+vrs8_t
+MTH_DISPATCH_FUNC(__ps_cotan_8)(vrs8_t x)
+{
+  vrs8_t (*fptr)(vrs8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8,frp_p);
+  fptr = (vrs8_t(*)(vrs8_t))MTH_DISPATCH_TBL[func_cotan][sv_sv8][frp_p];
+  return (fptr(x));
+}
+
+vrs8_t
+MTH_DISPATCH_FUNC(__fs_cotan_8m)(vrs8_t x, vis8_t m)
+{
+  vrs8_t (*fptr)(vrs8_t, vis8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8m,frp_f);
+  fptr = (vrs8_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_sv8m][frp_f];
+  return (fptr(x, m));
+}
+
+vrs8_t
+MTH_DISPATCH_FUNC(__rs_cotan_8m)(vrs8_t x, vis8_t m)
+{
+  vrs8_t (*fptr)(vrs8_t, vis8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8m,frp_r);
+  fptr = (vrs8_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_sv8m][frp_r];
+  return (fptr(x, m));
+}
+
+vrs8_t
+MTH_DISPATCH_FUNC(__ps_cotan_8m)(vrs8_t x, vis8_t m)
+{
+  vrs8_t (*fptr)(vrs8_t, vis8_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_sv8m,frp_p);
+  fptr = (vrs8_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_sv8m][frp_p];
+  return (fptr(x, m));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__fd_cotan_4)(vrd4_t x)
+{
+  vrd4_t (*fptr)(vrd4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4,frp_f);
+  fptr = (vrd4_t(*)(vrd4_t))MTH_DISPATCH_TBL[func_cotan][sv_dv4][frp_f];
+  return (fptr(x));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__rd_cotan_4)(vrd4_t x)
+{
+  vrd4_t (*fptr)(vrd4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4,frp_r);
+  fptr = (vrd4_t(*)(vrd4_t))MTH_DISPATCH_TBL[func_cotan][sv_dv4][frp_r];
+  return (fptr(x));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__pd_cotan_4)(vrd4_t x)
+{
+  vrd4_t (*fptr)(vrd4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4,frp_p);
+  fptr = (vrd4_t(*)(vrd4_t))MTH_DISPATCH_TBL[func_cotan][sv_dv4][frp_p];
+  return (fptr(x));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__fd_cotan_4m)(vrd4_t x, vid4_t m)
+{
+  vrd4_t (*fptr)(vrd4_t, vid4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4m,frp_f);
+  fptr = (vrd4_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_dv4m][frp_f];
+  return (fptr(x, m));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__rd_cotan_4m)(vrd4_t x, vid4_t m)
+{
+  vrd4_t (*fptr)(vrd4_t, vid4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4m,frp_r);
+  fptr = (vrd4_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_dv4m][frp_r];
+  return (fptr(x, m));
+}
+
+vrd4_t
+MTH_DISPATCH_FUNC(__pd_cotan_4m)(vrd4_t x, vid4_t m)
+{
+  vrd4_t (*fptr)(vrd4_t, vid4_t);
+  _MTH_I_INIT();
+  _MTH_I_STATS_INC(func_cotan,sv_dv4m,frp_p);
+  fptr = (vrd4_t(*)())MTH_DISPATCH_TBL[func_cotan][sv_dv4m][frp_p];
+  return (fptr(x, m));
+}
+
+vrs8_t
 MTH_DISPATCH_FUNC(__fs_cosh_8)(vrs8_t x)
 {
   vrs8_t (*fptr)(vrs8_t);

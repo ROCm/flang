@@ -1060,6 +1060,8 @@ is_no_symbol_ilm(ILM_T opc) {
   switch(opc) {
     case IM_DMUL:
     case IM_DSUB:
+    case IM_QMUL:
+    case IM_QSUB:
       return true;
     default:
       return false;

@@ -192,6 +192,15 @@ double my_copysign(double x, double y)
 {
     return L2D( (D2L(x) & DB_ABS_MASK) | (D2L(y) & DB_SIGN_BIT) );
 }
+// AOCC begin
+#undef copysignq
+#define copysignq(x, y) my_copysignq(x, y)
+static INLINE
+__float128 my_copysignq(__float128 x, __float128 y)
+{
+    return L2D( (D2L(x) & DB_ABS_MASK) | (D2L(y) & DB_SIGN_BIT) );
+}
+// AOCC end
 
 #undef isnanf
 #define isnanf(x) my_isnanf(x)
@@ -278,4 +287,19 @@ float my_cimagf(float _Complex x)
     return *(1 + (float *)&x);
 }
 
+#undef crealq
+#define crealq my_crealq
+static INLINE
+__float128 my_crealq(__float128 x)
+{
+    return *(0 + (__float128 *)&x);
+}
+
+#undef cimagq
+#define cimagq my_cimagq
+static INLINE
+__float128 my_cimagq(__float128  x)
+{
+    return *(1 + (__float128 *)&x);
+}
 #endif //!(defined __MATH_COMMON_H_INCLUDED__)

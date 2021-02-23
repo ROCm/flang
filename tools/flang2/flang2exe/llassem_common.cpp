@@ -4,10 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes for AMD GPU OpenMP offloading and bug fixes.
+ * Last modified: November 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
  */
+
 /**
    \file llassem_common.c
    Some various functions that emit LLVM IR.
@@ -71,14 +79,17 @@ static void put_ncharstring_n(char *, ISZ_T, int);
 static void put_zeroes(ISZ_T);
 static void put_cmplx_n(int, int);
 static void put_dcmplx_n(int, int);
+static void put_qcmplx_n(int, int);
 static void put_i8(int);
 static void put_i16(int);
 static void put_r4(INT);
 static void put_r8(int, int);
+static void put_r16(int, int);  // AOCC
 static void put_int(INT);
 static void put_int8(INT);
 static void put_float(INT);
 static void put_double(int);
+static void put_quad(int);   // AOCC
 static void put_cmplx_n(int, int);
 static void put_float_cmplx(int, int);
 static void put_double_cmplx(int, int);
@@ -445,6 +456,12 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         if (tconval == stb.dbl0)
           goto do_zeroes;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        if (tconval == stb.quad0)
+          goto do_zeroes;
+        break;
+      // AOCC end
       case TY_CMPLX:
         if (CONVAL1G(tconval) == 0 && CONVAL2G(tconval) == 0)
           goto do_zeroes;
@@ -453,6 +470,13 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         if (CONVAL1G(tconval) == stb.dbl0 && CONVAL2G(tconval) == stb.dbl0)
           goto do_zeroes;
         break;
+      // AOCC begin
+      case TY_QCMPLX:
+        if (CONVAL1G(tconval) == stb.quad0 && CONVAL2G(tconval) == stb.quad0
+            && CONVAL4G(tconval) == stb.quad0 && CONVAL4G(tconval) == stb.quad0)
+          goto do_zeroes;
+        break;
+      // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
       case TY_FLOAT128:
         if (tconval == stb.float128_0)
@@ -565,6 +589,17 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         put_r8((int)tconval, putval);
         break;
 
+      // AOCC begin
+      case TY_QUAD:
+        if (DBGBIT(5, 32)) {
+          fprintf(gbl.dbgfil,
+                  "emit_init:put_r16 first_data:%d i8cnt:%ld ptrcnt:%d\n",
+                  first_data, *i8cnt, *ptrcnt);
+        }
+        put_r16((int)tconval, putval);
+        break;
+      // AOCC end
+
       case TY_CMPLX:
         if (DBGBIT(5, 32)) {
           fprintf(gbl.dbgfil,
@@ -582,6 +617,17 @@ emit_init(DTYPE tdtype, ISZ_T tconval, ISZ_T *addr, ISZ_T *repeat_cnt,
         }
         put_dcmplx_n((int)tconval, putval);
         break;
+
+      // AOCC begin
+      case TY_QCMPLX:
+        if (DBGBIT(5, 32)) {
+          fprintf(gbl.dbgfil,
+                  "emit_init:put_qcmplx_n first_data:%d i8cnt:%ld ptrcnt:%d\n",
+                  first_data, *i8cnt, *ptrcnt);
+        }
+        put_qcmplx_n((int)tconval, putval);
+        break;
+      // AOCC end
 
       case TY_PTR:
         if (*i8cnt) {
@@ -921,6 +967,53 @@ put_double(int sptr)
   }
 }
 
+// AOCC begin
+static void
+put_quad(int sptr)
+{
+  INT num[4];
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+  fprintf(ASMFIL, "fp128 ");
+
+  if ((num[0] & 0x7ff00000) == 0x7ff00000) /* exponent == 2047 */
+    fprintf(ASMFIL, "0x%08x00000000", num[0]);
+  else {
+    fprintf(ASMFIL, "0xL%.8X%.8X%.8X%.8X", num[0], num[1], num[2], num[3]);
+  }
+}
+
+static void
+put_r16(int sptr, int putval)
+{
+  INT num[4];
+
+  num[0] = CONVAL1G(sptr);
+  num[1] = CONVAL2G(sptr);
+  num[2] = CONVAL3G(sptr);
+  num[3] = CONVAL4G(sptr);
+  if (flg.endian) {
+    put_r4(num[0]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[1]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[2]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[3]);
+  } else {
+    put_r4(num[3]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[2]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[1]);
+    fprintf(ASMFIL, ",");
+    put_r4(num[0]);
+  }
+}
+// AOCC end
+
 static void
 put_r8(int sptr, int putval)
 {
@@ -974,6 +1067,16 @@ put_dcmplx_n(int sptr, int putval)
   fprintf(ASMFIL, ",");
   put_r8((int)CONVAL2G(sptr), putval);
 }
+
+// AOCC begin
+static void
+put_qcmplx_n(int sptr, int putval)
+{
+  put_r16((int)CONVAL1G(sptr), putval);
+  fprintf(ASMFIL, ",");
+  put_r16((int)CONVAL2G(sptr), putval);
+}
+// AOCC end
 
 /**
    \brief Generate an expression to add an offset to a ptr

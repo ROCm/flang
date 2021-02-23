@@ -3,6 +3,12 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 6 Expander
 .sh 2 "Overview"
@@ -916,6 +922,12 @@ The remaining ILIs are for loading and storing pointers (\c
 .cw PLD
 and
 .cw PST ),
+.\" AOCC begin
+loading and storing quad (\c
+.cw QPLD
+and
+.cw QPST ),
+.\" AOCC end
 loading and storing doubles (\c
 .cw DLD
 and
@@ -928,8 +940,8 @@ are of the form:
 .(b L
 .TS
 LfCW LfCW.
-LDA/LDDP/LDSP adr sym	PLD/DLD/RLD
-STA/STDP/STSP val adr sym1	PST/DST/RST
+LDA/LDDP/LDSP/LDQP adr sym	PLD/DLD/RLD/QPLD
+STA/STDP/STSP/STQP val adr sym1	PST/DST/RST/QPST
 .TE
 .)b
 .lp
@@ -1403,6 +1415,10 @@ register),
 floating register),
 .cw IL_ARGDP
 (double precision floating register).
+.\" AOCC begin
+.cw IL_ARGQP
+(quad precision floating register).
+.\" AOCC end
 .np
 generating the ILI to push the
 argument count on the stack.
@@ -1452,6 +1468,12 @@ This is one of:
 .cw "DFRDP\ lnk\ 0"
 \(em double precision result; 0 indicates
 .cw DP(0) .
+.\" AOCC begin
+.ip \(bu 4n
+.cw "DFRQP\ lnk\ 0"
+\(em quad precision result; 0 indicates
+.cw QP(0) .
+.\" AOCC end
 .ba -5n
 .lp
 If the function is a

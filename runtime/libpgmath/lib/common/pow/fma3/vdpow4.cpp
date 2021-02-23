@@ -5,15 +5,6 @@
  *
  */
 
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- * Bug fixes.
- *
- * Date of Modification: November 2018
- *
- */
-
 #if defined(TARGET_LINUX_POWER)
 #error "Source cannot be compiled for POWER architectures"
 #include "xmm2altivec.h"

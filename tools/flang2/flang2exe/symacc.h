@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 #ifndef SYMACC_H_
 #define SYMACC_H_
@@ -201,9 +209,19 @@ inline SPTR SymConval1(SPTR sptr) {
 inline SPTR SymConval2(SPTR sptr) {
   return static_cast<SPTR>(CONVAL2G(sptr));
 }
+// AOCC begin
+inline SPTR SymConval3(SPTR sptr) {
+  return static_cast<SPTR>(CONVAL3G(sptr));
+}
+inline SPTR SymConval4(SPTR sptr) {
+  return static_cast<SPTR>(CONVAL4G(sptr));
+}
+// AOCC end
 #else
 #define SymConval1 CONVAL1G
 #define SymConval2 CONVAL2G
+#define SymConval3 CONVAL3G  // AOCC
+#define SymConval4 CONVAL4G  // AOCC
 #endif
 
 /** mode parameter for installsym_ex. */

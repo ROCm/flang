@@ -3,6 +3,12 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 13 ILI
 .re
@@ -1000,7 +1006,7 @@ The move ILI are divided into two types:
 .np
 The move ILI whose link is type IR, DP, SP, or AR to a data register,
 double precision register, or address register, respectively.
-These ILIs (MVIR, MVDP, MVSP, and MVAR) are terminal ILIs and also
+These ILIs (MVIR, MVDP, MVQP, MVSP, and MVAR) are terminal ILIs and also
 specify the destination register.
 .np
 The move ILIs which convert type AR to IR or IR to AR (AIMV or

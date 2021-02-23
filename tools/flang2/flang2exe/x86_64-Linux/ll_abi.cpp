@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ *  Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ *  Notified per clause 4(b) of the license.
+ *
+ * Added TY_QUAD to update class
+ * Date of Modification: 18th July 2020
  */
 
 /* ll_abi.c - Lowering x86-64 function calls to LLVM IR. */
@@ -129,7 +134,7 @@ amd64_update_class(void *context, DTYPE dtype, unsigned address,
     return retval;
   }
 
-  if (size <= 8) {
+  if (size <= 8 || DTY(dtype) == TY_QUAD) {         //AOCC
     bool is_ptr = DTY(dtype) == TY_PTR;
     enum amd64_class cls = AMD64_MEMORY;
     if (DT_ISINT(dtype) || is_ptr)
@@ -158,6 +163,7 @@ amd64_update_class(void *context, DTYPE dtype, unsigned address,
     cls[1] = AMD64_INTEGER;
     break;
 
+  case TY_QCMPLX:   // AOCC
   case TY_DCMPLX:
     cls[0] = AMD64_SSE;
     cls[1] = AMD64_SSE;

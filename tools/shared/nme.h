@@ -4,10 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support voltile flag in nme.
+ * This is used in Accelarator codegen.
+ * Date of modification 05th September 2019
+ *
  */
+
 #ifndef NME_H_
 #define NME_H_
 

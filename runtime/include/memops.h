@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 /** \file
  * \brief Various memory operations
  */
@@ -46,6 +49,13 @@ __c_mzero8(long long *dest, long cnt)
 
 static inline void
 __attribute__((always_inline))
+__c_mzero16(__float128 *dest, long cnt)
+{
+  (void) __builtin_memset(dest, 0, (size_t) cnt * sizeof(__float128));
+}
+
+static inline void
+__attribute__((always_inline))
 __c_mcopy1(char *dest, char *src, long cnt)
 {
   (void) __builtin_memcpy(dest, src, (size_t) cnt);
@@ -70,6 +80,13 @@ __attribute__((always_inline))
 __c_mcopy8(long long *dest, long long *src, long cnt)
 {
   (void) __builtin_memcpy(dest, src, (size_t) cnt * sizeof(long long));
+}
+
+static inline void
+__attribute__((always_inline))
+__c_mcopy16(__float128 *dest, __float128 *src, long cnt)
+{
+  (void) __builtin_memcpy(dest, src, (size_t) cnt * sizeof(__float128));
 }
 
 static inline void

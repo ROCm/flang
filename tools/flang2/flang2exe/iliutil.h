@@ -589,6 +589,7 @@ void dump_atomic_info(FILE *f, ATOMIC_INFO info);
    \brief ...
  */
 void dump_ili(FILE *f, int i);
+void dump_ili(int i); // AOCC
 
 /**
    \brief ...

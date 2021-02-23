@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ */
 
 /**
  *  \file
@@ -144,10 +152,11 @@ VTMP hlv_temps[VT_PHASES][VT_MAX] = {
     },
     /* Phase 1 -- induction temps */
     {
-        {0, 0, 0, "ndi", DT_INT4},  /* induction integers */
-        {0, 0, 0, "ndp", DT_CPTR},  /* induction pointers */
-        {0, 0, 0, "nds", DT_REAL4}, /* single precision */
-        {0, 0, 0, "ndd", DT_REAL8}, /* double precision */
+        {0, 0, 0, "ndi", DT_INT4},   /* induction integers */
+        {0, 0, 0, "ndp", DT_CPTR},   /* induction pointers */
+        {0, 0, 0, "nds", DT_REAL4},  /* single precision */
+        {0, 0, 0, "ndd", DT_REAL8},  /* double precision */
+        {0, 0, 0, "ndq", DT_QUAD},   /* AOCC: quad precision */
     },
 };
 VTMP hlv_vtemps = {

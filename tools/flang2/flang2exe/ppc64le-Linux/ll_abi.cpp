@@ -63,6 +63,11 @@ update_homogeneous(void *context, DTYPE dtype, unsigned address,
   case DT_DCMPLX:
     dtype = DT_DBLE;
     break;
+  // AOCC begin
+  case DT_QCMPLX:
+    dtype = DT_QUAD;
+    break;
+  // AOCC end
   default:
     break;
   }
@@ -75,6 +80,7 @@ update_homogeneous(void *context, DTYPE dtype, unsigned address,
   switch (llt->data_type) {
   case LL_FLOAT:
   case LL_DOUBLE:
+  case LL_FP128:
     /* OK. */
     break;
   case LL_VECTOR:

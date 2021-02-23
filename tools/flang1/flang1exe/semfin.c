@@ -3082,7 +3082,10 @@ CheckDecl(int sptr)
   /* Subroutine reference in a module, could be defined later */
   if (sem.mod_cnt > 0 && STYPEG(sptr) == ST_PROC && sem.which_pass == 0)
     return;
-
+  // AOCC begin
+  // lower malloc as call
+  if (!strcmp(SYMNAME(sptr),"malloc")) return;
+  // AOCC end
   error(38, !XBIT(124, 0x20000) ? 3 : 2, gbl.lineno, SYMNAME(sptr), CNULL);
   DCLDP(sptr, 1);
 } /* CheckDecl */

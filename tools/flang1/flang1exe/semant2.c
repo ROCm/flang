@@ -4,10 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
- */
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ *   Date of Modification: December 2019
+ *
+ * Support for assumed size array as parameter
+ *   Date of modification 9th June 2020
+ *
+ * Last modified: Jun 2020
+ *
+ * Check for stype of sptr(s) with same names before resusing them.
+ * Date of modification: 24th October 2020
+*/
+
 /**
     \file
     \brief This file contains part 2 of the compiler's semantic actions
@@ -44,7 +57,14 @@ static int reassoc_add(int, int, int);
 static int get_mem_sptr_by_name(char *name, int dtype);
 static ITEM *mkitem(SST *stkp);
 
-/**
+// AOCC begin
+int asz_count; 
+extern int asz_status;
+extern int asz_id_elem;
+int asz_id_elem_start;
+// AOCC end
+
+/*
    \brief semantic actions - part 2.
    \param rednum   reduction number
    \param top      top of stack after reduction
@@ -252,6 +272,7 @@ semant2(int rednum, SST *top)
    */
   case AC_END1:
     sem.in_array_const = false;
+    asz_id_elem = 0; // AOCC : reset that the elements for assumed size array are over
     break;
 
   /* ------------------------------------------------------------------ */
@@ -600,11 +621,13 @@ semant2(int rednum, SST *top)
      * length or kind expression.
      */
     sptr = refsym((int)SST_SYMG(RHS(1)), OC_OTHER);
+    //AOCC Begin
     sptr3 = (int)SST_SYMG(RHS(1));
     if((SCOPEG(sptr) != SCOPEG(sptr3)) && SCG(sptr) == SC_PRIVATE &&
-       STYPEG(sptr) != STYPEG(sptr3)){
-       sptr = sptr3;
+        STYPEG(sptr) != STYPEG(sptr3)){
+      sptr = sptr3;
     }
+    //AOCC End
     if (STYPEG(sptr) && sem.type_mode && queue_type_param(sptr, 0, 0, 3)) {
       sptr = insert_sym(sptr);
       STYPEP(sptr, ST_IDENT);
@@ -671,6 +694,15 @@ semant2(int rednum, SST *top)
         aclp->dtype = DTYPEG(sptr);
         SST_ACLP(LHS, aclp);
         init_named_array_constant(sptr, gbl.currsub);
+
+	// AOCC begin
+        /* indicating that ast holding the size of variable 
+	 * elements in an assumed size array needs to be copied 
+	 */ 
+        if (asz_id_elem == 1) {
+          asz_id_elem_start = 1;
+        }
+	// AOCC end
         ast = mk_id(sptr);
       }
       SST_ASTP(LHS, ast);
@@ -1470,7 +1502,8 @@ semant2(int rednum, SST *top)
       if (strcmp(SYMNAME(sptr1), "re") == 0 ||
           strcmp(SYMNAME(sptr1), "im") == 0) {
         /* build a phoney member ast that will be rewritten later */
-        dtype = DTY(dtype) == TY_CMPLX ? DT_REAL4 : DT_REAL8;
+        dtype = DTY(dtype) == TY_CMPLX ? DT_REAL4 : DTY(dtype) == TY_DCMPLX ?
+                              DT_REAL8 : DT_QUAD;
         STYPEP(sptr1, ST_MEMBER);
         DTYPEP(sptr1, dtype); /* don't count on this, it will change */
         SST_ASTP(LHS, mk_member(SST_ASTG(RHS(1)), mk_id(sptr1), dtype));
@@ -1858,6 +1891,9 @@ semant2(int rednum, SST *top)
       /* value set by scan */
       ast_conval(top);
     }
+    // AOCC: Change the number of array elements for assumed size arrays
+    if (asz_status == 1)
+      asz_count += 1;
     break;
   /*
    *      <constant> ::= <int kind const> |
@@ -1869,10 +1905,27 @@ semant2(int rednum, SST *top)
     SST_DTYPEP(LHS, dtype);
     if (dtype == DT_INT8) {
       ast_cnst(top);
+    } else if (dtype == DT_QUAD) {
+      // AOCC begin
+      SST_DTYPEP(LHS, DT_INT8);
+      SST_CVALP(LHS, CONVAL2G(sptr));
+      SST_ACLP(LHS, 0);
+      int v = SST_CVALG(LHS);
+      if (v < 0)
+        val[0] = -1;
+      else
+        val[0] = 0;
+      val[1] = v;
+      int cnst = getcon(val, DT_INT8);
+      SST_CVALP(LHS, cnst);
+      SST_ASTP(LHS, mk_cnst(cnst));
+      SST_SHAPEP(LHS, 0);
+      // AOCC end
     } else {
       SST_CVALP(LHS, CONVAL2G(sptr));
       ast_conval(top);
     }
+
     break;
 
   /*
@@ -1920,7 +1973,7 @@ semant2(int rednum, SST *top)
    *      <constant> ::= <qcomplex> |
    */
   case CONSTANT9:
-    SST_DTYPEP(LHS, DT_QCMPLX);
+    SST_DTYPEP(LHS, DT_CMPLX32);
     /* value set by scan */
     ast_cnst(top);
     break;
@@ -2028,6 +2081,9 @@ semant2(int rednum, SST *top)
     SST_DTYPEP(LHS, DTYPEG(sptr));
     /* value set by scan */
     ast_cnst(top);
+    // AOCC:  Change the number of array elements for assumed size arrays
+    if (asz_status == 1)
+      asz_count += 1;
     break;
   /*
    *	<char literal> ::= <id> <underscore> <quoted string> |
@@ -2048,7 +2104,7 @@ semant2(int rednum, SST *top)
               "- KIND parameter has unknown value for quoted string -",
               SYMNAME(sptr));
     }
-    string_with_kind(top);
+    string_with_kind(top); 
     break;
   /*
    *	<char literal> ::= <integer> <underscore> <quoted string>
@@ -2062,7 +2118,7 @@ semant2(int rednum, SST *top)
     } else if (SST_CVALG(RHS(1)) != 1)
       error(81, 3, gbl.lineno,
             "- KIND parameter has unknown value for quoted string", CNULL);
-    string_with_kind(top);
+    string_with_kind(top); 
     break;
 
   /* ------------------------------------------------------------------ */
@@ -2090,7 +2146,7 @@ semant2(int rednum, SST *top)
     SST_CVALP(LHS, getcon(val, dtype));
     ast_cnst(top);
     SST_IDP(LHS, S_CONST);
-    ch_substring(LHS, RHS(3), RHS(5));
+    ch_substring(LHS, RHS(3), RHS(5));   
     break;
 
   /* ------------------------------------------------------------------ */
@@ -2835,6 +2891,11 @@ rewrite_cmplxpart_rval(SST *e)
     case TY_DBLE:
       intrnm = part == 1 ? "dreal" : "dimag";
       break;
+    // AOCC begin
+    case TY_QUAD:
+      intrnm = part == 1 ? "qreal" : "qimag";
+      break;
+    // AOCC end
     default:
       interr("rewrite_cmplxpart_rval: unexpected type", DTY(dtype), 3);
     }
@@ -2877,10 +2938,14 @@ form_cmplx_const(SST *res, SST *rp, SST *ip)
     i = SST_DTYPEG(rp);
     if (i == DT_DBLE || i == DT_DCMPLX)
       dtype = DT_DBLE;
+    else if (i == DT_QUAD || i == DT_QCMPLX)
+      dtype = DT_QUAD;
     else {
       i = SST_DTYPEG(ip);
       if (i == DT_DBLE || i == DT_DCMPLX)
         dtype = DT_DBLE;
+      else if (i == DT_QUAD || i == DT_QCMPLX)
+        dtype = DT_QUAD;
       else
         dtype = DT_REAL;
     }
@@ -2888,7 +2953,8 @@ form_cmplx_const(SST *res, SST *rp, SST *ip)
     val[0] = SST_CVALG(rp);
     cngtyp(ip, dtype);
     val[1] = SST_CVALG(ip);
-    dtype = (dtype == DT_DBLE) ? DT_DCMPLX : DT_CMPLX;
+    dtype = (dtype == DT_DBLE) ? DT_DCMPLX : (dtype == DT_QUAD) ?
+                                 DT_QCMPLX : DT_CMPLX;
   }
   SST_IDP(res, S_CONST);
   SST_DTYPEP(res, dtype);

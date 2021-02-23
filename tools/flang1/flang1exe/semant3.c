@@ -4,10 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Last modified: Nov 12, 2019
+ *  Raise error for non integer nd non character stop codes
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ *  Date of modification 14th October 2019
+ *
+ * Support for Associate Block in OpenMP
+ * Date of modification : 9th May 2020
  */
+
 /**
     \file semant3.c
     \brief This file contains part 3 of the compiler's semantic actions
@@ -1597,10 +1608,8 @@ semant3(int rednum, SST *top)
     ast2 = SST_ASTG(RHS(2));
 
     // AOCC Begin
-    /* 
-     * Error not thrown for other 
-     * than integer/character type STOP CODE 
-    */
+    // throw error for types other than integer/character type STOP CODE
+    //
     if (DTY(A_DTYPEG(ast1)) == TY_INT ||
             DTY(A_DTYPEG(ast1)) == TY_SINT ||
             DTY(A_DTYPEG(ast1)) == TY_INT8 ||
@@ -3798,6 +3807,17 @@ errorstop_shared:
         int dest_ast = itemp->ast;
         DTYPE dest_dtype = A_DTYPEG(dest_ast);
 
+        // AOCC begin
+        if (DT_ISREAL(DDTG(dtype)) && DT_ISREAL(DDTG(dest_dtype)) &&
+           DDTG(dtype) != DDTG(dest_dtype)) {
+
+        error(155, 3, gbl.lineno,
+              "In an ALLOCATE statement the source expression in "
+              "SOURCE= or MOLD= specifiers must be of the same type "
+              "and kind type parameters as the object being allocated ",
+              NULL);
+        }
+        // AOCC end
         if (A_TYPEG(dest_ast) != A_SUBSCR && is_array_dtype(dest_dtype)) {
           /* An array is being allocated with shape assumed from the
            * MOLD= or SOURCE= expression.
@@ -6310,6 +6330,13 @@ chk_and_rewrite_cmplxpart_assn(SST *lhs, SST *rhs)
       i_imagnm = "dimag";
       i_cmplxnm = "dcmplx";
       break;
+    // AOCC begin
+    case TY_QUAD:
+      i_realnm = "qreal";
+      i_imagnm = "qimag";
+      i_cmplxnm = "qcmplx";
+      break;
+    // AOCC end
     default:
       interr("chk_and_rewrite_cmplxpart_assn: unexpected type", DTY(dtype), 3);
     }
@@ -6839,14 +6866,17 @@ construct_association(int lhs_sptr, SST *rhs, int stmt_dtype, LOGICAL is_class)
   set_descriptor_rank(FALSE /* to reset the hidden API state :-P */);
   get_all_descriptors(lhs_sptr);
   if (sem.parallel || sem.target || sem.task) {
-    if (SDSCG(lhs_sptr)) {
+    //AOCC Begin
+    /*if (SDSCG(lhs_sptr)) {
       SCP(SDSCG(lhs_sptr), SC_PRIVATE);  
-    }
+    }*/
+    SCOPEP(lhs_sptr , SCOPEG(rhs_sptr));
+    //AOCC End
     if (MIDNUMG(lhs_sptr)) {
-      SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);  
+      SCP(MIDNUMG(lhs_sptr), SC_PRIVATE);
     }
     if (PTROFFG(lhs_sptr)) {
-      SCP(PTROFFG(lhs_sptr), SC_PRIVATE);  
+      SCP(PTROFFG(lhs_sptr), SC_PRIVATE);
     }
   }
 

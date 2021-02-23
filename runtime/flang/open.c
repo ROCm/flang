@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ *
+ * Support to revert to the old value when newunit has errors.
+ * Date of Modification: 15th June 2020
+ */
 
 /* clang-format off */
 
@@ -27,12 +36,20 @@
 static FIO_FCB *Fcb; /* pointer to the file control block */
 
 int next_newunit = -13;
+__INT_T old_unit;       //AOCC
+__INT_T *old_unit_ptr;  //AOCC
 
 /* --------------------------------------------------------------------- */
 int
-ENTF90IO(GET_NEWUNIT, get_newunit)()
+ENTF90IO(GET_NEWUNIT, get_newunit)(__INT_T *newunit)
 {
   set_gbl_newunit(TRUE);
+  //AOCC Begin
+  if(newunit){
+    old_unit = *newunit;
+    old_unit_ptr = newunit;
+  }
+  //AOCC End
   return next_newunit--;
 }
 
@@ -106,8 +123,11 @@ __fortio_open(int unit, int action_flag, int status_flag, int dispose_flag,
     /*  check that file is not already connected to different unit: */
     for (f = fioFcbTbls.fcbs; f; f = f->next)
       if (f->named && strcmp(filename, f->name) == 0)
-        if (unit != f->unit)
+        if (unit != f->unit){
+          if(old_unit_ptr)          //AOCC
+            *old_unit_ptr = old_unit;
           EXIT_OPEN(__fortio_error(FIO_EOPENED))
+        }
   }
 
   /* ------- handle situation in which unit is already connected:  */
@@ -120,12 +140,21 @@ __fortio_open(int unit, int action_flag, int status_flag, int dispose_flag,
       /*  make sure no specifier other than BLANK is different than
           the one currently in effect */
 
-      if (status_flag == FIO_SCRATCH && f->status != FIO_SCRATCH)
+      if (status_flag == FIO_SCRATCH && f->status != FIO_SCRATCH){
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(__fortio_error(FIO_ECOMPAT))
-      if (acc_flag != f->acc || form_flag != f->form)
+      }
+      if (acc_flag != f->acc || form_flag != f->form){
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(__fortio_error(FIO_ECOMPAT))
-      if (acc_flag == FIO_DIRECT && reclen != (f->reclen / f->wordlen))
+      }
+      if (acc_flag == FIO_DIRECT && reclen != (f->reclen / f->wordlen)){
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(__fortio_error(FIO_ECOMPAT))
+      }
 
       f->blank = blank_flag;
       if (pos_flag == FIO_REWIND) {
@@ -139,8 +168,11 @@ __fortio_open(int unit, int action_flag, int status_flag, int dispose_flag,
       EXIT_OPEN(0) /* no error occurred */
     } else {
       /*  case 2:  file to be connected is NOT the same:  */
-      if (__fortio_close(f, 0 /*dispose flag*/) != 0)
+      if (__fortio_close(f, 0 /*dispose flag*/) != 0){
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(ERR_FLAG)
+      }
     }
   }
 
@@ -173,33 +205,44 @@ __fortio_open(int unit, int action_flag, int status_flag, int dispose_flag,
 
   if (status_flag == FIO_OLD) {
     /* if OLD and doesn't exist, then error */
-    if (__fort_access(filename, 0) != 0)
+    if (__fort_access(filename, 0) != 0){
+      if(old_unit_ptr)          //AOCC
+        *old_unit_ptr = old_unit;
       EXIT_OPEN(__fortio_error(FIO_ENOEXIST))
-
+    }
 /*  open file for readonly or read/write:  */
 
     perms = "r+";
     if ((action_flag == FIO_READ) ||
         (lcl_fp = __io_fopen(filename, perms)) == NULL) {
       perms = "r";
-      if ((lcl_fp = (__io_fopen(filename, perms))) == NULL)
+      if ((lcl_fp = (__io_fopen(filename, perms))) == NULL){
         EXIT_OPEN(__fortio_error(__io_errno()))
+      }
     }
   } else if (status_flag == FIO_NEW) {
     /* if NEW and exists then error */
-    if (__fort_access(filename, 0) == 0)
+    if (__fort_access(filename, 0) == 0){
+      if(old_unit_ptr)          //AOCC
+        *old_unit_ptr = old_unit;
       EXIT_OPEN(__fortio_error(FIO_EEXIST))
-
+    }
     perms = "w+";
-    if ((lcl_fp = __io_fopen(filename, perms)) == NULL)
+    if ((lcl_fp = __io_fopen(filename, perms)) == NULL){
+      if(old_unit_ptr)          //AOCC
+        *old_unit_ptr = old_unit;
       EXIT_OPEN(__fortio_error(__io_errno()))
+    }
   } else if (status_flag == FIO_REPLACE) {
 /* if file does not exist, create a file;
  * if file exists, delete the file and create a new file.
  */
     perms = "w+";
-    if ((lcl_fp = __io_fopen(filename, perms)) == NULL)
+    if ((lcl_fp = __io_fopen(filename, perms)) == NULL){
+      if(old_unit_ptr)          //AOCC
+        *old_unit_ptr = old_unit;
       EXIT_OPEN(__fortio_error(__io_errno()))
+    }
   } else if (status_flag == FIO_UNKNOWN) {
     i = 0;
     if (__fort_access(filename, 0) == 0) { /* file exists */
@@ -209,17 +252,25 @@ __fortio_open(int unit, int action_flag, int status_flag, int dispose_flag,
       perms = "w+";
 
     if ((lcl_fp = __io_fopen(filename, perms)) == NULL) {
-      if (i == 0) /* file does not exist */
+      if (i == 0){ /* file does not exist */
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(__fortio_error(__io_errno()))
+      }
 /*  try again with different mode:  */
       perms = "r";
-      if ((lcl_fp = __io_fopen(filename, perms)) == NULL)
+      if ((lcl_fp = __io_fopen(filename, perms)) == NULL){
+        if(old_unit_ptr)          //AOCC
+          *old_unit_ptr = old_unit;
         EXIT_OPEN(__fortio_error(__io_errno()))
+      }
     }
   } else {
     assert(status_flag == FIO_SCRATCH);
     perms = "w+";
-    if ((lcl_fp = __io_fopen(filename, perms)) == NULL) {
+    if ((lcl_fp = __io_fopen(filename, perms)) == NULL){
+      if(old_unit_ptr)          //AOCC
+        *old_unit_ptr = old_unit;
       EXIT_OPEN(__fortio_error(__io_errno()))
     }
     __fort_unlink(filename);
@@ -1154,7 +1205,7 @@ ENTF90IO(OPEN03A, open03a)(
       Fcb->sign = FIO_PLUS;
     else if (__fortio_eq_str(CADR(sign), CLEN(sign), "SUPPRESS"))
       Fcb->sign = FIO_SUPPRESS;
-    else if (__fortio_eq_str(CADR(sign), CLEN(sign), "PROCESOR_DEFINED"))
+    else if (__fortio_eq_str(CADR(sign), CLEN(sign), "PROCESSOR_DEFINED"))
       Fcb->sign = FIO_PROCESSOR_DEFINED;
     else
       return __fortio_error(FIO_ESPEC);

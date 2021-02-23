@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
+
 /**
    \file
    \brief optimization/peephole/inst simplification routines for LLVM Code
@@ -199,6 +208,10 @@ is_recip(OPERAND *cand)
         return sptr == stb.flt1;
       case IL_DCON:
         return sptr == stb.dbl1;
+      // AOCC begin
+      case IL_QCON:
+        return sptr == stb.quad1;
+      // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
       case IL_FLOAT128CON:
         return sptr == stb.float128_1;
@@ -246,6 +259,10 @@ convert_mul_to_div(ILI_OP opc)
     return IL_FDIV;
   case IL_DMUL:
     return IL_DDIV;
+  // AOCC begin
+  case IL_QMUL:
+    return IL_QDIV;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128MUL:
     return IL_FLOAT128DIV;

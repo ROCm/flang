@@ -4,10 +4,38 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for DNORM intrinsic
+ * Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Shifting intrinsics.
+ *  Month of Modification: June 2019
+ *
+ * Support for MERGE_BITS intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *  Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ * Last modified: Jun 2020
+ *
  */
+
 /**
  *  \file
  *  \brief Symbol initialization for Fortran
@@ -46,7 +74,7 @@
  * out5 -  output file which will contain ILMs (ilmtp.h)
  *---------------------------------------------------------------------*/
 
-STB stb;
+extern STB stb;
 
 /**
  * .IN name pcnt atyp dtype ILM pname arrayf
@@ -150,7 +178,7 @@ public:
     argtype["L8"] = DT_LOG8;
     argtype["K"] = DT_NCHAR;
     argtype["Q"] = DT_QUAD;
-    argtype["CQ"] = DT_QCMPLX;
+    argtype["CQ"] = DT_CMPLX32;
     argtype["BI"] = DT_BINT;
     argtype["AD"] = DT_ADDR;
     elt[".IN"] = LT_IN;
@@ -658,6 +686,8 @@ private:
           INTASTP(sptr1, intast_sym.size() - 1);
         }
       }
+
+      // AOCC begin
       /* cqname */
       tok = makeLower(getToken());
       if (tok.empty() || tok[0] == '-')
@@ -671,6 +701,8 @@ private:
           INTASTP(sptr1, intast_sym.size() - 1);
         }
       }
+      // AOCC end
+
       /* gsame */
       SPTR sptr1 = find_symbol(std::string(".") + SYMNAME(sptr));
       if (sptr1 != 0 && STYPEG(sptr1) == ST_INTRIN) {
@@ -1149,6 +1181,7 @@ const char *SyminiFE90::init_names0[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -1159,6 +1192,7 @@ const char *SyminiFE90::init_names0[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -1204,6 +1238,16 @@ const char *SyminiFE90::init_names0[] = {
     ".dcosd",
     "dcosd",
     ".qcosd",
+    "..cotan",
+    ".cotan",
+    ".dcotan",
+    "dcotan",
+    ".qcotan",
+    "..cotand",
+    ".cotand",
+    ".dcotand",
+    "dcotand",
+    ".qcotand",
     "..tan",
     ".tan",
     ".dtan",
@@ -1284,16 +1328,19 @@ const char *SyminiFE90::init_names0[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -1451,6 +1498,12 @@ const char *SyminiFE90::init_names0[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -1491,6 +1544,8 @@ const char *SyminiFE90::init_names0[] = {
     "sind",
     "cos",
     "cosd",
+    "cotan",
+    "cotand",
     "tan",
     "tand",
     "asin",
@@ -1548,6 +1603,8 @@ const char *SyminiFE90::init_names0[] = {
     "iparity"
     "iall",
     "iany",
+    "quad",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -1662,6 +1719,7 @@ const char *SyminiFE90::init_names0[] = {
     "dshiftl",
     "dshiftr",
     "mask",
+    "rank",
 };
 
 /**
@@ -1679,6 +1737,7 @@ const char *SyminiFE90::init_names1[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -1689,6 +1748,7 @@ const char *SyminiFE90::init_names1[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -1734,6 +1794,16 @@ const char *SyminiFE90::init_names1[] = {
     ".dcosd",
     "dcosd",
     ".qcosd",
+    "..cotan",
+    ".cotan",
+    ".dcotan",
+    "dcotan",
+    ".qcotan",
+    "..cotand",
+    ".cotand",
+    ".dcotand",
+    "dcotand",
+    ".qcotand",
     "..tan",
     ".tan",
     ".dtan",
@@ -1783,7 +1853,6 @@ const char *SyminiFE90::init_names1[] = {
     ".atan2d",
     ".datan2d",
     "datan2d",
-    ".qatan2d",
     "..sinh",
     ".sinh",
     ".dsinh",
@@ -1814,16 +1883,19 @@ const char *SyminiFE90::init_names1[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -1984,6 +2056,12 @@ const char *SyminiFE90::init_names1[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -2024,6 +2102,8 @@ const char *SyminiFE90::init_names1[] = {
     "sind",
     "cos",
     "cosd",
+    "cotan",
+    "cotand",
     "tan",
     "tand",
     "asin",
@@ -2072,6 +2152,7 @@ const char *SyminiFE90::init_names1[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",
@@ -2081,6 +2162,7 @@ const char *SyminiFE90::init_names1[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2196,6 +2278,7 @@ const char *SyminiFE90::init_names1[] = {
     "dshiftl",
     "dshiftr",
     "mask",
+    "rank",
 };
 
 /**
@@ -2213,6 +2296,7 @@ const char *SyminiFE90::init_names2[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -2223,6 +2307,7 @@ const char *SyminiFE90::init_names2[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -2268,6 +2353,16 @@ const char *SyminiFE90::init_names2[] = {
     ".dcosd",
     "dcosd",
     ".qcosd",
+    "..cotan",
+    ".cotan",
+    ".dcotan",
+    "dcotan",
+    ".qcotan",
+    "..cotand",
+    ".cotand",
+    ".dcotand",
+    "dcotand",
+    ".qcotand",
     "..tan",
     ".tan",
     ".dtan",
@@ -2317,7 +2412,6 @@ const char *SyminiFE90::init_names2[] = {
     ".atan2d",
     ".datan2d",
     "datan2d",
-    ".qatan2d",
     "..sinh",
     ".sinh",
     ".dsinh",
@@ -2348,16 +2442,19 @@ const char *SyminiFE90::init_names2[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -2518,6 +2615,12 @@ const char *SyminiFE90::init_names2[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -2558,6 +2661,8 @@ const char *SyminiFE90::init_names2[] = {
     "sind",
     "cos",
     "cosd",
+    "cotan",
+    "cotand",
     "tan",
     "tand",
     "asin",
@@ -2606,6 +2711,7 @@ const char *SyminiFE90::init_names2[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",
@@ -2615,6 +2721,7 @@ const char *SyminiFE90::init_names2[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -2783,6 +2890,7 @@ const char *SyminiFE90::init_names2[] = {
     "ieee_set_flag",
     "ieee_set_halting_mode",
     "ieee_set_status",
+    "rank",
 };
 
 /**
@@ -2800,6 +2908,7 @@ const char *SyminiFE90::init_names3[] = {
     ".cdsqrt",
     "cdsqrt",
     ".cqsqrt",
+    "cqsqrt",
     ".alog",
     "alog",
     ".dlog",
@@ -2810,6 +2919,7 @@ const char *SyminiFE90::init_names3[] = {
     ".cdlog",
     "cdlog",
     ".cqlog",
+    "cqlog",
     ".alog10",
     "alog10",
     ".dlog10",
@@ -2855,6 +2965,16 @@ const char *SyminiFE90::init_names3[] = {
     ".dcosd",
     "dcosd",
     ".qcosd",
+    "..cotan",
+    ".cotan",
+    ".dcotan", 
+    "dcotan",
+    ".qcotan",
+    "..cotand",
+    ".cotand",
+    ".dcotand",
+    "dcotand",
+    ".qcotand",
     "..tan",
     ".tan",
     ".dtan",
@@ -2904,7 +3024,6 @@ const char *SyminiFE90::init_names3[] = {
     ".atan2d",
     ".datan2d",
     "datan2d",
-    ".qatan2d",
     "..sinh",
     ".sinh",
     ".dsinh",
@@ -2935,16 +3054,19 @@ const char *SyminiFE90::init_names3[] = {
     ".cdabs",
     "cdabs",
     ".cqabs",
+    "cqabs",
     "..aimag",
     ".aimag",
     ".dimag",
     "dimag",
     ".qimag",
+    "qimag",
     "..conjg",
     ".conjg",
     ".dconjg",
     "dconjg",
     ".qconjg",
+    "qconjg",
     "dprod",
     "imax0",
     ".max0",
@@ -3105,6 +3227,12 @@ const char *SyminiFE90::init_names3[] = {
     ".2d",
     ".2c",
     ".2cd",
+// AOCC begin
+    "qreal",
+    ".2q",
+    ".2c",
+    ".2cq",
+// AOCC end
     "dint",
     "dnint",
     "..inint",
@@ -3145,6 +3273,8 @@ const char *SyminiFE90::init_names3[] = {
     "sind",
     "cos",
     "cosd",
+    "cotan",
+    "cotand",
     "tan",
     "tand",
     "asin",
@@ -3193,6 +3323,7 @@ const char *SyminiFE90::init_names3[] = {
     "bgt",
     "ble",
     "blt",
+    "quad",
     "maskl",
     "maskr",
     "merge_bits",
@@ -3202,6 +3333,7 @@ const char *SyminiFE90::init_names3[] = {
     "iparity"
     "iall",
     "iany",
+    "qcmplx",
     // AOCC End
     "dot_product",
     "eqv",
@@ -3371,8 +3503,12 @@ const char *SyminiFE90::init_names3[] = {
     "ieee_set_halting_mode",
     "ieee_set_status",
     "leadz",
+    // AOCC begin
+    "trailz",
+    // AOCC end
     "popcnt",
     "poppar",
+    "rank",
 };
 
 const size_t SyminiFE90::init_names0_size =

@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 #include "stdioInterf.h"
 #include "fioMacros.h"
@@ -27,9 +31,21 @@ __fort_malloc_without_abort(size_t n)
 
   if (n == 0)
     return ZIP;
+#if 0
+  // AOCC
+  // gcc combines following two constructs to calloc call. some of the applications
+  // depend on this behaviour.
+  // clang doesnt do this.
+  // forcing PGHPF_ZMEM results in call to malloc+memset that makes the application slower.
   p = malloc(n);
   if (__fort_zmem && (p != NULL))
     memset(p, '\0', n);
+#else
+  if (__fort_zmem)
+    p = calloc(n,sizeof(char));
+  else
+    p = malloc(n);
+#endif
   return p;
 }
 
@@ -54,9 +70,21 @@ __fort_realloc(void *ptr, size_t n)
   if (ptr == (char *)0 | ptr == ZIP) {
     if (n == 0)
       return ZIP;
-    p = malloc(n);
+#if 0
+    // AOCC
+    // gcc combines following two constructs to calloc call. some of the applications
+    // depend on this behaviour.
+    // clang doesnt do this.
+    // forcing PGHPF_ZMEM results in call to malloc+memset that makes the application slower.
+      p = malloc(n);
     if (__fort_zmem && (p != NULL))
       memset(p, '\0', n);
+#else
+    if (__fort_zmem)
+      p = calloc(n,sizeof(char));
+    else
+      p = malloc(n);
+#endif
   } else {
     if (n == 0) {
       free(ptr);

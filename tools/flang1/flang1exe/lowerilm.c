@@ -4,10 +4,27 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *   Date of modification 20th January 2020
+ *   Date of modification 24th January 2020
+ *   Date of modification 04th February 2020
+ *   Date of modification 12th February 2020
+ *   Date of modification 04th April    2020
+ *   Date of modification 28th August   2020
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ * Support for ifort's mm_prefetch intrinsic
+ * Last modified: Jun 2020
+ *
  */
+
 /**
     \file
     \brief Routines used by lower.c for lowering to ILMs.
@@ -299,6 +316,8 @@ plower(char *fmt, ...)
       fprintf(lower_ilm_file, " l%d", d);
       ++pcount;
       break;
+    case 'q':
+    case 'Q':
     case 'd':
     case 'D':
       if (d < 0) {
@@ -3803,12 +3822,22 @@ lower_stmt(int std, int ast, int lineno, int label)
     case TY_DBLE:
       plower("oii", "DST", lilm, rilm);
       break;
+    // AOCC begin
+    case TY_QUAD:
+      plower("oii", "QPST", lilm, rilm);
+      break;
+    // AOCC end
     case TY_CMPLX:
       plower("oii", "CST", lilm, rilm);
       break;
     case TY_DCMPLX:
       plower("oii", "CDST", lilm, rilm);
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      plower("oii", "CQST", lilm, rilm);
+      break;
+    // AOCC end
     case TY_CHAR:
       plower("oii", "SST", lilm, rilm);
       break;
@@ -4334,6 +4363,75 @@ lower_stmt(int std, int ast, int lineno, int label)
       add_nullify(lop);
       lower_end_stmt(std);
       return;
+
+    /* AOCC begin */
+    case I_MM_PREFETCH:
+    {
+      lower_start_stmt(lineno, label, TRUE, std);
+      args = A_ARGSG(ast);
+
+      lop = ARGT_ARG(args, 0);
+      rop = ARGT_ARG(args, 1);
+
+      if (A_ARGCNTG(ast) == 1) {
+        /* if no hint is passed, then we pass default to prefetch_t0 */
+        rop = mk_cval(3, DT_INT);
+      }
+
+      /*
+       * ifort's documentation on mm_prefetch *doesn't* discourage the usage of
+       * literal integer values for hint. This is bad for portability!
+       * FOR_K_PREFETCH_XXX constants should only be encouraged. Due to this, we
+       * have to solve a mess which are as follows:
+       *
+       * In intel compilers:
+       * hint = 0 lowers to prefetch_t0
+       * hint = 1 lowers to prefetch_t1
+       * hint = 2 lowers to prefetch_t2
+       * hint = 3 lowers to prefetch_nta
+       *
+       * while in clang (via __builtin_prefetch, which gets lowered to
+       * llvm.prefetch intrinsic) and gcc
+       * hint = 0 lowers to prefetch_nta
+       * hint = 1 lowers to prefetch_t2
+       * hint = 2 lowers to prefetch_t1
+       * hint = 3 lowers to prefetch_t0
+       *
+       * We stick to intel's behaviour by rewriting the hint constant values
+       * since mm_prefetch in Fortran is, AFAIK, an ifort specific intrinsic.
+       */
+
+      int hint = CONVAL2G(A_SPTRG(rop));
+      switch (hint) {
+      case 0:
+        rop = mk_cval(3, DT_INT);
+        break;
+      case 1:
+        rop = mk_cval(2, DT_INT);
+        break;
+      case 2:
+        rop = mk_cval(1, DT_INT);
+        break;
+      case 3:
+        rop = mk_cval(0, DT_INT);
+        break;
+      }
+
+      /*
+       * The first argument is an "address" (lop here). It can be a scalar,
+       * array access etc. We explicitly emit a LOC() intrinsic here.
+       */
+      lop = ast_intr(I_LOC, DT_PTR, 1, lop);
+      lower_expression(lop);
+      lower_expression(rop);
+
+      plower("oii", "MM_PREFETCH", lower_ilm(lop), lower_ilm(rop));
+      A_ILMP(ast, ilm);
+      lower_end_stmt(std);
+      return;
+    }
+    /* AOCC end */
+
     case I_COPYIN:
       symfunc = lower_makefunc(mkRteRtnNm(RTE_qopy_in), DT_NONE, FALSE);
       lower_start_stmt(lineno, label, TRUE, std);
@@ -4592,6 +4690,7 @@ lower_stmt(int std, int ast, int lineno, int label)
       case TY_QUAD:
       case TY_CMPLX:
       case TY_DCMPLX:
+      case TY_QCMPLX:    // AOCC
       case TY_BLOG:
       case TY_SLOG:
       case TY_LOG:
@@ -5683,7 +5782,7 @@ lower_sptr(int sptr, int pointerval)
       }
     }
   } else {
-    if (STYPEG(sptr) == ST_MEMBER) {
+    if (STYPEG(sptr) == ST_MEMBER && pointerval != 0 /*AOCC*/) {
       /* special case this error: user has referenced an array
          with the wrong number of array indices */
       if (SYMNAME(sptr) && strstr(SYMNAME(sptr), "$sd") != 0)
@@ -5906,12 +6005,22 @@ lower_typeload(int dtype, int base)
   case TY_DBLE:
     ilm = plower("oi", "DLD", base);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ilm = plower("oi", "QPLD", base);
+    break;
+  // AOCC end
   case TY_CMPLX:
     ilm = plower("oi", "CLD", base);
     break;
   case TY_DCMPLX:
     ilm = plower("oi", "CDLD", base);
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    ilm = plower("oi", "CQLD", base);
+    break;
+  // AOCC end
   case TY_PTR:
     if (!XBIT(49, 0x20000000)) {
       ilm = plower("oir", "PLD", base, 0);
@@ -5970,12 +6079,22 @@ lower_typestore(int dtype, int base, int rhs)
   case TY_DBLE:
     ilm = plower("oii", "DST", base, rhs);
     break;
+  // AOCC begin
+  case TY_QUAD:
+    ilm = plower("oii", "QPST", base, rhs);
+    break;
+  // AOCC end
   case TY_CMPLX:
     ilm = plower("oii", "CST", base, rhs);
     break;
   case TY_DCMPLX:
     ilm = plower("oii", "CDST", base, rhs);
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    ilm = plower("oii", "CQST", base, rhs);
+    break;
+  // AOCC end
   case TY_PTR:
     if (!XBIT(49, 0x20000000)) {
       ilm = plower("oii", "PST", base, rhs);

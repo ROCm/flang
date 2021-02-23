@@ -3,6 +3,7 @@
 !CHECK: define internal void @main_sub
 !CHECK: define internal void @__nv_main_sub_PARALLEL_F1L
 !CHECK:  call void @llvm.dbg.declare(metadata double** %"res$p
+!CHECK-NEXT:  call void @llvm.dbg.declare(metadata double** %"res$p
 !CHECK-NEXT:  call void @llvm.dbg.declare(metadata [16 x i64]* %"res$sd
 
 program main

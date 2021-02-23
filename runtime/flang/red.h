@@ -9,7 +9,6 @@
 /* FIXME: still used */
 
 #include "fort_vars.h"
-
 /* intrinsic reduction function enumeration */
 
 typedef enum {

@@ -4,10 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *  Date of Modification: November 2018
+ *
  */
+
 
 #ifndef LLASSEM_COMMON_H_
 #define LLASSEM_COMMON_H_
