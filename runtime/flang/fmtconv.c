@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
+
 /** \file
  * \brief Utility module for converting the internal representation
  * of a data item to string form.
@@ -142,8 +151,8 @@ __fortio_default_convert(char *item, int type,
   case __REAL16:
     width = REAL16_W;
     (void)
-        __fortio_fmt_g((__BIGREAL_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
-                      1, __REAL16, plus_flag, TRUE, dc_flag, round);
+        __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
+                      1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     break;
   case __WORD16:
     assert(0);
@@ -189,16 +198,16 @@ __fortio_default_convert(char *item, int type,
     *p++ = '(';
     width = REAL16_W;
     (void)
-        __fortio_fmt_g((__BIGREAL_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
-                      1, __REAL16, plus_flag, TRUE, dc_flag, round);
+        __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item), width, REAL16_D, REAL16_E,
+                      1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     if (dc_flag == TRUE)
       *p++ = ';';
     else
       *p++ = ',';
     (void)
-        __fortio_fmt_g((__BIGREAL_T)PP_REAL16(item + 16), width, REAL16_D,
-                      REAL16_E, 1, __REAL16, plus_flag, TRUE, dc_flag, round);
+        __fortio_fmt_e((__BIGREAL16_T)PP_REAL16(item + 16), width, REAL16_D,
+                      REAL16_E, 1, __REAL16, plus_flag, TRUE, dc_flag, 0, round);
     p = strip_blnk(p, conv_bufp);
     *p++ = ')';
     *p++ = '\0';
@@ -682,7 +691,7 @@ __fortio_fmt_g(__BIGREAL_T val, int w, int d, int e, int sf, int type,
 }
 
 extern char *
-__fortio_fmt_e(__BIGREAL_T val, int w, int d, int e, int sf, int type,
+__fortio_fmt_e(__BIGREAL16_T val, int w, int d, int e, int sf, int type,
               bool plus_flag, bool e_flag, bool dc_flag, int code, int round)
 {
   int sign_char;
@@ -709,8 +718,12 @@ __fortio_fmt_e(__BIGREAL_T val, int w, int d, int e, int sf, int type,
     newd = d + ((sf > 0) ? 1 : sf);
     newrnd = round;
   }
-
+#ifdef LONG_DOUBLE_FLOAT128
   fpdat.cvtp = __io_ecvt(val, newd, &fpdat.exp, &fpdat.sign, newrnd);
+#else
+  // AOCC
+  fpdat.cvtp = __io_qcvt(val, newd, &fpdat.exp, &fpdat.sign, newrnd);
+#endif
   fpdat.ndigits = strlen(fpdat.cvtp);
   fpdat.curp = fpdat.buf;
 
@@ -739,7 +752,16 @@ __fortio_fmt_e(__BIGREAL_T val, int w, int d, int e, int sf, int type,
     } else if (code == FED_ESw_d) {
       conv_es(d, e, e_flag);
     } else {
+  #ifdef LONG_DOUBLE_FLOAT128
       conv_e(d, e, sf, e_flag);
+  #endif
+      // AOCC
+      if(fpdat.exp > 0 && fpdat.exp >= d)
+        conv_e(d, e, sf, e_flag);
+      else if(fpdat.exp < 0)
+        conv_e(d, e, sf, e_flag);
+      else
+        conv_e(d, e, fpdat.exp, e_flag);
     }
     if (fpdat.sign) /* must check after conv_e */
       sign_char = '-';

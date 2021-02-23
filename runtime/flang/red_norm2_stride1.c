@@ -35,3 +35,17 @@ void NORM2_REAL8 (__POINT_T *src_pointer, __INT_T *size, __REAL8_T *result) {
   }
   *result = sqrt(sum);
 }
+
+// AOCC begin
+void NORM2_REAL16 (__POINT_T *src_pointer, __INT_T *size, __REAL16_T *result) {
+  // Passing in integer*8 address of starting point in the array
+  __REAL16_T *src = (__REAL16_T *)(*src_pointer);
+  __REAL16_T sum = 0;
+  __INT_T i;
+
+  for (i = 0; i < *size; ++i) {
+    sum += src[i]*src[i];
+  }
+  *result = sqrt(sum);
+}
+// AOCC end

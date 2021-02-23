@@ -4,9 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support character arrays as subroutine internal variables.
+ *  Date of Modification: December 2018
+ *
+ * Check stype of sptr(s) with same names before reusing them
+ * Date of Modification: October 2020
  */
 
 /** \file
@@ -1668,9 +1674,11 @@ decl_private_sym(int sptr)
   name = SYMNAME(sptr);
   sptr1 = getsymbol(name);
   sptr = refsym(sptr1, stb.ovclass[STYPEG(sptr)]);
+  //AOCC Begin
   if((SCOPEG(sptr) != SCOPEG(sptr1)) && SCG(sptr) == SC_PRIVATE &&
-        STYPEG(sptr) != STYPEG(sptr1))
-        sptr = sptr1;
+      STYPEG(sptr) != STYPEG(sptr1))
+      sptr = sptr1;
+  //AOCC End
   if (SCOPEG(sptr) == sem.scope_stack[sem.scope_level].sptr)
     return sptr; /* a variable can appear in more than 1 clause */
   if (checking_scope && sem.scope_stack[sem.scope_level].kind == SCOPE_PAR) {

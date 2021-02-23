@@ -4,10 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
+ *
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Support for DNORM intrinsic
+ *
+ * Date of Modification: 21st February 2019
+ *
+ * Support for parity and bit transformational intrinsic iparity, iany, iall
+ * Date of Modification: July 2019
+ *
  */
+
 /**
     \file
     \brief Optimizer submodule responsible for performing flow analysis
@@ -1784,7 +1796,7 @@ new_storeitem(int nme)
   int store;
 
   store = opt.storeb.stg_avail++;
-  if (store > 32767 * 4)
+  if (store > 32767 * 4 )  // AOCC increasing limit
     error(7, 4, 0, CNULL, CNULL);
   OPT_NEED(opt.storeb, STORE, 100);
   STORE_TYPE(store) = 0;
@@ -2747,9 +2759,8 @@ const_prop(void)
   Q_ITEM *q;
   int dvl;
 
-  if (XBIT(6, 0x1))
+  if (true || XBIT(6, 0x1))  // AOCC
     return FALSE;
-  return false;
 #if DEBUG
   if (OPTDBG(9, 32768)) {
     fprintf(gbl.dbgfil, "const_prop: file %s, function %s\n", gbl.src_file,

@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified : Jun 2020
+ */
 
 /* ll_abi.c - Lowering arm function calls to LLVM IR.
  *
@@ -74,6 +80,11 @@ update_homogeneous(void *context, DTYPE dtype, unsigned address,
   case DT_DCMPLX:
     dtype = DT_DBLE;
     break;
+  // AOCC begin
+  case DT_QCMPLX:
+    dtype = DT_QUAD;
+    break;
+  // AOCC end
   }
 
   size = size_of(dtype);

@@ -4,6 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last modified: Jun 2020
+ *
+ */
 
 /**
  * \file
@@ -48,7 +59,7 @@ typedef struct {
 
 typedef struct {
   SPTR dec_sptr;
-  SPTR def_sptr; 
+  SPTR def_sptr;
 } DEC_DEF_MAP;
 
 static DTIMPL dtimplicit;
@@ -72,7 +83,7 @@ void
 sym_init(void)
 {
   int i;
-  INT tmp[2], res[2];
+  INT tmp[2], res[2], res1[4], tmp1[4];
   int dtype;
   static char *npname = "hpf_np$";
   int sptr;
@@ -94,8 +105,10 @@ sym_init(void)
       DT_DBLE = DT_REAL8;
       DT_DCMPLX = DT_CMPLX16;
     } else {
-      DT_DBLE = DT_QUAD;
-      DT_DCMPLX = DT_QCMPLX;
+      // AOCC begin
+      //DT_REAL = DT_QUAD;
+      DT_QCMPLX = DT_CMPLX32;
+      // AOCC end
     }
   }
   if (XBIT(49, 0x80000000)) {
@@ -165,11 +178,11 @@ sym_init(void)
         if (INTTYPG(i) == DT_QUAD)
           INTTYPP(i, DT_REAL8);
         else if (INTTYPG(i) == DT_QCMPLX)
-          INTTYPP(i, DT_CMPLX16);
+          INTTYPP(i, DT_CMPLX32);
         if (ARGTYPG(i) == DT_QUAD)
           ARGTYPP(i, DT_REAL8);
         else if (ARGTYPG(i) == DT_QCMPLX)
-          ARGTYPP(i, DT_CMPLX16);
+          ARGTYPP(i, DT_CMPLX32);
       }
 
   /*
@@ -184,6 +197,7 @@ sym_init(void)
 
   /* int 0, 1 */
   tmp[0] = tmp[1] = (INT)0;
+  tmp1[0] = tmp1[1] = tmp1[2] = tmp1[3] = (INT)0; // AOCC
   stb.i0 = getcon(tmp, DT_INT);
   if (DT_INT == DT_INT8)
     stb.k0 = stb.i0;
@@ -282,6 +296,14 @@ sym_init(void)
   tmp[1] = CONVAL2G(stb.dbl0);
   xdneg(tmp, res);
   stb.dblm0 = getcon(res, DT_DBLE);
+// AOCC begin
+  tmp1[0] = CONVAL1G(stb.quad0);
+  tmp1[1] = CONVAL2G(stb.quad0);
+  tmp1[2] = CONVAL3G(stb.quad0);
+  tmp1[3] = CONVAL4G(stb.quad0);
+  xqneg(tmp1, res1);
+  stb.quadm0 = getcon(res1, DT_QUAD);
+// AOCC end
 #define NXTRA 2
 
   aux.curr_entry = &onlyentry;
@@ -1018,12 +1040,13 @@ getprint(int sptr)
     num[1] = CONVAL2G(sptr);
     cprintf(b, "%24.17le", num);
     break;
+
   case TY_QUAD:
     num[0] = CONVAL1G(sptr);
     num[1] = CONVAL2G(sptr);
     num[2] = CONVAL3G(sptr);
     num[3] = CONVAL4G(sptr);
-    cprintf(b, "%44.37qd", num);
+    cprintf(b, "%44.37Lf", num);
     break;
 
   case TY_CMPLX:
@@ -1045,6 +1068,23 @@ getprint(int sptr)
     num[1] = CONVAL2G(CONVAL2G(sptr));
     cprintf(&b[26], "%24.17le", num);
     break;
+
+  // AOCC begin
+  case TY_QCMPLX:
+    num[0] = CONVAL1G(CONVAL1G(sptr));
+    num[1] = CONVAL2G(CONVAL1G(sptr));
+    num[2] = CONVAL3G(CONVAL1G(sptr));
+    num[3] = CONVAL4G(CONVAL1G(sptr));
+    cprintf(b, "%44.37Lf", num);
+    b[44] = ',';
+    b[45] = ' ';
+    num[0] = CONVAL1G(CONVAL2G(sptr));
+    num[1] = CONVAL2G(CONVAL2G(sptr));
+    num[2] = CONVAL3G(CONVAL2G(sptr));
+    num[3] = CONVAL4G(CONVAL2G(sptr));
+    cprintf(&b[46], "%44.37Lf", num);
+    break;
+  // AOCC end
 
   case TY_NCHAR:
     sptr = CONVAL1G(sptr); /* sptr to char string constant */
@@ -2952,8 +2992,10 @@ instantiate_interface(SPTR iface)
         SCOPEP(arg, proc);
         if (DTY(DTYPEG(arg)) == TY_ARRAY && ASSUMSHPG(arg)) {
           DTYPE elem_dt = array_element_dtype(DTYPEG(arg));
+	  // AOCC Begin
           ADSC *ad = AD_DPTR(DTYPEG(dec_def_map[j].dec_sptr));
           sem.arrdim.ndim = sem.arrdim.ndefer = AD_NUMDIM(ad);
+	  // AOCC End
           int arr_dsc = mk_arrdsc();
           DTY(arr_dsc + 1) = elem_dt;
           DTYPEP(arg, arr_dsc);

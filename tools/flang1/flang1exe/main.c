@@ -4,14 +4,28 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ */
+
+/*
+ *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Month of modification : May 2019 - Added OMP offload support
+ * 2020/03/09: add fcprop pass to the flow.
+ *
+ * Modified for compiler_options()
+ * Date of modification: 21st May 2020
+ *
+ * Disabling inliner for Offloading compilation
+ * Date of modification : 01st June 2020
+ *
  * Adding a new pass to move variable allocations to host code
  * Date of modification : 26th Novemeber 2020
  *
  */
-/*
- * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
- * Notified per clause 4(b) of the license.
- */
+
 /** \file main.c
     \brief main program and initialization routines for fortran front-end
 */
@@ -153,11 +167,15 @@ int
 main(int argc, char *argv[])
 {
   int savescope, savecurrmod = 0;
+  char *extDirName = NULL;
   get_rutime();
   init(argc, argv); /* initialize */
   if (gbl.fn == NULL)
     gbl.fn = gbl.src_file;
 
+  // Disable inlining while offloading, or else it will conflict with
+  // declare target implementation
+  if (flg.omptarget) flg.inliner = false;   // AOCC
 #if DEBUG
   if (debugfunconly > 0)
     dodebug = 0;
@@ -186,6 +204,12 @@ main(int argc, char *argv[])
     if (!ipa_import_mode) {
       finish();
     }
+  }
+  if (flg.inliner) {
+   char template[] = "/tmp/tmpdir.XXXXXX";
+   extDirName = mkdtemp(template);
+   if (extDirName)
+     extractor_command_info(extDirName,1, NULL);
   }
   do { /* loop once for each user program unit */
 #if DEBUG
@@ -464,6 +488,12 @@ main(int argc, char *argv[])
           sectinline();
           DUMP("sectinline");
         }
+        // AOCC begin
+        if (ZBIT(1, 0x1)) {
+          collect_fcprop();
+          DUMP("fcprop");
+        }
+        // AOCC end
         if (XBIT(70, 0x18)) {
           linearize_arrays();
           DUMP("linearize");
@@ -559,6 +589,7 @@ main(int argc, char *argv[])
       gbl.outerentries = gbl.entries;
     }
     stb.curr_scope = savescope;
+    if (flg.inliner) extractor();   // AOCC
     ccff_close_unit_f90();
   } while (!gbl.eof_flag);
   finish(); /* finish does not return */
@@ -842,6 +873,7 @@ init(int argc, char *argv[])
   register_boolean_arg(arg_parser, "recursive", (bool *)&(flg.recursive),
                        false);
   register_string_arg(arg_parser, "cmdline", &(flg.cmdline), NULL);
+  register_string_arg(arg_parser, "source_file", &(flg.source_file), NULL);//AOCC
   register_boolean_arg(arg_parser, "func_args_alias", 
                        (bool *)&(flg.func_args_alias), false); // AOCC
   // AOCC begin
@@ -854,6 +886,7 @@ init(int argc, char *argv[])
 
   /* Set values form command line arguments */
   parse_arguments(arg_parser, argc, argv);
+  flg.source_file = sourcefile;//AOCC
 
   /* Direct debug output */
   if (was_value_set(arg_parser, &(flg.dbg)) ||
@@ -868,13 +901,15 @@ init(int argc, char *argv[])
     } else if ((flg.dbg[0] & 1) || sourcefile == NULL) {
       gbl.dbgfil = stderr;
     } else {
-      if (ipa_import_mode) {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbh");
-      } else {
-        tempfile = mkfname(sourcefile, file_suffix, ".qdbf");
-        if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
-          errfatal(5);
-      }
+      int index;
+      for (index = strlen(sourcefile) - 1; index > 0; index--)
+        if (sourcefile[index] == '.')
+          break;
+      if (index == 0)
+        index = strlen(sourcefile) - 1; /* file name has no suffix */
+      tempfile = mkfname(sourcefile, &sourcefile[index], ".qdbf");
+      if ((gbl.dbgfil = fopen(tempfile, "w")) == NULL)
+        errfatal(5);
     }
   }
 
@@ -1532,6 +1567,7 @@ finish(void)
     ipa_export_close();
   }
 
+  if (flg.inliner) extractor_end();  // AOCC
   freearea(8);      /* temporary filenames and pathnames space  */
   free_getitem_p(); /* getitem_p tbl contains area 8 pointers */
   destroy_action_map(&phase_dump_map);

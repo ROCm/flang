@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
- * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
- *
- *file cacosh.c
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  * Support for complex datatype arguments
  * Date of Modification: 08 January 2020

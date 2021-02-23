@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * AOCC ChangeLog:
+ *  2020/03/09 : fcprop pass in flang->llvm flow (-Hz,0x1,1)
+ */
 
 /** \file optimize.h
     \brief arious definitions for the optimizer module
@@ -673,7 +681,7 @@ typedef struct {
   STG_DECLARE(astb, OAST);
 } OPT;
 
-OPT opt;
+extern OPT opt;
 
 /*****  optimize.c *****/
 void optshrd_init(void);
@@ -793,6 +801,7 @@ void convert_output(void);                     /* outconv.c */
 void sectfloat(void);                          /* outconv.c */
 void sectinline(void);                         /* outconv.c */
 void linearize_arrays(void);                   /* outconv.c */
+void collect_fcprop(void);                     /* fcprop.c */ // AOCC
 void hoist_stmt(int std, int fg, int l);       /* outconv.c */
 void redundss(void);                           /* redundss.c */
 

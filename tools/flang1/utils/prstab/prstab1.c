@@ -4,12 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 /** \file
  * \brief LR parser (part 1)
  *
  */
 
 #include "lrutils.h"
+#define _PRSTAB_GLOBAL_
 #include "prstab.h"
 
 INT xargc;

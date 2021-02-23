@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Support for QCOMPLEX
+ * Date of Modification 18th Sept 2020
+ *
+ */
 
 #ifndef REGUTIL_H_
 #define REGUTIL_H_
@@ -20,7 +28,7 @@
 
 #include <stdint.h>
 
-#define RTEMPS 11
+#define RTEMPS 12        //AOCC
 
 #define LST_AREA 6
 #define AR_AREA 7

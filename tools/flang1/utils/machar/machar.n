@@ -4,6 +4,12 @@
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
 .\" */
+.\"/* 
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Last Modified: April 2020
+.\" */
 .NS 24 "Target Machine" "Appendix III - "
 .de DN
 .nf
@@ -63,8 +69,10 @@ lw(1n) lfCW | l | c.
 %TM_IDIV2%divide by power of 2 instruction%no
 %TM_FDIV%single precision divide instruction%no
 %TM_DDIV%double precision divide instruction%no
+%TM_QDIV%quad precision divide instruction%no
 %TM_FRCP%single precision Newton's reciprocal%no
 %TM_DRCP%double precision Newton's reciprocal%no
+%TM_QRCP%quad precision Newton's reciprocal%no
 %TM_UICMP%unsigned integer compare instruction%yes
 %TM_SQRT%square root instruction%no
 %TM_FIELD_INST%bit field support instructions%no
@@ -78,8 +86,10 @@ lw(1n) lfCW | l | c.
 %TM_AUTOINC_FP%auto increment when addressing single/double%yes
 %TM_FCMPZ%single precision compare with zero%yes
 %TM_DCMPZ%double precision compare with zero%yes
+%TM_QCMPZ%quad precision compare with zero%yes
 %TM_FCJMPZ%single precision compare with zero and jump%yes
 %TM_DCJMPZ%double precision compare with zero and jump%yes
+%TM_QCJMPZ%quad precision compare with zero and jump%yes
 %TM_REAL8%default real size is 8%no
 .TE
 .lp
@@ -113,6 +123,11 @@ signed quantity.
 .DA "( (x) << ((y)&31) )"
 .DN RSHIFT(x,y)
 .DA "( (x) >> ((y)&31) )"
+.DN SHIFTA(x,y)
+.DA "( ((y)&31) == 0 ? (x) :"
+.DA "( (x) & 0x80000000 ?"
+.DA "( (unsigned int)(x) >> ((y)&31) ) | ( ((unsigned int)-1) << (32-((y)&31)) ) :"
+.DA "(x) >> ((y)&31) ) )"
 .np
 Constant fold shift per target machine; operand which is shifted is an
 unsigned quantity.
@@ -175,7 +190,7 @@ lw(1n) lfCW | l | l | l | l | l | l | l | l.
 %TY_HCMPLX%4%1%32%0%reg2%Half Complex%half complex%2%
 %TY_CMPLX%8%3%64%0%reg2%Complex%complex%4%
 %TY_DCMPLX%16%7%128%0%reg3%Double Precision Complex%double complex%8%
-%TY_QCMPLX%16%7%128%0%reg3%Quad Precision Complex%complex*32%16%
+%TY_QCMPLX%32%15%256%0%reg3%Quad Precision Complex%complex*32%16% *\ AOCC \*
 %TY_BLOG%1%0%8%0%reg0%Byte Logical%logical*1%1%
 %TY_SLOG%2%1%16%0%reg0%Short Logical%logical*2%2%
 %TY_LOG%4%3%32%0%reg0%Logical%logical%4%
@@ -257,11 +272,11 @@ lw(1n) lfCW | l | l | l | l | l | l | l | l.
 %TY_HALF%2%1%16%0%reg1%Floating Point Half%real%2%
 %TY_REAL%8%7%64%0%reg1%Floating Point Real%real%8%
 %TY_DBLE%8%7%64%0%reg2%Double Precision Real%real%8%
-%TY_QUAD%16%15%128%0%reg2%Quad Precision Real%double precision%16%
+%TY_QUAD%16%15%128%0%reg2%Quad Precision Real%Quad precision%16%
 %TY_HCMPLX%4%1%32%0%reg2%Half Complex%half complex%2%
 %TY_CMPLX%16%7%64%0%reg3%Complex%complex%8%
 %TY_DCMPLX%16%7%128%0%reg3%Double Precision Complex%complex%8%
-%TY_QCMPLX%32%15%256%0%reg3%Quad Precision Complex%double complex%16%
+%TY_QCMPLX%32%15%256%0%reg3%Quad Precision Complex%quad complex%16%
 %TY_BLOG%8%7%64%0%reg0%Byte Logical%logical%1%
 %TY_SLOG%8%7%64%0%reg0%Short Logical%logical%2%
 %TY_LOG%8%7%64%0%reg0%Logical%logical%4%
@@ -302,7 +317,7 @@ lw(1n) lfCW | l | l | l | l | l | l | l | l.
 %TY_HCMPLX%4%1%32%0%reg2%Half Complex%half complex%2%
 %TY_CMPLX%8%3%64%0%reg2%Complex%complex%4%
 %TY_DCMPLX%16%7%128%0%reg3%Double Precision Complex%complex(8)%8%
-%TY_QCMPLX%16%7%128%0%reg3%Quad Precision Complex%complex(16)%16%
+%TY_QCMPLX%16%7%256%0%reg3%Quad Precision Complex%complex(16)%16%
 %TY_BLOG%1%0%8%0%reg0%Byte Logical%logical(1)%1%
 %TY_SLOG%2%1%16%0%reg0%Short Logical%logical(2)%2%
 %TY_LOG%4%3%32%0%reg0%Logical%logical%4%

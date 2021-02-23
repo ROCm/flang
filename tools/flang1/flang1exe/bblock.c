@@ -10,7 +10,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Implemented diagnostics for simpler case of uninitialized variable use.
- * Last modified: Nov 2020
+ * Last modified: Dec 2020
  *
  *
  * Support for x86-64 OpenMP offloading
@@ -3099,12 +3099,12 @@ void ompaccel_ast_transform() {
 
   if (flg.amdgcn_target) {
     ompaccel_ast_segregate_parsec();
+    ompaccel_ast_simplify_nested_parsec();
   }
 
   if (flg.x86_64_omptarget) {
     ompaccel_ast_simplify_nested_parsec();
   }
 }
-
 #endif
 /* AOCC end */

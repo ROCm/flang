@@ -4,10 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ *
+ * While removing the scope labels, blocks were traversed with a wrong loop
+ * terminating condition. This has been fixed.
+ * Date of Modification: 27th Aug 2019
+ *
  */
+
 /**
    \file
    \brief Functions for dealing with lexical scopes and the lifetimes

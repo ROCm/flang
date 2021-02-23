@@ -36,6 +36,11 @@ typedef struct {
   double imag;
 } dcmplx_t;
 
+typedef struct {
+  __float128 real;
+  __float128 imag;
+} qcmplx_t;
+
 void ENTF90(MERGEC, mergec)(cmplx_t *res, cmplx_t *tsource, cmplx_t *fsource,
                             void *mask, __INT_T *size)
 {
@@ -50,6 +55,18 @@ void ENTF90(MERGEC, mergec)(cmplx_t *res, cmplx_t *tsource, cmplx_t *fsource,
 
 void ENTF90(MERGEDC, mergedc)(dcmplx_t *res, dcmplx_t *tsource,
                               dcmplx_t *fsource, void *mask, __INT_T *size)
+{
+  if (I8(__fort_varying_log)(mask, size)) {
+    res->real = tsource->real;
+    res->imag = tsource->imag;
+  } else {
+    res->real = fsource->real;
+    res->imag = fsource->imag;
+  }
+}
+
+void ENTF90(MERGEQC, mergeqc)(qcmplx_t *res, qcmplx_t *tsource,
+                              qcmplx_t *fsource, void *mask, __INT_T *size)
 {
   if (I8(__fort_varying_log)(mask, size)) {
     res->real = tsource->real;

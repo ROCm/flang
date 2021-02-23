@@ -199,6 +199,8 @@ extern int mr_res_xr[MR_MAX_XREG_RES + 1];
 #define DP(i) ARG_XR(i)
 #define ISP(i) (i + 100) /* not used? */
 #define IDP(i) (i + 100)
+#define IQP(i) (i + 100)
+#define IQP(i) (i + 100)
 
 /* Macro for defining alternate-return register for fortran subprograms.
  */

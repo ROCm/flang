@@ -7,7 +7,14 @@
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *   Date of modification 12th February  2020
+ *   Date of modification 04th April     2020
+ * Added support for quad precision
+ *   Last modified: Feb 2020
  */
+
 /**
       \file dump.c
       \brief dump routines for compiler's internal data structures.
@@ -1931,6 +1938,15 @@ printname(int sptr)
       break;
 
     case TY_QUAD:
+      // AOCC begin
+      num[0] = CONVAL1G(sptr);
+      num[1] = CONVAL2G(sptr);
+      num[2] = CONVAL3G(sptr);
+      num[3] = CONVAL4G(sptr);
+      cprintf(b, "%.37Lf", num);
+      break;
+      // AOCC end
+
     case TY_DBLE:
       num[0] = CONVAL1G(sptr);
       num[1] = CONVAL2G(sptr);

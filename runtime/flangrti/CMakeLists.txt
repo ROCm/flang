@@ -31,6 +31,8 @@ SET(PGC_SRC_FILES
   bessel_tyn.c
   dbessel_tjn.c
   dbessel_tyn.c
+  qbessel_tjn.c
+  qbessel_tyn.c
   f2cmain.c
   kidnnt.c
   ktrap.c
@@ -38,6 +40,7 @@ SET(PGC_SRC_FILES
   mcopy2.c
   mcopy4.c
   mcopy8.c
+  mcopy16.c
   mthi64.c
   mset1.c
   mset2.c
@@ -46,7 +49,9 @@ SET(PGC_SRC_FILES
   mzero1.c
   mzero2.c
   mzero4.c
+  mzero4.c
   mzero8.c
+  mzero16.c
   ioargs.c
   memalign.c
   iostdinit.c
@@ -83,10 +88,7 @@ if (NOT DEFINED LIBOMP_EXPORT_DIR)
   find_library( 
     FLANG_LIBOMP
     libomp.so
-    HINTS
-    ${CMAKE_BINARY_DIR}/lib
-    ${OPENMP_BUILD_DIR}
-    NO_DEFAULT_PATH)
+    HINTS ${CMAKE_BINARY_DIR}/lib)
   target_link_libraries(flangrti_shared ${FLANG_LIBOMP})
 endif()
 
@@ -94,7 +96,8 @@ find_library(
   LIBPGMATH
   libpgmath.so
   HINTS ${CMAKE_BINARY_DIR}/lib)
-target_link_libraries(flangrti_shared ${LIBPGMATH} -Wl,-rpath,\$ORIGIN)
+target_link_libraries(flangrti_shared ${LIBPGMATH})
+target_link_libraries(flangrti_shared quadmath)
 
 if( ${TARGET_ARCHITECTURE} STREQUAL "aarch64" )
   target_compile_definitions(flangrti_static PRIVATE TARGET_LINUX_ARM)

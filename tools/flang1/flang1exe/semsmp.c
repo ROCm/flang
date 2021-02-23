@@ -10,7 +10,7 @@
  * Notified per clause 4(b) of the license.
  *
  * Changes to support AMDGPU OpenMP offloading.
- * Last Modified: Aug 2020
+ * Last Modified: Nov 2020
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
@@ -509,7 +509,7 @@ static struct cl_tag { /* clause table */
     {0, 0, NULL, NULL, "NUM_TEAMS", BT_TEAMS},
     {0, 0, NULL, NULL, "THREAD_LIMIT", BT_TEAMS},
     {0, 0, NULL, NULL, "DIST_SCHEDULE", BT_DISTRIBUTE},
-    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP},
+    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP | BT_TASK},  //AOCC
     {0, 0, NULL, NULL, "IS_DEVICE_PTR", BT_TARGET},
     {0, 0, NULL, NULL, "SIMD", BT_PDO | BT_PARDO | BT_SIMD},
     {0, 0, NULL, NULL, "THREADS", BT_TARGET},
@@ -1572,6 +1572,14 @@ semsmp(int rednum, SST *top)
     sem.collapse = 0;
     if (CL_PRESENT(CL_COLLAPSE)) {
       sem.collapse = CL_VAL(CL_COLLAPSE);
+    } else if (CL_PRESENT(CL_SAFELEN) || CL_PRESENT(CL_LINEAR) ||
+        CL_PRESENT(CL_ALIGNED) || CL_PRESENT(CL_PRIVATE) ||
+        CL_PRESENT(CL_LASTPRIVATE) || CL_PRESENT(CL_REDUCTION)){
+      errwarn((error_code_t)604);
+      sem.expect_simd_do = FALSE;
+      par_push_scope(TRUE);
+      SST_ASTP(LHS, 0);
+      break;
     }
     sem.expect_simd_do = TRUE;
     par_push_scope(TRUE);
@@ -7526,9 +7534,12 @@ do_reduction(void)
         /* error - illegal reduction variable */
         continue;
       reduc_symp->Private = decl_private_sym(reduc_symp->shared);
+      // AOCC Begin
+      // FIXME: Remove when we support reduction of real*4 in GPUs
       if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
-         DTYPEP(reduc_symp->Private, DT_DBLE);
+        DTYPEP(reduc_symp->Private, DT_DBLE);
       }
+      // AOCC End
       set_parref_flag(reduc_symp->shared, reduc_symp->shared,
                       BLK_UPLEVEL_SPTR(sem.scope_level));
       (void)mk_storage(reduc_symp->Private, &lhs);

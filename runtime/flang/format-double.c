@@ -212,14 +212,17 @@ static inline uint64_t
 double_to_uint64 (double x) {
 
 #if defined(TARGET_LLVM) && defined(TARGET_LINUX_X8664)
+static int t_t;
 /*  
  *  LLVM emulates 'vcvttsd2usi' (a new AVX-512F instruction) with 'vcvttsd2si' 
  *  on non AVX-512F machines to cast double to unsigned long. With -Ktrap=fp
  *  option, this generates a floating point exception when the converted number
  *  is >= 9223372036854775808 (1<<63).
  */
-  if (x >= SIGN_BIT)
+  if (x >= SIGN_BIT) {
+    t_t++;    // AOCC to avoid speculative execution of next line
     return (uint64_t) (x - SIGN_BIT) + SIGN_BIT;
+  }
 #endif
   return (uint64_t) x;
 }

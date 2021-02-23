@@ -5,21 +5,36 @@
 .\" *
 .\" */
 .\"/*
-.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
 .\" *
 .\" * Support for DNORM intrinsic
-.\" *
-.\" * Date of Modification: 21st February 2019
+.\" *  Date of Modification: 21st February 2019
 .\" *
 .\" * Support for EXECUTE_COMMAND_LINE intrinsic
-.\" *
-.\" * Date of Modification: July 2019
+.\" *  Date of Modification: July 2019
 .\" *
 .\" * Support for parity intrinsic.
-.\" * Month of Modification: July 2019
+.\" *  Month of Modification: July 2019
 .\" *
 .\" * Support for Bit transformational intrinsic iany, iall, iparity.
-.\" * Month of Modification: July 2019
+.\" *  Month of Modification: July 2019
+.\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" *  Last modified: April 2020
+.\" *
+.\" * Complex datatype support for atan2 under flag f2008
+.\" *  Modified on 13th March 2020
+.\" 
+.\" * Implemented rank intrinsic
+.\" * Date of modification: 10th Aug 2020
+.\"
+.\" * Added code support for dasinh
+.\" * Modified on 31st Aug 2020
+.\"
+.\" * Added code support for cotan
+.\" * Modified on Oct 2020
+.\"
 .\" */
 .NS 28 "Intrinsics & Generics" "Appendix VII - "
 .de IN
@@ -330,6 +345,32 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .QCOSD 1 Q Q none * V
 .AT elemental x
 
+.IN ..COTAN 1 R R none * V
+.AT elemental x
+.IN .COTAN 1 R R none * V
+.AT elemental x
+.IN .DCOTAN 1 D D none * V
+.AT elemental x
+.IN DCOTAN 1 D D none * V
+.AT elemental x
+.IN .QCOTAN 1 Q Q none * V
+.AT elemental x
+.IN QCOTAN 1 Q Q none * V
+.AT elemental x
+
+.IN ..COTAND 1 R R none * V
+.AT elemental x
+.IN .COTAND 1 R R none * V
+.AT elemental x
+.IN .DCOTAND 1 D D none * V
+.AT elemental x
+.IN DCOTAND 1 D D none * V
+.AT elemental x
+.IN .QCOTAND 1 Q Q none * V
+.AT elemental x
+.IN QCOTAND 1 Q Q none * V
+.AT elemental x
+
 .IN ..TAN 1 R R none * V
 .AT elemental x
 .IN .TAN 1 R R none * V
@@ -448,6 +489,10 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental x
 .IN DSINH 1 D D none * V
 .AT elemental x
+.IN .DASINH 1 D D none * V
+.AT elemental x
+.IN DASINH 1 D D none * V
+.AT elemental x
 .IN .QSINH 1 Q Q none * V
 .AT elemental x
 
@@ -515,6 +560,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental z
 .IN .QIMAG 1 CQ Q QIMAG * V
 .AT elemental x
+.IN QIMAG 1 CQ Q QIMAG * V
+.AT elemental z
 
 .IN ..CONJG 1 C C CONJG * V
 .AT elemental z
@@ -526,6 +573,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental z
 .IN .QCONJG 1 CQ CQ QCONJG * V
 .AT elemental x
+.IN QCONJG 1 CQ CQ QCONJG * V
+.AT elemental z
 
 .IN DPROD 2 R D DPROD * V
 .AT elemental x y
@@ -665,6 +714,8 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .AT elemental a p
 .IN .DMODULO 2 D D none -pgf90_dmodulo V
 .AT elemental a p
+.IN ..QMODULO 2 Q Q none -pgf90_qmodulo V
+.AT elemental a p
 .IN .QMODULO 2 Q Q none -pgf90_qmodulo V
 .AT elemental a p
 
@@ -794,6 +845,13 @@ sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
 .IN .KRSHIFT 2 I8 I8 none -
 .AT elemental i shift
 
+.IN .ISHIFTA 2 SI SI none -
+.AT elemental i shift
+.IN .JSHIFTA 2 I I none -
+.AT elemental i shift
+.IN .KSHIFTA 2 I8 I8 none -
+.AT elemental i shift
+
 .IN .2SCH 1 SI H CHAR -
 .AT elemental i
 .IN .CHAR 1 I H CHAR -
@@ -887,6 +945,11 @@ Extension to Fortran-77.
 .IN DREAL 1 CD D tc
 .AT elemental a
 Converts complex*16 to double.
+.\" AOCC begin
+.IN QREAL 1 CQ Q tc
+Converts complex*32 to quad.
+.AT elemental a
+.\" AOCC end
 .IN .2D 1 N D tc
 Convert any numeric data type to double precision.
 .AT elemental a
@@ -896,6 +959,14 @@ Convert any numeric data type to complex.
 .IN .2CD 11 N CD tc
 Convert any numeric data type to double complex.
 .AT elemental a
+.\" AOCC begin
+.IN .2Q 1 N Q tc
+Convert any numeric data type to quad precision.
+.AT elemental a
+.IN .2CQ 11 N CQ tc
+Convert any numeric data type to quad complex.
+.AT elemental a
+.\" AOCC end
 .IN DINT 1 D D none * V
 .AT elemental a
 
@@ -954,11 +1025,17 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .AT elemental a
 .GN DCMPLX .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD
 .AT elemental x *y
-.GN IMAG - - - - .AIMAG DIMAG - - .QIMAG
+./" AOCC begin
+.GN QUAD QFLOTI QFLOAT .2Q .2Q .2Q QREAL .2Q .2Q .2Q
+.AT elemental a
+.GN QCMPLX .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ
+.AT elemental x *y
+./" AOCC end
+.GN IMAG - - - - .AIMAG DIMAG - QIMAG QIMAG
 .AT elemental z
-.GN AIMAG - - - - .AIMAG DIMAG - - .QIMAG
+.GN AIMAG - - - - .AIMAG DIMAG - QIMAG QIMAG
 .AT elemental z
-.GN CONJG - - - - .CONJG DCONJG - - .QCONJG
+.GN CONJG - - - - .CONJG DCONJG - QCONJG QCONJG
 .AT elemental z
 .GN ININT - - .ININT IIDNNT - - - - -
 .AT elemental a
@@ -984,13 +1061,17 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .AT elemental x
 .GN LOG10 - - ALOG10 DLOG10 - - - .QLOG10 -
 .AT elemental x
-.GN SIN - - .SIN DSIN CSIN CDSIN - .QSIN .CQSIN
+.GN SIN - - .SIN DSIN CSIN CDSIN - .QSIN .CQSIN CQSIN
 .AT elemental x
-.GN SIND - - .SIND DSIND - - - .QSIN .CQSIN
+.GN SIND - - .SIND DSIND - - - .QSIND .CQSIND
 .AT elemental x
 .GN COS - - .COS DCOS CCOS CDCOS - .QCOS .CQCOS
 .AT elemental x
 .GN COSD - - .COSD DCOSD - - - .QCOSD -
+.AT elemental x
+.GN COTAN - - .COTAN DCOTAN - - - .QCOTAN -
+.AT elemental x
+.GN COTAND - - .COTAND DCOTAND - - - .QCOTAND -
 .AT elemental x
 .GN TAN - - .TAN DTAN - - - .QTAN -
 .AT elemental x
@@ -1031,6 +1112,8 @@ sptr	name	siname	iname	rname	dname	cname	cdname	i8name
 .GN LSHIFT .ILSHIFT .JLSHIFT - - - - .KLSHIFT - -
 .AT elemental i shift
 .GN RSHIFT .IRSHIFT .JRSHIFT - - - - .KRSHIFT - -
+.AT elemental i shift
+.GN SHIFTA .ISHIFTA .JSHIFTA - - - - .KSHIFTA - -
 .AT elemental i shift
 .GN MODULO .IMODULO .MODULO .AMODULO .DMODULO - - .KMODULO .QMODULO -
 .AT elemental a p
@@ -1175,6 +1258,8 @@ The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
 .AT elemental x
 .PD EXECUTE_COMMAND_LINE - -
 .AT subroutine command *wait *exitstat *cmdstat *cmdmsg
+.PD MM_PREFETCH - -
+.AT subroutine address *hint
 .PD DOT_PRODUCT - -
 .AT transformational vector_a vector_b
 .PD EQV - -
@@ -1235,6 +1320,8 @@ of its single-precision (double-precision) argument.
 .AT transformational source shape *pad *order
 .PD SHAPE - -
 .AT transformational source *kind
+.PD RANK - -
+.AT transformational source *kind
 .PD SIZE - -
 .AT inquiry array *dim *kind
 .PD ALLOCATED - -
@@ -1264,6 +1351,9 @@ CM Fortran's version of LBOUND.
 CM Fortran UBOUND intrinsic.
 .AT inquiry array *dim
 .PD .DSHAPE - -
+CM Fortran SHAPE intrinsic.
+.AT transformational source
+.PD .DRANK - -
 CM Fortran SHAPE intrinsic.
 .AT transformational source
 .PD .DSIZE - -
@@ -1595,6 +1685,8 @@ Internal subroutine to perform a copy out of an ordinary argument.
 .AT transformational array *dim *mask *segment *exclusive
 .H1 LEADZ - -
 .AT elemental i
+.H1 TRAILZ - -
+.AT elemental i
 .H1 MAXVAL_PREFIX - -
 .AT transformational array *dim *mask *segment *exclusive
 .H1 MAXVAL_SCATTER - -
@@ -1871,7 +1963,7 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .AT elemental i
 .H7 POPPAR - -
 .AT elemental i
-.H7 .TRAILZ - -
+.H7 TRAILZ - -
 .AT elemental i
 .H7 .MASKL - -
 .AT elemental i *kind
@@ -1896,7 +1988,7 @@ sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
 .H7 ASINH - -
 .AT elemental x
 .H7 ATANH - -
-.AT elemental x
+.AT elemental x y
 .H7 BESSEL_J0 - -
 .AT elemental x
 .H7 BESSEL_J1 - -

@@ -4,9 +4,34 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for DNORM intrinsic
+ *  Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ *  Month of Modification: May 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *  Month of Modification: July 2019
+ *
+ * Support for TRAILZ intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *  Month of Modification: July 2019
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ *
+ * Support for real*16 intrinsics
+ * Date of Modification: 18th July 2020
  */
 
 /** \file Provides the front-end access to the run time library structure
@@ -112,6 +137,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"dfloorv", "", false, "k"},
     {"dmodulev", "", false, ""},
     {"dmodulov", "", false, ""},
+    {"qmodulov", "", false, ""},
     {"errorstop08a_char", "", false, ""},
     {"errorstop08a_int", "", false, ""},
     {"execcmdline", "", false, ""},
@@ -119,6 +145,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"expon", "", false, "k"},
     {"expond", "", false, "k"},
     {"expondx", "", false, "k"},
+    {"exponqx", "", false, "k"},
     {"exponx", "", false, "k"},
     {"extends_type_of", "", true, "k"},
     {"finalize", "", true, ""},
@@ -127,6 +154,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"frac", "", false, ""},
     {"fracd", "", false, ""},
     {"fracdx", "", false, ""},
+    {"fracq", "", false, ""},
+    {"fracqx", "", false, ""},
     {"fracx", "", false, ""},
     {"get_cmda", "", false, ""},
     {"get_cmd_arga", "", false, ""},
@@ -190,6 +219,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"matmul_cplx16", "", true, ""},
     {"matmul_cplx16mxv_t", "", true, ""},
     {"matmul_cplx32", "", true, ""},
+    {"matmul_cplx32mxv_t", "", true, ""},
     {"matmul_cplx8", "", true, ""},
     {"matmul_cplx8mxv_t", "", true, ""},
     {"matmul_int1", "", true, ""},
@@ -205,11 +235,13 @@ FtnRteRtn ftnRtlRtns[] = {
     {"matmul_real4mxv_t", "", true, ""},
     {"matmul_real8", "", true, ""},
     {"matmul_real8mxv_t", "", true, ""},
+    {"matmul_real16mxv_t", "", true, ""},
     {"max", "", false, "k"},
     {"mcopy1", "", false, ""},
     {"mcopy2", "", false, ""},
     {"mcopy4", "", false, ""},
     {"mcopy8", "", false, ""},
+    {"mcopyz32", "", false, ""},
     {"mcopyz16", "", false, ""},
     {"mcopyz4", "", false, ""},
     {"mcopyz8", "", false, ""},
@@ -227,8 +259,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"mergel2", "", false, ""},
     {"mergel8", "", false, ""},
     {"mergeq", "", false, ""},
+    {"mergeqc", "", false, ""},      // AOCC
     {"merger", "", false, ""},
     {"min", "", false, "k"},
+    {"mmul_cmplx32", "", false, ""},
     {"mmul_cmplx16", "", false, ""},
     {"mmul_cmplx8", "", false, ""},
     {"mmul_real4", "", false, ""},
@@ -241,6 +275,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"mset2", "", false, ""},
     {"mset4", "", false, ""},
     {"mset8", "", false, ""},
+    {"msetz32", "", false, ""},
     {"msetz16", "", false, ""},
     {"msetz4", "", false, ""},
     {"msetz8", "", false, ""},
@@ -249,6 +284,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"mzero2", "", false, ""},
     {"mzero4", "", false, ""},
     {"mzero8", "", false, ""},
+    {"mzeroz32", "", false, ""},
     {"mzeroz16", "", false, ""},
     {"mzeroz4", "", false, ""},
     {"mzeroz8", "", false, ""},
@@ -259,6 +295,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"nearestd", "", false, ""},
     {"nearestdx", "", false, ""},
     {"nearestx", "", false, ""},
+    //AOCC Begin
+    {"nearestq", "", false, ""},
+    {"nearestqx", "", false, ""},
+    //AOCC End
     {"nlena", "", true, ""},
     {"nlentrim", "", false, ""},
     // AOCC Begin
@@ -267,6 +307,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"norm2_real4_dim", "", true, ""},
     {"norm2_real8", "", true, ""},
     {"norm2_real8_dim", "", true, ""},
+    {"norm2_real16", "", true, ""},
+    {"norm2_real16_dim", "", true, ""},
     // AOCC End
     {"nrepeat", "", false, ""},
     {"nscan", "", false, "k"},
@@ -310,6 +352,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"ptrchk", "", false, ""},
     {"ptrcp", "", false, ""},
     {"real", "", false, ""},
+    {"real32", "", false, ""},
     {"real16", "", false, ""},
     {"real4", "", false, ""},
     {"real8", "", false, ""},
@@ -317,6 +360,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"rrspacing", "", false, ""},
     {"rrspacingd", "", false, ""},
     {"rrspacingdx", "", false, ""},
+    {"rrspacingq", "", false, ""},
+    {"rrspacingqx", "", false, ""},
     {"rrspacingx", "", false, ""},
     {"rtn_name", "", false, ""},
     {"same_intrin_type_as", "", true, "k"},
@@ -324,6 +369,10 @@ FtnRteRtn ftnRtlRtns[] = {
     {"scale", "", false, ""},
     {"scaled", "", false, ""},
     {"scaledx", "", false, ""},
+    //AOCC Begin
+    {"scaleq", "", false, ""},
+    {"scaleqx", "", false, ""},
+    //AOCC End
     {"scalex", "", false, ""},
     {"scana", "", false, "k"},
     {"sect", "", true, ""},
@@ -341,6 +390,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"setexp", "", false, ""},
     {"setexpd", "", false, ""},
     {"setexpdx", "", false, ""},
+    {"setexpq", "", false, ""},
+    {"setexpqx", "", false, ""},
     {"setexpx", "", false, ""},
     {"shape", "", true, "k"},
     {"shape1", "", true, ""},
@@ -352,6 +403,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"spacing", "", false, ""},
     {"spacingd", "", false, ""},
     {"spacingdx", "", false, ""},
+    {"spacingq", "", false, ""},
+    {"spacingqx", "", false, ""},
     {"spacingx", "", false, ""},
     {"stopa", "", false, ""},
     {"stop08a", "", false, ""},
@@ -430,6 +483,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"counts", "", true, ""},
     {"cpu_time", "", false, ""},
     {"cpu_timed", "", false, ""},
+    {"cpu_timeq", "", false, ""},
     {"cshift", "", true, ""},
     {"cshiftc", "", true, ""},
     {"cshifts", "", true, ""},
@@ -595,6 +649,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"reshapeca", "", true, ""},
     {"rnum", "", true, ""},
     {"rnumd", "", true, ""},
+    {"rnumq", "", true, ""},         // AOCC
     {"rseed", "", true, ""},
     {"secnds", "", true, ""},
     {"secndsd", "", true, ""},
@@ -610,6 +665,9 @@ FtnRteRtn ftnRtlRtns[] = {
     {"sums", "", true, ""},
     {"sysclk", "", true, ""},
     {"template", "", true, ""},
+    /* AOCC begin */
+    {"trailz", "", false, ""},
+    /* AOCC end */
     {"transfer", "", true, ""},
     {"type", "", false, ""},
     {"typep", "", false, ""},
@@ -713,6 +771,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"f90io_open_sharea", "", false, ""},
     {"f90io_print_init", "", false, ""},
     {"f90io_rewind", "", false, ""},
+    {"f90io_sc_cq_fmt_write", "", false, ""},  // AOCC
+    {"f90io_sc_cq_ldw", "", false, ""},        // AOCC
     {"f90io_sc_cd_fmt_write", "", false, ""},
     {"f90io_sc_cd_ldw", "", false, ""},
     {"f90io_sc_cf_fmt_write", "", false, ""},
@@ -721,6 +781,8 @@ FtnRteRtn ftnRtlRtns[] = {
     {"f90io_sc_ch_ldw", "", false, ""},
     {"f90io_sc_d_fmt_write", "", false, ""},
     {"f90io_sc_d_ldw", "", false, ""},
+    {"f90io_sc_q_fmt_write", "", false, ""},   // AOCC
+    {"f90io_sc_q_ldw", "", false, ""},         // AOCC
     {"f90io_sc_f_fmt_write", "", false, ""},
     {"f90io_sc_f_ldw", "", false, ""},
     {"f90io_sc_fmt_write", "", false, ""},

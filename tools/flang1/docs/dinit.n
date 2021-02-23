@@ -3,6 +3,12 @@
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
 .\" */
 .NS 14 "Data Initialization File"
 .lp
@@ -88,6 +94,13 @@ in the corresponding DINIT_LOC, DINIT_FMT, or DINIT_NML.
 Indicates that 2 32-bit words are to be initialized with
 a 64-bit double precision floating point value.
 \*(cfconval\*(rf is a symbol table pointer to a double precision constant.
+.\" AOCC begin
+.IP "dtype = DT_QUAD" CW
+.br
+Indicates that 2 32-bit words are to be initialized with
+a 128-bit quad precision floating point value.
+\*(cfconval\*(rf is a symbol table pointer to a quad precision constant.
+.\* AOCC end
 .IP "dtype = DT_CMPLX" CW
 .br
 Indicates that 2 32-bit words are to be initialized with

@@ -4,6 +4,12 @@
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\" *
 .\" */
+.\"/* 
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Last Modified: May 2020
+.\" */
 .NS 23 "Error Messages" "Appendix II - "
 .af EN 001    \" define format for EN
 .de MS
@@ -711,7 +717,7 @@ Messages 280-300 RESERVED for directive handling
 .MS W 281 "Directive ignored - $ $"
 .MS F 282 "#error $"
 This message appears when preprocessing a file and a #error line is reached.
-.MS F 283 "#warning $"
+.MS S 283 "#warning $"
 This message appears when preprocessing a file and a #warning line is reached.
 .MS W 284 "A statement with an HPF keyword must begin with $ - $"
 HPF keyword statements (like DISTRIBUTE, ALIGN) must appear on lines
@@ -1333,6 +1339,8 @@ LAUNCH_BOUNDS is now allowed on ATTRIBUTES(DEVICE) or host subprograms.
 .MS E 552 "LAUNCH_BOUNDS() values must be positive"
 The LAUNCH_BOUNDS maximum number of threads and minimum grid size must
 be positive integer values.
+.MS W 603 "Unsupported clause specified for the vector directive. Only the always/never clauses are supported."
+.MS W 604 "Unsupported clause specified for the omp simd directive. The directive will be ignored."
 .MS S 901 "#elif after #else"
 A preprocessor #elif directive was found after a #else directive; only
 #endif is allowed in this context.
@@ -1500,6 +1508,7 @@ A DO CONCURRENT or FORALL construct or statement may not specify an index name m
 .MS S 1061 "The definition of function return type of $ does not match its declaration type"
 .MS S 1062 "LOCAL_INIT variable does not have an outside variable of the same name - $"
 A DO CONCURRENT variable with LOCAL_INIT locality must have a host variable of the same name.
+.MS S 1063 "Real number has a ‘q’ exponent and an explicit kind"
 Starting from 1100, Reserved for OpenMP GPU
 .MS S 1198 "OpenMP GPU - The feature is not implemented yet for the target device"
 .MS W 1199 "OpenMP GPU - \"$\" is ignored for the target device"

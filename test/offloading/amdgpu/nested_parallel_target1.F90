@@ -1,3 +1,8 @@
+! Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+!
+! Adding regression test for target inside parallel construct
+! Date of Creation: 08th April 2020
+!
 program pgm
   use omp_lib
   INTEGER :: compute_array(10, 10)
@@ -18,8 +23,6 @@ program pgm
       compute_array(p_val,:) = 100 + compute_array(p_val,:)
       p_val = p_val + 99
     !$omp end target
-    ! FIXME: With barrier!
-    !$omp barrier 
     IF (p_val == omp_get_thread_num() + 1) THEN
      compute_array(p_val,:) = compute_array(p_val,:) + 1
     END IF
@@ -27,4 +30,4 @@ program pgm
 
  call __check_int(compute_array_exp, compute_array, 100)
 
-end  
+end

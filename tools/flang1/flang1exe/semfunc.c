@@ -4,10 +4,82 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Avoiding generation of _mth_aint and _mth_dint lib calls for the aint input;
+ * instead handling it in flang
+ *  Date of Modification: May 2018
+ *
+ * Support for DNORM intrinsic
+ *  Date of Modification: 21st February 2019
+ *
+ * Support for Bit Sequence Comparsion intrinsic
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Masking intrinsics.
+ *  Month of Modification: May 2019
+ *
+ * Support for Bit Shifting intrinsics.
+ *  Month of Modification: June 2019
+ *
+ * Support for MERGE_BITS intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for TRAILZ intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for F2008 EXECUTE_COMMAND_LINE intrinsic subroutine.
+ *  Month of Modification: July 2019
+ *
+ * Support for Combined Bit Shifting intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for parity intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *  Month of Modification: July 2019
+ *
+ * Fixes for CP2K application build
+ *  Month of Modification: November 2019
+ *
+ * Fixed issues related to type bound procedures with and without nopass clause
+ *  Date of Modification: December 2019
+ *
+ * Complex datatype support for acosh , asinh , atanh
+ *  Modified on 08 January 2020
+ *
+ * Added code to support reshape with implied dos inside target region
+ *  Date of Modification: 23rd January 2020
+ *
+ * Added code to support atan with two arguments
+ *  Date of Modification: 27th February 2020
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ *
+ * Complex datatype support for atan2 under flag f2008
+ *  Modified on 13th March 2020
+ *
+ * Modified to omit source file name in compiler_options()
+ * Date of modification:21st May 2020
+ *
+ * Last modified: Jun 2020
+ *
+ * Support for real*16 intrinsics
+ * Date of Modification: 18th July 2020
+ *
+ * Implemented rank intrinsic
+ * Date of modification: 10th Aug 2020
+ *
+ * Added quad support for floor and ceiling intrinsics
+ * Last modified: August 2020
+ *
  */
+
 /** \file
     \brief Fortran front-end utility routines used by Semantic Analyzer to
            process functions, subroutines, predeclareds, etc.
@@ -110,6 +182,8 @@ static int gen_finalized_result(int fval, int func_sptr);
 static int byval_func_ptr = 0;
 static int byval_dscptr = 0;
 static int byval_paramct = 0;
+
+int nearest_status; /* indicating nearest is outside the array */
 
 #define PASS_BYVAL 1
 #define PASS_BYREF 2
@@ -4156,11 +4230,16 @@ gen_newer_intrin(int sptrgenr, int dtype)
       strcmp(intrin_nmptr, "sinh") == 0 || strcmp(intrin_nmptr, "tanh") == 0 ||
       strcmp(intrin_nmptr, "tan") == 0  ||
        //AOCC begin
-      strcmp(intrin_nmptr, "asinh") == 0|| strcmp(intrin_nmptr, "atanh") == 0|| 
-      strcmp(intrin_nmptr, "acosh") == 0 ) {
+      strcmp(intrin_nmptr, "asinh") == 0 || strcmp(intrin_nmptr, "atanh") == 0|| 
+      strcmp(intrin_nmptr, "acosh") == 0 || strcmp(intrin_nmptr, "cotan") == 0 ) {
       //AOCC end 
     if (DT_ISCMPLX(dtype)) {
       switch (DTY(dtype)) {
+      // AOCC begin
+      case TY_QCMPLX:
+        strcat(nmptr, "cq");
+        break;
+      // AOCC end
       case TY_DCMPLX:
         strcat(nmptr, "cd");
         break;
@@ -4188,6 +4267,11 @@ gen_newer_intrin(int sptrgenr, int dtype)
       INTASTP(sptr, NEW_INTRIN);
 
       switch (DTY(dtype)) {
+      // AOCC begin
+      case TY_QCMPLX:
+        GQCMPLXP(sptrgenr, sptr);
+        break;
+      // AOCC end
       case TY_DCMPLX:
         GDCMPLXP(sptrgenr, sptr);
         break;
@@ -4298,6 +4382,12 @@ ref_intrin(SST *stktop, ITEM *list)
      * is used as the respective internal respresentation
      */
     switch (intrin) {
+    // AOCC begin
+    case I_QUAD:
+    case I_QCMPLX:
+      dt_cast_word = DT_QUAD;
+      break;
+    // AOCC end
     case I_DBLE:
     case I_DCMPLX:
       dt_cast_word = DT_DBLE;
@@ -4562,10 +4652,26 @@ ref_intrin(SST *stktop, ITEM *list)
     opc = ILMG(sptr);
   argtyp = ARGTYPG(sptr);
   paramct = PARAMCTG(sptr);
+  
+ /* AOCC begin */ 
+  if ((intast == I_ATAN) && (count == 2))
+    intast = I_ATAN2;
 
-  if (paramct != 12 && paramct != 11 && count > paramct) {
-    goto intrinsic_error;
+  else if (paramct != 12 && paramct != 11 && count > paramct) {
+    if(count > paramct) {
+      if (intast == I_ATAN) {
+        e74_cnt(sptre, count, paramct, 2);
+        return 0;
+      }
+      else {
+        e74_cnt(sptre, count, paramct, paramct);
+        return 0;
+      }
+    }
+    else
+      goto intrinsic_error;
   }
+  /* AOCC end */
 
   if (paramct == 11) { /* CMPLX/DCMPLX intrinsic */
     if (ARG_STK(1))
@@ -4573,7 +4679,8 @@ ref_intrin(SST *stktop, ITEM *list)
        * real/dble
        */
 
-      dtype = dtype == DT_CMPLX ? stb.user.dt_real : DT_DBLE;
+      dtype = dtype == DT_CMPLX ? stb.user.dt_real : dtype == DT_DCMPLX
+                                ? DT_DBLE : DT_QUAD;
 
     else /* treat like typical type conversion intrinsic */
       paramct = 1;
@@ -4699,8 +4806,10 @@ ref_intrin(SST *stktop, ITEM *list)
 
         if (DTY(dtype) == TY_REAL)
           conval = getcon(num1, DT_CMPLX);
-        else
+        if (DTY(dtype) == TY_DBLE)
           conval = getcon(num1, DT_DCMPLX);
+        else
+          conval = getcon(num1, DT_QCMPLX);
 
         goto const_return;
       }
@@ -4766,6 +4875,7 @@ ref_intrin(SST *stktop, ITEM *list)
         goto const_return;
       case IM_IMAG:
       case IM_DIMAG:
+      case IM_QIMAG:     // AOCC
         conval = CONVAL2G(con1);
         goto const_return;
       case IM_CONJG:
@@ -4778,6 +4888,13 @@ ref_intrin(SST *stktop, ITEM *list)
         con2 = CONVAL2G(con1);
         res[1] = const_fold(OP_SUB, (INT)stb.dbl0, con2, DT_REAL8);
         goto const_getcon;
+      // AOCC begin
+      case IM_QCONJG:
+        res[0] = CONVAL1G(con1);
+        con2 = CONVAL2G(con1);
+        res[1] = const_fold(OP_SUB, (INT)stb.quad0, con2, DT_QUAD);
+        goto const_getcon;
+      // AOCC end
 #ifdef IM_DPROD
       case IM_DPROD:
         con2 = GET_CVAL_ARG(1);
@@ -5365,6 +5482,9 @@ no_const_fold:
     case DT_REAL8:
       rtlRtn = RTE_dmodulov;
       break;
+    case DT_QUAD:
+      rtlRtn = RTE_qmodulov;
+      break;
     }
     fsptr = sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), (int)INTTYPG(sptr));
     EXTSYMP(sptr, fsptr);
@@ -5705,6 +5825,9 @@ ref_pd(SST *stktop, ITEM *list)
   SPTR pdsym = SST_SYMG(stktop);
   int pdtype = PDNUMG(pdsym);
   int is_real2_arg_error = 0;
+  SST *sp;
+  int argdtype;
+  int dt_cast_word;
 
 /* any integer type, or hollerith, or, if -x 51 0x20 not set, real/double */
 #define TYPELESS(dt)                     \
@@ -6061,7 +6184,8 @@ ref_pd(SST *stktop, ITEM *list)
     if (count != 1 || get_kwd_args(list, count, KWDARGSTR(pdsym)))
       goto bad_args;
     dtype1 = SST_DTYPEG(ARG_STK(0));
-    if (DTYG(dtype1) != TY_REAL && DTYG(dtype1) != TY_DBLE)
+    if (DTYG(dtype1) != TY_REAL && DTYG(dtype1) != TY_DBLE
+        && DTYG(dtype1 != TY_QUAD))
       goto bad_args;
     (void)mkexpr(ARG_STK(0));
     XFR_ARGAST(0);
@@ -7270,6 +7394,11 @@ ref_pd(SST *stktop, ITEM *list)
     } else if (dtype1 == DT_DBLE) {
       (void)mkexpr(ARG_STK(0));
       dtyper = DT_DBLE;
+    // AOCC begin
+    } else if (dtype1 == DT_QUAD) {
+      (void)mkexpr(ARG_STK(0));
+      dtyper = DT_QUAD;
+    // AOCC end
     } else {
       goto bad_args;
     }
@@ -7848,6 +7977,31 @@ ref_pd(SST *stktop, ITEM *list)
     }
     break;
 
+  //AOCC Begin
+  case PD_rank:
+    if (count != 1) {
+      E74_CNT(pdsym, count, 1, 1);
+        goto call_e74_cnt;
+    }
+    if (evl_kwd_args(list, 1, KWDARGSTR(pdsym)))
+      goto exit_;
+    dtyper =  stb.user.dt_int;
+    stkp = ARG_STK(0);
+    int rank = 0;
+    if (DTY(SST_DTYPEG(stkp)) == TY_ARRAY)
+       rank = AD_NUMDIM(AD_DPTR(SST_DTYPEG(stkp)));
+    ast = mk_cval(rank, dtyper);
+    EXPSTP(pdsym, 1);
+    SST_IDP(stktop, S_CONST);
+    SST_DTYPEP(stktop, dtyper);
+    SST_SHAPEP(stktop, 0);
+    SST_ASTP(stktop, ast);
+    if (DTY(dtyper) != TY_INT8)
+      SST_CVALP(stktop, rank);
+    else
+      SST_CVALP(stktop, A_SPTRG(ast));
+    return SST_CVALG(stktop);
+  //AOCC End
   case PD_merge:
     if (count != 3) {
       E74_CNT(pdsym, count, 3, 3);
@@ -8330,8 +8484,8 @@ ref_pd(SST *stktop, ITEM *list)
           conval = 4;
         else if (con1 <= 15)
           conval = 8;
-        /*else if (con1 <= 31 && !XBIT(57, 4))
-          conval = 16; currently real 16 is not supported */
+        else if (con1 <= 31 && (!XBIT(57, 0x4)))
+          conval = 16;
         else {
           conval = -1;
 	  p = -1;
@@ -8377,10 +8531,10 @@ ref_pd(SST *stktop, ITEM *list)
           } else if (con1 <= 307) {
             if (conval > 0 && conval <= 8)
               conval = 8;
-          } /*else if ((con1 <= 4931) && !XBIT(57, 4)) {
+          } else if ((con1 <= 4931) && (!XBIT(57, 0x4))) {
             if (conval > 0 && conval <= 16)
               conval = 16;
-          }*/ else {
+          } else {
             if (conval > 0)
               conval = 0;
             conval = -2;
@@ -8428,8 +8582,8 @@ ref_pd(SST *stktop, ITEM *list)
               conval = 4;
 	    else if (conval > 0 && conval <= 8)
               conval = 8;
-	    /*else if (conval > 0 && conval <= 16)
-              conval = 16;*/
+	    else if (conval > 0 && conval <= 16)
+              conval = 16;
 	    else if (p < 0 && r < 0)
 	      conval = -3;
           }
@@ -8912,6 +9066,20 @@ ref_pd(SST *stktop, ITEM *list)
       }
       sname = "epsilon(1.0_8)";
       goto const_dble_val;
+    //  AOCC begin
+    case TY_QUAD:
+      if (XBIT(49, 0x40000)) { /* C90 */
+#define C90_EPSILON "0.50487097934144755546350628178090e-28L"
+        atoxq(C90_EPSILON, &val[0], strlen(C90_EPSILON));
+      } else {
+        val[0] = 0x3f8f0000;
+        val[1] = 0;
+        val[2] = 0;
+        val[3] = 0;
+      }
+      sname = "epsilon(1.0_16)";
+      goto const_quad_val;
+    // AOCC end
     default:
       break;
     }
@@ -8976,7 +9144,7 @@ ref_pd(SST *stktop, ITEM *list)
       default:
         interr("PD_spacing, pdtype", pdtype, 3);
       }
-    } else { /* TY_DBLE */
+    } else if (DTY(dtype1) == TY_DBLE) { /* TY_DBLE */
       switch (pdtype) {
       case PD_fraction:
         rtlRtn = RTE_fracd;
@@ -8989,6 +9157,20 @@ ref_pd(SST *stktop, ITEM *list)
         break;
       default:
         interr("PD_spacingd, pdtype", pdtype, 3);
+      }
+    } else {
+      switch (pdtype) {
+      case PD_fraction:
+        rtlRtn = RTE_fracq;
+        break;
+      case PD_rrspacing:
+        rtlRtn = RTE_rrspacingq;
+        break;
+      case PD_spacing:
+        rtlRtn = RTE_spacingq;
+        break;
+      default:
+        interr("PD_spacingq, pdtype", pdtype, 3);
       }
     }
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
@@ -9275,13 +9457,14 @@ ref_pd(SST *stktop, ITEM *list)
 
     dtyper = dtype1; /* initial result of call is type of argument */
 
-    /* for this case dtype2 is used for conversion; the actual floor/ceiling 
-     * calls we use return real, but the Fortran declaration returns int. 
+     
+    /* for this case dtype2 is used for conversion; the actual floor/ceiling
+     * calls we use return real, but the Fortran declaration returns int.
      * We need to calculate final type for conversion to correct int kind.
      */
 
     if ((stkp = ARG_STK(1))) { /* kind */
-      dtype2 = set_kind_result(stkp, DT_INT, TY_INT); 
+      dtype2 = set_kind_result(stkp, DT_INT, TY_INT);
       if (!dtype2) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
@@ -9311,7 +9494,51 @@ ref_pd(SST *stktop, ITEM *list)
       dtyper = get_array_dtype(1, dtyper);
     goto gen_call;
 
+  // AOCC begin
   case PD_aint:
+    if (count < 1 || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+    if (get_kwd_args(list, 2, KWDARGSTR(pdsym)))
+      goto exit_;
+    stkp = ARG_STK(0);
+    if (SST_ISNONDECC(stkp))
+      cngtyp(stkp, DT_INT);
+    dtype1 = DDTG(SST_DTYPEG(stkp));
+    if (!DT_ISREAL(dtype1)) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+    if ((stkp = ARG_STK(1))) {
+      dtyper = set_kind_result(stkp, DT_REAL, TY_REAL);
+      if (!dtyper) {
+        E74_ARG(pdsym, 1, NULL);
+        goto call_e74_arg;
+      }
+    } else
+      dtyper = dtype1;
+
+    (void)mkexpr(ARG_STK(0));
+    shaper = SST_SHAPEG(ARG_STK(0));
+    XFR_ARGAST(0);
+    argt_count = 1;
+    if (ARG_STK(1)) {
+      (void)mkexpr(ARG_STK(1));
+      argt_count = 2;
+      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_INT4);
+    }
+    if (shaper)
+      dtyper = get_array_dtype(1, dtyper);
+    if (dtyper == DT_QUAD) {
+      ast = ARG_AST(0);
+      ast = mk_convert(ast, DT_INT);
+      ast = mk_convert(ast, dtyper);
+      goto expr_val;
+    }
+
+    goto gen_call;
+  
   case PD_anint:
     if (count < 1 || count > 2) {
       E74_CNT(pdsym, count, 1, 2);
@@ -9327,17 +9554,64 @@ ref_pd(SST *stktop, ITEM *list)
       E74_ARG(pdsym, 0, NULL);
       goto call_e74_arg;
     }
+    
     if ((stkp = ARG_STK(1))) { /* kind */
       dtyper = set_kind_result(stkp, DT_REAL, TY_REAL);
       if (!dtyper) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
       }
-    } else
-      dtyper = dtype1; /* result is type of argument */
-    /* If this is f90, leave the kind argument in. Otherwise issue
-     * a warning and leave it -- we'll get to it someday
-     */
+    } else {
+      dtyper = dtype1;
+    }
+
+    if (sem.dinit_data) {
+      gen_init_intrin_call(stktop, pdsym, count, dtyper, TRUE);
+      return 0;
+    }
+   
+    stkp = ARG_STK(0);
+    if (is_sst_const(stkp)) {
+      con1 = get_sst_cval(stkp);
+      switch (DTY(dtype1)) {
+      case TY_REAL:
+        num1[0] = CONVAL2G(stb.flt0);
+        if (xfcmp(con1, num1[0]) >= 0) {
+          INT fv2_23 = 0x4b000000;
+          if (xfcmp(con1, fv2_23) >= 0)
+            xfadd(con1, CONVAL2G(stb.flt0), &res[0]);
+          else
+            xfadd(con1, CONVAL2G(stb.flthalf), &res[0]);
+        } else {
+          INT fvm2_23 = 0xcb000000;
+          if (xfcmp(con1, fvm2_23) <= 0)
+            xfsub(con1, CONVAL2G(stb.flt0), &res[0]);
+          else
+            xfsub(con1, CONVAL2G(stb.flthalf), &res[0]);
+        }
+        break;      
+      case TY_DBLE:
+        if (const_fold(OP_CMP, con1, stb.dbl0, DT_REAL8) >= 0) {
+          INT dv2_52[2] = {0x43300000, 0x00000000};
+          INT d2_52;
+          d2_52 = getcon(dv2_52, DT_DBLE);
+          if (const_fold(OP_CMP, con1, d2_52, DT_REAL8) >= 0)
+	    res[0] = const_fold(OP_ADD, con1, stb.dbl0, DT_REAL8);
+          else
+            res[0] = const_fold(OP_ADD, con1, stb.dblhalf, DT_REAL8);
+        } else {
+          INT dvm2_52[2] = {0xc3300000, 0x00000000};
+          INT dm2_52;
+          dm2_52 = getcon(dvm2_52, DT_DBLE);
+          if (const_fold(OP_CMP, con1, dm2_52, DT_REAL8) >= 0)
+            res[0] = const_fold(OP_SUB, con1, stb.dblhalf, DT_REAL8);
+          else
+	    res[0] = const_fold(OP_SUB, con1, stb.dbl0, DT_REAL8);
+        }
+        break;
+      }
+    }       
+    
     (void)mkexpr(ARG_STK(0));
     shaper = SST_SHAPEG(ARG_STK(0));
     XFR_ARGAST(0);
@@ -9345,20 +9619,13 @@ ref_pd(SST *stktop, ITEM *list)
     if (ARG_STK(1)) {
       (void)mkexpr(ARG_STK(1));
       argt_count = 2;
-      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_INT4);
+      ARG_AST(1) = mk_cval1(target_kind(dtyper), DT_REAL);
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
-    // AOCC begin: avoiding generation of _mth_aint lib call instead
-    // handling it here
-    if (pdtype == PD_aint) {
-      ast = ARG_AST(0);
-      ast = mk_convert(ast, DT_INT);
-      ast = mk_convert(ast, dtyper);
-      goto expr_val;
-    // AOCC end
-    }
+
     goto gen_call;
+  // AOCC end
 
   case PD_int:
     if (count < 1 || count > 2) {
@@ -9522,9 +9789,11 @@ ref_pd(SST *stktop, ITEM *list)
     stkp1 = ARG_STK(1);
     stkp2 = ARG_STK(2);
 
+    // AOCC : DT_CMPLX32
     if (stkp2) { /* kind */
       dtyper = set_kind_result(stkp2, DT_CMPLX, TY_CMPLX);
-      dtype1 = dtyper == DT_CMPLX16 ? DT_REAL8 : DT_REAL4;
+      dtype1 = dtyper == DT_CMPLX16 ? DT_REAL8 : dtyper == DT_CMPLX32 ?
+                                                 DT_QUAD : DT_REAL4;
       if (!dtyper) {
         E74_ARG(pdsym, 1, NULL);
         goto call_e74_arg;
@@ -9760,7 +10029,12 @@ ref_pd(SST *stktop, ITEM *list)
     stkp = ARG_STK(0);
     shaper = SST_SHAPEG(stkp);
     ast = ARG_AST(0);
-    if (dtype1 != dtyper) {
+
+    /*
+     * AOCC: If -fdefault-integer-8, then we need to preserve the shape by
+     * generating a call, else future semantics will be mislead.
+     */
+    if (dtype1 != dtyper || XBIT(124, 0x10)) { /* AOCC */
       argt_count = 1;
       goto gen_call;
     }
@@ -9790,6 +10064,7 @@ ref_pd(SST *stktop, ITEM *list)
         conval = pdtype == PD_maxexponent ? 8189 : -8188;
       else
         conval = pdtype == PD_maxexponent ? 16384 : -16381;
+      break;
     default:
       E74_ARG(pdsym, 0, NULL);
       goto call_e74_arg;
@@ -9803,40 +10078,88 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (evl_kwd_args(list, 2, KWDARGSTR(pdsym)))
       goto exit_;
-    stkp = ARG_STK(0);
-    shaper = SST_SHAPEG(stkp);
-    dtype1 = DDTG(SST_DTYPEG(stkp));
-    dtype2 = DDTG(SST_DTYPEG(ARG_STK(1)));
-    if (!DT_ISREAL(dtype1) || !DT_ISREAL(dtype2)) {
-      E74_ARG(pdsym, 0, NULL);
-      goto call_e74_arg;
-    }
-    shape2 = SST_SHAPEG(ARG_STK(1));
-    shaper = set_shape_result(shaper, shape2);
-    if (shaper < 0) {
-      E74_ARG(pdsym, 2, NULL);
-      goto call_e74_arg;
-    }
-    ast = ARG_AST(1);
-    if (shape2)
-      dtyper = get_array_dtype(1, DT_LOG);
-    else
-      dtyper = DT_LOG;
-    if (DTY(dtype2) == TY_REAL)
-      ast = mk_binop(OP_GE, ast, mk_cnst(stb.flt0), dtyper);
-    else
-      ast = mk_binop(OP_GE, ast, mk_cnst(stb.dbl0), dtyper);
-    ARG_AST(1) = ast;
-    if (DTY(dtype1) == TY_REAL)
-      rtlRtn = RTE_nearest;
-    else /* TY_DBLE */
-      rtlRtn = RTE_nearestd;
-    (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
-    dtyper = SST_DTYPEG(stkp);
-    if (shaper && DTY(dtyper) != TY_ARRAY)
-      dtyper = get_array_dtype(1, dtyper);
-    break;
 
+    // AOCC begin
+      sp = ARG_STK(0);
+      dtype1 = SST_DTYPEG(sp);
+      shaper = SST_SHAPEG(sp);
+      sp = ARG_STK(1);
+      dtype2 = SST_DTYPEG(sp);
+   
+      if (sem.in_array_const == 0) {
+	nearest_status  = 1;
+	stkp = ARG_STK(0);
+	shaper = SST_SHAPEG(stkp);
+	dtype1 = DDTG(SST_DTYPEG(stkp));
+	dtype2 = DDTG(SST_DTYPEG(ARG_STK(1)));
+	if (!DT_ISREAL(dtype1) || !DT_ISREAL(dtype2)) {
+          E74_ARG(pdsym, 0, NULL);
+	  goto call_e74_arg;
+	}
+	shape2 = SST_SHAPEG(ARG_STK(1));
+	shaper = set_shape_result(shaper, shape2);
+	if (shaper < 0) {
+	  E74_ARG(pdsym, 2, NULL);
+	  goto call_e74_arg;
+	}
+	ast = ARG_AST(1);
+	if (shape2)
+	  dtyper = get_array_dtype(1, DT_LOG);
+	else
+	  dtyper = DT_LOG;
+	if (DTY(dtype2) == TY_REAL)
+	  ast = mk_binop(OP_GE, ast, mk_cnst(stb.flt0), dtyper);
+        else
+          ast = mk_binop(OP_GE, ast, mk_cnst(stb.quad0), dtyper);
+        ARG_AST(1) = ast;
+        if (DTY(dtype1) == TY_REAL)
+          rtlRtn = RTE_nearest;
+        else
+          rtlRtn = RTE_nearestq;        //AOCC
+        (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
+        dtyper = SST_DTYPEG(stkp);
+        if (shaper && DTY(dtyper) != TY_ARRAY)
+        dtyper = get_array_dtype(1, dtyper);
+	break;
+      }
+      else {
+	sp = ARG_STK(0);
+        dtype1 = 0;
+        for (i = 0; i < count; i++) {
+          sp = ARG_STK(i);
+          argdtype = SST_DTYPEG(sp);
+          if (argdtype == DT_WORD || argdtype == DT_DWORD) {
+            if (dt_cast_word) {
+              cngtyp(sp, dt_cast_word);
+	      argdtype = SST_DTYPEG(sp);
+	    } else if (argdtype == DT_WORD) {
+	    }
+          }
+          if (!dtype1) {
+           dtype1 = argdtype;
+	   if (DTY(argdtype) == TY_ARRAY)
+             break;
+          }
+          else {
+            if (DTY(argdtype) == TY_ARRAY) {
+              dtype1 = argdtype;
+	      break;
+	    }
+         }
+       }
+       if (DTY(dtype1) == TY_REAL)
+         rtlRtn = RTE_nearest;
+       else if(DTY(dtype1) == TY_DBLE)
+         rtlRtn = RTE_nearestd;
+       else
+         rtlRtn = RTE_nearestq;
+       char* nmptr = mkRteRtnNm(rtlRtn);
+       (void)sym_mkfunc_nodesc(nmptr, dtype1);
+       dtyper = SST_DTYPEG(sp);
+       break;
+    }
+    // AOCC end
+ 
   case PD_precision:
     if (count != 1) {
       E74_CNT(pdsym, count, 1, 1);
@@ -9886,6 +10209,7 @@ ref_pd(SST *stktop, ITEM *list)
     case TY_INT8:
     case TY_REAL:
     case TY_DBLE:
+    case TY_QUAD:
       conval = 2;
       break;
     default:
@@ -9973,12 +10297,20 @@ ref_pd(SST *stktop, ITEM *list)
         rtlRtn = RTE_scale;
       else
         rtlRtn = RTE_setexp;
-    } else { /* TY_DBLE */
+    } else if (DTY(dtype1) == TY_DBLE){ /* TY_DBLE */
       if (pdtype == PD_scale)
         rtlRtn = RTE_scaled;
       else
         rtlRtn = RTE_setexpd;
     }
+    //AOCC Begin
+    else {
+      if (pdtype == PD_scale)
+        rtlRtn = RTE_scaleq;
+      else
+        rtlRtn = RTE_setexpq;
+    }
+    //AOCC End
     (void)sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), dtype1);
     break;
 
@@ -10009,6 +10341,22 @@ ref_pd(SST *stktop, ITEM *list)
       if (XBIT(51, 0x10))
         goto const_dword_val;
       goto const_dble_val;
+    // AOCC begin
+    case TY_QUAD:
+      if (XBIT(49, 0x40000)) {            /* C90 */
+#define C90_TINY "0.733441547021938866248564956819e-2465" /* 0200044000000000000000 */
+                                                          /* 0000000000000000000000 */
+        atoxq(C90_TINY, &val[0], strlen(C90_TINY));
+      } else {
+        /* 3.362103143112093506262677817321752603E-4932 */
+        val[0] = 0x00010000; /* was 0x00080000 */
+        val[1] = 0x00000000;
+        val[2] = 0x00000000;
+        val[3] = 0x00000000;
+      }
+      sname = "tiny(1.0_16)";
+      goto const_quad_val;
+    // AOCC end
     default:
       break;
     }
@@ -11274,6 +11622,15 @@ ref_pd(SST *stktop, ITEM *list)
     if (get_kwd_args(list, 1, KWDARGSTR(pdsym)))
       goto exit_;
 
+    // AOCC begin
+    if (STYPEG(SST_SYMG(ARG_STK(0))) == ST_PROC ||
+        is_procedure_ptr(SST_SYMG(ARG_STK(0)))) {
+      error(4, 3, gbl.lineno,
+            "Procedure unexpected as argument", NULL);
+      goto exit_;
+    }
+    // AOCC end
+
     (void)mkarg(ARG_STK(0), &dum);
     XFR_ARGAST(0);
     ast = ARG_AST(0);
@@ -11455,6 +11812,9 @@ ref_pd(SST *stktop, ITEM *list)
     }
     break;
   case PD_leadz:
+  /* AOCC begin */
+  case PD_trailz:
+  /* AOCC end */
   case PD_popcnt:
   case PD_poppar:
     if (count != 1) {
@@ -11495,6 +11855,25 @@ ref_pd(SST *stktop, ITEM *list)
         ;
       for (; isspace(*sname); ++sname)
         ;
+      //AOCC Begin
+      sname[strlen(sname)-1] = '\0';
+      int i, j ,count;
+      for(i = 0 ; i < strlen(sname) ; i++)
+      {
+        count = 0 , j=0;
+        while(sname[i] == flg.source_file[j] && sname[i]!='\0')
+        {
+           i++, j++ , count++;
+        }
+        if(count == strlen(flg.source_file))
+        {
+          for(i; i < strlen(sname) ; i++)
+            sname[i-count] = sname[i];
+          sname[i-count] = '\0';
+          break;
+        }
+      }
+      //AOCC End
       sptr = getstring(sname, strlen(sname));
     } else {
       interr("compiler_options: command line not available", 0, 3);
@@ -11538,6 +11917,7 @@ gen_call:
   else
     func_ast = mk_id(pdsym);
   ast = mk_func_node(func_type, func_ast, argt_count + argt_extra, argt);
+
   if (shaper)
     dtyper = dtype_with_shape(dtyper, shaper);
   A_DTYPEP(ast, dtyper);
@@ -11763,6 +12143,11 @@ getMergeSym(int dt, int ikind)
   case TY_DCMPLX:
     rtlRtn = RTE_mergedc;
     break;
+  // AOCC begin
+  case TY_QCMPLX:
+    rtlRtn = RTE_mergeqc;
+    break;
+  // AOCC end
   case TY_BLOG:
     rtlRtn = RTE_mergel1;
     break;
@@ -12335,6 +12720,50 @@ ref_pd_subr(SST *stktop, ITEM *list)
     }
     argt_count = 3;
     break;
+
+  /* AOCC begin */
+  case PD_mm_prefetch:
+    if (!count || count > 2) {
+      E74_CNT(pdsym, count, 1, 2);
+      goto call_e74_cnt;
+    }
+
+    if (evl_kwd_args(list, count, KWDARGSTR(pdsym)))
+      goto exit_;
+
+    dtype1 = SST_DTYPEG(ARG_STK(0)); /* first arg (address) */
+
+    if (is_sst_const(ARG_STK(0))) {
+      E74_ARG(pdsym, 0, NULL);
+      goto call_e74_arg;
+    }
+
+    if (count == 1) { /* if no hint */
+      argt_count = count;
+      break;
+    }
+
+    dtype2 = SST_DTYPEG(ARG_STK(1)); /* second arg (hint) */
+
+    if (!is_sst_const(ARG_STK(1))) {
+      E74_ARG(pdsym, 1, NULL);
+      goto call_e74_arg;
+    }
+
+    switch (DTY(dtype2)) {
+    case TY_WORD:
+    case TY_DWORD:
+    case TY_BINT:
+    case TY_SINT:
+    case TY_INT:
+      break;
+    default:
+      E74_ARG(pdsym, 1, NULL);
+      goto call_e74_arg;
+    }
+    argt_count = count;
+    break;
+    /* AOCC end */
 
   case PD_get_environment_variable:
     if (count < 1 || count > 5) {

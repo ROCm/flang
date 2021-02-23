@@ -2,7 +2,13 @@
 .\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-.\" * 
+.\" *
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" *  Notified per clause 4(b) of the license.
+.\" *
+.\" * Added support for quad precision
+.\" *  Last modified: Feb 2020
+.\" *
 .\" */
 .NS 27 "Symbol Table"
 .de OC		\"overloading class
@@ -1851,6 +1857,10 @@ undefined.
 .ip \f(CWTY_DBLE\fP
 First 32-bit word of d.p. constant in
 SC format.
+.\" AOCC begin
+.ip \f(CWTY_QUAD\fP
+First 32-bit word of quad precision constant.
+.\" AOCC end
 .ip \f(CWTY_FLOAT128\fP
 First 32-bit word of quad constant.
 .ip \f(CWTY_CMPLX\fP
@@ -1893,6 +1903,10 @@ Second constant value:
 32-bit floating point value.
 .ip \f(CWTY_DBLE\fP
 Second 32-bit word of double precision constant.
+.\" AOCC begin
+.ip \f(CWTY_QUAD\fP
+Second 32-bit word of quad precision constant.
+.\" AOCC end
 .ip \f(CWTY_FLOAT128\fP
 Second 32-bit word of quad constant.
 .ip \f(CWTY_CMPLX\fP
@@ -2110,8 +2124,11 @@ means the arguments can be either
 .cw DT_INT ,
 .cw DT_REAL ,
 .cw DT_DBLE ,
+.\" AOCC
+.cw DT_QUAD ,
 .cw DT_CMPLX ,
 or
+.cw DT_QCMPLX .
 .cw DT_DCMPLX .
 .cw DT_WORD
 means the argument must be one of the 32-bit data types,
@@ -2862,6 +2879,7 @@ means the arguments can be either
 .cw DT_DBLE ,
 .cw DT_CMPLX ,
 or
+.cw DT_QCMPLX .
 .cw DT_DCMPLX .
 .cw DT_WORD
 means the argument must be one of the 32-bit data types,
@@ -3219,7 +3237,8 @@ on context.  Internal to the Fortran compiler.
 .PD DT_CMPLX4 "half complex" TY_HCMPLX
 .PD DT_CMPLX8 complex TY_CMPLX
 .PD DT_CMPLX16 "double complex" TY_DCMPLX
-.PD DT_QCMPLX "complex*32" TY_QCMPLX
+.PD DT_CMPLX32  "quad complex" TY_QCMPLX
+./" .PD DT_QCMPLX "complex*32" TY_QCMPLX
 .PD DT_BLOG "logical*1" TY_BLOG
 .PD DT_SLOG "logical*2" TY_SLOG
 .PD DT_LOG4 "logical" TY_LOG
@@ -3242,10 +3261,14 @@ Integer array (1:1); this predeclared data type is filled in by
 ast_init().
 .PD DT_128F "__m128" TY_128
 .PD DT_128D "__m128d" TY_128
+.\" AOCC
+.PD DT_128Q "__m128q" TY_128
 .PD DT_128I "__m128i" TY_128
 .PD DT_256 "256-bit" TY_256
 .PD DT_256F "__m256" TY_256
+.\" AOCC
 .PD DT_256D "__m256d" TY_256
+.PD DT_256Q "__m256q" TY_256
 .PD DT_256I "__m256i" TY_256
 .PD DT_512 "512-bit" TY_512
 .PD DT_512F "__m512" TY_512

@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ */
 
 /* clang-format off */
 
@@ -20,7 +26,6 @@ int ENT3F(STIME, stime)(int *tp)
   int i;
   struct timespec ts = {};
   ts.tv_sec = *tp;
-
   if ((i = clock_settime(CLOCK_REALTIME, &ts)))
     i = __io_errno();
 

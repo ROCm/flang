@@ -2,7 +2,17 @@
 .\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 .\" * See https://llvm.org/LICENSE.txt for license information.
 .\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-.\" * 
+.\" *
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
+.\" *
+.\" * Added support for quad precision
+.\" * Last modified: Feb 2020
+.\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
+.\" * Last modified: July 2020
 .\" */
 .NS 24 "Target Machine" "Appendix III - "
 .de DN
@@ -60,6 +70,7 @@ lw(1n) lfCW | l | c.
 %TM_IDIV2%divide by power of 2 instruction%no
 %TM_FDIV%single precision divide instruction%yes
 %TM_DDIV%double precision divide instruction%yes
+%TM_QDIV%quad precision divide instruction%yes
 %TM_UICMP%unsigned integer compare instruction%yes
 %TM_SQRT%square root instruction%yes
 %TM_FIELD_INST%bit field support instructions%no
@@ -72,8 +83,10 @@ lw(1n) lfCW | l | c.
 %TM_AUTOINC_FP%auto increment when addressing single/double%no
 %TM_FCMPZ%single precision compare with zero%no
 %TM_DCMPZ%double precision compare with zero%no
+%TM_QCMPZ%quad precision compare with zero%no
 %TM_FCJMPZ%single precision compare with zero and jump%yes
 %TM_DCJMPZ%double precision compare with zero and jump%yes
+%TM_QCJMPZ%quad precision compare with zero and jump%yes
 %TM_I8%integer*8 (long long)%yes
 .TE
 .lp
@@ -106,6 +119,10 @@ signed quantity.
 .DA "( (x) << (y) )"
 .DN RSHIFT(x,y) 
 .DA "( (x) >> (y) )"
+.DN SHIFTA(x,y)
+.DA "( (x) & 0x80000000 ?"
+.DA "( (unsigned)(x) >> (y) ) | ( (~0u) << (32-(y)) ) :"
+.DA "(x) >> (y) )"
 .np
 Constant fold shift per target machine; operand which is shifted is an
 unsigned quantity.
@@ -153,10 +170,11 @@ lw(1n) lfCW | l | l | l | l | l | l.
 %TY_HALF%2%1%16%0%reg1%Half Precision Real
 %TY_REAL%4%3%32%0%reg1%Floating Point Real
 %TY_DBLE%8%7%64%0%reg2%Double Precision Real
-%TY_QUAD%0%0%64%0%reg2%Quad Precision Real
+%TY_QUAD%16%15%128%0%reg2%Quad Precision Real  \* AOCC \*
 %TY_HCMPLX%4%1%32%0%mem0%half precision complex
 %TY_CMPLX%8%3%64%0%mem0%Complex
 %TY_DCMPLX%16%7%128%0%mem1%Double Precision Complex
+%TY_QCMPLX%32%15%128%0%mem1%Quad Precision Complex  \* AOCC \*
 %TY_BLOG%1%0%8%0%reg0%Byte Logical
 %TY_SLOG%2%1%16%0%reg0%Short Logical
 %TY_LOG%4%3%32%0%reg0%Logical

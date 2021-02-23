@@ -235,6 +235,7 @@ static char *cfunc[] = {
         [func_aint]     = "aint",
         [func_ceil]     = "ceil",
         [func_floor]    = "floor",
+	[func_cotan]    = "cotan",
 };
 
 #undef SLEEF
@@ -260,6 +261,7 @@ static char *cfunc[] = {
 #include "math_tables/mth_aintdefs.h"
 #include "math_tables/mth_ceildefs.h"
 #include "math_tables/mth_floordefs.h"
+#include "math_tables/mth_cotandefs.h"
 #ifdef SLEEF
 #include "math_tables/mth_sleef.h"
 #endif
@@ -302,6 +304,7 @@ static mth_intrins_defs_t mth_intrins_defs[] = {
 #include "math_tables/mth_aintdefs.h"
 #include "math_tables/mth_ceildefs.h"
 #include "math_tables/mth_floordefs.h"
+#include "math_tables/mth_cotandefs.h"
 #else
 #include "math_tables/mth_sleef.h"
 #endif

@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ */
 
 /** \file lower.h
     \brief definitions for Fortran front-end's lower module
@@ -184,7 +188,7 @@ void lower_check_generics(void);
 
 struct lower_syms {
   int license, localmode, ptr0, ptr0c;
-  int intzero, intone, realzero, dblezero;
+  int intzero, intone, realzero, dblezero, quadzero;
   /* pointers for functions: loc, exit, allocate */
   int loc, exit, alloc, alloc_chk, ptr_alloc, dealloc, dealloc_mbr, lmalloc,
       lfree;
@@ -243,15 +247,18 @@ typedef struct {
   int refd_list;       /* linked list of pointer/offset/section descriptors in the order they
                         * need to be given addresses */
 } lower_symbol_lists;
+#ifndef _LOWEREXP_CPP_
+extern
+#endif
 STG_DECLARE(lsymlists, lower_symbol_lists);
 #define LOWER_MEMBER_PARENT(x) lsymlists.stg_base[x].member_parent
 #define LOWER_SYMBOL_REPLACE(x) lsymlists.stg_base[x].symbol_replace
 #define LOWER_POINTER_LIST(x) lsymlists.stg_base[x].pointer_list
 #define LOWER_REFD_LIST(x) lsymlists.stg_base[x].refd_list
 
-int *lower_argument;
-int lower_argument_size;
-int lower_line;
+extern int *lower_argument;
+extern int lower_argument_size;
+extern int lower_line;
 
 /* only one of thenlabel and elselabel should be nonzero;
  * the other is the 'fall through' case */
@@ -259,8 +266,8 @@ typedef struct {
   int thenlabel, elselabel, endlabel;
 } iflabeltype;
 
-int lower_disable_ptr_chk;
-int lower_disable_subscr_chk;
+extern int lower_disable_ptr_chk;
+extern int lower_disable_subscr_chk;
 
 /* types of entries pushed onto the stack */
 #define STKDO 1
@@ -357,6 +364,7 @@ int lowersym_pghpf_cmem(int *whichmem);
 #define CLASS_MEM 13
 #define CLASS_FSTK 14 // TODO: UNUSEDS delete
 #define CLASS_PTR 15
+#define CLASS_SSEQP 16
 
 /* mostly used for small structs passed in regs stuff.*/
 /* These values must be kept insync with the values in the BE file exp_rte.c */

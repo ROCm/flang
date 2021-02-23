@@ -75,6 +75,7 @@ set(SRCS
   dsincosp.c
   dsinh.c
   dtan.c
+  dcotan.c
   dtanh.c
   exp.c
   log.c
@@ -82,6 +83,7 @@ set(SRCS
   sincosp.c
   sinh.c
   tan.c
+  cotan.c
   tanh.c)
 list(APPEND DEFINITIONS _GNU_SOURCE _ISOC99_SOURCE)
 if(${LIBPGMATH_SYSTEM_NAME} MATCHES "Linux")
@@ -124,6 +126,7 @@ set(SRCS
   dsincosp.c
   dsinh.c
   dtan.c
+  dcotan.c
   dtanh.c
   exp.c
   log.c
@@ -131,6 +134,7 @@ set(SRCS
   sincosp.c
   sinh.c
   tan.c
+  cotan.c
   tanh.c)
 set(FLAGS "${FLAGS} -mavx2 -mfma")
 if(NOT ${LIBPGMATH_SYSTEM_NAME} MATCHES "Windows")

@@ -4,10 +4,26 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for transpose intrinsic during initialization
+ *  Date of Modification: 1st March 2019
+ *
+ * Support for nearest intrinsic
+ *  Last modified: 01 March 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ *  Last modified: April 2020
+ *
+ * Added code to support cotan intrinsic
+ *  Last modified: Oct 2020
+ *
+
  */
+
 #ifndef SEMANT_H_
 #define SEMANT_H_
 
@@ -434,6 +450,11 @@ struct CONST {
 #define AC_I_shiftr 59
 #define AC_I_dshiftl 60
 #define AC_I_dshiftr 61
+#define AC_I_nearest 62
+#define AC_I_shifta 63
+#define AC_I_anint 64
+#define AC_I_aint 65
+#define AC_I_cotan 66
 /* AOCC end */
 #define AC_UNARY_OP(e) (e.op == AC_NEG || e.op == AC_CONV)
 
