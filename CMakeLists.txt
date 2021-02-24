@@ -11,6 +11,7 @@
 #
 
 cmake_minimum_required(VERSION 2.8)
+cmake_policy(SET CMP0057 NEW)
 
 # In order to bootstrap the runtime library we need to skip
 # CMake's Fortran tests
