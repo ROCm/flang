@@ -1514,7 +1514,8 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     bihb.csfg = BIH_CS(expb.curbih) = true;
     // AOCC Begin
     // ili = addMpBcsNest();
-    if (!flg.amdgcn_target) {
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    } else {
     // AOCC End
       ili = addMpBcsNest();
        iltb.callfg = 1;
@@ -1533,7 +1534,8 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_CS(expb.curbih) = true;
     // AOCC Begin
     // ili = addMpEcsNest();
-    if (!flg.amdgcn_target) {
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    } else {
       ili = addMpEcsNest();
       iltb.callfg = 1;
       chk_block(ili);
@@ -3095,6 +3097,7 @@ static int
 addMpBcsNest(void)
 {
   int ili;
+  mk_prototype("_mp_bcs_nest_red", NULL, DT_NONE,0);
   ili = makeCall("_mp_bcs_nest_red", IL_JSR, 0);
   return ili;
 }
@@ -3103,6 +3106,7 @@ static int
 addMpEcsNest(void)
 {
   int ili;
+  mk_prototype("_mp_ecs_nest_red", NULL, DT_NONE,0);
   ili = makeCall("_mp_ecs_nest_red", IL_JSR, 0);
   return ili;
 }
