@@ -13523,7 +13523,17 @@ isNVVM(char *fn_name)
     }
   }
   // AOCC end
+  if ((strcmp(fn_name,"__tgt_target") == 0 ||
+      (strcmp(fn_name,"__tgt_register_requires") == 0 ||
+      (strcmp(fn_name,"__tgt_register_lib") == 0))))
+      return false;
 
+  // AOCC
+  // we can have target function calls within the target region.
+  // returning true for all function calls
+  return true;
+
+  // the following code will be deleted 
   return (strncmp(fn_name, "__kmpc", 6) == 0) ||
          (strncmp(fn_name, "llvm.nvvm", 9) == 0) ||
          // AOCC Begin
