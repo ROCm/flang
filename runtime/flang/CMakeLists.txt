@@ -57,6 +57,7 @@ SET(FTN_INTRINSICS_DESC_INDEP
   delfilesqq3f.c
   derf3f.c
   derfc3f.c
+  deviceio_lib.F95
   drandm3f.c
   dsecnds3f.c
   dtime3f.c
