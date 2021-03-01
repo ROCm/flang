@@ -1280,7 +1280,7 @@ make_lltype_from_sptr(SPTR sptr)
   SPTR iface;
   int len;
   int stype = 0, sc = 0;
-  LL_Type *llt, *llt2;
+  LL_Type *llt = 0, *llt2;
   int addrspace = LL_AddrSp_Default;
   ADSC *ad;
   INT d;
@@ -1320,20 +1320,25 @@ make_lltype_from_sptr(SPTR sptr)
 
   /* Labels */
   if (stype == ST_LABEL) {
-    return ll_create_basic_type(llvm_get_current_module(), LL_LABEL, 0);
+    llt = ll_create_basic_type(llvm_get_current_module(), LL_LABEL, 0);
+    goto return_llt;
   }
 
   /* Functions */
   if (is_function(sptr)) {
     LL_ABI_Info *abi;
     if (IS_FTN_PROC_PTR(sptr)) {
-      if ((iface = get_iface_sptr(sptr)))
-        return make_ptr_lltype(make_ptr_lltype(make_lltype_from_iface(iface)));
-      return make_ptr_lltype(make_lltype_from_dtype(DT_CPTR));
+      if ((iface = get_iface_sptr(sptr))) {
+        llt = make_ptr_lltype(make_ptr_lltype(make_lltype_from_iface(iface)));
+        goto return_llt;
+      }
+      llt = make_ptr_lltype(make_lltype_from_dtype(DT_CPTR));
+      goto return_llt;
     }
     abi = ll_abi_for_func_sptr(llvm_get_current_module(), sptr, DT_NONE);
     llt = ll_abi_function_type(abi);
-    return make_ptr_lltype(llt);
+    llt = make_ptr_lltype(llt);
+    goto return_llt;
   }
 
   /* Volatiles */
@@ -1364,8 +1369,10 @@ make_lltype_from_sptr(SPTR sptr)
     }
   } else if (llis_array_kind(sdtype)) {
     /* all dummy argument are i32* or i64* */
-    if (SCG(sptr) == SC_DUMMY)
-      return make_generic_dummy_lltype();
+    if (SCG(sptr) == SC_DUMMY) {
+      llt = make_generic_dummy_lltype();
+      goto return_llt;
+    }
     /* Make all arrays to be <type>* */
     if (DTY(sdtype) == TY_CHAR)
       atype = DT_BINT;
@@ -1448,6 +1455,10 @@ make_lltype_from_sptr(SPTR sptr)
     def->addrspace = addrspace;
     add_def(def, &llarray_def_list);
   }
+  return llt;
+return_llt:
+  DBGDUMPLLTYPE("returned type is ", llt)
+  DBGTRACEOUT1(" return type address %p", llt)
   return llt;
 } /* make_lltype_from_sptr */
 

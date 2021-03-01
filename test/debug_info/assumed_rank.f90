@@ -5,7 +5,9 @@
 !RUN: %flang -gdwarf-4 -std=f2008 -S -emit-llvm %s -o - | FileCheck %s --check-prefix=F2K8
 
 !DWARF4: call void @llvm.dbg.value(metadata i64* %ararray, metadata [[DLOC:![0-9]+]], metadata !DIExpression())
-!DWARF4: !DILocalVariable(name: "ararray", arg: 1, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: [[ARTYPE:![0-9]+]])
+!DWARF4: !DILocalVariable(name: "ararray"
+!DWARF4-SAME: arg: 2
+!DWARF4-SAME: type: [[ARTYPE:![0-9]+]])
 !DWARF4: [[ARTYPE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, align: {{[0-9]+}}, elements: [[ELEMS:![0-9]+]], dataLocation: [[DLOC:![0-9]+]])
 !DWARF4: [[ELEMS]] = !{[[ELEM1:![0-9]+]], [[ELEM2:![0-9]+]], [[ELEM3:![0-9]+]], [[ELEM4:![0-9]+]], [[ELEM5:![0-9]+]], [[ELEM6:![0-9]+]], [[ELEM7:![0-9]+]]}
 !DWARF4: [[ELEM1]] = !DISubrange(lowerBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 80, DW_OP_deref), upperBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 120, DW_OP_deref), stride: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 112, DW_OP_deref, DW_OP_push_object_address, DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_mul))
@@ -18,13 +20,17 @@
 
 
 !DWARF5: call void @llvm.dbg.value(metadata i64* %ararray, metadata [[DLOC:![0-9]+]], metadata !DIExpression())
-!DWARF5: !DILocalVariable(name: "ararray", arg: 1, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: [[ARTYPE:![0-9]+]])
+!DWARF5: !DILocalVariable(name: "ararray"
+!DWARF5-SAME: arg: 2
+!DWARF5-SAME: type: [[ARTYPE:![0-9]+]])
 !DWARF5: [[ARTYPE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, align: {{[0-9]+}}, elements: [[ELEMS:![0-9]+]], dataLocation: [[DLOC:![0-9]+]], rank: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_constu, 7, DW_OP_and))
 !DWARF5: [[ELEMS]] = !{[[ELEM1:![0-9]+]]}
 !DWARF5: [[ELEM1]] = !DIGenericSubrange(lowerBound: !DIExpression(DW_OP_push_object_address, DW_OP_over, DW_OP_constu, 48, DW_OP_mul, DW_OP_plus_uconst, 80, DW_OP_plus, DW_OP_deref), upperBound: !DIExpression(DW_OP_push_object_address, DW_OP_over, DW_OP_constu, 48, DW_OP_mul, DW_OP_plus_uconst, 120, DW_OP_plus, DW_OP_deref), stride: !DIExpression(DW_OP_push_object_address, DW_OP_over, DW_OP_constu, 48, DW_OP_mul, DW_OP_plus_uconst, 112, DW_OP_plus, DW_OP_deref, DW_OP_push_object_address, DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_mul))
 
 !F2K8: call void @llvm.dbg.value(metadata i64* %ararray, metadata [[DLOC:![0-9]+]], metadata !DIExpression())
-!F2K8: !DILocalVariable(name: "ararray", arg: 1, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: [[ARTYPE:![0-9]+]])
+!F2K8: !DILocalVariable(name: "ararray"
+!F2K8-SAME: arg: 2
+!F2K8-SAME: type: [[ARTYPE:![0-9]+]])
 !F2K8: [[ARTYPE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, align: {{[0-9]+}}, elements: [[ELEMS:![0-9]+]], dataLocation: [[DLOC:![0-9]+]])
 !F2K8: [[ELEMS]] = !{[[ELEM1:![0-9]+]], [[ELEM2:![0-9]+]], [[ELEM3:![0-9]+]], [[ELEM4:![0-9]+]], [[ELEM5:![0-9]+]], [[ELEM6:![0-9]+]], [[ELEM7:![0-9]+]], [[ELEM8:![0-9]+]], [[ELEM9:![0-9]+]], [[ELEM10:![0-9]+]], [[ELEM11:![0-9]+]], [[ELEM12:![0-9]+]], [[ELEM13:![0-9]+]], [[ELEM14:![0-9]+]], [[ELEM15:![0-9]+]]}
 

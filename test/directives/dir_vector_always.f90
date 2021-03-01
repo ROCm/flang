@@ -10,6 +10,4 @@ subroutine add(arr1,arr2,arr3,N)
     arr3(i) = arr1(arr2(i))
   end do
 end subroutine
-! CHECK: load <[[VF:[0-9]+]] x i32>
-! CHECK: store <[[VF]] x i32>
-! CHECK: {{.*}}!{!"llvm.loop.isvectorized", i32 1}
+! CHECK: {{.*}}!{!"llvm.loop.vectorize.always", i1 true}

@@ -1037,9 +1037,6 @@ init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
   strcpy(sname_entry, ".openmp.offload.entry.");
   strcat(sname_entry, kernelname);
   eptr3 = (SPTR)addnewsym(sname_entry);
-  // AOCC Begin
-  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
-  // AOCC End
   DTYPEP(eptr3, tgt_offload_entry_type);
   SCP(eptr3, SC_EXTERN);
   STYPEP(eptr3, ST_STRUCT);
