@@ -13,7 +13,6 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Month of modification : May 2019 - Added OMP offload support
- * 2020/03/09: add fcprop pass to the flow.
  *
  * Modified for compiler_options()
  * Date of modification: 21st May 2020
@@ -489,10 +488,6 @@ main(int argc, char *argv[])
           DUMP("sectinline");
         }
         // AOCC begin
-        if (ZBIT(1, 0x1)) {
-          collect_fcprop();
-          DUMP("fcprop");
-        }
         // AOCC end
         if (XBIT(70, 0x18)) {
           linearize_arrays();
