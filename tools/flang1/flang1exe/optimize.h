@@ -10,7 +10,6 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * AOCC ChangeLog:
- *  2020/03/09 : fcprop pass in flang->llvm flow (-Hz,0x1,1)
  */
 
 /** \file optimize.h
@@ -801,7 +800,6 @@ void convert_output(void);                     /* outconv.c */
 void sectfloat(void);                          /* outconv.c */
 void sectinline(void);                         /* outconv.c */
 void linearize_arrays(void);                   /* outconv.c */
-void collect_fcprop(void);                     /* fcprop.c */ // AOCC
 void hoist_stmt(int std, int fg, int l);       /* outconv.c */
 void redundss(void);                           /* redundss.c */
 
