@@ -33,7 +33,6 @@ set(SOURCES
   dummy.c
   dump.c
   exterf.c
-  fcprop.c
   fenddf.c
   fgraph.c
   findloop.c
