@@ -938,6 +938,7 @@ ompaccel_nvvm_mk_barrier(nvvm_barriers btype)
   }
   // AOCC End
   static_assert(true, "Other nvvm intrinsics are not implemented yet.");
+  return -1;
 }
 
 int
