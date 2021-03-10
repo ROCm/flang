@@ -2049,6 +2049,7 @@ static bool is_var_initialized(int sptr) {
 static clear_initsyms() {
   if (initsyms_set)
     hashset_clear(initsyms_set);
+  return 0;
 }
 
 /* marks the variable pointed to by sptr as initiazlied */
@@ -2650,6 +2651,7 @@ int get_pdo_buddy_std(int pdo_std) {
       return std;
     }
   }
+  return 0;
 }
 
 /* returns the parallel std of \p pdo_std */
@@ -2662,6 +2664,7 @@ int get_pdo_parallel_std(int pdo_std) {
       return std;
     }
   }
+  return 0;
 }
 
 /*
