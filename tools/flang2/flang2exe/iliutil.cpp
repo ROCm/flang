@@ -572,6 +572,7 @@ ad1func_cmplx(ILI_OP opc, char *name, int opn1)
   return ad2ili(IL_DFRCQ, tmp, CQ_RETVAL);
   }
   // AOCC end
+  return -1;
 }
 
 /** \brief Add func call with 2 arguments returning complex value
@@ -643,6 +644,7 @@ ad2func_cmplx(ILI_OP opc, char *name, int opn1, int opn2)
     return ad2ili(IL_DFRCQ, tmp, CQ_RETVAL);
   }
   // AOCC end
+  return -1;
 }
 
 /** \brief Add func call with 1 complex argument returning complex value
@@ -677,6 +679,7 @@ ad1func_cmplx_abi(ILI_OP opc, char *name, int opn1)
     return ad2ili(IL_DFRCQ, tmp, CQ_RETVAL);
   }
   // AOCC end
+  return -1;
 }
 
 /** \brief Add func call with 2 arguments returning complex value
@@ -749,6 +752,7 @@ ad2func_cmplx_abi(ILI_OP opc, char *name, int opn1, int opn2)
     return ad2ili(IL_DFRCQ, tmp, CQ_RETVAL);
   }
   // AOCC end
+  return -1;
 }
 
 /** \brief Add func call with 1 complex argument returning complex value
