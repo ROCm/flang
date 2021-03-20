@@ -169,6 +169,46 @@ is_ishft(int curilm)
   return false;
 }
 
+static 
+ILI_OP 
+verify_supported_device_mathfn(ILM_OP opc)
+{
+    switch (opc) {
+      default: return (ILI_OP)0;
+
+      case IM_CEXP:      return IL_SCMPLXEXP;
+      case IM_CDEXP:     return IL_DCMPLXEXP;
+
+      case IM_CLOG:      return IL_SCMPLXLOG;
+      case IM_CDLOG:     return IL_DCMPLXLOG;
+
+      case IM_CSIN:      return IL_SCMPLXSIN;
+      case IM_CDSIN:     return IL_DCMPLXSIN;
+      case IM_CSINH:     return IL_SCMPLXSINH;
+      case IM_CDSINH:    return IL_DCMPLXSINH;
+      case IM_CASIN:     return IL_SCMPLXASIN;
+      case IM_CDASIN:    return IL_DCMPLXASIN;
+
+      case IM_CCOS:      return IL_SCMPLXCOS;
+      case IM_CDCOS:     return IL_DCMPLXCOS;
+      case IM_CCOSH:     return IL_SCMPLXCOSH;
+      case IM_CDCOSH:    return IL_DCMPLXCOSH;
+      case IM_CACOS:     return IL_SCMPLXACOS;
+      case IM_CDACOS:    return IL_DCMPLXACOS;
+
+      case IM_CTAN:      return IL_SCMPLXTAN;
+      case IM_CDTAN:     return IL_DCMPLXTAN;
+      case IM_CTANH:     return IL_SCMPLXTANH;
+      case IM_CDTANH:    return IL_DCMPLXTANH;
+      case IM_CATAN:     return IL_SCMPLXATAN;
+      case IM_CDATAN:    return IL_DCMPLXATAN;
+
+      case IM_CCOTAN:    return IL_SCMPLXTAN;
+      case IM_CDCOTAN:   return IL_DCMPLXTAN;
+       return (ILI_OP)0;
+    }
+    return (ILI_OP)0;
+}
 void
 exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
 {
@@ -187,6 +227,16 @@ exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
    * a names entry.
    */
   nme = 0;
+#ifdef OMP_OFFLOAD_LLVM
+    if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+       ILI_OP iliop = verify_supported_device_mathfn(opc);
+       if (iliop != 0) {
+         op1 = ILI_OF(ILM_OPND(ilmp, 1));
+         ILM_RESULT(curilm) = ad1ili(iliop, op1);
+         return;
+       }
+    }
+#endif
   switch (opc) {
   default:
     interr("exp_ac:ilm not cased", opc, ERR_Severe);
