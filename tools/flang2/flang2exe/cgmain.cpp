@@ -7698,6 +7698,11 @@ get_next_arg(int arg_ili)
   case IL_DAIR:
   case IL_DAKR:
   case IL_DASP:
+  // AOCC Begin
+  case IL_DACS:
+  case IL_DACD:
+  case IL_DACQ:
+  // AOCC end
     return ILI_OPND(arg_ili, 3);
 
   default:

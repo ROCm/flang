@@ -2540,6 +2540,138 @@ inline bool IS_QUAD0(int x)
 #define IS_QUAD0 is_quad0  // AOCC
 #endif
 
+static 
+int lowered_to_device_libm(ILI_OP opc,int op1,int op2)
+{
+    int ilix;
+    switch (opc) {
+      case IL_DPOWD:
+        (void)mk_prototype("pow", "f pure", DT_DBLE, 2, DT_DBLE,DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "pow", 2, op1,op2);
+        return ad2altili(opc, op1,op2, ilix);
+      case IL_DCOS:
+        (void)mk_prototype("cos", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DSIN:
+        (void)mk_prototype("sin", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "sin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DSQRT:
+        (void)mk_prototype("sqrt", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "sqrt", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DEXP:
+        (void)mk_prototype("exp", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "exp", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DLOG:
+        (void)mk_prototype("log", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "log", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DLOG10:
+        (void)mk_prototype("log10", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "log10", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_NINT:
+        (void)mk_prototype("llvm.nearbyint.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
+        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f32", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      case IL_IDNINT:
+        (void)mk_prototype("llvm.nearbyint.f64", "f pure", DT_DBLE, 1, DT_DBLE);
+        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f64", 1, op1);
+        return ad2altili(opc, op1, op2, ilix);
+      case IL_SCMPLXEXP:
+        (void)mk_prototype("cexp", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cexp", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXEXP:
+        (void)mk_prototype("cdexp", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdexp", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXLOG:
+        (void)mk_prototype("clog", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "clog", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXLOG:
+        (void)mk_prototype("cdlog", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdlog", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXSIN:
+        (void)mk_prototype("csin", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "csin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXSIN:
+        (void)mk_prototype("cdsin", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdsin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXSINH:
+        (void)mk_prototype("csinh", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "csinh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXSINH:
+        (void)mk_prototype("cdsinh", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdsinh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXASIN:
+        (void)mk_prototype("casin", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "casin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXASIN:
+        (void)mk_prototype("cdasin", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdasin", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXCOS:
+        (void)mk_prototype("ccos", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "ccos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXCOS:
+        (void)mk_prototype("cdcos", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdcos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXCOSH:
+        (void)mk_prototype("ccosh", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "ccosh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXCOSH:
+        (void)mk_prototype("cdcosh", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdcosh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXACOS:
+        (void)mk_prototype("cacos", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cacos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXACOS:
+        (void)mk_prototype("cdacos", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdacos", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXTAN:
+        (void)mk_prototype("ctan", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "ctan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXTAN:
+        (void)mk_prototype("cdtan", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdtan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXTANH:
+        (void)mk_prototype("ctanh", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "ctanh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXTANH:
+        (void)mk_prototype("cdtanh", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdtanh", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXATAN:
+        (void)mk_prototype("catan", "f pure", DT_CMPLX, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "catan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXATAN:
+        (void)mk_prototype("cdatan", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdatan", 1, op1);
+        return ad1altili(opc, op1, ilix);
+    }
+    return 0;
+}
 /**
  * \brief adds arithmetic ili
  */
@@ -2687,18 +2819,15 @@ addarth(ILI *ilip)
    * Use LLVM math intrinsics instead of
    * using flang runtime math library
   */
+#ifdef OMP_OFFLOAD_LLVM
+  if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+    int ilix = lowered_to_device_libm(opc,op1,op2);
+    if (ilix) return ilix;
+  }
+#endif
+
   if (flg.use_llvm_math_intrin) {
     switch(opc) {
-    case IL_DPOWD:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("pow", "f pure", DT_DBLE, 2, DT_DBLE,DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "pow", 2, op1,op2);
-        return ad2altili(opc, op1,op2, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.pow.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.pow.f64", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
@@ -2720,27 +2849,11 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.cos.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DCOS:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("cos", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "cos", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.cos.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.cos.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
     //AOCC Begin
     case IL_QCOS:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("cos", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "cos", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("cosq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_DFRQP, IL_QJSR, "cosq", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2751,27 +2864,11 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sin.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSIN:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("sin", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "sin", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.sin.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sin.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
     //AOCC Begin
     case IL_QSIN:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("sin", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "sin", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("sinq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_DFRQP, IL_QJSR, "sinq", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2796,28 +2893,12 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_DFRSP, IL_QJSR, "llvm.sqrt.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DSQRT:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("sqrt", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "sqrt", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.sqrt.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_DFRDP, IL_QJSR, "llvm.sqrt.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
 
       // AOCC Begin
     case IL_QSQRT:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("sqrtq", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "sqrtq", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("sqrtq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_DFRQP, IL_QJSR, "sqrtq", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2828,28 +2909,12 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.exp.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DEXP:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("exp", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "exp", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.exp.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.exp.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
 
       // AOCC Begin
     case IL_QEXP:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("exp", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "exp", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("expq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_qpfunc, IL_QJSR, "expq", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2861,27 +2926,11 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.log.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DLOG:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("log", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "log", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.log.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.log.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
     // AOCC begin
     case IL_QLOG:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("log", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "log", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("logq", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_qpfunc, IL_QJSR, "logq", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2893,28 +2942,12 @@ addarth(ILI *ilip)
       ilix = ad_func(IL_spfunc, IL_QJSR, "llvm.log10.f32", 1, op1);
       return ad1altili(opc, op1, ilix);
     case IL_DLOG10:
-      // AOCC Begin
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("log10", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "log10", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
-      // AOCC End
       (void)mk_prototype("llvm.log10.f64", "f pure", DT_DBLE, 1, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.log10.f64", 1, op1);
       return ad1altili(opc, op1, ilix);
 
       // AOCC Begin
     case IL_QLOG10:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("log10", "f pure", DT_QUAD, 1, DT_QUAD);
-        ilix = ad_func(IL_DFRDP, IL_QJSR, "log10", 1, op1);
-        return ad1altili(opc, op1, ilix);
-      }
-#endif
       (void)mk_prototype("log10q", "f pure", DT_QUAD, 1, DT_QUAD);
       ilix = ad_func(IL_qpfunc, IL_QJSR, "log10q", 1, op1);
       return ad1altili(opc, op1, ilix);
@@ -2964,24 +2997,6 @@ addarth(ILI *ilip)
       (void)mk_prototype("fmaxq", "f pure", DT_QUAD, 2, DT_QUAD, DT_QUAD);
       ilix = ad_func(IL_qpfunc, IL_QJSR, "fmaxq", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
-  case IL_NINT:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.nearbyint.f32", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f32", 1, op1);
-        return ad2altili(opc, op1, op2, ilix);
-      }
-#endif
-      break;
-  case IL_IDNINT:
-#ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("llvm.nearbyint.f64", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_qpfunc, IL_QJSR, "llvm.nearbyint.f64", 1, op1);
-        return ad2altili(opc, op1, op2, ilix);
-      }
-#endif
-      break;
     // AOCC end
 
     default:
