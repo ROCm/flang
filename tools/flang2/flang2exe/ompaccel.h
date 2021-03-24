@@ -60,7 +60,9 @@ typedef struct {
   bool in_map;          /* set if it occurs in map */
   int ili_base;         /* symbol base */
   int ili_lowerbound;   /* lower bound */
+  SPTR sptr_lowerbound;   /* lower bound sptr */
   int ili_length;       /* length */
+  SPTR sptr_length;       /* length sptr*/
   int ili_sptr;         /* ili for sptr, // AOCC
                            ili_base represents base of struct,
                            this represets offsetted pointer */

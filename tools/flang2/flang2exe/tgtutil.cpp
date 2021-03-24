@@ -519,11 +519,20 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
         param_dtype = array_element_dtype(param_dtype);
       else if (llis_pointer_kind(param_dtype))
         param_dtype = DTySeqTyElement(param_dtype);
+      // AOCC Begin
+      // ILIs for base and lower bound symbols
+      if(!ILI_OF(targetinfo->symbols[i].ili_base))
+        targetinfo->symbols[i].ili_base = mk_address(param_sptr);
+      if(!ILI_OF(targetinfo->symbols[i].ili_lowerbound))
+        targetinfo->symbols[i].ili_lowerbound = 
+                  mk_ompaccel_ldsptr(targetinfo->symbols[i].sptr_lowerbound);
+      // AOCC End
       iliy = targetinfo->symbols[i].ili_base;
       ilix = mk_ompaccel_store(iliy, DT_ADDR, nme_base, ad_acon(arg_base_sptr, i * TARGET_PTRSIZE));
       /* Assign args */
       chk_block(ilix);
       ilix = ikmove(targetinfo->symbols[i].ili_lowerbound);
+      ilix = mk_ompaccel_add(ilix, DT_INT8, ad_kconi(-1), DT_INT8); // AOCC
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
       ilix = sel_aconv(ilix);
       ilix = mk_ompaccel_add(iliy, DT_ADDR, ilix, DT_INT8);
@@ -554,7 +563,14 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       chk_block(ilix);
     }
     /* assign size */
-    if(targetinfo->symbols[i].in_map) {
+    if(targetinfo->symbols[i].in_map && 
+                      targetinfo->symbols[i].sptr_length != SPTR_NULL) {// AOCC
+      // AOCC Begin
+      // ILI for the length symbol
+      if(!ILI_OF(targetinfo->symbols[i].sptr_length))
+        targetinfo->symbols[i].ili_length = 
+                      mk_ompaccel_ldsptr(targetinfo->symbols[i].sptr_length);
+      // AOCC End
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {

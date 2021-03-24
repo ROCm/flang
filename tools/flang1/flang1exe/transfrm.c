@@ -359,6 +359,53 @@ static void rewrite_omp_target_construct() {
 
   ast_unvisit();
 }
+
+void rewrite_omp_map_array_section()
+{
+  int std = 0, bmpstd;
+  int ast = 0, lop;
+  int ast2 = 0, shape, src;
+  int tmp, newast, asn;
+
+  ast_visit(1,1);
+
+  for(std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+ 
+    if(ast == 0)
+      continue;
+
+    if(A_TYPEG(ast) == A_MP_BMPSCOPE)
+      bmpstd = std;
+    if(A_TYPEG(ast) != A_MP_MAP)
+      continue;
+
+    lop = A_LOPG(ast);
+
+    if(A_TYPEG(lop) != A_SUBSCR || !A_SHAPEG(lop))
+      continue;
+
+    transform_map_array_section(lop, bmpstd, &ast2);
+
+    shape = A_SHAPEG(lop);
+
+    // compute the size of the array 
+    if(SHD_UPB(shape, 0)){
+      src = mk_binop(OP_ADD, mk_binop(OP_SUB, SHD_UPB(shape,0), 
+                                SHD_LWB(shape,0), astb.bnd.dtype), 
+                                  SHD_STRIDE(shape,0), astb.bnd.dtype);
+      tmp = getcctmp('z', src, ST_VAR, DT_INT8);
+      newast = mk_id(tmp);
+      asn = mk_assn_stmt(newast, src, DT_INT8);
+      add_stmt_before(asn, bmpstd);
+      A_ROPP(ast, newast);
+    }
+    if(ast2)
+      A_LOPP(ast, ast2);
+  }
+
+  ast_unvisit();
+}
 // AOCC END
 
 void
@@ -381,6 +428,16 @@ transform(void)
 #if DEBUG
       if (DBGBIT(50, 4)) {
         fprintf(gbl.dbgfil, "After rewrite_omp_target_construct\n");
+        dstda();
+      }
+#endif
+      /* Handle sections for assumed array in map clause
+      */
+      rewrite_omp_map_array_section();
+
+#if DEBUG
+      if(DBGBIT(50, 4)) {
+        fprintf(gbl.dbgfil, "After rewrite_omp_map_array_section\n");
         dstda();
       }
 #endif

@@ -796,6 +796,9 @@ bool pta_stride1(int ptrstdx, int ptrsptr); /* pointsto.c */
 void pstride_analysis(void);                   /* pstride.c */
 void fini_pstride_analysis(void);              /* pstride.c */
 void call_analyze(void);                       /* rest.c */
+// AOCC Begin
+void transform_map_array_section(int ast, int std, int *retval);/* rest.c */
+// AOCC End
 void convert_output(void);                     /* outconv.c */
 void sectfloat(void);                          /* outconv.c */
 void sectinline(void);                         /* outconv.c */
