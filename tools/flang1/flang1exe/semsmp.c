@@ -5077,7 +5077,39 @@ semsmp(int rednum, SST *top)
       } else {
         sptr = SST_LSYMG(RHS(1));
       }
-      error(1206, ERR_Warning, gbl.lineno, sptr ? SYMNAME(sptr) : CNULL, CNULL);
+      if(!(int)ASUMSZG(sptr)) // AOCC
+        error(1206, ERR_Warning, gbl.lineno, sptr ? SYMNAME(sptr) : CNULL, CNULL);
+
+      // AOCC Begin
+      // create subscript with lower and upper bound for the array in RHS(1)
+      itemp = SST_BEGG(RHS(3));
+      if(DTY(DTYPEG(sptr)) == TY_ARRAY && (int)ASUMSZG(sptr)){
+         ITEM *itemp1;
+         int triple_flag, curr_dim;
+         for(triple_flag = curr_dim = 0,itemp1 = itemp;
+             (itemp1 && itemp1 != ITEM_END); itemp1 = itemp1->next){
+           SST *e1 = itemp1->t.stkp;
+           if(SST_IDG(e1) == S_TRIPLE){
+             int mask = 0;
+             if(SST_IDG(SST_E1G(e1)) == S_NULL){
+               mask |= lboundMask;
+             }
+             if(SST_IDG(SST_E2G(e1)) == S_NULL){
+               mask |= uboundMask;
+             }
+             if(SST_IDG(SST_E3G(e1)) == S_NULL){
+               mask |= strideMask;
+             }
+             mask <<= 3 * curr_dim;
+             triple_flag |= mask;
+             ++curr_dim;
+          }
+        }
+        SST_DIMFLAGP(LHS, triple_flag);
+        (void)mkvarref(RHS(1), itemp);  // creates triple and subscript
+        SST_PARENP(LHS, 0);
+      }
+      // AOCC End
       goto accel_data2;
       break;
     }
