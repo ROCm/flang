@@ -860,6 +860,28 @@ find_section_subscript(int ast)
   return ast;
 } /* find_section_subscript */
 
+// AOCC Begin
+/* retval will have a array subscript with only lower bound
+*  For example: arr(3:10) is changed to arr(3)
+*/
+void transform_map_array_section(int ast, int std, int *retval)
+{
+    int sptr, ast2;
+    LOGICAL continuous;
+
+    if (A_TYPEG(ast) != A_SUBSCR || !A_SHAPEG(ast)) {
+        return;
+    }
+
+    sptr = sptr_of_subscript(ast);
+    ast2 = remove_subscript_expressions(ast, std, sym_of_ast(ast));
+    ast2 = convert_subscript(ast2);
+    continuous = continuous_section(sptr, ast2, 0, 0);
+    if(continuous)
+      *retval = first_element_from_section(ast2);
+}
+// AOCC End
+
 static int
 transform_section_arg(int ele, int std, int callast, int entry, int *descr,
                       int argnbr)

@@ -3235,6 +3235,7 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
 {
   int label, argilm;
   int base = 0, ili_sptr = 0; // AOCC
+  SPTR lwb_sptr = SPTR_NULL, length_sptr = SPTR_NULL; // AOCC
   SPTR sptr;
   if (outlinedCnt >= 2)
     return;
@@ -3246,6 +3247,24 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
   } else if (ILM_OPC(mapop) == IM_PLD) {
     sptr = ILM_SymOPND(mapop, 2); // make 2
     label = ILM_OPND(ilmp, 2);    /* map type */
+  // AOCC Begin
+  // sptr for lower bound and length for assumed shape array
+  } else if (ILM_OPC(mapop) == IM_ELEMENT) {
+    sptr = ILM_SymOPND((ILM *)(ilmb.ilm_base + ILM_SymOPND(mapop, 2)), 1);
+    ILM *tmp = (ILM *)(ilmb.ilm_base + ILM_SymOPND(mapop, 4));
+    if(ILM_OPC(tmp) == IM_BASE)
+      lwb_sptr = ILM_SymOPND(tmp, 1);
+    else if(ILM_OPC(tmp) == IM_KCON)
+      lwb_sptr = ILM_SymOPND(tmp, 1);
+    else if(ILM_OPC(tmp) == IM_KLD){
+      lwb_sptr = ILM_SymOPND((ILM *)(ilmb.ilm_base + ILM_SymOPND(tmp, 1)), 1);
+    }
+    lwb_sptr = ILM_SymOPND((ILM *)(ilmb.ilm_base + ILM_SymOPND(mapop, 4)), 1);
+    if(ilms[ILM_OPC(ilmp)].oprs == 3)
+      length_sptr = ILM_SymOPND((ILM *)
+                                  (ilmb.ilm_base + ILM_SymOPND(ilmp, 3)), 1);
+    label = ILM_OPND(ilmp, 2);    /* map type */
+  // AOCC End
   }
 
   // AOCC Begin
@@ -3253,6 +3272,20 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
     base = ILM_OPND(ilmp, 3);
     base = ILI_OF(base);
     ili_sptr = ILI_OF(argilm);
+  }
+  // AOCC End
+
+  // AOCC Begin
+  for (int i = 0; i < current_tinfo->n_symbols; ++i) {
+    if (SDSCG(current_tinfo->symbols[i].host_sym)){
+      if(current_tinfo->symbols[i].host_sym == sptr) {
+        if(lwb_sptr != SPTR_NULL && length_sptr != SPTR_NULL){
+          current_tinfo->symbols[i].in_map = 1;
+          current_tinfo->symbols[i].sptr_lowerbound = lwb_sptr;
+          current_tinfo->symbols[i].sptr_length = length_sptr;
+        }
+      }
+    }
   }
   // AOCC End
 
