@@ -2828,6 +2828,7 @@ addarth(ILI *ilip)
 
   if (flg.use_llvm_math_intrin) {
     switch(opc) {
+    case IL_DPOWD:
       (void)mk_prototype("llvm.pow.f64", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
       ilix = ad_func(IL_dpfunc, IL_QJSR, "llvm.pow.f64", 2, op1, op2);
       ilix = ad2altili(opc, op1, op2, ilix);
