@@ -474,7 +474,7 @@ private:
       for (std::vector<std::string>::const_iterator it = tokens.begin() + 1,
                                                     E = tokens.end();
            it != E; ++it) {
-        tgt << " " << *it;
+        tgt << ' ' << *it;
       }
       tgt << "\n";
       return;
@@ -566,7 +566,7 @@ private:
         for (std::vector<std::string>::const_iterator it = tokens.begin() + 1,
                                                       E = tokens.end();
              it != E; ++it) {
-          tgt << " " << *it;
+          tgt << ' ' << *it;
         }
         tgt << "\n";
       }
@@ -578,7 +578,7 @@ private:
         for (std::vector<std::string>::const_iterator it = tokens.begin() + 2,
                                                       E = tokens.end();
              it != E; ++it) {
-          tgt << " " << *it;
+          tgt << ' ' << *it;
         }
         tgt << "\n\n";
       }
@@ -654,7 +654,7 @@ private:
         ss << "#. **" << tokens[1] << "**";
         for (std::vector<std::string>::size_type it = 3; it < tokens.size();
              ++it) {
-          ss << " " << tokens[it];
+          ss << ' ' << tokens[it];
         }
         ss << "    *Type*: *" << tokens[2] << "*\n\n";
       }
@@ -666,7 +666,7 @@ private:
         if (it != E) {
           ss << " ``" << *it++ << "``";
           for (; it != E; ++it) {
-            ss << " " << *it;
+            ss << ' ' << *it;
           }
         }
       }
@@ -1037,7 +1037,7 @@ private:
             for (cell_type::const_iterator ci = formatting[it].begin(),
                                            E = formatting[it].end();
                  ci != E; ++ci) {
-              tgt << " " << *ci;
+              tgt << ' ' << *ci;
             }
             tgt << '\n';
           }
@@ -1180,7 +1180,7 @@ private:
                it = widths.begin(),
                E = widths.end();
            it != E; ++it) {
-        tgt << " " << *it;
+        tgt << ' ' << *it;
       }
       tgt << '\n';
     }
