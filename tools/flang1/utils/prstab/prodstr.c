@@ -118,7 +118,12 @@ readln()
   char *status;
 
   strncpy(savelin, linbuf, 121);
-  savelin[strlen(savelin) - 1] = '\0';
+
+  if(strlen(savelin)!=0)
+    savelin[strlen(savelin) - 1] = '\0';
+  else
+    savelin[0] = '\0';
+
   status = fgets(linbuf, 121, infile);
   lineno++;
   curchr = 0;
