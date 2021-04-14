@@ -1513,12 +1513,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_NOMERGE(expb.curbih) = true;
     bihb.csfg = BIH_CS(expb.curbih) = true;
     // AOCC Begin
-    // ili = addMpBcsNest();
+#ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-    } else {
+    } else 
+#endif
+    {
     // AOCC End
       ili = addMpBcsNest();
-       iltb.callfg = 1;
+      iltb.callfg = 1;
       chk_block(ili);
     }
     ccff_info(MSGOPENMP, "OMP003", gbl.findex, gbl.lineno,
@@ -1534,8 +1536,11 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     BIH_CS(expb.curbih) = true;
     // AOCC Begin
     // ili = addMpEcsNest();
+#ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-    } else {
+    } else 
+#endif
+    {
       ili = addMpEcsNest();
       iltb.callfg = 1;
       chk_block(ili);

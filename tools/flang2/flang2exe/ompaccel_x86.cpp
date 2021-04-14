@@ -191,8 +191,10 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   for (int i = 0; i < func_paramct; i++) {
     SPTR arg_sptr = (SPTR)aux.dpdsc_base[func_dpsc + i + adjust_idx];
     if (DTY(DTYPEG(arg_sptr)) != TY_ARRAY &&
+#if 1 // aocc flang does not have these two lines
         DTY(DTYPEG(arg_sptr)) != TY_CMPLX &&
         DTY(DTYPEG(arg_sptr)) != TY_DCMPLX &&
+#endif
         (DTY(DTYPEG(arg_sptr)) != TY_PTR)) {
       // We skip reduction variables since they'll be lowered as pointers.
       if (reduc_syms.find(arg_sptr) != reduc_syms.end()) { continue; }

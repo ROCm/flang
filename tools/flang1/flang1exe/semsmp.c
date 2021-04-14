@@ -7571,9 +7571,11 @@ do_reduction(void)
       if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
         DTYPEP(reduc_symp->Private, DT_DBLE);
       }
+#if 1
       if (DTYPEG(reduc_symp->Private) == DT_CMPLX && flg.amdgcn_target) {
         DTYPEP(reduc_symp->Private, DT_DCMPLX);
       }
+#endif
       // AOCC End
       set_parref_flag(reduc_symp->shared, reduc_symp->shared,
                       BLK_UPLEVEL_SPTR(sem.scope_level));
