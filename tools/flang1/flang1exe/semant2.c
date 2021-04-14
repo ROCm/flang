@@ -1523,7 +1523,8 @@ semant2(int rednum, SST *top)
     i = NMPTRG(SST_SYMG(RHS(rhstop)));
     //AOCC Begin
     if (STYPEG(SST_SYMG(RHS(rhstop))) == ST_USERGENERIC ||
-        STYPEG(SST_SYMG(RHS(rhstop))) == ST_PROC)
+        STYPEG(SST_SYMG(RHS(rhstop))) == ST_PROC ||
+        STYPEG(SST_SYMG(RHS(rhstop))) == ST_ENTRY)
         A_ALIASP(ast,SST_SYMG(RHS(rhstop)));
     //AOCC End
     ast = mkmember(dtype, ast, i);

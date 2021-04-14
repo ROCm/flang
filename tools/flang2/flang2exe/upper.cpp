@@ -2087,6 +2087,7 @@ read_symbol(void)
   case ST_STRUCT:
   case ST_UNION:
   case ST_VAR:
+    linenum = getval("lineno");
     addrtkn = getbit("addrtaken");
     argument = getbit("argument"); /* + */
     assigned = getbit("assigned");
@@ -2374,6 +2375,7 @@ read_symbol(void)
     }
     INTENTINP(newsptr, intentin);
     ALLOCATTRP(newsptr, allocattr);
+    LINENOP(newsptr, linenum);
     if (flg.debug && has_alias)
       save_modvar_alias(newsptr, alias_name);
     break;

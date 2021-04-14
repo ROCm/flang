@@ -464,6 +464,7 @@ main(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_LLVM
           if (flg.omptarget) {
             ompaccel_ast_alloc_array();
+	    ompaccel_ast_alloc_array2();
           }
 #endif
 
@@ -487,8 +488,6 @@ main(int argc, char *argv[])
           sectinline();
           DUMP("sectinline");
         }
-        // AOCC begin
-        // AOCC end
         if (XBIT(70, 0x18)) {
           linearize_arrays();
           DUMP("linearize");

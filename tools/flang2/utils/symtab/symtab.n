@@ -1316,9 +1316,13 @@ auxiliary data structures described below).
 Number of dummy parameters for this entry point.
 This count also includes any implicit arguments required for the entry.
 containing the initialization values for this variable.
-.SE FUNCLINE w14
-Source line number of first line of function definition (used for LSD block
-entry for this function).
+.SE LINENO w14
+Source line number of variable declaration.
+#.SE FUNCLINE w14
+#This field overloads LINENO, so it's commented out for documentation
+#purposes.
+#Source line number of first line of function definition (used for LSD block
+#entry for this function).
 .SE BIHNUM w15
 The
 .cw BIH

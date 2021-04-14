@@ -8270,6 +8270,11 @@ add_to_list(ACL *val, ACL **root)
 {
   ACL *tail;
   if (*root) {
+    // AOCC Begin
+    // check if val is already in the list
+    for (tail = *root; tail; tail = tail->next)
+      if (tail == val ) return;
+    // AOCC End
     for (tail = *root; tail->next; tail = tail->next)
       ;
     tail->next = val;
