@@ -1,11 +1,14 @@
+
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #
-# Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+
 #
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #
 # AMD Support for DNORM intrinsic
 # Date of Modification: 21st February 2019
@@ -16,6 +19,7 @@
 # [AMD] Support for Bit Masking intrinsics.
 # Month of Modification: May 2019
 #===----------------------------------------------------------------------===#
+
 
 enable_language(C ASM Fortran) # Enable assembly and Fortran
 
@@ -53,6 +57,7 @@ SET(FTN_INTRINSICS_DESC_INDEP
   delfilesqq3f.c
   derf3f.c
   derfc3f.c
+  deviceio_lib.F95
   drandm3f.c
   dsecnds3f.c
   dtime3f.c
@@ -127,6 +132,8 @@ SET(FTN_INTRINSICS_DESC_INDEP
   isnand3f.c
   isnanf3f.c
   itime3f.c
+  itrailz.c
+  itrailzi.c
   kabs.c
   kidim.c
   kill3f.c
@@ -136,6 +143,7 @@ SET(FTN_INTRINSICS_DESC_INDEP
   kmin.c
   kpopcnt.c
   kpoppar.c
+  ktrailz.c
   link3f.c
   lnblnk3f.c
   loc3f.c
@@ -256,6 +264,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   fpcvt.c
   ftn.c
   ftnexit.c
+  gather_cmplx32.F95
   gather_cmplx16.F95
   gather_cmplx8.F95
   gather_real4.F95
@@ -270,26 +279,32 @@ SET(FTN_SUPPORT_DESC_INDEP
   linux_dummy.c
   malloc.c
   misc.c
+  mmcmplx32.c
   mmcmplx16.c
   mmcmplx8.c
   mmreal4.c
   mmreal8.c
+  mnaxnb_cmplx32.F95
   mnaxnb_cmplx16.F95
   mnaxnb_cmplx8.F95
   mnaxnb_real4.F95
   mnaxnb_real8.F95
+  mnaxtb_cmplx32.F95
   mnaxtb_cmplx16.F95
   mnaxtb_cmplx8.F95
   mnaxtb_real4.F95
   mnaxtb_real8.F95
+  mtaxnb_cmplx32.F95
   mtaxnb_cmplx16.F95
   mtaxnb_cmplx8.F95
   mtaxnb_real4.F95
   mtaxnb_real8.F95
+  mtaxtb_cmplx32.F95
   mtaxtb_cmplx16.F95
   mtaxtb_cmplx8.F95
   mtaxtb_real4.F95
   mtaxtb_real8.F95
+  mvmul_cmplx32.F95
   mvmul_cmplx16.F95
   mvmul_cmplx8.F95
   mvmul_real4.F95
@@ -300,6 +315,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   rw.c
   scalar_copy.c
   stat_linux.c
+  transpose_cmplx32.F95
   transpose_cmplx16.F95
   transpose_cmplx8.F95
   transpose_real4.F95
@@ -308,6 +324,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   utils.c
   utilsi64.c
   version.c
+  vmmul_cmplx32.F95
   vmmul_cmplx16.F95
   vmmul_cmplx8.F95
   vmmul_real4.F95
@@ -316,6 +333,7 @@ SET(FTN_SUPPORT_DESC_INDEP
   xfer.c
   init.c
   xfer_rpm1.c
+  cmplx_intrinsic_wrapper.c
   )
 
 SET(FTN_SUPPORT_DESC_DEP
@@ -340,6 +358,13 @@ SET(FTN_SUPPORT_DESC_DEP
   mget.c
   miscsup_com.c
   mmul.c
+  mmulcplx32.c
+  mmul_cplx32contmxm.F95
+  mmul_cplx32contmxv.F95
+  mmul_cplx32contvxm.F95
+  mmul_cplx32str1.F95
+  mmul_cplx32str1_t.F95
+  mmulcplx32_t.c
   mmulcplx16.c
   mmul_cplx16contmxm.F95
   mmul_cplx16contmxv.F95
@@ -404,6 +429,13 @@ SET(FTN_SUPPORT_DESC_DEP
   mmul_real8str1.F95
   mmul_real8str1_t.F95
   mmulreal8_t.c
+  mmulreal16.c
+  mmul_real16contmxm.F95
+  mmul_real16contmxv.F95
+  mmul_real16contvxm.F95
+  mmul_real16str1.F95
+  mmul_real16str1_t.F95
+  mmulreal16_t.c
   nmlread.c
   nmlwrite.c
   nmlutil.c
@@ -419,12 +451,10 @@ SET(FTN_SUPPORT_DESC_DEP
   transfer.c
   type.c
   util.c
-  ieee_exceptions.F95
-  ieee_arithmetic.F95
   )
 
 set(I8_FILES_DIR I8_sources)
-separate_arguments(SEPARATED_CMAKE_Fortran_FLAGS UNIX_COMMAND ${CMAKE_Fortran_FLAGS})
+separate_arguments(SEPARATED_CMAKE_Fortran_FLAGS NATIVE_COMMAND ${CMAKE_Fortran_FLAGS})
 
 if(EXISTS bin/flang1)
   set(FLANG1_DEP bin/flang1)
@@ -434,6 +464,7 @@ else()
   set(FLANG1_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang1)
   set(FLANG2_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang2)
 endif()
+
 # Fortran files with macros as module names need to be preprocessed.
 # CMake has an internal Fortran parser that parses the module name, but it doesn't
 # consider macros which results in wrong dependencies.
@@ -658,7 +689,7 @@ add_dependencies(flang_static
   )
 
 # Make sure the compiler is built before we bootstrap
-add_dependencies(flang_shared
+add_dependencies(flang_shared 
   flang_static
   ${FLANG1_DEP}
   ${FLANG2_DEP}

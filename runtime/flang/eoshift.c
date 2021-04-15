@@ -236,7 +236,7 @@ static void I8(eoshift_scalar)(char *rb,          /* result base */
 
 static void I8(eoshift_loop)(char *rb,          /* result base */
                              char *ab,          /* array base */
-                             __INT_T *sb,       /* shift base */
+                             __INT4_T *sb,       /* shift base */
                              char *bb,          /* boundary base */
                              __INT_T shift_dim, /* dimension to shift */
                              F90_Desc *rs,      /* result descriptor */
@@ -308,11 +308,10 @@ static void I8(eoshift_loop)(char *rb,          /* result base */
     if (loop_dim > 1)
       I8(eoshift_loop)(rb, ab, sb, bb, shift_dim, rs, as, ss, bs, rc, ac,
 			     soff, boff, loop_dim-1);
-    else
-
+    else 
       I8(eoshift_scalar)(rb, ab, sb[soff], bb + boff*F90_LEN_G(bs),
 			       shift_dim, rs, as, rc, ac, 1);
-
+    
     /* restore descriptor fields */
 
     F90_FLAGS_P(ac, aflags);

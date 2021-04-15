@@ -39,6 +39,7 @@ set(SRCS
   mth_tanhdefs.h
   mth_ceildefs.h
   mth_floordefs.h
+  mth_cotandefs.h
   )
 
 set(NEW_SRCS)

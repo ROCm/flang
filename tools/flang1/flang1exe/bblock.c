@@ -10,7 +10,7 @@
  *
  * Changes to support AMDGPU OpenMP offloading
  * Implemented diagnostics for simpler case of uninitialized variable use.
- * Last modified: Nov 2020
+ * Last modified: Dec 2020
  *
  *
  * Support for x86-64 OpenMP offloading
@@ -2049,6 +2049,7 @@ static bool is_var_initialized(int sptr) {
 static clear_initsyms() {
   if (initsyms_set)
     hashset_clear(initsyms_set);
+  return 0;
 }
 
 /* marks the variable pointed to by sptr as initiazlied */
@@ -2650,6 +2651,7 @@ int get_pdo_buddy_std(int pdo_std) {
       return std;
     }
   }
+  return 0;
 }
 
 /* returns the parallel std of \p pdo_std */
@@ -2662,6 +2664,7 @@ int get_pdo_parallel_std(int pdo_std) {
       return std;
     }
   }
+  return 0;
 }
 
 /*
@@ -3099,12 +3102,12 @@ void ompaccel_ast_transform() {
 
   if (flg.amdgcn_target) {
     ompaccel_ast_segregate_parsec();
+    ompaccel_ast_simplify_nested_parsec();
   }
 
   if (flg.x86_64_omptarget) {
     ompaccel_ast_simplify_nested_parsec();
   }
 }
-
 #endif
 /* AOCC end */

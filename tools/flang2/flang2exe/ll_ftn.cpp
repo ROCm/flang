@@ -4,10 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Last modified: Apr 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
  */
+
 /**
    \file
    FIXME - document what this is
@@ -107,9 +114,11 @@ is_fastcall(int ilix)
     switch (ILI_OPC(ILI_OPND(ilix, 2))) {
     /* mth_i_ ..  routines? */
     case IL_DADP: /* dplnk dp lnk */
+    case IL_DAQP: /* qplnk qp lnk */   // AOCC
     case IL_DASP: /* splnk sp lnk */
     case IL_DACS: /* cslnk cs lnk */
     case IL_DACD: /* cdlnk cd lnk */
+    case IL_DACQ: /* cdlnk cq lnk */   // AOCC
       return true;
     }
     break;
@@ -639,6 +648,7 @@ get_return_type(SPTR func_sptr)
     return DT_NONE;
   case TY_CMPLX:
   case TY_DCMPLX:
+  case TY_QCMPLX:      // AOCC
     if (CFUNCG(func_sptr) || CMPLXFUNC_C)
       break;
     return DT_NONE;

@@ -4,6 +4,13 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 
+# 
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
+#
+# Last Modified: May 2020
+#
+
 set(SOURCES
   accpp.c
   assem.c
@@ -131,8 +138,8 @@ add_dependencies(flang1
   )
 
 if (FLANG_INCLUDE_DOCS)
-  add_dependencies(flang1_gen_sphinx_docs
-    flang1
+  add_dependencies(flang1
+    flang1_gen_sphinx_docs
     )
 endif()
 

@@ -3,6 +3,12 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
+# 
+# Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
+#
+# Last Modified: May 2020
+#
 
 add_executable(fen2rst
   ${UTILS_SHARED_DIR}/n2rst.cpp
@@ -32,7 +38,7 @@ add_custom_command(
          ${FLANG1_DOC_BIN_DIR}/scanner.rst
          ${FLANG1_DOC_BIN_DIR}/semant.rst
          ${FLANG1_DOC_BIN_DIR}/transform.rst
-  COMMAND ${CMAKE_BINARY_DIR}/bin/fen2rst -v ${FLANG1_DOC_SRC_DIR}/ast.n
+	 COMMAND ${CMAKE_BINARY_DIR}/bin/fen2rst -v ${UTILS_AST_DIR}/ast.n
                                              ${FLANG1_DOC_SRC_DIR}/comms.n
                                              ${FLANG1_DOC_SRC_DIR}/controller.n
                                              ${FLANG1_DOC_SRC_DIR}/dinit.n
@@ -46,7 +52,7 @@ add_custom_command(
                                              ${FLANG1_DOC_SRC_DIR}/semant.n
                                              ${FLANG1_DOC_SRC_DIR}/transform.n
   WORKING_DIRECTORY ${FLANG1_DOC_BIN_DIR}
-  DEPENDS fen2rst ${FLANG1_DOC_SRC_DIR}/ast.n
+  DEPENDS fen2rst ${UTILS_AST_DIR}/ast.n
                   ${FLANG1_DOC_SRC_DIR}/comms.n
                   ${FLANG1_DOC_SRC_DIR}/controller.n
                   ${FLANG1_DOC_SRC_DIR}/dinit.n

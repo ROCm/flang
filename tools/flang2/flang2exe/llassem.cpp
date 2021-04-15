@@ -5,10 +5,21 @@
  *
  */
 
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Support for x86-64 OpenMP offloading
+ *  Last modified: Oct 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading.
+ *  Last modified: Nov 2019
+ *
+ * Added support for quad precision
+ *  Last modified: Feb 2020
+ *
  */
+
 
 /**
    \file
@@ -616,8 +627,9 @@ get_struct_from_dsrt2(SPTR sptr, DSRT *dsrtp, ISZ_T size, int *align8,
         addr = dsrtp->offset;
         first_data = 0;
       } else if (addr > dsrtp->offset) {
-        error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
-              SYMNAME(dsrtp->sptr), CNULL);
+        if (!(CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)) // AOCC
+          error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
+                SYMNAME(dsrtp->sptr), CNULL);
         continue;
       }
     }
@@ -1130,7 +1142,7 @@ write_libomtparget(void)
       }
 
       else if (flg.x86_64_omptarget) {
-          fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
+         fprintf(ASMFIL, "\n; OpenMP GPU Offload Init\n\
   @.omp_offloading.img_end.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @.omp_offloading.img_start.x86_64-pc-linux-gnu = internal constant i8 0\n\
   @__stop_omp_offloading_entries = internal constant %%struct.__tgt_offload_entry_ zeroinitializer\n\
@@ -1322,7 +1334,9 @@ write_consts(void)
             fprintf(ASMFIL, "@%s = internal constant %s ", getsname(sptr),
                     tyName);
           }
-          write_constant_value(sptr, 0, CONVAL1G(sptr), CONVAL2G(sptr), false);
+          // AOCC Parameters :CONVAL3G(sptr), CONVAL4G(sptr)
+          write_constant_value(sptr, 0, CONVAL1G(sptr), CONVAL2G(sptr),
+                               CONVAL3G(sptr), CONVAL4G(sptr), false);
         }
         fputc('\n', ASMFIL);
       }
@@ -1396,8 +1410,9 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
         first_data = 0;
         addr = dsrtp->offset;
       } else if (addr > dsrtp->offset) {
-        error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
-              SYMNAME(dsrtp->sptr), CNULL);
+        if (!(CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)) // AOCC
+          error(S_0164_Overlapping_data_initializations_of_OP1, ERR_Warning, 0,
+                SYMNAME(dsrtp->sptr), CNULL);
         continue;
       }
     }
@@ -1429,6 +1444,13 @@ process_dsrt(DSRT *dsrtp, ISZ_T size, char *cptr, bool stop_at_sect, ISZ_T addr)
       emit_init(p->dtype, p->conval, &addr, &repeat_cnt, loc_base, &i8cnt,
                 &ptrcnt, &ptr);
     }
+
+    // AOCC begin
+    // If this is a bind(C) variable then we stop processing `dsrt`s since each
+    // bind(C) variable must be a separate symbol.
+    if (CFUNCG(dsrtp->sptr) && STYPEG(dsrtp->sptr) == ST_VAR)
+      break;
+    // AOCC end
   }
 
   if (size >= 0) {
@@ -5607,7 +5629,7 @@ find_funcptr_name(SPTR sptr)
         goto Continue;
     } while (*sp);
     if (np - sptrnm != len)
-      continue;
+        goto Continue;
     goto Found;
   Continue:
     if (gblsym == FPTR_HASHLK(gblsym))
@@ -6039,6 +6061,7 @@ get_sptr_uplevel_address(int sptr)
 {
   int i, gblsym;
   gblsym = find_ag(get_ag_searchnm(gbl.currsub));
+  if (!gblsym) return 0; // AOCC
   for (i = 0; i < AG_UPLEVEL_AVL(gblsym); i++) {
     if (sptr == AG_UPLEVEL_NEW(gblsym, i)) {
       return AG_UPLEVEL_MEM(gblsym, i);

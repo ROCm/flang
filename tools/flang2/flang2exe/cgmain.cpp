@@ -4,10 +4,63 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+
 /*
- * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
- * Notified per clause 4(b) of the license.
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ *
+ * Support for ivdep directive
+ * Date of Modification: 11th march 2019
+ *
+ * Support for vector and novector directives
+ * Date of Modification: 19th July 2019
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
+ *
+ * Support for volatile in NME
+ * Date of modification 05th September 2019
+ *
+ * Added some SPTR allocation code changes
+ * Date of modification 19th September 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification Dec 2020
+ *
+ * Compile time improvement changes
+ * Date of modification 14th November 2019
+ *
+ * Allowing declaration of sqrt function in target module
+ * Date of modification 31st Jan 2020
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ * Allowing declaration of __ockl_get* functions in target module
+ * Date of modification 14th February 2020
+ *
+ * Support for Real128 support for math intrinsics
+ * Date of modification 24th February 2020
+ *
+ * get_alloca_addrspace function is made public.
+ * Date of modification 13th April 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+ *
+ * Added code to support SHIFTA intrinsic
+ * Last modified: April 2020
+ *
+ * Last modified: Jun 2020
+ *
+ * Added quad support for floor and ceiling intrinsics
+ * Last modified: August 2020
+ *
+ * Added quad support for cotan and cotand intrinsics
+ * Last modified: Oct 2020
+ *
  */
+
 /**
    \file
    \brief Main source module to translate into LLVM
@@ -43,6 +96,7 @@
 #include "ccffinfo.h"
 #include "main.h"
 #include "symfun.h"
+#include "ilidir.h"
 // AOCC Begin
 #include "direct.h"
 // AOCC End
@@ -692,7 +746,7 @@ gen_return_operand(int ilix)
   if (has_multiple_entries(gbl.currsub) && (rtype->data_type == LL_VOID) &&
       (dty != TY_NONE) && (dty != TY_CHAR) && (dty != TY_NCHAR)
 #if !defined(TARGET_LLVM_POWER)
-      && (dty != TY_CMPLX) && (dty != TY_DCMPLX)
+      && (dty != TY_CMPLX) && (dty != TY_DCMPLX) && (dty != TY_QCMPLX)
 #endif
   ) {
     LL_Type *rtype = make_lltype_from_dtype(dtype);
@@ -1326,7 +1380,7 @@ cons_no_depchk_metadata(void)
 INLINE static bool
 ignore_simd_block(int bih)
 {
-  return (!XBIT(183, 0x4000000)) && BIH_SIMD(bih);
+  return (!XBIT(183, 0x4000000)) && BIH_NOSIMD(bih);
 }
 
 /**
@@ -1522,12 +1576,10 @@ schedule(void)
 
   funcId++;
   assign_fortran_storage_classes();
-  if (XBIT(183, 0x10000000)) {
-    if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
-      widenAddressArith();
-    if (gbl.outlined && funcHasNoDepChk())
-      redundantLdLdElim();
-  }
+  if (XBIT(68, 0x1) && (!XBIT(183, 0x40000000)))
+    widenAddressArith();
+  if (gbl.outlined && funcHasNoDepChk())
+    redundantLdLdElim();
 
 restartConcur:
   FTN_HOST_REG() = 1;
@@ -1746,15 +1798,21 @@ restartConcur:
     clear_rw_nodepchk();
     // AOCC End
 
-    if (XBIT(183, 0x10000000)) {
-      if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
-          (!ignore_simd_block(bih))) {
-        fix_nodepchk_flag(bih);
-        mark_rw_nodepchk(bih);
-      } else {
-        clear_rw_nodepchk();
-      }
+    open_pragma(BIH_LINENO(bih));
+    if (!flg.omptarget)
+      BIH_NODEPCHK(bih) = !flg.depchk;
+    if (XBIT(19, 0x18))
+      BIH_NOSIMD(bih) = true;
+    else if (XBIT(19, 0x400))
+      BIH_SIMD(bih) = true;
+    if ((!XBIT(69, 0x100000)) && BIH_NODEPCHK(bih) &&
+        (!ignore_simd_block(bih))) {
+      fix_nodepchk_flag(bih);
+      mark_rw_nodepchk(bih);
+    } else {
+      clear_rw_nodepchk();
     }
+    close_pragma();
 
     // AOCC Begin
     /** \brief Flang codegen support for !dir$ ivdep
@@ -1883,12 +1941,12 @@ restartConcur:
             i->misc_metadata = loop_md;
           }
 
-        } else if ((XBIT(183, 0x10000000) && (!XBIT(69, 0x100000)) &&
+        } else if (((!XBIT(69, 0x100000)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
                    (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
                    ||
-                   (is_ivdep_directive)) {
+                   (is_ivdep_directive) || BIH_SIMD(bih)) {
           LL_MDRef loop_md;
           // for ivdep pragma, rw_nodepcheck will be enabled.
           // Need to generate "llvm.loop.parallel_accesses" metadata as well.
@@ -1919,6 +1977,8 @@ restartConcur:
                   ENABLE_CSE_OPT && ILT_DELETE(ilt) &&
                       (IL_TYPE(opc) == ILTY_STORE),
                   SPTR_NULL, ilt);
+//        make_stmt(STMT_ST, ilix, true,
+//                  SPTR_NULL, ilt);
       } else if (opc == IL_JSR && cgmain_init_call(ILI_OPND(ilix, 1))) {
         make_stmt(STMT_SZERO, ILI_OPND(ilix, 2), false, SPTR_NULL, ilt);
       } else if (opc == IL_SMOVE) {
@@ -1931,6 +1991,7 @@ restartConcur:
         case IL_DFRSP:
         case IL_DFRDP:
         case IL_DFRCS:
+        case IL_DFRQP:    // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
         case IL_FLOAT128RESULT:
 #endif
@@ -2033,14 +2094,22 @@ restartConcur:
   write_ftn_typedefs();
   write_global_and_static_defines();
 
+  FILE *backup_file; // AOCC
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
-    use_cpu_output_file();
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    use_gpu_output_file();
+    // AOCC Begin
+    backup_file = gbl.asmfil;
+    gbl.asmfil = gbl.ompaccfile;
+    // AOCC End
+  }
 #endif
   assem_data();
 #ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget && ISNVVMCODEGEN)
+  if (flg.omptarget && ISNVVMCODEGEN) {
+    gbl.asmfil = backup_file; // AOCC
     use_gpu_output_file();
+  }
   if (flg.omptarget)
     write_libomtparget();
 #endif
@@ -2469,12 +2538,11 @@ msz_dtype(MSZ msz)
   case MSZ_PTR:
     return DT_CPTR;
   case MSZ_F16:
+    return DT_QUAD;  // AOCC
 #if defined(LONG_DOUBLE_FLOAT128)
     return DT_FLOAT128;
 #elif defined(TARGET_LLVM_X8664)
-    return DT_128;
-#else
-    return DT_QUAD;
+    return DT_QUAD;  // AOCC
 #endif
   case MSZ_F32:
     return DT_256;
@@ -2798,6 +2866,26 @@ locset_to_tbaa_info(LL_Module *module, LL_MDRef omniPtr, int ilix)
 #if defined(REVMIDLNKG)
   if (REVMIDLNKG(bsym)) {
     const int ptr = REVMIDLNKG(bsym);
+    // AOCC begin
+    if (XBIT(53, 0x800000)) {
+      if (ILI_OPC(ilix) == IL_LDA &&
+          !NOCONFLICTG(ptr) && !PTRSAFEG(ptr) && !TARGETG(ptr)) {
+        char *bsym_name = getprint(bsym);
+        size_t bsym_len = strlen(bsym_name);
+        if (bsym_len > 2 && bsym_name[bsym_len - 1] == 'p'
+            && bsym_name[bsym_len - 2] == '$') {
+          bsym = ptr;
+          rv = snprintf(name, NAME_SZ, "t%x.%x", funcId, base);
+          DEBUG_ASSERT(rv < NAME_SZ, "buffer overrun");
+          a[0] = ll_get_md_string(module, name);
+          a[1] = omniPtr;
+          a[2] = ll_get_md_i64(module, 0);
+          return ll_get_md_node(module, LL_PlainMDNode, a, 3);
+        }
+      }
+    }
+    // AOCC end
+
     if (!NOCONFLICTG(ptr) && !PTRSAFEG(ptr) && !TARGETG(ptr))
       return LL_MDREF_ctor(0, 0);
     bsym = ptr;
@@ -4189,6 +4277,8 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
       case IL_FCJMPZ:
       case IL_DCJMP:
       case IL_DCJMPZ:
+      case IL_QCJMP:      // AOCC
+      case IL_QCJMPZ:     // AOCC
         ad_instr(ilix, gen_instr(I_FCMP, tmps, Curr_Instr->operands->ll_type,
                                  gen_llvm_expr(ilix, NULL)));
         break;
@@ -4345,6 +4435,16 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
           LL_Type *ty = make_lltype_from_dtype(DT_DCMPLX);
           op1 = gen_llvm_expr(rhs_ili, ty);
           store_flags = ldst_instr_flags_from_dtype(DT_DCMPLX);
+        // AOCC begin
+        } else if (ILI_OPC(ilix) == IL_STQCMPLX) {
+          LL_Type *ty = make_lltype_from_dtype(DT_QCMPLX);
+          op1 = gen_llvm_expr(rhs_ili, ty);
+          store_flags = ldst_instr_flags_from_dtype(DT_QCMPLX);
+        } else if (ILI_OPC(ilix) == IL_STQP) {
+          LL_Type *ty = make_lltype_from_dtype(DT_QUAD);
+          op1 = gen_llvm_expr(rhs_ili, ty);
+          store_flags = ldst_instr_flags_from_dtype(DT_QUAD);
+        // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
         } else if (ILI_OPC(ilix) == IL_FLOAT128ST) {
           LL_Type *ty = make_lltype_from_dtype(DT_FLOAT128);
@@ -4874,12 +4974,6 @@ insert_llvm_memcpy(int ilix, int size, OPERAND *dest_op, OPERAND *src_op,
  */
 void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
                              OPERAND *exprMDOp, OperandFlag_t opflag) {
-
-#ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget) {
-    return;  //FIXME: need to fully generate dbg info o ntarget.
-  }
-#endif
   EXFUNC_LIST *exfunc;
   OPERAND *call_op;
   static bool dbg_declare_defined = false;
@@ -4997,11 +5091,10 @@ gen_const_expr(int ilix, LL_Type *expected_type)
       operand->ll_type = expected_type;
     } else {
       // AOCC Begin
-      // operand->ll_type = make_lltype_from_dtype(DT_INT);
-      if (expected_type && ll_type_int_bits(expected_type))
-        operand->ll_type = make_lltype_from_dtype(DT_INT);
-      else
+      if (expected_type && expected_type->data_type == LL_PTR)
         operand->ll_type = make_lltype_from_dtype(DT_INT8);
+      else
+        operand->ll_type = make_lltype_from_dtype(DT_INT);
       // AOCC End
       operand->val.sptr = sptr;
     }
@@ -5014,11 +5107,18 @@ gen_const_expr(int ilix, LL_Type *expected_type)
     operand->ll_type = make_lltype_from_dtype(DT_DBLE);
     operand->val.sptr = sptr;
     break;
+    // AOCC begin
+  case IL_QCON:
+    operand->ll_type = make_lltype_from_dtype(DT_QUAD);
+    operand->val.sptr = sptr;
+    break;
+    // AOCC end
   case IL_VCON:
     operand->ll_type = make_lltype_from_sptr(sptr);
     operand->val.sptr = sptr;
     break;
   case IL_SCMPLXCON:
+  case IL_QCMPLXCON:   // AOCC
   case IL_DCMPLXCON:
     operand->ll_type = make_lltype_from_dtype(DTYPEG(sptr));
     operand->val.sptr = sptr;
@@ -5053,6 +5153,14 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   op_ili = ILI_OPND(ilix, 1);
 
   switch (opc) {
+  // AOCC begin
+  case IL_QFIXUK:
+  case IL_QFIXU:
+  case IL_QFIX:
+  case IL_QFIXK:
+    opc_type = make_lltype_from_dtype(DT_QUAD);
+    break;
+  // AOCC end
   case IL_DFIXUK:
   case IL_DFIXU:
   case IL_DFIX:
@@ -5067,10 +5175,14 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_FIXUK:
     opc_type = make_lltype_from_dtype(DT_FLOAT);
     break;
+  case IL_QUAD:              // AOCC
+    opc_type = make_lltype_from_dtype(DT_DBLE);
+    break;
   case IL_FLOAT:
   case IL_FLOATU:
   case IL_DFLOATU:
   case IL_DFLOAT:
+  case IL_QFLOAT:             // AOCC
   case IL_ALLOC:
     opc_type = make_lltype_from_dtype(DT_INT);
     break;
@@ -5078,6 +5190,7 @@ gen_unary_expr(int ilix, LL_InstrName itype)
   case IL_FLOATUK:
   case IL_DFLOATUK:
   case IL_DFLOATK:
+  case IL_QFLOATK:           // AOCC
     opc_type = make_lltype_from_dtype(DT_INT8);
     break;
 #ifdef LONG_DOUBLE_FLOAT128
@@ -5119,8 +5232,15 @@ gen_abs_expr(int ilix)
     double d;
     INT tmp[2];
   } dtmp;
+  // AOCC begin
+  union {
+    __float128 q;
+    INT tmp[2];
+  } qtmp;
+  // AOCC end
   float f;
   double d;
+  __float128 q;
   INSTR_LIST *Curr_Instr;
 
   DBGTRACEIN2(" ilix: %d(%s) \n", ilix, IL_NAME(opc))
@@ -5165,6 +5285,17 @@ gen_abs_expr(int ilix)
     zero_op = gen_llvm_expr(ad1ili(IL_DCON, getcon(dtmp.tmp, DT_DBLE)),
                             operand->ll_type);
     break;
+  // AOCC begin
+  case IL_QABS:
+    cc_itype = I_FCMP;
+    cc_val = convert_to_llvm_fltcc(CC_LT);
+    op2 = gen_llvm_expr(ad1ili(IL_QNEG, lhs_ili), operand->ll_type);
+    q = 0.0;
+    xmqtoq(q, qtmp.tmp);
+    zero_op = gen_llvm_expr(ad1ili(IL_QCON, getcon(qtmp.tmp, DT_QUAD)),
+                            operand->ll_type);
+    break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128ABS:
     cc_itype = IL_FLOAT128CMP;
@@ -5238,6 +5369,7 @@ gen_minmax_expr(int ilix, OPERAND *op1, OPERAND *op2)
     break;
   case IL_FMIN:
   case IL_DMIN:
+  case IL_QMIN:     // AOCC
     cc_itype = I_FCMP;
     cc_val = convert_to_llvm_fltcc(CC_NOTGE);
     break;
@@ -5253,6 +5385,7 @@ gen_minmax_expr(int ilix, OPERAND *op1, OPERAND *op2)
     break;
   case IL_FMAX:
   case IL_DMAX:
+  case IL_QMAX:      // AOCC
     cc_itype = I_FCMP;
     cc_val = convert_to_llvm_fltcc(CC_NOTLE);
     break;
@@ -5266,6 +5399,7 @@ gen_minmax_expr(int ilix, OPERAND *op1, OPERAND *op2)
     switch (DTY(DTySeqTyElement(vect_dtype))) {
     case TY_FLOAT:
     case TY_DBLE:
+    case TY_QUAD:   // AOCC
       cc_itype = I_FCMP;
       cc_val = convert_to_llvm_fltcc(cc_ctype);
       break;
@@ -5576,12 +5710,6 @@ void insert_llvm_dbg_value(OPERAND *load, LL_MDRef mdnode, SPTR sptr,
   LL_DebugInfo *di = mod->debug_info;
   INSTR_LIST *callInsn = make_instr(I_CALL);
 
-#ifdef OMP_OFFLOAD_LLVM
-  if (flg.omptarget) {
-    return;  //FIXME: need to fully generate dbg info o ntarget.
-  }
-#endif
-
   if (!defined) {
     EXFUNC_LIST *exfunc;
     char *gname =
@@ -5755,6 +5883,30 @@ gen_convert_vector(int ilix)
       break;
     }
     break;
+  // AOCC begin
+  case LL_FP128:
+    switch (ll_src->sub_types[0]->data_type) {
+    case LL_I1:
+    case LL_I8:
+    case LL_I16:
+    case LL_I24:
+    case LL_I32:
+    case LL_I40:
+    case LL_I48:
+    case LL_I56:
+    case LL_I64:
+    case LL_I128:
+    case LL_I256:
+      if (DT_ISUNSIGNED(dtype_src))
+        return convert_uint_to_float(operand, ll_dst);
+      return convert_sint_to_float(operand, ll_dst);
+    case LL_FLOAT:
+      return convert_float_size(operand, ll_dst);
+    default:
+      break;
+    }
+    break;
+  // AOCC end
   default:
     assert(0, "gen_convert_vector(): unhandled vector type for dst",
            ll_dst->sub_types[0]->data_type, ERR_Fatal);
@@ -5792,6 +5944,7 @@ gen_binary_vexpr(int ilix, int itype_int, int itype_uint, int itype_float)
   switch (DTY(DTySeqTyElement(vect_dtype))) {
   case TY_REAL:
   case TY_DBLE:
+  case TY_QUAD:   // AOCC
     return gen_binary_expr(ilix, itype_float);
   case TY_INT:
   case TY_SINT:
@@ -5893,6 +6046,10 @@ get_mac_name(int *swap, int *fneg, int ilix, int matches, int l, int r)
     return (*fneg) ? "x86.fma.vfnmadd.ss" : "x86.fma.vfmadd.ss";
   case IL_DADD:
     return (*fneg) ? "x86.fma.vfnmadd.sd" : "x86.fma.vfmadd.sd";
+  // AOCC begin
+  case IL_QADD:
+    return (*fneg) ? "x86.fma.vfnmadd.sq" : "x86.fma.vfmadd.sq";
+  // AOCC end
   case IL_FSUB:
     if (*swap) {
       return (*fneg) ? "x86.fma.vfmadd.ss" : "x86.fma.vfnmadd.ss";
@@ -5903,7 +6060,14 @@ get_mac_name(int *swap, int *fneg, int ilix, int matches, int l, int r)
       return (*fneg) ? "x86.fma.vfmadd.sd" : "x86.fma.vfnmadd.sd";
     }
     return (*fneg) ? "x86.fma.vfnmsub.sd" : "x86.fma.vfmsub.sd";
+  // AOCC begin
+  case IL_QSUB:
+    if (*swap) {
+      return (*fneg) ? "x86.fma.vfmadd.sq" : "x86.fma.vfnmadd.sq";
+    }
+    return (*fneg) ? "x86.fma.vfnmsub.sq" : "x86.fma.vfmsub.sq";
   }
+  // AOCC end
   assert(0, "does not match MAC", opc, ERR_Fatal);
   return "";
 }
@@ -6189,8 +6353,15 @@ gen_binary_expr(int ilix, int itype)
     double d;
     INT tmp[2];
   } dtmp;
+  // AOCC begin
+  union {
+    __float128 q;
+    INT tmp[2];
+  } qtmp;
+  // AOCC end
   float f;
   double d;
+  __float128 q;
 
   DBGTRACEIN2(" ilix: %d(%s)", ilix, IL_NAME(opc))
 
@@ -6315,6 +6486,11 @@ gen_binary_expr(int ilix, int itype)
     case IL_DNEG:
       lhs_ili = ad1ili(IL_DCON, stb.dblm0);
       break;
+      // AOCC begin
+    case IL_QNEG:
+      lhs_ili = ad1ili(IL_QCON, stb.quadm0);
+      break;
+      // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
     case IL_FLOAT128CHS:
       lhs_ili = ad1ili(IL_FLOAT128CON, stb.float128_0);
@@ -6357,6 +6533,9 @@ gen_binary_expr(int ilix, int itype)
   case IL_URSHIFT:
   case IL_RSHIFT:
   case IL_ARSHIFT:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /*AOCC end */
     binops->next = gen_llvm_expr(rhs_ili, make_lltype_from_dtype(DT_UINT));
     break;
   case IL_VLSHIFTS:
@@ -7084,6 +7263,11 @@ update_return_type_for_ccfunc(int ilix, ILI_OP opc)
   case IL_DFRDP:
     new_dtype = cg_get_type(3, DTY(dtype), DT_DBLE);
     break;
+  //AOCC Begin
+  case IL_DFRQP:
+    new_dtype = cg_get_type(3, DTY(dtype), DT_QUAD);
+    break;
+  //AOCC End
   case IL_DFRIR:
     new_dtype = cg_get_type(3, DTY(dtype), DT_INT);
     break;
@@ -7093,6 +7277,11 @@ update_return_type_for_ccfunc(int ilix, ILI_OP opc)
   case IL_DFRCS:
     new_dtype = cg_get_type(3, DTY(dtype), DT_CMPLX);
     break;
+  //AOCC Begin
+  case IL_DFRCQ:
+    new_dtype = cg_get_type(3, DTY(dtype), DT_QCMPLX);
+    break;
+  //AOCC End
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128RESULT:
     new_dtype = cg_get_type(3, DTY(dtype), DT_FLOAT128);
@@ -7318,6 +7507,7 @@ get_next_arg(int arg_ili)
   switch (ILI_OPC(arg_ili)) {
   case IL_ARGAR:
   case IL_ARGDP:
+  case IL_ARGQP:  // AOCC
   case IL_ARGIR:
   case IL_ARGKR:
   case IL_ARGSP:
@@ -7330,9 +7520,15 @@ get_next_arg(int arg_ili)
 
   case IL_DAAR:
   case IL_DADP:
+  case IL_DAQP:   // AOCC
   case IL_DAIR:
   case IL_DAKR:
   case IL_DASP:
+  // AOCC Begin
+  case IL_DACS:
+  case IL_DACD:
+  case IL_DACQ:
+  // AOCC end
     return ILI_OPND(arg_ili, 3);
 
   default:
@@ -7410,6 +7606,17 @@ gen_call_expr(int ilix, DTYPE ret_dtype, INSTR_LIST *call_instr, int call_sptr)
   bool intrinsic_modified = false;
   int throw_label = ili_throw_label(ilix);
 
+  // AOCC Begin
+  if (call_sptr) {
+      // create prototypes for quad print functions. otherwise, it will take
+      // double as first argument
+      if (strcmp(SYMNAME(call_sptr),"f90io_sc_q_ldw") == 0) {
+        SPTR sptr = mk_prototype_llvm("f90io_sc_q_ldw", "", DT_INT, 2, DT_QUAD,DT_INT);
+        LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+        abi->is_pure = 0;
+      }
+  }
+  // AOCC End
   if (call_instr == NULL)
     call_instr = make_instr((throw_label > 0) ? I_INVOKE : I_CALL);
 
@@ -7831,16 +8038,17 @@ gen_copy_operand(OPERAND *opnd)
 
 /* Math operations for complex values.
  * 'itype' should be the I_FADD, I_FSUB, I_xxxx etc.
- * 'dtype' should either be DT_CMPLX or DT_DCMPLX.
+ * 'dtype' should either be DT_CMPLX or DT_DCMPLX or DT_QCMPLX.
  */
 static OPERAND *
 gen_cmplx_math(int ilix, DTYPE dtype, LL_InstrName itype)
 {
   OPERAND *r1, *r2, *i1, *i2, *rmath, *imath, *res, *c1, *c2, *cse1, *cse2;
   LL_Type *cmplx_type, *cmpnt_type;
-  const DTYPE cmpnt = (dtype == DT_CMPLX) ? DT_FLOAT : DT_DBLE;
+  const DTYPE cmpnt = (dtype == DT_CMPLX) ? DT_FLOAT : (dtype == DT_DCMPLX)
+                                          ? DT_DBLE : DT_QUAD;
 
-  assert(DT_ISCMPLX(dtype), "gen_cmplx_math: Expected DT_CMPLX or DT_DCMPLX",
+  assert(DT_ISCMPLX(dtype), "gen_cmplx_math: Expected DT_CMPLX or DT_DCMPLX or DT_QCMPLX",
          dtype, ERR_Fatal);
 
   cmplx_type = make_lltype_from_dtype(dtype);
@@ -7877,7 +8085,9 @@ gen_cmplx_math(int ilix, DTYPE dtype, LL_InstrName itype)
 static OPERAND *
 gen_cmplx_mul(int ilix, DTYPE dtype)
 {
-  const DTYPE elt_dt = (dtype == DT_CMPLX) ? DT_FLOAT : DT_DBLE;
+  // AOCC: DT_QUAD
+  const DTYPE elt_dt = (dtype == DT_CMPLX) ? DT_FLOAT : (dtype == DT_DCMPLX)
+                                           ? DT_DBLE : DT_QUAD;
   LL_Type *cmpnt_type = make_lltype_from_dtype(elt_dt);
   OPERAND *a, *bi, *c, *di, *cse1, *cse2;
   OPERAND *r1, *r2, *r3, *r4, *imag, *real, *res, *c1, *c2;
@@ -8243,8 +8453,15 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     double d;
     INT tmp[2];
   } dtmp;
+  // AOCC begin
+  union {
+    __float128 q;
+    INT tmp[2];
+  } qtmp;
+  // AOCC end
   float f;
   double d;
+  __float128 q;
 
   switch (ILI_OPC(ilix)) {
   case IL_JSR:
@@ -8260,6 +8477,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DCEIL:
   case IL_AINT:
   case IL_DINT:
+  case IL_QINT:       // AOCC
     /* floor/ceil/aint use llvm intrinsics, not calls via alt-ili */
     break;
   case IL_VSIN:
@@ -8487,12 +8705,15 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     }
   } break;
   case IL_LDSCMPLX:
+  case IL_LDQCMPLX:           // AOCC
   case IL_LDDCMPLX: {
     unsigned flags;
     ld_ili = ILI_OPND(ilix, 1);
     nme_ili = ILI_OPND(ilix, 2);
     msz = (MSZ)ILI_OPND(ilix, 3);
-    flags = opc == IL_LDSCMPLX ? DT_CMPLX : DT_DCMPLX;
+    // AOCC: DT_QCMPLX
+    flags = opc == IL_LDSCMPLX ? DT_CMPLX : opc == IL_LDDCMPLX
+                               ? DT_DCMPLX : DT_QCMPLX;
     operand = gen_address_operand(ld_ili, nme_ili, false,
                                   make_ptr_lltype(expected_type), (MSZ)-1);
     assert(operand->ll_type->data_type == LL_PTR,
@@ -8503,6 +8724,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_LD:
   case IL_LDSP:
   case IL_LDDP:
+  case IL_LDQP:  // AOCC
   case IL_LDKR:
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128LD:
@@ -8568,8 +8790,10 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_ICON:
   case IL_FCON:
   case IL_DCON:
+  case IL_QCON:     // AOCC
   case IL_SCMPLXCON:
   case IL_DCMPLXCON:
+  case IL_QCMPLXCON:   // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CON:
 #endif
@@ -8577,15 +8801,18 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FIX:
   case IL_DFIX:
+  case IL_QFIX: //AOCC
     operand = gen_unary_expr(ilix, I_FPTOSI);
     break;
   case IL_FIXK:
   case IL_DFIXK:
+  case IL_QFIXK: //AOCC
     operand = gen_unary_expr(ilix, I_FPTOSI);
     break;
   case IL_FIXUK:
   case IL_DFIXUK:
   case IL_DFIXU:
+  case IL_QFIXU: //AOCC
   case IL_UFIX:
     operand = gen_unary_expr(ilix, I_FPTOUI);
     break;
@@ -8599,14 +8826,24 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DFLOAT:
   case IL_DFLOATK:
   case IL_FLOATK:
+  case IL_QFLOAT:              // AOCC
+  case IL_QFLOATK:             // AOCC
     operand = gen_unary_expr(ilix, I_SITOFP);
     break;
   case IL_SNGL:
     operand = gen_unary_expr(ilix, I_FPTRUNC);
     break;
   case IL_DBLE:
+    if (ILI_OPC(ILI_OPND(ilix, 1)) == IL_LDQP)
+      operand = gen_llvm_expr(ILI_OPND(ilix, 1), NULL);
+    else
+      operand = gen_unary_expr(ilix, I_FPEXT);
+    break;
+  // AOCC begin
+  case IL_QUAD:
     operand = gen_unary_expr(ilix, I_FPEXT);
     break;
+  // AOCC end
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128FROM:
     operand = gen_unary_expr(ilix, I_FPEXT);
@@ -8631,6 +8868,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FADD:
   case IL_DADD:
+  case IL_QADD:  // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128ADD:
 #endif
@@ -8642,6 +8880,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DCMPLXADD:
     operand = gen_cmplx_math(ilix, DT_DCMPLX, I_FADD);
     break;
+  // AOCC begin
+  case IL_QCMPLXADD:
+    operand = gen_cmplx_math(ilix, DT_QCMPLX, I_FADD);
+    break;
+  // AOCC end
   case IL_VSUB:
     operand = gen_binary_vexpr(ilix, I_SUB, I_SUB, I_FSUB);
     break;
@@ -8653,6 +8896,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FSUB:
   case IL_DSUB:
+  case IL_QSUB:    // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128SUB:
 #endif
@@ -8664,6 +8908,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DCMPLXSUB:
     operand = gen_cmplx_math(ilix, DT_DCMPLX, I_FSUB);
     break;
+  // AOCC begin
+  case IL_QCMPLXSUB:
+    operand = gen_cmplx_math(ilix, DT_QCMPLX, I_FSUB);
+    break;
+  // AOCC end
   case IL_VMUL:
     operand = gen_binary_vexpr(ilix, I_MUL, I_MUL, I_FMUL);
     break;
@@ -8679,6 +8928,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FMUL:
   case IL_DMUL:
+  case IL_QMUL:      // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128MUL:
 #endif
@@ -8690,6 +8940,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DCMPLXMUL:
     operand = gen_cmplx_mul(ilix, DT_DCMPLX);
     break;
+  // AOCC begin
+  case IL_QCMPLXMUL:
+    operand = gen_cmplx_mul(ilix, DT_QCMPLX);
+    break;
+  // AOCC end
   case IL_VDIV:
     operand = gen_binary_vexpr(ilix, I_SDIV, I_UDIV, I_FDIV);
     break;
@@ -8703,6 +8958,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FDIV:
   case IL_DDIV:
+  case IL_QDIV:     // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128DIV:
 #endif
@@ -8729,6 +8985,9 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_RSHIFT:
   case IL_ARSHIFT:
   case IL_KARSHIFT:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /* AOCC end */
     operand = gen_binary_expr(ilix, I_ASHR);
     break;
   case IL_VAND:
@@ -8789,6 +9048,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DCMPLXXOR:
     operand = gen_cmplx_math(ilix, DT_DCMPLX, I_XOR);
     break;
+  // AOCC begin
+  case IL_QCMPLXXOR:
+    operand = gen_cmplx_math(ilix, DT_QCMPLX, I_XOR);
+    break;
+  // AOCC end
   case IL_KMOD:
   case IL_MOD:
     operand = gen_binary_expr(ilix, I_SREM);
@@ -8828,6 +9092,26 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     operand->ll_type = make_type_from_opc(opc);
     goto process_cc;
     break;
+    // AOCC begin
+  case IL_QCJMPZ:
+    if (!zero_ili) {
+      q = 0.0;
+      xmqtoq(q, qtmp.tmp);
+      zero_ili = ad1ili(IL_QCON, getcon(qtmp.tmp, DT_QUAD));
+      comp_exp_type = make_lltype_from_dtype(DT_QUAD);
+    }
+    operand->ot_type = OT_CC;
+    first_ili = ILI_OPND(ilix, 1);
+    second_ili = zero_ili;
+    ili_cc = ILI_ccOPND(ilix, 2);
+    if (IEEE_CMP)
+      float_jmp = true;
+    operand->val.cc = convert_to_llvm_fltcc(ili_cc);
+    float_jmp = false;
+    operand->ll_type = make_type_from_opc(opc);
+    goto process_cc;
+    break;
+    // AOCC end
   case IL_UKCJMPZ:
     zero_ili = ad_kconi(0);
     operand->ot_type = OT_CC;
@@ -8883,6 +9167,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   /* jumps with cc and expression */
   case IL_FCJMP:
   case IL_DCJMP:
+  case IL_QCJMP:    // AOCC
     operand->ot_type = OT_CC;
     first_ili = ILI_OPND(ilix, 1);
     second_ili = ILI_OPND(ilix, 2);
@@ -8924,6 +9209,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     break;
   case IL_FCMP:
   case IL_DCMP:
+  case IL_QCMP:         // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CMP:
 #endif
@@ -9125,6 +9411,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     if (expected_type == NULL)
       expected_type = make_lltype_from_dtype(DT_DBLE);
     goto _process_define_ili;
+  //AOCC Begin
+  case IL_FREEQP:
+    cse_opc = true;
+  case IL_DFRQP:
+    if (expected_type == NULL)
+      expected_type = make_lltype_from_dtype(DT_QUAD);
+    goto _process_define_ili;
+  //AOCC End
   case IL_DFR128:
     if (expected_type == NULL)
       expected_type = make_lltype_from_dtype(DT_128);
@@ -9159,6 +9453,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_DFRCD:
     if (expected_type == NULL)
       expected_type = make_lltype_from_dtype(DT_DCMPLX);
+    goto _process_define_ili;
+  // AOCC begin
+  case IL_FREECQ:
+    cse_opc = true;
+  case IL_DFRCQ:
+    if (expected_type == NULL)
+      expected_type = make_lltype_from_dtype(DT_QCMPLX);
+  // AOCC end
 
   _process_define_ili:
     /* llvm_info.curr_ret_ili = ilix; */
@@ -9261,6 +9563,7 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_UKNEG:
     operand = gen_binary_expr(ilix, I_SUB);
     break;
+  case IL_QNEG:           // AOCC
   case IL_DNEG:
   case IL_FNEG:
 #ifdef LONG_DOUBLE_FLOAT128
@@ -9269,13 +9572,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     operand = gen_binary_expr(ilix, I_FSUB);
     break;
   case IL_SCMPLXNEG:
+  case IL_QCMPLXNEG:      // AOCC
   case IL_DCMPLXNEG: {
     OPERAND *res, *op_rneg, *op_ineg, *c1, *cse1;
     LL_Type *cmplx_ty, *cmpnt_ty;
-    const DTYPE dt = opc == IL_SCMPLXNEG ? DT_CMPLX : DT_DCMPLX;
-    const DTYPE et = opc == IL_SCMPLXNEG ? DT_FLOAT : DT_DBLE;
+    const DTYPE dt = opc == IL_SCMPLXNEG ? DT_CMPLX : opc == IL_DCMPLXNEG ? DT_DCMPLX : DT_QCMPLX;
+    const DTYPE et = opc == IL_SCMPLXNEG ? DT_FLOAT : opc == IL_DCMPLXNEG ? DT_DBLE : DT_QUAD;
 
-    cmpnt_ty = make_lltype_from_dtype(dt == DT_CMPLX ? DT_FLOAT : DT_DBLE);
+    cmpnt_ty = make_lltype_from_dtype(dt == DT_CMPLX ? DT_FLOAT : dt == DT_DCMPLX ? DT_DBLE : DT_QUAD);
 
     c1 = gen_eval_cmplx_value(ILI_OPND(ilix, 1), dt);
     cse1 = gen_copy_operand(c1);
@@ -9302,9 +9606,11 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_CSEIR:
   case IL_CSESP:
   case IL_CSEDP:
+  case IL_CSEQP:     // AOCC
   case IL_CSEAR:
   case IL_CSECS:
   case IL_CSECD:
+  case IL_CSECQ:     // AOCC
 #ifdef LONG_DOUBLE_FLOAT128
   case IL_FLOAT128CSE:
 #endif
@@ -9372,6 +9678,12 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     dt = DT_DCMPLX;
     cmpnt = DT_NONE;
     goto component;
+  // AOCC begin
+  case IL_QCMPLX2REAL:
+    dt = DT_QCMPLX;
+    cmpnt = DT_NONE;
+    goto component;
+  // AOCC end
   case IL_SCMPLX2IMAG:
     dt = DT_CMPLX;
     cmpnt = (DTYPE)1;
@@ -9380,21 +9692,34 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     dt = DT_DCMPLX;
     cmpnt = (DTYPE)1;
     goto component;
+  // AOCC begin
+  case IL_QCMPLX2IMAG:
+    dt = DT_QCMPLX;
+    cmpnt = (DTYPE)1;
+    goto component;
+  // AOCC end
   component:
     c1 = gen_eval_cmplx_value(ILI_OPND(ilix, 1), dt);
     operand =
-        gen_extract_value(c1, dt, dt == DT_CMPLX ? DT_FLOAT : DT_DBLE, cmpnt);
+        gen_extract_value(c1, dt, dt == DT_CMPLX ? DT_FLOAT : dt == DT_DCMPLX
+                          ? DT_DBLE : DT_QUAD , cmpnt);
     break;
   case IL_SPSP2SCMPLX:
+  case IL_QPQP2QCMPLX:   // AOCC
   case IL_DPDP2DCMPLX: {
     LL_Type *dt, *et;
     if (opc == IL_SPSP2SCMPLX) {
       dt = make_lltype_from_dtype(DT_CMPLX);
       et = make_lltype_from_dtype(DT_FLOAT);
-    } else {
+    } else if (opc == IL_DPDP2DCMPLX) {
       dt = make_lltype_from_dtype(DT_DCMPLX);
       et = make_lltype_from_dtype(DT_DBLE);
+    // AOCC begin
+    } else {
+      dt = make_lltype_from_dtype(DT_QCMPLX);
+      et = make_lltype_from_dtype(DT_QUAD);
     }
+    // AOCC end
     cc_op1 = gen_llvm_expr(ILI_OPND(ilix, 1), et);
     cc_op2 = gen_llvm_expr(ILI_OPND(ilix, 2), et);
     operand = make_undef_op(dt);
@@ -9409,6 +9734,12 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     dt = DT_DCMPLX;
     cmpnt = DT_DBLE;
     goto component_zero;
+  // AOCC begin
+  case IL_QPQP2QCMPLXI0:
+    dt = DT_QCMPLX;
+    cmpnt = DT_QUAD;
+    goto component_zero;
+  // AOCC end
   component_zero: /* Set imaginary value to 0 */
     cc_op1 = gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(cmpnt));
     cc_op2 = make_constval_op(make_lltype_from_dtype(cmpnt), 0, 0);
@@ -9424,6 +9755,12 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
     dt = DT_DCMPLX;
     cmpnt = DT_DBLE;
     goto cmplx_conj;
+  // AOCC begin
+  case IL_QCMPLXCONJG:
+    dt = DT_QCMPLX;
+    cmpnt = DT_QUAD;
+    goto cmplx_conj;
+  // AOCC end
   cmplx_conj:
     /* result = {real , 0 - imag} */
     c1 = gen_eval_cmplx_value(ILI_OPND(ilix, 1), dt);
@@ -9569,6 +9906,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_KABS:
     operand = gen_abs_expr(ilix);
     break;
+  // AOCC begin
+  case IL_QABS:
+    operand = gen_call_llvm_intrinsic(
+        "fabsq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FFLOOR:
     operand = gen_call_llvm_intrinsic(
         "floor.f32",
@@ -9581,6 +9926,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QFLOOR:
+    operand = gen_call_llvm_intrinsic(
+        "floorq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FCEIL:
     operand = gen_call_llvm_intrinsic(
         "ceil.f32",
@@ -9593,6 +9946,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+    // AOCC begin
+  case IL_QCEIL:
+    operand = gen_call_llvm_intrinsic(
+        "ceilq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_AINT:
     operand = gen_call_llvm_intrinsic(
         "trunc.f32",
@@ -9611,11 +9972,13 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_UKMIN:
   case IL_FMIN:
   case IL_DMIN:
+  case IL_QMIN:
   case IL_IMAX:
   case IL_UIMAX:
   case IL_KMAX:
   case IL_UKMAX:
   case IL_FMAX:
+  case IL_QMAX:           // AOCC
   case IL_DMAX: {
     LL_Type *llTy;
     lhs_ili = ILI_OPND(ilix, 2);
@@ -9653,8 +10016,10 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
   case IL_ASELECT:
   case IL_FSELECT:
   case IL_DSELECT:
+  case IL_QSELECT:
   case IL_CSSELECT:
   case IL_CDSELECT:
+  case IL_CQSELECT:
     operand = gen_select_expr(ilix);
     break;
   case IL_FSQRT:
@@ -9669,6 +10034,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QSQRT:
+    operand = gen_call_llvm_intrinsic(
+        "sqrtq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FLOG:
     operand = gen_call_llvm_intrinsic(
         "log.f32",
@@ -9693,6 +10066,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QLOG10:
+    operand = gen_call_llvm_intrinsic(
+        "log10.f128",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  // AOCC end
   case IL_FSIN:
     operand = gen_call_llvm_intrinsic(
         "sin.f32",
@@ -9711,6 +10092,14 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
         make_lltype_from_dtype(DT_FLOAT), NULL, I_CALL);
     break;
+  /* AOCC begin */
+  case IL_FCOTAN:
+    operand = gen_call_pgocl_intrinsic(
+        "cotan_f",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_FLOAT)),
+        make_lltype_from_dtype(DT_FLOAT), NULL, I_CALL);
+    break;
+  /* AOCC end */
   case IL_DTAN:
     operand = gen_call_pgocl_intrinsic(
         "tan_d",
@@ -9764,6 +10153,22 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
         gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_DBLE)),
         make_lltype_from_dtype(DT_DBLE), NULL, I_PICALL);
     break;
+  // AOCC begin
+  case IL_QEXP:
+    operand = gen_call_llvm_intrinsic(
+        "expq",
+        gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD)),
+        make_lltype_from_dtype(DT_QUAD), NULL, I_PICALL);
+    break;
+  case IL_QPOWQ:
+    operand = gen_llvm_expr(ILI_OPND(ilix, 1), make_lltype_from_dtype(DT_QUAD));
+    operand->next =
+        gen_llvm_expr(ILI_OPND(ilix, 2), make_lltype_from_dtype(DT_QUAD));
+    operand = gen_call_pgocl_intrinsic(
+        "pow_q", operand, make_lltype_from_dtype(DT_QUAD), NULL, I_CALL);
+    break;
+  // AOCC end
+  
   case IL_FAND: {
     /* bitwise logical AND op. operand has floating-point type
        %copnd1 = bitcast float %opnd1 to iX
@@ -10239,6 +10644,11 @@ vect_llvm_intrinsic_name(int ilix)
   case DT_DBLE:
     fsize = 64;
     break;
+  // AOCC begin
+  case DT_QUAD:
+    fsize = 128;
+    break;
+  // AOCC end
   default:
     assert(0, "vect_llvm_intrinsic_name(): unhandled type", type, ERR_Fatal);
   }
@@ -10845,9 +11255,7 @@ dtype_struct_name(DTYPE dtype)
   return dtype_str;
 }
 
-/**
- * check if the argument is device arg
- */
+// AOCC Begin
 static bool is_device_arg(int sptr) {
   if (!ISNVVMCODEGEN)
     return false;
@@ -10860,10 +11268,11 @@ static bool is_device_arg(int sptr) {
     return false;
   if (DESCARRAYG(sptr) && CLASSG(sptr))
     return false;
-  if (SCG(sptr) == SC_STATIC)
+  if (SCG(sptr) == SC_STATIC && OMPACCFUNCKERNELG(gbl.currsub))
     return true;
   return false;
 }
+// AOCC End
 
 /* Set the LLVM name of a global sptr to '@' + name.
  *
@@ -10875,8 +11284,10 @@ set_global_sname(int sptr, const char *name)
 {
   name = map_to_llvm_name(name);
   SNAME(sptr) = (char *)getitem(LLVM_LONGTERM_AREA, strlen(name) + 2);
+  // AOCC Begin
   if (flg.amdgcn_target && is_device_arg(sptr))
     sprintf(SNAME(sptr), "%%%s", name);
+  // AOCC End
   else
     sprintf(SNAME(sptr), "@%s", name);
   return SNAME(sptr);
@@ -10939,8 +11350,7 @@ create_global_initializer(GBL_LIST *gitem, const char *flag_str,
   dty = DTY(DTYPEG(sptr));
   stype = STYPEG(sptr);
 
-  if (
-      (stype == ST_VAR && dty == TY_PTR))
+  if ((stype == ST_VAR && dty == TY_PTR))
     initializer = "null";
   else if (AGGREGATE_STYPE(stype) || COMPLEX_DTYPE(DTYPEG(sptr)) ||
            VECTOR_DTYPE(DTYPEG(sptr)))
@@ -11029,7 +11439,8 @@ INLINE static bool
 need_debug_info(SPTR sptr)
 {
 #ifdef OMP_OFFLOAD_LLVM
-// FIXME: We used to suppress -g for target here.
+  if (is_ompaccel(sptr) && ISNVVMCODEGEN)
+    return false;
 #endif
   return generating_debug_info() && needDebugInfoFilt(sptr);
 }
@@ -11946,6 +12357,8 @@ make_type_from_opc(ILI_OP opc)
   case IL_UINEG:
   case IL_DFIX:
   case IL_DFIXU:
+  case IL_QFIX:   // AOCC
+  case IL_QFIXU:  // AOCC
   case IL_ICMP:
   case IL_ICMPZ:
   case IL_ISELECT:
@@ -11955,6 +12368,9 @@ make_type_from_opc(ILI_OP opc)
   case IL_UIMAX:
   case IL_IABS:
   case IL_CMPXCHG_OLDI:
+  /* AOCC begin */
+  case IL_SHIFTA:
+  /* AOCC end */
     llt = make_lltype_from_dtype(DT_INT);
     break;
   case IL_KAND:
@@ -11994,6 +12410,7 @@ make_type_from_opc(ILI_OP opc)
   case IL_UKCMP:
   case IL_DFIXK:
   case IL_DFIXUK:
+  case IL_QFIXK:            // AOCC
   case IL_UKCJMP:
   case IL_UKADD:
   case IL_UKSUB:
@@ -12057,6 +12474,32 @@ make_type_from_opc(ILI_OP opc)
   case IL_DABS:
     llt = make_lltype_from_dtype(DT_DBLE);
     break;
+  // AOCC begin
+  case IL_QCJMP:
+  case IL_QCJMPZ:
+  case IL_QCMP:
+  case IL_QFLOAT:
+  case IL_QFLOATU:
+  case IL_QFLOATK:
+  case IL_QUAD:
+  case IL_QADD:
+  case IL_QSUB:
+  case IL_QNEG:
+  case IL_QMAX:
+  case IL_QMIN:
+  case IL_QMOD:
+  case IL_QMUL:
+  case IL_QDIV:
+  case IL_QCON:
+  case IL_QSELECT:
+  case IL_QABS:
+    llt = make_lltype_from_dtype(DT_QUAD);
+    break;
+  case IL_CQSELECT:
+  case IL_QCMPLXADD:
+    llt = make_lltype_from_dtype(DT_QCMPLX);
+    break;
+  // AOCC end
   case IL_CSSELECT:
   case IL_SCMPLXADD:
     llt = make_lltype_from_dtype(DT_CMPLX);
@@ -12411,6 +12854,62 @@ gen_acon_expr(int ilix, LL_Type *expected_type)
   return operand;
 }
 
+// AOCC begin
+static OPERAND *
+attempt_ptr_gep_folding(int baseOp, int idxOp) {
+  int base_acon = ILI_OPND(baseOp, 1);
+  SPTR addr_sptr = ILI_SymOPND(base_acon, 1);
+  SPTR base_sptr = (SPTR)CONVAL1G(addr_sptr);
+
+  int _base_nme = ILI_OPND(baseOp, 2);
+
+  if (_base_nme < 0 || _base_nme >= nmeb.stg_avail)
+    return NULL;
+
+  int base_nme = basenme_of(_base_nme);
+  if (base_nme) {
+    if (NME_SYM(base_nme) != base_sptr)
+      return NULL;
+  }
+
+  if (DTY(DTYPEG(addr_sptr)) != TY_PTR)
+    return NULL;
+
+  if (STYPEG(base_sptr) != ST_VAR)
+    return NULL;
+
+  // FIXME! It would be nice if we could get the underlying shape here and only
+  // perform the folding if we're working on pointers to simpler shapes like 1D
+  // arrays for now.
+  //
+  // ADSC *ad = AD_DPTR(DTYPEG(base_nme));
+  // printf("%d\n", AD_NUMDIM(ad)); // ?
+  //
+  // #include "mwd.h"
+  // gbl.dbgfil = stdout;
+  // dumpdtype(DTYPEG(NME_SYM(base_nme)));
+  // dumpdtype(DTYPEG(base_sptr));
+
+  if (ILI_OPC(idxOp) != IL_KAMV)
+    return NULL;
+
+  int kmul = ILI_OPND(idxOp, 1);
+  if (ILI_OPC(kmul) != IL_KMUL)
+    return NULL;
+
+  int ldkr = ILI_OPND(kmul, 1);
+  if (ILI_OPC(ldkr) != IL_LDKR)
+    return NULL;
+
+  int acon = ILI_OPND(ldkr, 1);
+  if (ILI_OPC(acon) != IL_ACON)
+    return NULL;
+
+  OPERAND *op = gen_llvm_expr(ILI_OPND(kmul, 2), make_int_lltype(64));
+  return op;
+}
+// AOCC end
+
 /**
    \brief Pattern match the ILI tree and fold when there is a match
    \param addr  The ILI to pattern match
@@ -12484,6 +12983,17 @@ maybe_do_gep_folding(int aadd, int idxOp, LL_Type *ty)
     rv = gen_gep_op(aadd, index, ty, rv);
     return rv;
   }
+
+  // AOCC begin
+  if (XBIT(2, 0x2000000)) {
+    rv = attempt_ptr_gep_folding(baseOp, idxOp);
+    if (rv) {
+      OPERAND *base = gen_base_addr_operand(baseOp, ty);
+      rv = gen_gep_op(aadd, base, ty, rv);
+      return rv;
+    }
+  }
+  // AOCC end
 
   addressElementSize = savedAddressElementSize;
   return NULL;
@@ -12857,7 +13367,6 @@ gen_constant(SPTR sptr, DTYPE tdtype, INT conval0, INT conval1, int flags)
     break;
 
   case DT_DBLE:
-  case DT_QUAD:
 
     if (sptr) {
       num[0] = CONVAL1G(sptr);
@@ -12885,6 +13394,14 @@ gen_constant(SPTR sptr, DTYPE tdtype, INT conval0, INT conval1, int flags)
       DBGTRACE1("#set double exponent value to %s", d)
     }
     break;
+  // AOCC begin
+  case DT_QUAD:
+    size += 36;
+    constant = getitem(LLVM_LONGTERM_AREA, size);
+      snprintf(constant, size, "0xL%08x%08x%08x%08x", CONVAL1G(sptr),
+               CONVAL2G(sptr), CONVAL3G(sptr), CONVAL4G(sptr));
+      break;
+  // AOCC end
   case DT_REAL:
     /* our internal representation of floats is in 8 digit hex form;
      * internal LLVM representation of floats in hex form is 16 digits;
@@ -13004,13 +13521,24 @@ isNVVM(char *fn_name)
   // AOCC begin
   if (flg.x86_64_omptarget) {
     if ((strncmp(fn_name, "f90_", 4) == 0) ||
+        (strncmp(fn_name, "f90io_", 6) == 0) ||
         (strncmp(fn_name, "_mp_", 4) == 0) ||
         (strncmp(fn_name, "__ps", 4) == 0)) {
       return true;
     }
   }
   // AOCC end
+  if ((strcmp(fn_name,"__tgt_target") == 0 ||
+      (strcmp(fn_name,"__tgt_register_requires") == 0 ||
+      (strcmp(fn_name,"__tgt_register_lib") == 0))))
+      return false;
 
+  // AOCC
+  // we can have target function calls within the target region.
+  // returning true for all function calls
+  return true;
+
+  // the following code will be deleted 
   return (strncmp(fn_name, "__kmpc", 6) == 0) ||
          (strncmp(fn_name, "llvm.nvvm", 9) == 0) ||
          // AOCC Begin
@@ -13025,16 +13553,18 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "sqrt", 4) == 0) ||
          (strncmp(fn_name, "sin", 3) == 0) ||
          (strncmp(fn_name, "cos", 3) == 0) ||
+         (strncmp(fn_name, "tanf", 4) == 0) ||
+         (strncmp(fn_name, "tan", 3) == 0) ||
          (strncmp(fn_name, "pow", 3) == 0) ||
          (strncmp(fn_name, "exp", 3) == 0) ||
          (strncmp(fn_name, "log", 3) == 0) ||
          (strncmp(fn_name, "log10", 5) == 0) ||
          (strncmp(fn_name, "sinhf", 5) == 0) ||
-         (strncmp(fn_name, "sinh", 5) == 0) ||
+         (strncmp(fn_name, "sinh", 4) == 0) ||
          (strncmp(fn_name, "coshf", 5) == 0) ||
-         (strncmp(fn_name, "cosh", 5) == 0) ||
+         (strncmp(fn_name, "cosh", 4) == 0) ||
          (strncmp(fn_name, "tanhf", 5) == 0) ||
-         (strncmp(fn_name, "tanh", 5) == 0) ||
+         (strncmp(fn_name, "tanh", 4) == 0) ||
          (strncmp(fn_name, "atanf", 5) == 0) ||
          (strncmp(fn_name, "atan", 4) == 0) ||
          (strncmp(fn_name, "acosf", 5) == 0) ||
@@ -13042,19 +13572,8 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "asinf", 5) == 0) ||
          (strncmp(fn_name, "asin", 4) == 0) ||
          (strncmp(fn_name, "__ockl_get", 10) == 0) ||
-	 (strncmp(fn_name, "sinhf", 5) == 0) ||
-         (strncmp(fn_name, "sinh", 5) == 0) ||
-         (strncmp(fn_name, "coshf", 5) == 0) ||
-         (strncmp(fn_name, "cosh", 5) == 0) ||
-         (strncmp(fn_name, "tanhf", 5) == 0) ||
-         (strncmp(fn_name, "tanh", 5) == 0) ||
-         (strncmp(fn_name, "atanf", 5) == 0) ||
-         (strncmp(fn_name, "atan", 4) == 0) ||
-         (strncmp(fn_name, "acosf", 5) == 0) ||
-         (strncmp(fn_name, "acos", 4) == 0) ||
-         (strncmp(fn_name, "asinf", 5) == 0) ||
-         (strncmp(fn_name, "asin", 4) == 0) ||
 #endif
+         // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
          (strncmp(fn_name, "llvm.fma", 8) == 0);
 }
@@ -13111,7 +13630,8 @@ write_external_function_declarations(int first_time)
   DBGTRACEOUT("");
 } /* write_external_function_declarations */
 
-#ifdef OMP_OFFLOAD_AMD
+// AOCC Begin
+#ifdef OMP_OFFLOAD_LLVM
 INLINE static void write_kernel_attributes(FILE *out) {
   if (flg.amdgcn_target) {
     // We are not generating any debug info for GPU(as of now),
@@ -13121,6 +13641,7 @@ INLINE static void write_kernel_attributes(FILE *out) {
   }
 }
 #endif
+// AOCC End
 
 /**
    \brief Emit function attributes in debugging mode output
@@ -13163,6 +13684,28 @@ build_unused_global_define_from_params(void)
 {
   return;
 }
+
+// AOCC Begin
+/**
+   \brief Helper function: test if the param length exists as compiler created
+          symbol which represents length of any assumed length string argument
+          in the arg list
+   \param length is the compiler created symbol which represents length of
+          assumed length string argument
+ */
+INLINE static bool
+cg_fetch_clen_parent(SPTR length)
+{
+  int i;
+  SPTR parent;
+  for (i = 1; i <= llvm_info.abi_info->nargs; ++i) {
+    parent = llvm_info.abi_info->arg[i].sptr;
+    if ((DTY(DTYPEG(parent)) == TY_CHAR) && (DTYPEG(parent) == DT_ASSCHAR) &&
+        (CLENG(parent) == length)) return true;
+  }
+  return false;
+}
+// AOCC End
 
 /**
    \brief Helper function: In Fortran, test if \c MIDNUM is not \c SC_DUMMY
@@ -13216,6 +13759,16 @@ INLINE static void
 formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
 {
   if (formalsNeedDebugInfo(sptr)) {
+    bool is_ptr_alc_arr = false;
+    SPTR new_sptr = (SPTR)REVMIDLNKG(sptr);
+    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+        CCSYMG(sptr) /* Otherwise it can be a cray pointer */ &&
+        (new_sptr && (STYPEG(new_sptr) == ST_ARRAY) &&
+         (POINTERG(new_sptr) || ALLOCATTRG(new_sptr))) &&
+        SDSCG(new_sptr)) {
+      is_ptr_alc_arr = true;
+      sptr = new_sptr;
+    }
     LL_DebugInfo *db = current_module->debug_info;
     LL_MDRef param_md = lldbg_emit_param_variable(
         db, sptr, BIH_FINDEX(gbl.entbih), i, CCSYMG(sptr));
@@ -13225,8 +13778,11 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
                               ? NULL
                               : cons_expression_metadata_operand(llTy);
       OperandFlag_t flag = (mayHide && CCSYMG(sptr)) ? OPF_HIDDEN : OPF_NONE;
-      // For the assumed shape array, pass descriptor in place of base address.
-      if (ASSUMSHPG(sptr) && SDSCG(sptr))
+      // For pointer, allocatable, assumed shape and assumed rank arrays, pass
+      // descriptor in place of base address.
+      if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+          (is_ptr_alc_arr || ASSUMRANKG(sptr) || ASSUMSHPG(sptr)) &&
+          SDSCG(sptr))
         sptr = SDSCG(sptr);
       insert_llvm_dbg_declare(param_md, sptr, llTy, exprMDOp, flag);
     }
@@ -13438,6 +13994,17 @@ process_formal_arguments(LL_ABI_Info *abi)
     assert(llTy->data_type == LL_PTR, "expected a pointer type",
            llTy->data_type, ERR_Fatal);
     /* Emit an @llvm.dbg.declare right after the store. */
+// AOCC Begin
+    /* if arg->sptr is the compiler created symbol which represents the length
+     * of assumed length string type, then make the first metadata argument type
+     * of this symbol as address instead of value in the llvm.dbg.declare
+     * intrinsic.
+     */
+    if ((arg->kind == LL_ARG_DIRECT) && CCSYMG(arg->sptr) &&
+	    PASSBYVALG(arg->sptr) && cg_fetch_clen_parent(arg->sptr))
+	formalsAddDebug(arg->sptr, i, llTy, false);
+    else
+// AOCC End
 	formalsAddDebug(arg->sptr, i, llTy, true);
   }
 }
@@ -13473,6 +14040,12 @@ print_arg_attributes(LL_ABI_ArgInfo *arg)
     break;
   case LL_ARG_BYVAL:
     print_token(" byval");
+    print_token(" (");
+    if (arg->type->data_type == LL_PTR)
+      write_type(arg->type->sub_types[0]);
+    else
+      write_type(arg->type);
+    print_token(" )");
     break;
   default:
     interr("Unknown argument kind", arg->kind, ERR_Fatal);
@@ -13596,6 +14169,15 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
      * proprietary compilers. */
     print_token(" noinline");
   }
+// AOCC BEGIN
+  else if (XBIT(14, 0x8)) {
+    /* Apply noinline attribute if the pragma "noinline" is given */
+    print_token(" noinline");
+  } else if (XBIT(191, 0x2)) {
+    /* Apply alwaysinline attribute if the pragma "alwaysinline" is given */
+    print_token(" alwaysinline");
+  }
+// AOCC END
 
   if (func_sptr > NOSYM) {
 /* print_function_signature() can be called with func_sptr=0 */
@@ -13775,7 +14357,8 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
       print_dbg_line_no_comma(subprogram);
     }
   }
-    print_line(" {\nL.entry:"); /* } so vi matches */
+
+  print_line(" {\nL.entry:"); /* } so vi matches */
 
 #ifdef CONSTRUCTORG
   if (CONSTRUCTORG(func_sptr)) {
@@ -13802,6 +14385,7 @@ exprjump(ILI_OP opc)
   case IL_ICJMP:
   case IL_FCJMP:
   case IL_DCJMP:
+  case IL_QCJMP:
   case IL_ACJMP:
   case IL_UICJMP:
     return true;
@@ -13993,7 +14577,7 @@ cg_llvm_end(void)
   if (flg.omptarget) {
     ll_build_metadata_device(gbl.ompaccfile, gpu_llvm_module);
     ll_write_metadata(gbl.ompaccfile, gpu_llvm_module);
-    write_kernel_attributes(gbl.ompaccfile);
+    write_kernel_attributes(gbl.ompaccfile); // AOCC
   }
 #endif
 }

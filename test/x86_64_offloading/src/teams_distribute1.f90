@@ -3,7 +3,7 @@
 !
 ! x86_64 offloading regression test-suite
 !
-! Last modified: Oct 2019
+! Last modified: Jul 2020
 !
 
 subroutine subr1(curr_arr, next_arr, send, n, shared_0, x)
@@ -32,13 +32,13 @@ subroutine subr1(curr_arr, next_arr, send, n, shared_0, x)
 end subroutine
 
 program foo
-  integer, parameter :: n = 10
+  integer, parameter :: n = 11
   integer :: send(n)
   integer :: iterat, max_iterat = 1
   real(8) :: arr1(n, 0:1)
   real(8) :: res(n), exp(n)
   real(8) :: y = 1.5, x = 2.5
-  integer :: i_ct
+  integer :: i_ct, i, j, sum1
 
   do i = 1, n
     send(i) = i
@@ -54,5 +54,40 @@ program foo
   !$omp end target data
 
   res = arr1(:, 1)
+
+  !$omp target teams map(tofrom: sum1)
+  !$omp distribute
+  do i = 1, 10
+    !$omp parallel do
+    do j = 1, 10
+      !$omp atomic update
+      sum1 = sum1 + 1
+    end do
+  end do
+  !$omp end target teams
+
+  !$omp target teams map(tofrom: sum1)
+  !$omp distribute
+  do i = 1, 10
+    !$omp parallel
+    !$omp do
+    do j = 1, 10
+      !$omp atomic update
+      sum1 = sum1 + 1
+    end do
+    !$omp end parallel
+  end do
+  !$omp end target teams
+
+  !$omp target teams map(tofrom: sum1)
+  !$omp distribute
+  do i = 1, 10
+    !$omp atomic update
+    sum1 = sum1 + 1
+  end do
+  !$omp end target teams
+
+  res(n) = sum1
+  exp(n) = 210
   call check_double(res, exp, n)
 end program foo

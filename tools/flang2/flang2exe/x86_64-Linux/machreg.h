@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 #ifndef MACHREG_H_
 #define MACHREG_H_
@@ -310,6 +318,10 @@ extern char *opmask_reg[N_OPMASK_REGS + 1];    /* OPMASK_REG_NAMES */
 #define DP_RETVAL XR_XMM0
 #define CS_RETVAL XR_XMM0
 #define CD_RETVAL XR_XMM0
+//AOCC Begin
+#define QP_RETVAL XR_XMM0
+#define CQ_RETVAL XR_XMM0
+//AOCC End
 
 #define IR_RETVAL IR_RAX
 #define AR_RETVAL IR_RAX
@@ -349,8 +361,10 @@ extern int mr_res_xr[MR_MAX_XREG_RES];
 #define IR(i) ARG_IR(i)
 #define SP(i) ARG_XR(i)
 #define DP(i) ARG_XR(i)
+#define QP(i) ARG_XR(i)  // AOCC: 128 bit
 #define ISP(i) (i + 100) /* not used? */
 #define IDP(i) (i + 100)
+#define IQP(i) (i + 100)
 
 /* Macro for defining alternate-return register for fortran subprograms.
  */

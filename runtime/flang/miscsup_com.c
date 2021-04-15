@@ -5,6 +5,18 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Support for TRAILZ intrinsic.
+ *  Month of Modification: July 2019
+ *
+ * Support for REAL*16 intrinsics
+ * Date of Modification: 18th July 2020
+ */
+
+
 /* clang-format off */
 
 /** \file
@@ -27,6 +39,7 @@ MP_SEMAPHORE(static, sem);
 #include "type.h"
 
 extern double __fort_second();
+extern double __fort_sysclk_second(); /* AOCC */
 extern long __fort_getoptn(char *, long);
 
 #define time(x) __fort_time(x)
@@ -136,6 +149,7 @@ __LOG_T
 ENTF90(PRESENTC, presentc)(DCHAR(p) DCLEN(p))
 {
   ENTF90(PRESENTCA, presentca)(CADR(p), (__CLEN_T)CLEN(p));
+  return 0;
 }
 
 /** \brief
@@ -569,6 +583,28 @@ ENTFTN(CPU_TIMED, cpu_timed)(__REAL8_T *x)
   *x = res;
 }
 
+//AOCC Begin
+void
+ENTFTN(CPU_TIMEQ, cpu_timeq)(__REAL16_T *x)
+{
+  extern double __fort_second();
+  double secs;
+  __REAL16_T res;
+
+  secs = __fort_second();
+  /* probably not necessary for this version, except that
+     user could mix real*4 and real*8 versions.
+   */
+  if (secs > TIME_THRESHOLD2)
+    res = secs - TIME_THRESHOLD2;
+  else if (secs > TIME_THRESHOLD1)
+    res = secs - TIME_THRESHOLD1;
+  else
+    res = secs;
+  *x = res;
+}
+//AOCC End
+
 __REAL4_T
 ENTFTN(SECNDS, secnds)(__REAL4_T *x, F90_Desc *xd)
 {
@@ -837,7 +873,7 @@ ENTFTN(SYSCLK, sysclk)(__STAT_T *count, __STAT_T *count_rate,
     }
   }
   if (ISPRESENT(count)) {
-    double t = __fort_second();
+    double t = __fort_sysclk_second(); /* AOCC */
     MXINT_T mxt;
     mxt = mxint(countd);
     if (t * resol > mxt) {
@@ -3330,6 +3366,16 @@ ENTFTN(LEADZ, leadz)(void *i, __INT_T *size)
   return nz;
 }
 
+/* AOCC begin */
+__INT_T
+ENTFTN(TRAILZ, trailz)(void *i, __INT_T *size)
+{
+  unsigned ui = (unsigned) I8(__fort_varying_int)(i, size);
+
+  return (ui) ? __builtin_ctz(ui) : (*size * 8);
+}
+/* AOCC end */
+
 __INT_T
 ENTFTN(POPCNT, popcnt)(void *i, __INT_T *size)
 {
@@ -3947,6 +3993,17 @@ ENTF90(DMODULO, dmodulo)(__DBLE_T *x, __DBLE_T *y)
     d += *y;
   return d;
 }
+// AOCC Begin
+__REAL16_T
+ENTF90(QMODULO, qmodulo)(__REAL16_T *x, __REAL16_T *y)
+{
+  __REAL16_T d;
+  d = fmodq(*x, *y);
+  if (d != 0 && ((*x < 0 && *y > 0) || (*x > 0 && *y < 0)))
+    d += *y;
+  return d;
+}
+// AOCC End
 
 __INT4_T
 ENTF90(MODULOv, modulov)(__INT4_T a, __INT4_T p)
@@ -4006,6 +4063,18 @@ ENTF90(DMODULOv, dmodulov)(__DBLE_T x, __DBLE_T y)
     d += y;
   return d;
 }
+
+// AOCC Begin
+__REAL16_T
+ENTF90(QMODULOv, qmodulov)(__REAL16_T x, __REAL16_T y)
+{
+  __REAL16_T d;
+  d = fmodq(x, y);
+  if (d != 0 && ((x < 0 && y > 0) || (x > 0 && y < 0)))
+    d += y;
+  return d;
+}
+// AOCC End
 
 __INT_T
 ENTF90(CEILING, ceiling)(__REAL_T *r)
@@ -4395,11 +4464,8 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
       k = 4;
     else if (p <= 15)
       k = 8;
-// Real kind 16 is not supported currently
-#if 0
     else if (p <= 31)
       k = 16;
-#endif
     else {
       e -= 1;
       prec = -1;
@@ -4415,12 +4481,10 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
       if (k <= 8)
         k = 8;
     }
-#if 0
     else if (r <= 4931) {
       if (k <= 16)
         k = 16;
     }
-#endif
     else {
       e -= 2;
       range = -2;
@@ -4434,10 +4498,8 @@ ENTF90(SEL_REAL_KIND, sel_real_kind)
         k = 4;
       else if (k <= 8)
         k = 8;
-#if 0
       else if (k <= 16)
         k = 16;
-#endif
       else if (prec < 0 && range < 0)
 	k = -3;
     }
@@ -4480,6 +4542,23 @@ ENTF90(EXPONDX, expondx)(__REAL8_T d)
     return 0;
   else
     return ((g.i >> 52) & 0x7FF) - 1022;
+}
+
+__INT_T
+ENTF90(EXPONQX, exponqx)(__REAL16_T q)
+{
+  union {
+    struct {
+    __INT8_T lo;
+    __INT8_T hi;
+    } i;
+    __REAL16_T r;
+  } g;
+  g.r = q;
+  if ((((g.i.hi >> 32) & ~0x80000000) | (g.i.hi & 0xffffffff)) == 0)
+    return 0;
+  else
+    return ((g.i.hi >> 48) & 0x7FFF) - 16382;
 }
 
 __INT_T
@@ -4546,6 +4625,24 @@ ENTF90(FRACDX, fracdx)(__REAL8_T d)
 __REAL8_T
 ENTF90(FRACD, fracd)(__REAL8_T *d) { return ENTF90(FRACDX, fracdx)(*d); }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(FRACQX, fracqx)(__REAL16_T q)
+{
+  __REAL16_SPLIT x;
+
+  x.q = q;
+  if (x.q != 0.0) {
+    x.i.h &= ~0x7FFD0000;
+    x.i.h |= 0x3FFE0000;
+  }
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(FRACQ, fracq)(__REAL16_T *q) { return ENTF90(FRACQX, fracqx)(*q); }
+//AOCC End
+
 /** \brief NEAREST(X,S) has a value equal to the machine representable number
  * distinct from X and nearest to it in the direction of the infinity
  * with the same sign as S.
@@ -4603,7 +4700,32 @@ ENTF90(NEARESTD, nearestd)(__REAL8_T *d, __LOG_T *sign)
 {
   return ENTF90(NEARESTDX, nearestdx)(*d, *sign);
 }
+//AOCC Begin
+__REAL16_T
+ENTF90(NEARESTQX, nearestqx)(__REAL16_T q, __LOG_T sign)
+{
+  __REAL16_SPLIT x;
 
+  x.q = q;
+  if (x.q == 0.0) {
+    x.ll.h = (sign & 1) ? 0x0000000000000001 : 0x8000000000000001;
+    x.ll.l = 0;
+  } else {
+    if ((x.ll.h >> 112 & 0x7FFF) != 0x7FFF) { /* not nan or inf */
+      if ((x.q < 0) ^ (sign & GET_DIST_MASK_LOG))
+        ++x.ll.h;
+      else
+        --x.ll.h;
+    }
+  }
+  return x.q;
+}
+__REAL16_T
+ENTF90(NEARESTQ, nearestq)(__REAL16_T *q, __LOG_T *sign)
+{
+  return ENTF90(NEARESTQX, nearestqx)(*q, *sign);
+}
+//AOCC End
 __REAL4_T
 ENTF90(RRSPACINGX, rrspacingx)(__REAL4_T f)
 {
@@ -4655,6 +4777,38 @@ ENTF90(RRSPACINGD, rrspacingd)(__REAL8_T *d)
   return ENTF90(RRSPACINGDX, rrspacingdx)(*d);
 }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(RRSPACINGQX, rrspacingqx)(__REAL16_T q)
+{
+  __REAL16_SPLIT x, y;
+  int e;
+
+  x.q = q;
+  if (x.q == 0)
+    return 0;
+  y.i.h = (x.i.h & 0x7FFF << 20) ^ 0x7FFF << 20;
+  y.i.l = 0;
+  y.i.j = 0;
+  y.i.k = 0;
+  x.q *= y.q;
+  if (x.q < 0)
+    x.q = -x.q;
+  e = 111 + 16383;
+  y.i.h = e << 16;
+  y.i.l = 0;
+  y.i.j = 0;
+  y.i.k = 0;
+  x.q *= y.q;
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(RRSPACINGQ, rrspacingq)(__REAL16_T *q)
+{
+  return ENTF90(RRSPACINGQX, rrspacingqx)(*q);
+}
+//AOCC End
 __REAL4_T
 ENTF90(SCALEX, scalex)(__REAL4_T f, __INT_T i)
 {
@@ -4722,6 +4876,44 @@ ENTF90(SCALED, scaled)(__REAL8_T *d, void *i, __INT_T *size)
   x.i.l = 0;
   return *d * x.d;
 }
+
+//AOCC Begin
+__REAL16_T
+ENTF90(SCALEQX, scaleqx)(__REAL16_T q, __INT_T i)
+{
+  int e;
+  __REAL16_SPLIT x;
+
+  e = 16383 + i;
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 16;
+  x.i.l = 0;
+  x.i.j = 0;
+  x.i.k = 0;
+  return q * x.q;
+}
+
+__REAL16_T
+ENTF90(SCALEQ, scaleq)(__REAL16_T *q, void *i, __INT_T *size)
+{
+  int e;
+  __REAL16_SPLIT x;
+
+  e = 16383 + I8(__fort_varying_int)(i, size);
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 16;
+  x.i.l = 0;
+  x.i.j = 0;
+  x.i.k = 0;
+  return *q * x.q;
+}
+//AOCC End
 
 __REAL4_T
 ENTF90(SETEXPX, setexpx)(__REAL4_T f, __INT_T i)
@@ -4811,6 +5003,55 @@ ENTF90(SETEXPD, setexpd)(__REAL8_T *d, void *i, __INT_T *size)
   return x.d * y.d;
 }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(SETEXPQX, setexpqx)(__REAL16_T q, __INT_T i)
+{
+  int e;
+  __REAL16_SPLIT x, y;
+
+  y.q = q;
+  if (y.q == 0.0)
+    return y.q;
+  y.i.h &= ~0x7FFF0000;
+  y.i.h |= 0x3FFF0000;
+  y.i.k = 0;
+  y.i.j = 0;
+  y.i.l = 0;
+  e = 16382 + i;
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 16;
+  x.i.l = 0;
+  x.i.k = 0;
+  x.i.j = 0;
+  return x.q * y.q;
+}
+
+__REAL16_T
+ENTF90(SETEXPQ, setexpq)(__REAL16_T *q, void *i, __INT_T *size)
+{
+  int e;
+  __REAL16_SPLIT x, y;
+
+  y.q = *q;
+  if (y.q == 0.0)
+    return y.q;
+  y.i.h &= ~0x7FFF0000;
+  y.i.h |= 0x3FFF0000;
+  e = 16382 + I8(__fort_varying_int)(i, size);
+  if (e < 0)
+    e = 0;
+  else if (e > 32767)
+    e = 32767;
+  x.i.h = e << 16;
+  x.i.l = 0;
+  return x.q * y.q;
+}
+//AOCC End
+
 __REAL4_T
 ENTF90(SPACINGX, spacingx)(__REAL4_T f)
 {
@@ -4855,6 +5096,29 @@ ENTF90(SPACINGD, spacingd)(__REAL8_T *d)
   return ENTF90(SPACINGDX, spacingdx)(*d);
 }
 
+//AOCC Begin
+__REAL16_T
+ENTF90(SPACINGQX, spacingqx)(__REAL16_T q)
+{
+  int e;
+  __REAL16_SPLIT x;
+
+  x.q = q;
+  e = ((x.i.h >> 16) & 0x7FFF) - 112;
+  if (e < 1)
+    e = 1;
+  x.i.h = e << 16;
+  x.i.l = 0;
+  return x.q;
+}
+
+__REAL16_T
+ENTF90(SPACINGQ, spacingq)(__REAL16_T *q)
+{
+  return ENTF90(SPACINGQX, spacingqx)(*q);
+}
+//AOCC End
+
 #ifndef DESC_I8
 
 typedef __INT8_T SZ_T;
@@ -4876,6 +5140,8 @@ _MZERO(4, int)
 
 _MZERO(8, long long)
 
+_MZERO(16, __float128)
+
 void
 ENTF90(MZEROZ8, mzeroz8)(void *d, SZ_T size)
 {
@@ -4889,6 +5155,14 @@ ENTF90(MZEROZ16, mzeroz16)(void *d, SZ_T size)
 {
   if (d && size > 0) {
     __c_mzero8(d, size * 2);
+  }
+}
+
+void
+ENTF90(MZEROZ32, mzeroz32)(void *d, SZ_T size)
+{
+  if (d && size > 0) {
+    __c_mzero16(d, size * 2);
   }
 }
 
@@ -4944,6 +5218,24 @@ ENTF90(MSETZ16, msetz16)(void *d, void *v, SZ_T size)
   }
 }
 
+void
+ENTF90(MSETZ32, msetz32)(void *d, void *v, SZ_T size)
+{
+  if (d) {
+    SZ_T i;
+    __float128 *pd;
+    __float128 v0, v1;
+    pd = (__float128 *)d;
+    v0 = ((__float128 *)v)[0];
+    v1 = ((__float128 *)v)[1];
+    for (i = 0; i < size; i++) {
+      pd[0] = v0;
+      pd[1] = v1;
+      pd += 2;
+    }
+  }
+}
+
 #undef _MCOPY
 #define _MCOPY(n, t)                                                           \
   void ENTF90(MCOPY##n, mcopy##n)(void *d, void *v, SZ_T size)                 \
@@ -4960,6 +5252,8 @@ _MCOPY(4, int)
 
 _MCOPY(8, long long)
 
+_MCOPY(16, __float128)
+
 void
 ENTF90(MCOPYZ8, mcopyz8)(void *d, void *v, SZ_T size)
 {
@@ -4973,6 +5267,14 @@ ENTF90(MCOPYZ16, mcopyz16)(void *d, void *v, SZ_T size)
 {
   if (d && v && size) {
     __c_mcopy8(d, v, size * 2);
+  }
+}
+
+void
+ENTF90(MCOPYZ32, mcopyz32)(void *d, void *v, SZ_T size)
+{
+  if (d && v && size) {
+    __c_mcopy16(d, v, size * 2);
   }
 }
 

@@ -7,7 +7,16 @@
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Support for parity intrinsic.
+ *   Month of Modification: July 2019
+ *
+ * Support for Bit transformational intrinsic iany, iall, iparity.
+ *   Month of Modification: July 2019
+ * Last modified: Jun 2020
  */
+
 /** \brief Fortran transformation module */
 
 #include "gbldefs.h"
@@ -350,6 +359,53 @@ static void rewrite_omp_target_construct() {
 
   ast_unvisit();
 }
+
+void rewrite_omp_map_array_section()
+{
+  int std = 0, bmpstd;
+  int ast = 0, lop;
+  int ast2 = 0, shape, src;
+  int tmp, newast, asn;
+
+  ast_visit(1,1);
+
+  for(std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    ast = STD_AST(std);
+ 
+    if(ast == 0)
+      continue;
+
+    if(A_TYPEG(ast) == A_MP_BMPSCOPE)
+      bmpstd = std;
+    if(A_TYPEG(ast) != A_MP_MAP)
+      continue;
+
+    lop = A_LOPG(ast);
+
+    if(A_TYPEG(lop) != A_SUBSCR || !A_SHAPEG(lop))
+      continue;
+
+    transform_map_array_section(lop, bmpstd, &ast2);
+
+    shape = A_SHAPEG(lop);
+
+    // compute the size of the array 
+    if(SHD_UPB(shape, 0)){
+      src = mk_binop(OP_ADD, mk_binop(OP_SUB, SHD_UPB(shape,0), 
+                                SHD_LWB(shape,0), astb.bnd.dtype), 
+                                  SHD_STRIDE(shape,0), astb.bnd.dtype);
+      tmp = getcctmp('z', src, ST_VAR, DT_INT8);
+      newast = mk_id(tmp);
+      asn = mk_assn_stmt(newast, src, DT_INT8);
+      add_stmt_before(asn, bmpstd);
+      A_ROPP(ast, newast);
+    }
+    if(ast2)
+      A_LOPP(ast, ast2);
+  }
+
+  ast_unvisit();
+}
 // AOCC END
 
 void
@@ -372,6 +428,16 @@ transform(void)
 #if DEBUG
       if (DBGBIT(50, 4)) {
         fprintf(gbl.dbgfil, "After rewrite_omp_target_construct\n");
+        dstda();
+      }
+#endif
+      /* Handle sections for assumed array in map clause
+      */
+      rewrite_omp_map_array_section();
+
+#if DEBUG
+      if(DBGBIT(50, 4)) {
+        fprintf(gbl.dbgfil, "After rewrite_omp_map_array_section\n");
         dstda();
       }
 #endif
@@ -1319,7 +1385,8 @@ rewrite_block_forall(void)
             continue;
         }
         if (A_TYPEG(ast) == A_ALLOC || A_TYPEG(ast) == A_CONTINUE ||
-            A_TYPEG(ast) == A_COMMENT || A_TYPEG(ast) == A_COMSTR)
+            A_TYPEG(ast) == A_COMMENT || A_TYPEG(ast) == A_COMSTR ||
+            A_TYPEG(ast) == A_DO || A_TYPEG(ast) == A_ENDDO)      //AOCC
           continue;
         /* or it may be like, z_b_0 = 1 */
         if (A_TYPEG(ast) == A_ASN && A_TYPEG(A_DESTG(ast)) == A_ID)
@@ -2250,6 +2317,12 @@ collapse_assignment(int asn, int std)
       if (CONVAL1G(cnst) == stb.dbl0 && CONVAL2G(cnst) == stb.dbl0)
         is_zero = 1;
       break;
+    // AOCC begin
+    case DT_CMPLX32:
+      if (CONVAL1G(cnst) == stb.quad0 && CONVAL2G(cnst) == stb.quad0)
+        is_zero = 1;
+      break;
+    // AOCC end
     case DT_BINT:
     case DT_SINT:
     case DT_INT4:
@@ -2265,7 +2338,7 @@ collapse_assignment(int asn, int std)
       break;
     default:
       if (cnst == stb.i0 || cnst == stb.k0 || cnst == stb.flt0 ||
-          cnst == stb.dbl0)
+          cnst == stb.dbl0 || cnst == stb.quad0)
         is_zero = 1;
       break;
     }
@@ -2319,6 +2392,9 @@ collapse_assignment(int asn, int std)
       case 16:
         rtlRtn = RTE_mzeroz16;
         break;
+      case 32:
+        rtlRtn = RTE_mzeroz32;
+        break;
       }
     } else {
       switch (size_of(dtype)) {
@@ -2333,6 +2409,9 @@ collapse_assignment(int asn, int std)
         break;
       case 8:
         rtlRtn = RTE_mzero8;
+        break;
+      case 16:
+        rtlRtn = RTE_mzeroz8;
         break;
       }
     }
@@ -2354,6 +2433,9 @@ collapse_assignment(int asn, int std)
       case 16:
         rtlRtn = RTE_mcopyz16;
         break;
+      case 32:
+        rtlRtn = RTE_mcopyz32;
+        break;
       }
     } else {
       switch (size_of(dtype)) {
@@ -2368,6 +2450,9 @@ collapse_assignment(int asn, int std)
         break;
       case 8:
         rtlRtn = RTE_mcopy8;
+        break;
+      case 16:
+        rtlRtn = RTE_mcopyz8;
         break;
       }
     }
@@ -2390,6 +2475,9 @@ collapse_assignment(int asn, int std)
       case 16:
         rtlRtn = RTE_msetz16;
         break;
+      case 32:
+        rtlRtn = RTE_msetz32;
+        break;
       }
     } else {
       switch (size_of(dtype)) {
@@ -2404,6 +2492,9 @@ collapse_assignment(int asn, int std)
         break;
       case 8:
         rtlRtn = RTE_mset8;
+        break;
+      case 16:
+        rtlRtn = RTE_msetz8;
         break;
       }
     }
@@ -3666,7 +3757,7 @@ mk_deallocate(int ast)
 
 /* is_assign_lhs is set when this is for the LHS of an assignment */
 void
-rewrite_deallocate(int ast, bool is_assign_lhs, int std)
+rewrite_deallocate(int ast, bool is_assign_lhs, int std, bool can_reorder)
 {
   int i;
   int sptrmem;
@@ -3702,8 +3793,9 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
     if (!ALLOCATTRG(sptrmem)) {
       continue;
     }
-    if (has_finalized_component(sptrmem))
-      reorder_nullify=true;
+    if (can_reorder && has_finalized_component(sptrmem)) {
+       reorder_nullify=true;
+    }
   }
   if (reorder_nullify) {
     add_stmt_after(add_nullify_ast(ast), std);
@@ -3720,7 +3812,7 @@ rewrite_deallocate(int ast, bool is_assign_lhs, int std)
     astmem = mk_id(sptrmem);
     astmem = mk_member(astparent, astmem, A_DTYPEG(astmem));
     if (!POINTERG(sptrmem) && allocatable_member(sptrmem)) {
-      rewrite_deallocate(astmem, false, std);
+      rewrite_deallocate(astmem, false, std, false);
     }
     if (!ALLOCATTRG(sptrmem)) {
       continue;
@@ -3993,7 +4085,7 @@ gen_dealloc_mbr(int ast, int std)
   int std_dealloc = add_stmt_before(astfunc, std);
   A_DALLOCMEMP(astfunc, 1);
   if (allocatable_member(memsym_of_ast(ast))) {
-    rewrite_deallocate(ast, true, std_dealloc);
+    rewrite_deallocate(ast, true, std_dealloc, true);
   }
 }
 

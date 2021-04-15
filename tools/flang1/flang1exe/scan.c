@@ -4,6 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *
+ * Support type statement for intrinsic types
+ *   Date of Modification: 24 January 2020
+ *
+ * Added support for quad precision
+ *   Last modified: Feb 2020
+ *
+ *   Last modified: Jun 2020
+ *
+ */
 
 /**
     \file scan.c
@@ -24,6 +39,7 @@
 #include "ccffinfo.h"
 #include "fih.h"
 #include "dinit.h"
+#include<string.h>
 
 /*  functions defined in this file:  */
 
@@ -76,7 +92,9 @@ static void check_continuation(int);
 static LOGICAL is_next_char(char *, int);
 static int double_type(char *, int *);
 void add_headerfile(char *, int, int);
-
+//AOCC Begin
+void check_type_intrinsic(int * , int * , char * , char *);
+//AOCC End
 /*  external declarations  */
 
 extern void parse_init(void);
@@ -353,7 +371,7 @@ static int (*p_get_token[])(INT *) = {_get_token, _read_token};
 #include "kwddf.h"
 
 static void init_ktable(KTABLE *);
-static int keyword(char *, KTABLE *, int *, LOGICAL);
+static int keyword(char *, KTABLE *, int *, int);
 static int keyword_idx; /* index of KWORD entry found by keyword() */
 
 /* Macro to NULL terminate a substring to error module */
@@ -5094,6 +5112,11 @@ get_keyword:
   tkntyp = keyword(id, &normalkw, &idlen, sig_blanks);
   if (tkntyp == 0)
     goto return_identifier;
+  //AOCC Begin
+  //Support for f2008 feature: type statement for intrinsic types
+  if(tkntyp == TK_TYPE && flg.std == F2008)
+    check_type_intrinsic(&tkntyp , &idlen , currc , cp);
+  //AOCC End
   bind_state = B_NONE;
   switch (scn.stmtyp = tkntyp) {
   case TK_FUNCTION:
@@ -6079,7 +6102,7 @@ get_kind_value(int knd)
  *  entry matching the keyword.
  */
 static int
-keyword(char *id, KTABLE *ktable, int *keylen, LOGICAL exact)
+keyword(char *id, KTABLE *ktable, int *keylen, int flag)
 {
   int chi, low, high, p, kl, cond;
   KWORD *base;
@@ -6104,6 +6127,17 @@ keyword(char *id, KTABLE *ktable, int *keylen, LOGICAL exact)
     if (cond == 0)
       p = low;
   }
+
+  //AOCC Begin
+  /*This condition is solely for Type intrinsic check*/
+  if(flag == 2){
+    if(strcmp(id,base[p].keytext) != 0)
+      return 0;
+    else
+      return base[p].toktyp;
+  }
+  //AOCC End
+
   if (p) {
     keyword_idx = p;
     return base[p].toktyp;
@@ -6399,7 +6433,7 @@ get_number(int cplxno)
   char *cp;
   INT num[4];
   int sptr;
-  LOGICAL d_exp;
+  LOGICAL d_exp,q_exp;
   int kind_id_len;
   int errcode;
   int nmptr;
@@ -6409,6 +6443,7 @@ get_number(int cplxno)
   chk_octal = TRUE; /* Attempt to recognize Cray's octal extension */
   kind_id_len = 0;
   d_exp = FALSE;
+  q_exp = FALSE;    // AOCC
   nmptr = 0;
   c = *(cp = currc);
   if (c == '-' || c == '+')
@@ -6440,13 +6475,13 @@ state1: /* digits  */
         goto return_integer; /* digits .eq */
       goto state2;           /* digits .e */
     }
-    if (isdig(cp[1]) || cp[1] == 'd')
+    if (isdig(cp[1]) || cp[1] == 'd' || cp[1] == 'q')
       goto state2; /* digits . digits|d */
     if (islower(cp[1]))
       goto return_integer; /* digits . <lowercase letter> */
     goto state2;           /* could still be digits . E|D */
   }
-  if (c == 'e' || c == 'E' || c == 'd' || c == 'D')
+  if (c == 'e' || c == 'E' || c == 'd' || c == 'D'|| c == 'q' || c == 'Q')
     goto state3;
   goto return_integer;
 state2: /* digits . [ digits ]  */
@@ -6454,7 +6489,7 @@ state2: /* digits . [ digits ]  */
     c = *++cp;
   } while (isdig(c));
   assert(cp > currc + 1, "get_number:single dot", (int)c, 3);
-  if (c == 'e' || c == 'E' || c == 'd' || c == 'D')
+  if (c == 'e' || c == 'E' || c == 'd' || c == 'D' || c == 'q' || c == 'Q')
     goto state3;
   goto return_real;
 
@@ -6462,6 +6497,10 @@ state3: /* digits [ . [ digits ] ] { e | d }  */
   if (c == 'd') {
     d_exp = TRUE;
   }
+  // AOCC begin
+  if (c == 'q' || c == 'Q')
+    q_exp = TRUE;
+  // AOCC end
   c = *++cp;
   if (isdig(c))
     goto state5;
@@ -6478,7 +6517,14 @@ state5: /* digits [ . [ digits ] ] { e | d } [ + | - ] digits  */
   c = *++cp;
   if (isdig(c))
     goto state5;
-  goto return_real;
+  // AOCC begin
+  if (q_exp && c == '_') {
+    errsev(1063);
+    return;
+  } else {
+    goto return_real;
+  }
+  // AOCC end
 
 syntax_error:
   errsev(28);
@@ -6536,10 +6582,10 @@ return_integer:
       p++;
       len--;
     }
-    if (len == 0) {
-      /* Have a cray octal number. Overwrite the 'b' with '"' thus
-       * terminating the octal constant for get_nondec().
-       */
+     if (len == 0) {
+       /* Have a cray octal number. Overwrite the 'b' with '"' thus
+        * terminating the octal constant for get_nondec().
+        */
       if (flg.standard)
         error(170, 2, gbl.lineno,
               "octal constant composed of octal digits followed by 'b'", CNULL);
@@ -6594,9 +6640,8 @@ return_real:
       error(437, 2, gbl.lineno, "Constant with kind type 16 ", "REAL");
       kind = DT_REAL8;
     }
-  } else {
+  } else if (d_exp) {
     /* constant was not explicitly kinded */
-    if (d_exp) {
       kind = DT_DBLE;
       if (!XBIT(49, 0x200))
         /* not -dp */
@@ -6605,17 +6650,49 @@ return_real:
         error(437, 2, gbl.lineno, "DOUBLE PRECISION constant", "REAL");
         kind = DT_REAL;
       }
-    } else {
+      // AOCC begin
+    } else if (q_exp) {
+      kind = DT_QUAD;
+      if (!XBIT(49, 0x200))
+        /* not -qp */
+        nmptr = putsname(currc, cp - currc);
+      if (XBIT(57, 0x10) && DTY(kind) == TY_QUAD) {
+        error(437, 2, gbl.lineno, "QUAD PRECISION constant", "REAL");
+        kind = DT_REAL;
+      }
+    }
+    // AOCC end
+      else {
       kind = stb.user.dt_real;
       nmptr = putsname(currc, cp - currc);
     }
-  }
   if (cplxno) {
     c = *(cp + kind_id_len);
     if ((cplxno == 1 && c != ',') || (cplxno == 2 && c != ')'))
       return;
   }
   switch (DTY(kind)) {
+  // AOCC begin
+  case TY_QUAD:
+    tkntyp = TK_QCON;
+    errcode = atoxq(currc, num, (int)(cp - currc));
+    switch (errcode) {
+    case 0:
+      break;
+    case -1:
+    default:
+      CERROR(28, 3, gbl.lineno, currc, cp, CNULL);
+      break;
+    case -2:
+      CERROR(112, 1, gbl.lineno, currc, cp, CNULL);
+      break;
+    case -3:
+      CERROR(111, 1, gbl.lineno, currc, cp, CNULL);
+      break;
+    }
+    sptr = tknval = getcon(num, DT_QUAD);
+    break;
+  // AOCC end
   case TY_DBLE:
     tkntyp = TK_DCON;
     errcode = atoxd(currc, num, (int)(cp - currc));
@@ -7069,6 +7146,11 @@ check_ccon(void)
       case TY_DBLE:
         tkntyp = TK_DCON;
         break;
+      // AOCC begin
+      case TY_QUAD:
+        tkntyp = TK_QCON;
+        break;
+      // AOCC end
       default:
         tkntyp = TK_RCON;
         break;
@@ -7080,6 +7162,11 @@ check_ccon(void)
     case TK_DCON:
       num[0] = cngcon(val[0], DTYPEG(num[0]), DT_REAL8);
       break;
+    // AOCC begin
+    case TK_QCON:
+      num[0] = cngcon(val[0], DTYPEG(num[0]), DT_QUAD);
+      break;
+    // AOCC end
     default:
       interr("check_ccon: unexp.constant", tkntyp, 3);
       tkntyp = TK_RCON;
@@ -7096,6 +7183,12 @@ check_ccon(void)
       tkntyp = TK_DCCON;
       tknval = getcon(val, DT_CMPLX16);
       break;
+    // AOCC begin
+    case TK_QCON:
+      tkntyp = TK_QCCON;
+      tknval = getcon(val, DT_CMPLX32);
+      break;
+    // AOCC end
     }
   } else {
     if (tok1 == TK_DCON) {
@@ -7103,6 +7196,13 @@ check_ccon(void)
         xdble(num[1], val);
         num[1] = getcon(val, DT_DBLE);
       }
+    // AOCC begin
+    } else if (tok1 == TK_QCON) {
+      if (tkntyp == TK_RCON) { /* (quad, real)  */
+        xftoq(num[1], val);
+        num[1] = getcon(val, DT_QUAD);
+      }
+    // AOCC end
     } else if (tkntyp == TK_RCON) { /* (real, real)  */
       tkntyp = TK_CCON;
       tknval = getcon(num, DT_CMPLX);
@@ -7110,11 +7210,26 @@ check_ccon(void)
       NMPTRP(tknval, putsname(save_currc - 1, currc - save_currc + 1));
       return;
     } else { /* (real, double)  */
-      xdble(num[0], val);
-      num[0] = getcon(val, DT_DBLE);
+        if (tkntyp == TK_DCON) {
+          xdble(num[0], val);
+          num[0] = getcon(val, DT_DBLE);
+        } // AOCC begin
+        else if (tkntyp == TK_QCON) { /* (real, quad) */
+          xftoq(num[0], val);
+          num[0] = getcon(val,DT_QUAD);
+        }
+         // AOCC end
     }
-    tkntyp = TK_DCCON;
-    tknval = getcon(num, DT_CMPLX16);
+    if (tkntyp == TK_DCON || tok1 == TK_DCON) {
+      tkntyp = TK_DCCON;
+      tknval = getcon(num, DT_CMPLX16);
+    }
+    // AOCC begin
+    if (tkntyp == TK_QCON || tok1 == TK_QCON) {
+      tkntyp = TK_QCCON;
+      tknval = getcon(num, DT_CMPLX32);
+    }
+    // AOCC end
   }
   return;
 
@@ -9560,3 +9675,74 @@ double_type(char *ip, int *p_idlen)
   }
   return 0;
 }
+//AOCC Begin
+//Checks for type(intrinsic type)
+void check_type_intrinsic(int *tkntyp , int *idlen , char *currc , char *cp){
+
+  char *curr_token;
+  char look_ahead[MAXIDLEN * 4];
+  int intrinsic_type;
+  int paran_count = 0;
+  int c , count , index = 0 , space = 0;
+  char *insert;
+  curr_token = cp;
+  count = MAXIDLEN * 4;
+  insert = look_ahead;
+
+  if(*curr_token == ' '){
+    ++curr_token;
+    index++;
+    space++;
+  }
+  if(*curr_token == '('){
+    ++curr_token;
+    index++;
+    if(*curr_token == ' '){
+      ++curr_token;
+      index++;
+      space++;
+    }
+    do {
+      c = *curr_token++;
+      index++;
+      if (--count >= 0)
+        *insert++ = c;
+    } while (isident(c));
+    if (insert != look_ahead)
+      --insert;
+    *insert = '\0';
+    int temp_idlen = curr_token - cp;
+    intrinsic_type = keyword(look_ahead, &normalkw, &temp_idlen, 2);
+    switch(intrinsic_type){
+      case TK_INTEGER:
+      case TK_REAL:
+      case TK_CHARACTER:
+      case TK_LOGICAL:
+      case TK_COMPLEX:
+        *tkntyp = intrinsic_type;
+        if(*curr_token == ')'){
+          *idlen = index + 5;
+        }
+        else if (*(curr_token - 1) == ')'){
+          *idlen = index + 4;
+        }
+        else if (*(curr_token - 1) == '(' || *curr_token == '('){
+          while(index != strlen(cp)){
+            if(*curr_token == ')')
+              paran_count++;
+            index++;
+            if(paran_count == 2)
+              break;
+            *curr_token++;
+          }
+          if(paran_count == 2)
+            currc[index + 3] = ' ';
+            *idlen = space+strlen(look_ahead)+5;
+        }
+        break;
+      default:
+        return;
+    }
+  }
+}
+//AOCC End

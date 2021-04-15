@@ -5,6 +5,15 @@
  *
  */
 
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last modified: Jun 2020
+ */
+
 /********************************************************
   FIXME: get rid of this "important notice" and proliferating copies.
 
@@ -46,7 +55,7 @@ sym_init_first(void)
     STG_ALLOC(stb, 1000);
     assert(stb.stg_base, "sym_init: no room for symtab", stb.stg_size,
            ERR_Fatal);
-    stb.n_size = 5124;
+    stb.n_size = 5024 + 512;
     NEW(stb.n_base, char, stb.n_size);
     assert(stb.n_base, "sym_init: no room for namtab", stb.n_size, ERR_Fatal);
     stb.n_base[0] = 0;
@@ -72,6 +81,7 @@ sym_init_first(void)
   DT_LOG = DT_LOG4;
   DT_DBLE = DT_REAL8;
   DT_DCMPLX = DT_CMPLX16;
+  DT_QCMPLX = DT_CMPLX32;
   DT_PTR = DT_INT4;
 }
 
@@ -376,6 +386,17 @@ add_fp_constants(void)
   stb.dbl2 = getcon(tmp, DT_REAL8);
   atoxd("0.5", &tmp[0], 3);
   stb.dblhalf = getcon(tmp, DT_REAL8);
+
+  // AOCC begin
+  atoxq("0.0", &tmp[0], 4);
+  stb.quad0 = getcon(tmp, DT_QUAD);
+  atoxq("1.0", &tmp[0], 4);
+  stb.quad1 = getcon(tmp, DT_QUAD);
+  atoxq("2.0", &tmp[0], 4);
+  stb.quad2 = getcon(tmp, DT_QUAD);
+  atoxq("0.5", &tmp[0], 4);
+  stb.quadhalf = getcon(tmp, DT_QUAD);
+  // AOCC end
 
 #ifdef LONG_DOUBLE_FLOAT128
   atoxq("0.0", &tmp[0], 4);

@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * AOCC ChangeLog:
+ */
 
 /** \file optimize.h
     \brief arious definitions for the optimizer module
@@ -673,7 +680,7 @@ typedef struct {
   STG_DECLARE(astb, OAST);
 } OPT;
 
-OPT opt;
+extern OPT opt;
 
 /*****  optimize.c *****/
 void optshrd_init(void);
@@ -789,6 +796,9 @@ bool pta_stride1(int ptrstdx, int ptrsptr); /* pointsto.c */
 void pstride_analysis(void);                   /* pstride.c */
 void fini_pstride_analysis(void);              /* pstride.c */
 void call_analyze(void);                       /* rest.c */
+// AOCC Begin
+void transform_map_array_section(int ast, int std, int *retval);/* rest.c */
+// AOCC End
 void convert_output(void);                     /* outconv.c */
 void sectfloat(void);                          /* outconv.c */
 void sectinline(void);                         /* outconv.c */

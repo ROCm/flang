@@ -7,7 +7,17 @@
 /*
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *
+ * Date of Modification: March 2019
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Date of modification 12th February  2020
+ * Date of modification 04th April     2020
+ *
  */
+
 
 /** \file rest.c
     \brief various ast transformations
@@ -849,6 +859,28 @@ find_section_subscript(int ast)
   }
   return ast;
 } /* find_section_subscript */
+
+// AOCC Begin
+/* retval will have a array subscript with only lower bound
+*  For example: arr(3:10) is changed to arr(3)
+*/
+void transform_map_array_section(int ast, int std, int *retval)
+{
+    int sptr, ast2;
+    LOGICAL continuous;
+
+    if (A_TYPEG(ast) != A_SUBSCR || !A_SHAPEG(ast)) {
+        return;
+    }
+
+    sptr = sptr_of_subscript(ast);
+    ast2 = remove_subscript_expressions(ast, std, sym_of_ast(ast));
+    ast2 = convert_subscript(ast2);
+    continuous = continuous_section(sptr, ast2, 0, 0);
+    if(continuous)
+      *retval = first_element_from_section(ast2);
+}
+// AOCC End
 
 static int
 transform_section_arg(int ele, int std, int callast, int entry, int *descr,
@@ -1702,9 +1734,7 @@ transform_call(int std, int ast)
                */
               check_alloc_ptr_type(sptr, std, 0, unl_poly ? 2 : 1, 0, 0,
                                    STYPEG(sptr) == ST_MEMBER ? ele : 0);
-              sptrsdsc = SDSCG(sptr);
-	      if (!sptrsdsc)
-                sptrsdsc = DESCRG(sptr);
+              sptrsdsc = DESCRG(sptr); // AOCC
             }
             if (sptrsdsc)
               tmp = mk_id(sptrsdsc);
@@ -2226,6 +2256,8 @@ transform_call(int std, int ast)
     ARGT_ARG(newargt, newj) = descr;
   }
   A_ARGSP(ast, newargt);
+  // AOCC: it is possible that all descriptors are not populated. 
+  // resetting the newnargs count for this case
   if (newnargs > newj) newnargs = newj;
   A_ARGCNTP(ast, newnargs);
 } /* transform_call Fortran */

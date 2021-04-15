@@ -3,6 +3,20 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last modified: Jun 2020
+ *
+ */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Last Modified: May 2020
+ *
+ * Support to revert to the old value when newunit has errors.
+ * Date of Modification: 15th June 2020
  */
 
 /** \file
@@ -718,11 +732,13 @@ semantio(int rednum, SST *top)
       TYPDP(sptr, 1);
       INTERNALP(sptr, 0);
 
-      ast = mk_func_node(A_FUNC, mk_id(sptr), 0, 0);
-      ast = mk_assn_stmt(PTV(PT_NEWUNIT), ast, A_DTYPEG(PTV(PT_NEWUNIT)));
+      ast = begin_io_call(A_FUNC, sptr, 1);           //AOCC
+      (void)add_io_arg(PTARG(PT_UNIT));               //AOCC
+      ast = mk_assn_stmt(PTV(PT_UNIT), ast, A_DTYPEG(PTV(PT_NEWUNIT)));    //AOCC
       add_stmt_after(ast, io_call.std);
-      if (A_DTYPEG(PTV(PT_NEWUNIT)) != DT_INT) {
-        PTV(PT_UNIT) = mk_convert(PTV(PT_NEWUNIT), DT_INT);
+
+     if (A_DTYPEG(PTV(PT_NEWUNIT)) != DT_INT) {
+        PTV(PT_UNIT) = mk_convert(PTV(PT_UNIT), DT_INT);
       }
     }
 
@@ -1168,8 +1184,8 @@ semantio(int rednum, SST *top)
                    (dtype == DT_INT8 || dtype == DT_INT4 || dtype == DT_SINT ||
                     dtype == DT_BINT || dtype == DT_LOG8 || dtype == DT_LOG ||
                     dtype == DT_SLOG || dtype == DT_BLOG || dtype == DT_REAL4 ||
-                    dtype == DT_REAL8 || dtype == DT_CMPLX8 ||
-                    dtype == DT_CMPLX16 ||
+                    dtype == DT_REAL8 || dtype == DT_QUAD || dtype == DT_CMPLX8 ||
+                    dtype == DT_CMPLX16 || dtype == DT_CMPLX32 ||
                     (DTY(dtype) == TY_CHAR && fmttyp == FT_LIST_DIRECTED))) {
 
           i = sym_mkfunc_nodesc(mkRteRtnNm(getWriteByDtypeRtn(dtype, fmttyp)),
@@ -2713,6 +2729,7 @@ semantio(int rednum, SST *top)
               IOERR2(201, PTNAME(PT_DELIM));
             PT_CHECK(PT_DECIMAL, astb.ptr0c);
             PT_CHECK(PT_SIGN, astb.ptr0c);
+            PT_CHECK(PT_ROUND, astb.ptr0c);
             sptr = mk_iofunc(rtlRtn, DT_INT, 0);
             (void)begin_io_call(A_FUNC, sptr, 4);
             (void)add_io_arg(A_DESTG(ast));
@@ -5041,6 +5058,7 @@ ast_ioret(void)
 /* ast_type - A_FUNC or A_CALL */
 /* count    - number of arguments */
 /* func     - sptr of function to invoke */
+/* return ast to function call */
 static int
 begin_io_call(int ast_type, int func, int count)
 {
@@ -6138,6 +6156,10 @@ getWriteByDtypeRtn(int dtype, FormatType fmttyp)
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_d_ldw
                                           : RTE_f90io_sc_d_fmt_write;
     break;
+  case DT_QUAD:
+    rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_q_ldw
+                                          : RTE_f90io_sc_q_fmt_write;
+    break;
   case DT_INT8:
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_l_ldw
                                           : RTE_f90io_sc_l_fmt_write;
@@ -6163,6 +6185,10 @@ getWriteByDtypeRtn(int dtype, FormatType fmttyp)
   case DT_CMPLX16:
     rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_cd_ldw
                                           : RTE_f90io_sc_cd_fmt_write;
+    break;
+  case DT_CMPLX32:
+    rtlRtn = (fmttyp == FT_LIST_DIRECTED) ? RTE_f90io_sc_cq_ldw
+                                          : RTE_f90io_sc_cq_fmt_write;
     break;
   default:
     if (DTY(dtype) == TY_CHAR) {

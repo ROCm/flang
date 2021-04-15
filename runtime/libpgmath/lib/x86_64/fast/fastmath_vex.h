@@ -13499,6 +13499,226 @@ ENT(ASM_CONCAT3(__fvd_pow_,TARGET_VEX_OR_FMA,_256)):
 
 
 /* -------------------------------------------------------------------------
+ *  vector single precision cotangent - 128 bit
+ *
+ *  Prototype:
+ *
+ *      float * __fvs_cotan_[fma4/vex](float *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq    $40, %rsp
+
+        vmovupd  %xmm0, (%rsp)                 /* Save xmm0 */
+#if     ! defined(TARGET_WIN_X8664)
+        vzeroupper
+#endif
+
+        CALL(ENT(__mth_i_cotan))                
+        vmovss   %xmm0, 16(%rsp)               
+
+        vmovss 4(%rsp),%xmm0                   
+        CALL(ENT(__mth_i_cotan))               
+        vmovss   %xmm0, 20(%rsp)               
+
+        vmovss 8(%rsp),%xmm0                   
+        CALL(ENT(__mth_i_cotan))                 
+        vmovss   %xmm0, 24(%rsp)              
+
+        vmovss 12(%rsp),%xmm0                  
+        CALL(ENT(__mth_i_cotan))                
+        vmovss   %xmm0, 28(%rsp)               
+
+        vmovupd  16(%rsp), %xmm0                
+
+        addq    $40, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA))
+
+/* -------------------------------------------------------------------------
+ *  vector single precision cotangent - 256 bit
+ *
+ *  Prototype:
+ *
+ *      float * __fvs_cotan_[fma4/vex]_256(float *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__fvs_cotan_,TARGET_VEX_OR_FMA,_256))
+ENT(ASM_CONCAT3(__fvs_cotan_,TARGET_VEX_OR_FMA,_256)):
+
+
+        subq    $72, %rsp
+
+        vmovups %ymm0, (%rsp)
+#if     ! defined(TARGET_WIN_X8664)
+        vzeroupper
+#endif
+
+        CALL(ENT(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA)))
+
+
+        vmovups (%rsp), %ymm2
+        vmovaps %xmm0, %xmm1
+        vextractf128    $1, %ymm2, %xmm0
+        vmovups %ymm1, 32(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvs_cotan_,TARGET_VEX_OR_FMA)))
+
+        vmovups 32(%rsp), %ymm1
+        vinsertf128     $1, %xmm0, %ymm1, %ymm0
+
+        addq    $72, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__fvs_cotan_,TARGET_VEX_OR_FMA,_256))
+        ELF_SIZE(ASM_CONCAT3(__fvs_cotan_,TARGET_VEX_OR_FMA,_256))
+
+
+/* -------------------------------------------------------------------------
+ *  scalar single precision cotangent
+ *
+ *  Prototype:
+ *
+ *      float __fss_cotan_[fma4/vex](float *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__fss_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__fss_cotan_,TARGET_VEX_OR_FMA)):
+
+        subq $8, %rsp
+
+        CALL(ENT(__mth_i_cotan))
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__fss_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__fss_cotan_,TARGET_VEX_OR_FMA))
+
+
+/* -------------------------------------------------------------------------
+ *  vector double precision cotangent - 128 bit
+ *
+ *  Prototype:
+ *
+ *      double * __fvd_cotan_[fma4/vex](double *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA)):
+
+
+        subq    $40, %rsp
+
+        vmovupd  %xmm0, (%rsp)                 /* Save xmm0 */
+#if     ! defined(TARGET_WIN_X8664)
+        vzeroupper
+#endif
+
+        CALL(ENT(__mth_i_dcotan))               
+        vmovsd   %xmm0, 16(%rsp)               
+
+        vmovsd 8(%rsp),%xmm0                   
+        CALL(ENT(__mth_i_dcotan))              
+        vmovsd   %xmm0, 24(%rsp)              
+
+        vmovupd  16(%rsp), %xmm0              
+
+        addq    $40, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA))
+
+
+
+/* -------------------------------------------------------------------------
+ *  vector double precision cotangent - 256 bit
+ *
+ *  Prototype:
+ *
+ *      double * __fvd_cotan_[fma4/vex]_256(double *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT3(__fvd_cotan_,TARGET_VEX_OR_FMA,_256))
+ENT(ASM_CONCAT3(__fvd_cotan_,TARGET_VEX_OR_FMA,_256)):
+
+
+        subq    $72, %rsp
+
+        vmovups %ymm0, (%rsp)
+#if     ! defined(TARGET_WIN_X8664)
+        vzeroupper
+#endif
+
+        CALL(ENT(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA)))
+
+
+        vmovups (%rsp), %ymm2
+        vmovaps %xmm0, %xmm1
+        vextractf128    $1, %ymm2, %xmm0
+        vmovups %ymm1, 32(%rsp)
+
+        CALL(ENT(ASM_CONCAT(__fvd_cotan_,TARGET_VEX_OR_FMA)))
+
+        vmovups 32(%rsp), %ymm1
+        vinsertf128     $1, %xmm0, %ymm1, %ymm0
+
+        addq    $72, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT3(__fvd_cotan_,TARGET_VEX_OR_FMA,_256))
+        ELF_SIZE(ASM_CONCAT3(__fvd_cotan_,TARGET_VEX_OR_FMA,_256))
+
+
+/* -------------------------------------------------------------------------
+ *  scalar double precision cotangent
+ *
+ *  Prototype:
+ *
+ *      double __fsd_cotan_[fma4/vex](double *x);
+ *
+ * ------------------------------------------------------------------------- */
+
+        .text
+        ALN_FUNC
+        .globl ENT(ASM_CONCAT(__fsd_cotan_,TARGET_VEX_OR_FMA))
+ENT(ASM_CONCAT(__fsd_cotan_,TARGET_VEX_OR_FMA)):
+
+        subq $8, %rsp
+
+        CALL(ENT(__mth_i_dcotan))
+
+        addq $8, %rsp
+        ret
+
+        ELF_FUNC(ASM_CONCAT(__fsd_cotan_,TARGET_VEX_OR_FMA))
+        ELF_SIZE(ASM_CONCAT(__fsd_cotan_,TARGET_VEX_OR_FMA))
+
+
+
+/* -------------------------------------------------------------------------
  *  vector single precision tangent - 128 bit
  *
  *  Prototype:

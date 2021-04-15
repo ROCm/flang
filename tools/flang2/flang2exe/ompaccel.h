@@ -4,10 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Last modified: August 2020
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Apr 2020
  */
+
 /**
  *  \file
  *  \brief ompaccel.c - OpenMP GPU Offload for NVVM Targets. It uses
@@ -19,6 +26,7 @@
 
 #include "llmputil.h"
 #include "expand.h"
+#include "kmpcutil.h" // AOCC
 
 /* Find if the func_sptr whether it is a kernel or not. */
 #define IS_OMP_DEVICE_KERNEL(func_sptr) (OMPACCFUNCKERNELG(func_sptr))
@@ -52,7 +60,9 @@ typedef struct {
   bool in_map;          /* set if it occurs in map */
   int ili_base;         /* symbol base */
   int ili_lowerbound;   /* lower bound */
+  SPTR sptr_lowerbound;   /* lower bound sptr */
   int ili_length;       /* length */
+  SPTR sptr_length;       /* length sptr*/
   int ili_sptr;         /* ili for sptr, // AOCC
                            ili_base represents base of struct,
                            this represets offsetted pointer */
@@ -76,6 +86,7 @@ struct _OMPACCEL_TARGET{
   OMPACCEL_TINFO* parent_tinfo;           /*  Parent tinfo is used for nested outlining in device. */
   bool nowait;                            /*  async      */
   int n_reduction_symbols;                /*  Number of reduction symbols */
+  int sz_reduction_symbols;               /*  Size of reduction symbols */ // AOCC
   OMPACCEL_RED_SYM *reduction_symbols;    /*  Reduction symbols along with the reduction operator */
   OMPACCEL_RED_FUNCS reduction_funcs;     /*  Auxiliary functions for reduction */
   char *func_name;                        /*  Function name */  // AOCC
@@ -325,6 +336,13 @@ bool ompaccel_x86_has_tid_args(SPTR func_sptr);
  * x86 offloading.
  */
 void ompaccel_x86_fix_arg_types(SPTR func_sptr);
+
+/**
+ * \brief generates a fork_call as per \p kmpc_api (ie. teams or fork) to \p
+ * outlined_func.
+ * Functions implementing -Mx,232,0x1 must use this.
+ */
+int ompaccel_x86_fork_call(SPTR outlined_func, int kmpc_api = KMPC_API_FORK_CALL);
 // AOCC End
 
 /* ################################################ */

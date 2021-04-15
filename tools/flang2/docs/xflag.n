@@ -5,7 +5,8 @@
 .\" *
 .\" */
 .\"/*
-.\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+.\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+.\" * Notified per clause 4(b) of the license.
 .\" *
 .\" * Support for DNORM intrinsic
 .\" * Date of Modification: 21st February 2019
@@ -234,6 +235,8 @@ F90 pointer optimizations.
 Use GSMOVE in exp_rte.c
 .XB 0x1000000
 Don't expand SMOVEs (struct moves) in a single IL_SMOVEI/IL_SMOVES
+.XB 0x2000000
+[experimental] Enable aggressive gep folding.
 
 .XF "3:" 
 Used to turn on/off various dual-op/dual-inst/pipelined ops.
@@ -865,7 +868,7 @@ independent loop (forall-independent loop).
 .XB "0x200"
 don't perform tail recursion elimination
 .XB "0x400"
-don't perform idiom vector recognition for the PIII
+perform loop vectorisation.
 .XB "Ox800"
 Perform zero trip elimination - will we ever be able to switch the sense?
 .XB "0x1000"
@@ -1747,6 +1750,9 @@ Don't use cgr_modifies() (optutil.c:is_static_call_safe()).
 .XB 0x400000
 Disable propagation of certain IPA pointer information from actual arguments
 to ..inline temporaries when a call-site is inlined.
+.XB 0x800000
+[experimental] Assume fortran pointer address loads (not to be confused with the
+load of the element at that address) can't alias.
 
 .XF "54:" 
 More Flang behavior modification
@@ -2293,7 +2299,7 @@ In the outliner used for KPMC openmp regions, when filling the argument
 .XB 0x100000:
 Enable nodepchk for simd construct/clause.
 .XB 0x200000:
-Enable nodepchk for ivdep pragma.
+Enable nodepchk for ivdep pragma (and SIMD pragma for now).
 
 .XF "70-79:"
 RESERVED FOR ALTERNATE CODE GENERATION
@@ -5055,6 +5061,8 @@ Temporary flags
 .XB 0x01:
 Turn on C++ prototype implementation of the gnu visibility attribute 
 "hidden"
+.XB 0x02:
+Enable "alwaysinline" attribute for a function, using "alwaysinline" pragma
 
 .XF "192:"
 More Accelerator flags

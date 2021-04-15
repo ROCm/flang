@@ -4,10 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Modification for output splitting
+ *
+ * Date of Modification: 17th July 2019
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ *
  */
+
 /* clang-format off */
 
 /** \file
@@ -1137,6 +1148,13 @@ ENTF90IO(SC_D_LDW, sc_d_ldw)(double item, int type)
   return __f90io_ldw(type, 1, 0, (char *)&item, 0);
 }
 
+// AOCC begin
+__INT_T
+ENTF90IO(SC_Q_LDW, sc_q_ldw)(__float128 item, int type)
+{
+  return __f90io_ldw(type, 1, 0, (char*)&item, 0);
+}
+// AOCC end
 __INT_T
 ENTF90IO(SC_CF_LDW, sc_cf_ldw)(float real, float imag, int type)
 {
@@ -1160,6 +1178,19 @@ ENTF90IO(SC_CD_LDW, sc_cd_ldw)(double real, double imag, int type)
   dum.imag = imag;
   return __f90io_ldw(type, 1, 0, (char *)&dum, 0);
 }
+
+// AOCC begin
+ENTF90IO(SC_CQ_LDW, sc_cq_ldw)(__float128 real, __float128 imag, int type)
+{
+  struct {
+    __float128 real;
+    __float128 imag;
+  } dum;
+  dum.real = real;
+  dum.imag = imag;
+  return __f90io_ldw(type, 1, 0, (char *)&dum, 0);
+}
+// AOCC end
 
 __INT_T
 ENTF90IO(SC_CH_LDW, sc_ch_ldw)(char *item, int type, int len)

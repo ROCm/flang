@@ -3,6 +3,11 @@
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
+ *
+ * Copyright (c) 2019, Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Date of Modification : May 2020
+ *
  */
 
 #ifndef FORTRAN_SYMFUN_H_
@@ -403,6 +408,12 @@ ST_GetterInstance(GDBLEG, SPTR, GDouble)
 ST_GetterInstance(GDCMPLXG, SPTR, GDoubleComplex)
 #undef GDCMPLXG
 #define GDCMPLXG(X) STGetGDoubleComplex(X)
+
+// AOCC begin
+#undef GQCMPLXG
+#define GQCMPLXG(X) STGetGQuadComplex(X)
+ST_GetterInstance(GQCMPLXG, SPTR, GQuadComplex)
+// AOCC end
 
 ST_GetterInstance(GINTG, SPTR, GInteger)
 #undef GINTG

@@ -4,10 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Bug fixes.
+ *  Date of Modification: December 2018
+ *
  */
+
 /**
     \file
     \brief Routines used by lower.c for lowering symbols.
@@ -33,6 +38,7 @@
 #include "llmputil.h"
 
 #define INSIDE_LOWER
+#define _LOWERSYM_CPP_
 #include "lower.h"
 #include "dbg_out.h"
 void scan_for_dwarf_module();
@@ -1259,6 +1265,7 @@ lower_init_sym(void)
   lowersym.intone = lower_getintcon(1);
   lowersym.realzero = stb.flt0;
   lowersym.dblezero = stb.dbl0;
+  lowersym.quadzero = stb.quad0;
   lowersym.ptrnull = lower_getnull();
   if (XBIT(68, 0x1)) {
     lowersym.bnd.zero = stb.k0;
@@ -2560,7 +2567,7 @@ lower_put_datatype(int dtype, int usage)
     putwhich("Complex16", "C16");
     break;
   case TY_QCMPLX:
-    putwhich("Complex16", "C16");
+    putwhich("Complex32", "C32");  // AOCC
     break;
 
   case TY_BLOG:
@@ -3706,6 +3713,7 @@ lower_symbol(int sptr)
     if (stype == ST_ARRAY || stype == ST_DESCRIPTOR) {
       putbit("adjustable", ADJARRG(sptr));
       putbit("afterentry", AFTENTG(sptr));
+      putbit("assumedrank", ASSUMRANKG(sptr));
       putbit("assumedshape", ASSUMSHPG(sptr));
       putbit("assumedsize", ASUMSZG(sptr));
       putbit("autoarray",
@@ -3878,10 +3886,17 @@ lower_symbol(int sptr)
       puthex(CONVAL2G(sptr));
       break;
     case TY_DCMPLX:
-    case TY_QCMPLX:
       putsym("sym", CONVAL1G(sptr));
       putsym("sym", CONVAL2G(sptr));
       break;
+    // AOCC begin
+    case TY_QCMPLX:
+      putsym("sym", CONVAL1G(sptr));
+      putsym("sym", CONVAL2G(sptr));
+      putsym("sym", CONVAL3G(sptr));
+      putsym("sym", CONVAL4G(sptr));
+      break;
+    // AOCC end
     case TY_QUAD:
       puthex(CONVAL1G(sptr));
       puthex(CONVAL2G(sptr));
@@ -4101,6 +4116,7 @@ lower_symbol(int sptr)
                             retdesc == CLASS_PTR)) {
       switch (DTY(dtype)) {
       case TY_CMPLX:
+      case TY_QCMPLX:   // AOCC
       case TY_DCMPLX:
         if (!CMPLXFUNC_C && FVALG(sptr))
           fvallast = 1;

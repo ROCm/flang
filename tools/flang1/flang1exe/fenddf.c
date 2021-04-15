@@ -4,6 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/*
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ * Last Modified: Jun 2020
+ *
+ */
 
 /** \file
     \brief Data definitions for Fortran front-end data structures.
@@ -53,11 +64,11 @@ INT cast_types[NTYPE][2][2] = {
     /* DT_REAL2 */ {{1, 1}, {1, 1}},
     /* DT_REAL */ {{1, 1}, {1, 1}},
     /* DT_DBLE */ {{1, 1}, {1, 1}},
-    /* DT_QUAD */ {{-1, -1}, {-1, -1}},
+    /* DT_QUAD */ {{1, 1}, {1, 1}},            // AOCC
     /* DT_CMPLX4 */ {{-1, -1}, {1, -1}},
     /* DT_CMPLX */ {{-1, -1}, {1, -1}},
     /* DT_DCMPLX */ {{-1, -1}, {1, -1}},
-    /* DT_QCMPLX */ {{-1, -1}, {-1, -1}},
+    /* DT_QCMPLX */ {{-1, -1}, {1, -1}},
     /* DT_BLOG */ {{1, 1}, {1, 1}},
     /* DT_SLOG */ {{1, 1}, {1, 1}},
     /* DT_LOG */ {{1, 1}, {1, 1}},

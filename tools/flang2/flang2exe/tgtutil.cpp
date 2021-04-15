@@ -4,9 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
-/*
+/* 
  * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
  * Notified per clause 4(b) of the license.
+ *
+ * Changes to support AMDGPU OpenMP offloading
+ * Last modified: August 2020
+ *
+ * Support for x86-64 OpenMP offloading
+ * Last modified: Sept 2019
+ * Last Modified: Jun 2020
  */
 
 /** \file
@@ -264,7 +271,7 @@ make_array_sptr(char *name, DTYPE atype, int arraysize)
 // AOCC Begin
 static bool
 is_complex_dtype(DTYPE dtype) {
-  if (dtype == DT_CMPLX || dtype == DT_DCMPLX)
+  if (dtype == DT_CMPLX || dtype == DT_DCMPLX || dtype == DT_QCMPLX)
     return true;
   return false;
 }
@@ -432,6 +439,12 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
   /* fill the arrays */
   /* Build the list: (size, sptr) pairs. */
 
+  // AOCC Begin.
+  // This part of code to be emitted in host module, so disable the flag
+  bool old_intarget  = gbl.ompaccel_intarget;
+  gbl.ompaccel_intarget = false;
+  // AOCC End
+
   for (i = 0; i < targetinfo->n_symbols; ++i) {
     int nme_args, nme_size, nme_base, nme_types;
     nme_args = add_arrnme(NT_ARR, args_sptr, addnme(NT_VAR, args_sptr, 0, 0), 0, ad_icon(i), FALSE);
@@ -506,11 +519,20 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
         param_dtype = array_element_dtype(param_dtype);
       else if (llis_pointer_kind(param_dtype))
         param_dtype = DTySeqTyElement(param_dtype);
+      // AOCC Begin
+      // ILIs for base and lower bound symbols
+      if(!ILI_OF(targetinfo->symbols[i].ili_base))
+        targetinfo->symbols[i].ili_base = mk_address(param_sptr);
+      if(!ILI_OF(targetinfo->symbols[i].ili_lowerbound))
+        targetinfo->symbols[i].ili_lowerbound = 
+                  mk_ompaccel_ldsptr(targetinfo->symbols[i].sptr_lowerbound);
+      // AOCC End
       iliy = targetinfo->symbols[i].ili_base;
       ilix = mk_ompaccel_store(iliy, DT_ADDR, nme_base, ad_acon(arg_base_sptr, i * TARGET_PTRSIZE));
       /* Assign args */
       chk_block(ilix);
       ilix = ikmove(targetinfo->symbols[i].ili_lowerbound);
+      ilix = mk_ompaccel_add(ilix, DT_INT8, ad_kconi(-1), DT_INT8); // AOCC
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
       ilix = sel_aconv(ilix);
       ilix = mk_ompaccel_add(iliy, DT_ADDR, ilix, DT_INT8);
@@ -541,7 +563,14 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       chk_block(ilix);
     }
     /* assign size */
-    if(targetinfo->symbols[i].in_map) {
+    if(targetinfo->symbols[i].in_map && 
+                      targetinfo->symbols[i].sptr_length != SPTR_NULL) {// AOCC
+      // AOCC Begin
+      // ILI for the length symbol
+      if(!ILI_OF(targetinfo->symbols[i].sptr_length))
+        targetinfo->symbols[i].ili_length = 
+                      mk_ompaccel_ldsptr(targetinfo->symbols[i].sptr_length);
+      // AOCC End
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {
@@ -558,6 +587,10 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
                  TARGET_PTRSIZE == 8 ? MSZ_I8 : MSZ_WORD);
     chk_block(ilix);
   }
+
+  // AOCC Begin
+  gbl.ompaccel_intarget = old_intarget;
+  // AOCC End
 }
 
 int
@@ -890,7 +923,7 @@ ll_make_struct(int count, char *name, TGT_ST_TYPE *meminfo, ISZ_T sz)
   char sname[MXIDLEN];
 
   tag = SPTR_NULL;
-  dtype = cg_get_type(count+6, TY_STRUCT, NOSYM); // AOCC dont return used type
+  dtype = cg_get_type(count, TY_STRUCT, NOSYM); // AOCC dont return used type
   if (name) {
     sprintf(sname, "%s", name);
     tag = getsymbol(sname);
@@ -1020,6 +1053,11 @@ init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
   strcpy(sname_entry, ".openmp.offload.entry.");
   strcat(sname_entry, kernelname);
   eptr3 = (SPTR)addnewsym(sname_entry);
+#if 0
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
+#endif
   DTYPEP(eptr3, tgt_offload_entry_type);
   SCP(eptr3, SC_EXTERN);
   STYPEP(eptr3, ST_STRUCT);
@@ -1046,6 +1084,9 @@ init_tgt_register_syms()
 
   // tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin"); // AOCC
   tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   DTYPEP(tptr1, tgt_offload_entry_type);
   /* SCP(tptr1, SC_EXTERN); */ SCP(tptr1, SC_PRIVATE); // AOCC
   DCLDP(tptr1, 1);
@@ -1107,6 +1148,9 @@ ll_make_tgt_register_lib()
   SPTR sptr;
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
+  // AOCC Begin
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
@@ -1132,7 +1176,9 @@ ll_make_tgt_register_requires()
   SPTR sptr;
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
+  // AOCC Begin
   tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  // AOCC End
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
@@ -1182,7 +1228,8 @@ ll_make_tgt_register_lib2()
   assert(tptr && tptr2 && tptr3 && tptr4,
          "OpenMP Offload structures are not found.", 0, ERR_Fatal);
   // AOCC end
-  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry");
+
+  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry"); //AOCC
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
       ll_make_tgt_bin_descriptor("__tgt_bin_desc", dtype_entry, dtype_devimage);

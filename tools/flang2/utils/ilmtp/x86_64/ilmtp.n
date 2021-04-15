@@ -3,11 +3,34 @@
 \" * See https://llvm.org/LICENSE.txt for license information.
 \" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 \" *
-\" * Copyright (c) 2018, Advanced Micro Devices, Inc. All rights reserved.
+\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+\" * Notified per clause 4(b) of the license.
 \" *
 \" * Complex data types support for acosh, asinh and atanh
 \" * Date of Modification: 08 January 2020
 \" *
+\" * Added support for quad precision
+\" * Last modified: Feb 2020
+\" *
+\" * Complex datatype support for atan2 under flag f2008
+\" * Modified on 13th March 2020
+\"
+.\" * Support for Real128 support for math intrinsics
+.\" * Date of Modification: Feb 2020
+.\" *
+.\" * Added code to support SHIFTA intrinsic
+.\" * Last modified: April 2020
+.\" *
+.\" * Added quad support for floor and ceiling intrinsics
+.\" * Last modified: August 2020
+.\" *
+.\" * Added complex quad support for asin, asinh, acos, acosh, atan, atanh
+.\" * Last modified: 19th August 2020
+.\" *
+.\" * Added support for cotan and cotand intrinsics
+.\" * Last modified: Oct 2020
+.\" *
+
 \" */
 .NS 25 "ILM Definitions" "Appendix IV - "
 .sh 2 "ILM Definitions"
@@ -60,10 +83,19 @@ stc3 - number of words for this ILM block (including the BOS).
 .AT spec trm
 .IL DISNAN arth lnk
 .AT spec trm
+.IL QISNAN arth lnk
+.AT spec trm
+.IL MM_PREFETCH misc lnk lnk
+.AT spec trm
 \" AOCC END
 .IL FLOAT arth lnk
 Convert integer to real number (REAL and FLOAT intrinsics).
 .OP FLOAT r p1
+\" AOCC BEGIN
+.IL QFLOAT arth lnk
+Convert integer to double precision (QFLOAT intrinsic).
+.OP QFLOAT r p1
+\" AOCC END
 .IL DFLOAT arth lnk
 Convert integer to double precision (DFLOAT intrinsic).
 .OP DFLOAT r p1
@@ -107,6 +139,9 @@ Convert unsigned short to unsigned integer.
 .OP SP2IR t1 rp1
 .OP UIKMV r t1
 .IL DTOUDI arth lnk
+.\" AOCC begin
+.IL QTOUDI arth lnk
+.\" AOCC end
 .AT i8
 .OP DP2KR r rp1
 .IL DTOUI arth lnk
@@ -116,6 +151,9 @@ Convert unsigned short to unsigned integer.
 .AT i8
 .OP KCON r v1
 .IL UDITOD arth lnk
+.\" AOCC begin
+.IL UQITOD arth lnk
+.\" AOCC end
 .OP KR2DP r p1
 .IL UDITOR arth lnk
 .OP KIMV t1 p1
@@ -157,6 +195,10 @@ Cast a real to a 64-bit unsigned integer (dword).
 .AT i8
 .OP SP2IR t1 p1
 .OP UIKMV r t1
+./" AOCC begin
+.IL CQTOI arth lnk lnk
+.AT spec
+./" AOCC end
 .IL CRTOI arth lnk lnk
 Cast a complex to integer (C)
 .AT spec
@@ -203,6 +245,9 @@ Convert real number to unsigned.
 .IL DBLE arth lnk
 Convert single precision floating point value to double precision.
 .OP DBLE r p1
+.IL QFIX arth lnk
+Convert double precision floating point number to integer.
+.OP QFIX r p1
 .IL DFIX arth lnk
 Convert double precision floating point number to integer.
 .OP DFIX r p1
@@ -211,6 +256,9 @@ Convert double precision floating point number to
 unsigned integer.
 .OP DFIXK t1 p1
 .OP KIMV r t1
+.IL QUAD arth lnk
+Convert double precision floating point value to quad precision.
+.OP QUAD r p1
 .IL REAL arth lnk
 Returns real part of complex number (single precision).
 .AT spec
@@ -219,6 +267,16 @@ Returns real part of complex number (single precision).
 Returns double precision real part of a double complex value.
 .AT spec
 .OP MVDP r rp1 iv-1
+.\" AOCC begin
+.IL QTOQ arth lnk lnk
+.OP QPOWQ r p1 p2
+.IL CQTOCQ arth lnk lnk
+.AT spec dcmplx
+.IL QREAL arth lnk
+Returns quad precision real part of a quad complex value.
+.AT spec
+.OP MVQP r rp1 iv-1
+.\" AOCC end
 .IL IMAG arth lnk
 Returns imaginary part of complex value (single precision)
 (AIMAG intrinsic).
@@ -229,12 +287,24 @@ Returns double precision imaginary part of a double complex value
 (DIMAG intrinsic).
 .AT spec
 .OP MVDP r ip1 iv-1
+.\" AOCC begin
+.IL QIMAG arth lnk
+Returns quad precision imaginary part of a quad complex value
+(QIMAG intrinsic).
+.AT spec
+.OP MVQP r ip1 iv-1
+.\" AOCC end
 .IL CMPLX arth lnk lnk
 Form complex number out of two single precision real values.
 .AT spec
 .IL DCMPLX arth lnk lnk
 Form double complex number out of two double precision real values.
 .AT spec dcmplx
+.\" AOCC begin
+.IL QCMPLX arth lnk lnk
+Form quad complex number out of two quad precision real values.
+.AT spec
+.\" AOCC end
 .IL ICHAR fstr lnk
 Converts single character to integer.
 .AT spec
@@ -253,6 +323,11 @@ AINT intrinsic (converts real to real).
 .IL DINT arth lnk
 DINT intrinsic (converts double to double).
 .OP DINT r p1
+.\" AOCC begin
+.IL QINT arth lnk
+QINT intrinsic (converts quad to quad).
+.OP QINT r p1
+.\" AOCC end
 .IL ANINT arth lnk
 ANINT intrinsic (converts real to real).
 .OP NULL t1 iv0
@@ -265,6 +340,14 @@ DNINT intrinsic (converts double to double).
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dnint t1
 .OP DFRDP r t2 dpret
+.\" AOCC begin
+.IL QNINT arth lnk
+QNINT intrinsic (converts quad to integer).
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qnint t1
+.OP DFRQP r t2 drret
+.\" AOCC end
 .IL NINT arth lnk
 NINT intrinsic (converts real to integer).
 \".OP NULL t1 iv0
@@ -294,10 +377,18 @@ Absolute value of single precision real number.
 .OP FABS r p1
 .IL DABS arth lnk
 .OP DABS r p1
+.\" AOCC begin
+.IL QABS arth lnk
+.OP QABS r p1
+.\" AOCC end
 .IL CABS arth lnk
 .AT spec
 .OP DBLE t1 rp1
 .OP DBLE t2 ip1
+.\" AOCC begin
+.OP QUAD t1 rp1
+.OP QUAD t2 ip1
+.\" AOCC end
 .OP DMUL t1 t1 t1
 .OP DMUL t2 t2 t2
 .OP DADD t3 t1 t2
@@ -310,6 +401,15 @@ Absolute value of single precision real number.
 .OP DADP t2 rp1 dp(1) t1
 .OP QJSR t3 =e'%d%__mth_i_cdabs t2
 .OP DFRDP r t3 dpret
+./" AOCC begin
+.IL CQABS arth lnk
+.AT spec
+.OP NULL t1 iv0
+.OP DAQP t1 ip1 qp(0) t1
+.OP DAQP t2 rp1 qp(1) t1
+.OP QJSR t3 =e'%d%cqabs t2
+.OP DFRQP r t3 qpret
+./" AOCC end
 .IL LEN fstr lnk
 Length of a character expression.  This ILM contains a link to
 one character expression.
@@ -328,11 +428,24 @@ Conjugate of a double complex number.
 .AT spec dcmplx
 .OP MVDP rr rp1 iv-1
 .OP DNEG ir ip1
+.\" AOCC begin
+.IL QCONJG arth lnk
+Conjugate of a quad complex number.
+.AT spec
+.OP MVQP rr rp1 iv-1
+.OP QNEG ir ip1
+.\" AOCC end
 .IL SQRT arth lnk
 Square root of a single precision real number (SQRT intrinsic).
 .OP FSQRT r p1
 .IL DSQRT arth lnk
 .OP DSQRT r p1
+.\" AOCC begin
+.IL QSQRT arth lnk
+.OP QSQRT r p1
+.IL CQSQRT arth lnk
+.AT spec
+.\" AOCC end
 .IL CSQRT arth lnk
 .AT spec
 .IL CDSQRT arth lnk
@@ -342,6 +455,12 @@ EXP intrinsic for single precision floating point values.
 .OP FEXP r p1
 .IL DEXP arth lnk
 .OP DEXP r p1
+.\" AOCC begin
+.IL QEXP arth lnk
+.OP QEXP r p1
+.IL CQEXP arth lnk
+.AT spec
+.\" AOCC end
 .IL CEXP arth lnk
 .AT spec
 .IL CDEXP arth lnk
@@ -362,10 +481,20 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDCOSH arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQCOSH arth lnk
+.AT spec
+.\" AOCC end
 .IL CSINH arth lnk
 .AT spec
 .IL CDSINH arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQSINH arth lnk
+.AT spec
+.IL CQTANH arth lnk
+.AT spec
+.\" AOCC end
 .IL CTANH arth lnk
 .AT spec
 .IL CDTANH arth lnk
@@ -374,16 +503,39 @@ EXP intrinsic for single precision floating point values.
 .AT spec
 .IL CDTAN arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQTAN arth lnk
+.AT spec
+.IL CCOTAN arth lnk
+.AT spec
+.IL CDCOTAN arth lnk
+.AT spec dcmplx
+.\" AOCC begin
+.IL CQCOTAN arth lnk
+.AT spec
+.IL CQATAN arth lnk
+.AT spec
+.IL CQATAN2 arth lnk lnk
+.AT spec
+.IL CQATANH arth lnk
+.AT spec
+.\" AOCC end
 .IL CACOSH arth lnk
 .AT spec
 .IL CASINH arth lnk
 .AT spec
 .IL CATANH arth lnk
 .AT spec
+.IL CATAN2 arth lnk lnk
+.AT spec
 .IL ALOG arth lnk
 .OP FLOG r p1
 .IL DLOG arth lnk
 .OP DLOG r p1
+.\" AOCC begin
+.IL QLOG arth lnk
+.OP QLOG r p1
+.\" AOCC end
 .IL CLOG arth lnk
 .AT spec
 .IL CDLOG arth lnk
@@ -392,6 +544,12 @@ EXP intrinsic for single precision floating point values.
 .OP FLOG10 r p1
 .IL DLOG10 arth lnk
 .OP DLOG10 r p1
+.\" AOCC begin
+.IL CQLOG arth lnk
+.AT spec
+.IL QLOG10 arth lnk
+.OP QLOG10 r p1
+.\" AOCC end
 .IL SIN arth lnk
 Sine of a single precision value
 .OP FSIN r p1
@@ -405,10 +563,18 @@ Sine of a single precision value
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dsin t1
 \".OP DFRDP r t2 dpret
+.IL QSIN arth lnk
+.OP QSIN r p1
 .IL CSIN arth lnk
 .AT spec
 .IL CDSIN arth lnk
 .AT spec dcmplx
+.IL CQSIN arth lnk
+.AT spec
+.IL CQASIN arth lnk
+.AT spec
+.IL CQASINH arth lnk
+.AT spec
 .IL COS arth lnk
 Cosine of a single precision number
 .OP FCOS r p1
@@ -422,10 +588,20 @@ Cosine of a single precision number
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dcos t1
 \".OP DFRDP r t2 dpret
+.IL QCOS arth lnk
+.OP QCOS r p1
 .IL CCOS arth lnk
 .AT spec
 .IL CDCOS arth lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQCOS arth lnk
+.AT spec
+.IL CQACOS arth lnk
+.AT spec
+.IL CQACOSH arth lnk
+.AT spec
+.\" AOCC end
 .IL TAN arth lnk
 Tangent of a single precision value
 .OP FTAN r p1
@@ -433,28 +609,56 @@ Tangent of a single precision value
 \".OP DASP t1 p1 sp(0) t1
 \".OP QJSR t2 =e'%s%__mth_i_tan t1
 \".OP DFRSP r t2 spret
+.IL COTAN arth lnk
+Cotangent of a single precision value
+.OP FCOTAN r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_cotan t1
+\".OP DFRSP r t2 spret
 .IL DTAN arth lnk
 .OP DTAN r p1
 \".OP NULL t1 iv0
 \".OP DADP t1 p1 dp(0) t1
-\".OP QJSR t2 =e'%d%__mth_i_dtan t1
+\".OP QJSR t2 =e'%d%__mth_i_dcotan t1
 \".OP DFRDP r t2 dpret
+.IL QTAN arth lnk
+.OP QTAN r p1
+.IL DCOTAN arth lnk
+.OP DCOTAN r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dcotan t1
+\".OP DFRDP r t2 dpret
+.IL QCOTAN arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qcotan t1
+.OP DFRQP r t2 qpret
 .IL ASIN arth lnk
 .OP FASIN r p1
 .IL DASIN arth lnk
 .OP DASIN r p1
+.IL QASIN arth lnk
+.OP QASIN r p1
 .IL ACOS arth lnk
 .OP FACOS r p1
 .IL DACOS arth lnk
 .OP DACOS r p1
+.IL QACOS arth lnk
+.OP QACOS r p1
 .IL ATAN arth lnk
 .OP FATAN r p1
 .IL DATAN arth lnk
 .OP DATAN r p1
+.IL QATAN arth lnk
+.OP QATAN r p1
 .IL ATAN2 arth lnk lnk
 .OP FATAN2 r p1 p2
 .IL DATAN2 arth lnk lnk
 .OP DATAN2 r p1 p2
+.IL QATAN2 arth lnk lnk
+.OP QATAN2 r p1 p2
 .IL SIND arth lnk
 SIN in degrees.
 .OP NULL t1 iv0
@@ -466,6 +670,11 @@ SIN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dsind t1
 .OP DFRDP r t2 dpret
+.IL QSIND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qsind t1
+.OP DFRQP r t2 qpret
 .IL COSD arth lnk
 COS in degrees.
 .OP NULL t1 iv0
@@ -477,6 +686,11 @@ COS in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dcosd t1
 .OP DFRDP r t2 dpret
+.IL QCOSD arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qcosd t1
+.OP DFRQP r t2 qpret
 .IL TAND arth lnk
 TAN in degrees.
 .OP NULL t1 iv0
@@ -488,6 +702,27 @@ TAN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dtand t1
 .OP DFRDP r t2 dpret
+.IL QTAND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qtand t1
+.OP DFRQP r t2 qpret
+.IL COTAND arth lnk
+COTAN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_cotand t1
+.OP DFRSP r t2 spret
+.IL DCOTAND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dcotand t1
+.OP DFRDP r t2 dpret
+.IL QCOTAND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qcotand t1
+.OP DFRQP r t2 qpret
 .IL ASIND arth lnk
 ASIN in degrees.
 .OP NULL t1 iv0
@@ -499,6 +734,11 @@ ASIN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dasind t1
 .OP DFRDP r t2 dpret
+.IL QASIND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qasind t1
+.OP DFRQP r t2 qpret
 .IL ACOSD arth lnk
 ACOS in degrees.
 .OP NULL t1 iv0
@@ -510,6 +750,11 @@ ACOS in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dacosd t1
 .OP DFRDP r t2 dpret
+.IL QACOSD arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qacosd t1
+.OP DFRDP r t2 qpret
 .IL ATAND arth lnk
 ATAN in degrees.
 .OP NULL t1 iv0
@@ -521,6 +766,11 @@ ATAN in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_datand t1
 .OP DFRDP r t2 dpret
+.IL QATAND arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qatand t1
+.OP DFRQP r t2 qpret
 .IL ATAN2D arth lnk lnk
 ATAN2 in degrees.
 .OP NULL t1 iv0
@@ -534,6 +784,12 @@ ATAN2 in degrees.
 .OP DADP t2 p1 dp(0) t1
 .OP QJSR t3 =e'%d%__mth_i_datan2d t2
 .OP DFRDP r t3 dpret
+.IL QATAN2D arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(1) t1
+.OP DAQP t2 p1 qp(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qatan2d t2
+.OP DFRDP r t3 qpret
 .IL SINH arth lnk
 .OP FSINH r p1
 \".OP NULL t1 iv0
@@ -546,14 +802,20 @@ ATAN2 in degrees.
 \".OP DADP t1 p1 dp(0) t1
 \".OP QJSR t2 =e'%d%__mth_i_dsinh t1
 \".OP DFRDP r t2 dpret
+.IL QSINH arth lnk
+.OP QSINH r p1
 .IL COSH arth lnk
 .OP FCOSH r p1
 .IL DCOSH arth lnk
 .OP DCOSH r p1
+.IL QCOSH arth lnk
+.OP QCOSH r p1
 .IL TANH arth lnk
 .OP FTANH r p1
 .IL DTANH arth lnk
 .OP DTANH r p1
+.IL QTANH arth lnk
+.OP QTANH r p1
 .IL ERF arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -564,6 +826,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_derf t1
 .OP DFRDP r t2 dpret
+.IL QERF arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qerf t1
+.OP DFRQP r t2 qpret
 .IL ERFC arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -574,6 +841,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_derfc t1
 .OP DFRDP r t2 dpret
+.IL QERFC arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qerfc t1
+.OP DFRQP r t2 qpret
 .IL ERFC_SCALED arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -584,6 +856,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_derfc_scaled t1
 .OP DFRDP r t2 dpret
+.IL QERFC_SCALED arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qerfc_scaled t1
+.OP DFRQP r t2 qpret
 .IL GAMMA arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -594,6 +871,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dgamma t1
 .OP DFRDP r t2 dpret
+.IL QGAMMA arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qgamma t1
+.OP DFRQP r t2 qpret
 .IL LOG_GAMMA arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -604,6 +886,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dlog_gamma t1
 .OP DFRDP r t2 dpret
+.IL QLOG_GAMMA arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qlog_gamma t1
+.OP DFRQP r t2 qpret
 .IL HYPOT arth lnk lnk
 .OP NULL t1 iv0
 .OP DASP t1 p2 sp(1) t1
@@ -616,6 +903,12 @@ ATAN2 in degrees.
 .OP DADP t2 p1 dp(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dhypot t2
 .OP DFRDP r t3 dpret
+.IL QHYPOT arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(1) t1
+.OP DAQP t2 p1 qp(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qhypot t2
+.OP DFRQP r t3 qpret
 .IL ACOSH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -626,6 +919,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dacosh t1
 .OP DFRDP r t2 dpret
+.IL QACOSH arth lnk
+.OP QACOSH r p1
 .IL ASINH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -636,6 +931,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dasinh t1
 .OP DFRDP r t2 dpret
+.IL QASINH arth lnk
+.OP QASINH r p1
 .IL ATANH arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -646,6 +943,8 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_datanh t1
 .OP DFRDP r t2 dpret
+.IL QATANH arth lnk
+.OP QATANH r p1
 .IL BESSEL_J0 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -656,6 +955,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_j0 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_J0 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_j0 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_J1 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -666,6 +970,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_j1 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_J1 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_j1 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_JN arth lnk lnk
 .OP NULL t1 iv0
 .OP DASP t1 p2 sp(0) t1
@@ -678,6 +987,12 @@ ATAN2 in degrees.
 .OP DAIR t2 p1 dr(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dbessel_jn t2
 .OP DFRDP r t3 dpret
+.IL QBESSEL_JN arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qbessel_jn t2
+.OP DFRQP r t3 dpret
 .IL BESSEL_Y0 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -688,6 +1003,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_y0 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_Y0 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_y0 t1
+.OP DFRQP r t2 dpret
 .IL BESSEL_Y1 arth lnk
 .OP NULL t1 iv0
 .OP DASP t1 p1 sp(0) t1
@@ -698,6 +1018,11 @@ ATAN2 in degrees.
 .OP DADP t1 p1 dp(0) t1
 .OP QJSR t2 =e'%d%__mth_i_dbessel_y1 t1
 .OP DFRDP r t2 dpret
+.IL QBESSEL_Y1 arth lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p1 qp(0) t1
+.OP QJSR t2 =e'%q%__mth_i_qbessel_y1 t1
+.OP DFRDP r t2 qpret
 .IL BESSEL_YN arth lnk lnk
 .OP NULL t1 iv0
 .OP DASP t1 p2 sp(0) t1
@@ -710,6 +1035,12 @@ ATAN2 in degrees.
 .OP DAIR t2 p1 dr(0) t1
 .OP QJSR t3 =e'%d%__mth_i_dbessel_yn t2
 .OP DFRDP r t3 dpret
+.IL QBESSEL_YN arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%q%__mth_i_qbessel_yn t2
+.OP DFRQP r t3 qpret
 .IL SNGL arth lnk
 Convert double precision number to single precision (SNGL intrinsic).
 .OP SNGL r p1
@@ -742,6 +1073,8 @@ Integer negation.
 .OP FNEG r p1
 .IL DNEG arth lnk
 .OP DNEG r p1
+.IL QNEG arth lnk
+.OP QNEG r p1
 .IL CNEG arth lnk
 .AT spec
 .OP FNEG rr rp1
@@ -751,6 +1084,13 @@ Double complex negation.
 .AT spec dcmplx
 .OP DNEG rr rp1
 .OP DNEG ir ip1
+./" AOCC begin
+.IL CQNEG arth lnk
+Quad complex negation.
+.AT spec
+.OP QNEG rr rp1
+.OP QNEG ir ip1
+./" AOCC end
 .IL NOT64 arth lnk
 Bitwise negation of 64 bit value (NOT intrinsic).
 .AT i8
@@ -822,6 +1162,15 @@ p3 - mask
 .fi
 .OP ICMPZ t1 p3 ne
 .OP DSELECT r t1 p2 p1
+.IL QMERGE arth lnk lnk lnk
+Real*16 valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP QSELECT r t1 p2 p1
 .IL CMERGE arth lnk lnk lnk
 Real*4 complex valued f90 merge intrinsic.
 .nf
@@ -840,6 +1189,17 @@ p3 - mask
 .fi
 .OP ICMPZ t1 p3 ne
 .OP CDSELECT r t1 p2 p1
+./" AOCC begin
+.IL CQMERGE arth lnk lnk lnk
+Real*16 complex valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP CQSELECT r t1 p2 p1
+./" AOCC end
 .IL IADD arth lnk lnk
 .OP IADD r p1 p2
 .IL UIADD arth lnk lnk
@@ -848,6 +1208,14 @@ p3 - mask
 .OP FADD r p1 p2
 .IL DADD arth lnk lnk
 .OP DADD r p1 p2
+.\" AOCC begin
+.IL QADD arth lnk lnk
+.OP QADD r p1 p2
+.IL CQADD arth lnk lnk
+.AT spec dcmplx
+.OP QADD rr rp1 rp2
+.OP QADD ir ip1 ip2
+.\" AOCC end
 .IL CADD arth lnk lnk
 .AT spec
 .OP FADD rr rp1 rp2
@@ -883,12 +1251,20 @@ the pointer (lnk1) points to.
 .OP FSUB r p1 p2
 .IL DSUB arth lnk lnk
 .OP DSUB r p1 p2
+.\" AOCC begin
+.IL QSUB arth lnk lnk
+.OP QSUB r p1 p2
+.IL CQSUB arth lnk lnk
+.AT spec
+.OP QSUB rr rp1 rp2
+.OP QSUB ir ip1 ip2
+.\" AOCC end
 .IL CSUB arth lnk lnk
 .AT spec
 .OP FSUB rr rp1 rp2
 .OP FSUB ir ip1 ip2
 .IL CDSUB arth lnk lnk
-.AT spec dcmplx
+.AT spec
 .OP DSUB rr rp1 rp2
 .OP DSUB ir ip1 ip2
 .IL PSUB arth lnk lnk stc
@@ -931,6 +1307,8 @@ the pointer (lnk1) points to.
 .OP FMUL r p1 p2
 .IL DMUL arth lnk lnk
 .OP DMUL r p1 p2
+.IL QMUL arth lnk lnk
+.OP QMUL r p1 p2
 .IL CMUL arth lnk lnk
 .AT spec
 .OP FMUL t1 rp1 rp2
@@ -947,6 +1325,16 @@ the pointer (lnk1) points to.
 .OP DMUL t1 ip1 rp2
 .OP DMUL t2 ip2 rp1
 .OP DADD ir t2 t1
+.\" AOCC begin
+.IL CQMUL arth lnk lnk
+.AT spec
+.OP QMUL t1 rp1 rp2
+.OP QMUL t2 ip1 ip2
+.OP QSUB rr t1 t2
+.OP QMUL t1 ip1 rp2
+.OP QMUL t2 ip2 rp1
+.OP QADD ir t2 t1
+.\" AOCC end
 .IL IDIV arth lnk lnk
 .OP IDIV r p1 p2
 .IL UIDIV arth lnk lnk
@@ -955,6 +1343,16 @@ the pointer (lnk1) points to.
 .OP FDIV r p1 p2
 .IL DDIV arth lnk lnk
 .OP DDIV r p1 p2
+.\" AOCC begin
+.IL QDIV arth lnk lnk
+.OP QDIV r p1 p2
+.IL CQDIV arth lnk lnk
+.AT spec
+.IL CQDIVQ arth lnk lnk
+.AT spec
+.OP QDIV rr rp1 p2
+.OP QDIV ir ip1 p2
+.\" AOCC end
 .IL CDIV arth lnk lnk
 .AT spec
 .IL CDIVR arth lnk lnk
@@ -974,6 +1372,8 @@ Exponentiation - integer to an integer power.
 .OP FPOWI r p1 p2
 .IL DTOI arth lnk lnk
 .OP DPOWI r p1 p2
+.IL QTOI arth lnk lnk
+.OP QPOWI r p1 p2
 .CL MOD arth lnk lnk
 Integer remainder
 .OP MOD r p1 p2
@@ -986,6 +1386,10 @@ Integer remainder (MOD intrinsic).
 .OP FMOD r p1 p2
 .IL DMOD arth lnk lnk
 .OP DMOD r p1 p2
+.\" AOCC begin
+.IL QMOD arth lnk lnk
+.OP QMOD r p1 p2
+.\" AOCC end
 .IL ISIGN arth lnk lnk
 .OP ICMPZ t1 p2 lt
 .OP IABS t2 p1
@@ -1013,6 +1417,18 @@ Real valued SIGN intrinsic that distinguishes negative zero.
 .OP DABS t2 p1
 .OP DNEG t3 t2
 .OP DSELECT r t1 t2 t3
+./" AOCC begin
+.IL QSIGN arth lnk lnk
+.OP QCMPZ t1 p2 lt
+.OP QABS t2 p1
+.OP QNEG t3 t2
+.OP QSELECT r t1 t2 t3
+.IL QSIGNNZ arth lnk lnk
+.OP QCMPZNZ t1 p2 lt
+.OP QABS t2 p1
+.OP QNEG t3 t2
+.OP QSELECT r t1 t2 t3
+./" AOCC end
 .IL IDIM arth lnk lnk
 .OP NULL t1 iv0
 .OP DAIR t1 p2 dr(1) t1
@@ -1032,6 +1448,12 @@ Real valued DIM intrinsic.
 .OP DADP t2 p1 sp(0) t1
 .OP QJSR t3 =e'%d%ftn_i_ddim t2
 .OP DFRDP r t3 dpret
+.IL QDIM arth lnk lnk
+.OP NULL t1 iv0
+.OP DAQP t1 p2 qp(1) t1
+.OP DAQP t2 p1 qp(0) t1
+.OP QJSR t3 =e'%q%ftn_i_qdim t2
+.OP DFRQP r t3 qpret
 .IL DPROD arth lnk lnk
 Multiply two single precision real values and return double
 precision value. (DPROD intrinsic).
@@ -1046,6 +1468,10 @@ precision value. (DPROD intrinsic).
 .OP FMAX r p1 p2
 .IL DMAX arth lnk lnk
 .OP DMAX p p1 p2
+.\" AOCC begin
+.IL QMAX arth lnk lnk
+.OP QMAX p p1 p2
+.\" AOCC end
 .IL IMIN arth lnk lnk
 .OP IMIN r p1 p2
 .IL UIMIN arth lnk lnk
@@ -1054,6 +1480,10 @@ precision value. (DPROD intrinsic).
 .OP FMIN r p1 p2
 .IL DMIN arth lnk lnk
 .OP DMIN r p1 p2
+.\" AOCC begin
+.IL QMIN arth lnk lnk
+.OP QMIN r p1 p2
+.\" AOCC end
 .IL INDEX fstr lnk lnk
 INDEX intrinsic (inputs are two character strings and result is an integer).
 .AT spec
@@ -1107,6 +1537,12 @@ Right shift operator (>>).  First operand is 32 bit signed integer
 value and second is assumed to be a positive integer.
 .OP RSHIFT r p1 p2
 .IL KRSHIFT arth lnk lnk
+.AT i8
+.IL SHIFTA arth lnk lnk
+Right shift operator (>>).  First operand is 32 bit signed integer
+value and second is assumed to be a positive integer.
+.OP SHIFTA r p1 p2
+.IL KSHIFTA arth lnk lnk
 .AT i8
 .OP KARSHIFT r p1 p2
 .IL ULSHIFT arth lnk lnk
@@ -1215,6 +1651,7 @@ IBITS(p1, p2, p3) - extract p3 bits beginning at p2 from p1.
 r = p3 != 0 ? (p1 >> p2) & (-1 >> (32 - p3)) : 0
 .fi
 .OP RSHIFT t1 p1 p2
+.OP SHIFTA t1 p1 p2
 .OP ICON t2 =i'-1
 .OP ICON t3 =i'32
 .OP ISUB t4 t3 p3
@@ -1254,12 +1691,19 @@ FLOOR of real to real
 .IL DFLOOR arth lnk
 FLOOR of double to double
 .OP DFLOOR r p1
+.IL QFLOOR arth lnk
+FLOOR of quad to quad
+.OP QFLOOR r p1
 .IL RCEIL arth lnk
 CELING of real to real
 .OP FCEIL r p1
 .IL DCEIL arth lnk
 CELING of double to double
 .OP DCEIL r p1
+.IL QCEIL arth lnk
+CEIL of quad to quad
+.OP QCEIL r p1
+
 .IL ICMP arth lnk lnk
 Integer comparision of two integer numbers.
 The compare ILMs are used only in the context of a relational expression
@@ -1274,12 +1718,20 @@ Compare two single precision floating point numbers.
 .AT spec
 .IL DCMP arth lnk lnk
 Compare two double precision floating point numbers.
+.\" AOCC begin
+.AT spec
+.IL QCMP arth lnk lnk
+Compare two quad precision floating point numbers.
+.\" AOCC end
 .AT spec
 .IL UICMP arth lnk lnk
 Unsigned integer comparison.
 .AT spec
 .IL UDICMP arth lnk lnk
 Unsigned double integer comparison.
+.AT spec
+.IL UQICMP arth lnk lnk
+Unsigned quad integer comparison.
 .AT spec
 .CL PCMP arth lnk lnk
 Pointer comparison.
@@ -1292,6 +1744,12 @@ The value computed is 0 if equal and -1 or 1 if not equal.
 Compare two double complex numbers.
 The value computed is the same as for the ICMP ILM.
 .AT spec
+./" AOCC begin
+.IL CQCMP arth lnk lnk
+Compare two quad complex numbers.
+The value computed is the same as for the ICMP ILM.
+.AT spec
+./" AOCC end
 .IL SCMP fstr lnk lnk
 Compare two strings.
 The value computed is the same as for the ICMP ILM.  SCMP has no
@@ -1375,6 +1833,14 @@ lnk3 - stride
 .OP FCON r v1
 .IL DCON cons sym
 .OP DCON r v1
+.\" AOCC begin
+.IL QCON cons sym
+.OP QCON r v1
+.IL CQCON cons sym
+.AT spec
+.OP QCON rr iv0
+.OP QCON ir iv0
+.\" AOCC end
 .IL CCON cons sym
 .AT spec
 .OP FCON rr iv0
@@ -1447,6 +1913,13 @@ Arithmetic if branch on real expression.
 .OP DCJMPZ null p1 le v2
 .OP DCJMPZ null p1 eq v3
 .OP DCJMPZ null p1 gt v4
+.\" AOCC begin
+.IL QAIF branch lnk sym1 sym2 sym3
+.AT spec trm
+.OP QCJMPZ null p1 le v2
+.OP QCJMPZ null p1 eq v3
+.OP QCJMPZ null p1 gt v4
+.\" AOCC end
 .IL AGOTO branch n lnk sym*
 Assigned GOTO.
 'lnk' is to an ILD ILM.
@@ -1486,6 +1959,11 @@ Load real
 .IL DLD load lnk
 Load double
 .AT spec
+.\" AOCC begin
+.IL QPLD load lnk
+Load quad
+.AT spec
+.\" AOCC end
 .IL QLD load lnk
 Load m128
 .AT spec
@@ -1496,6 +1974,10 @@ Load m256
 .AT spec
 .IL CDLD load lnk
 .AT spec dcmplx
+.\" AOCC begin
+.IL CQLD load lnk
+.AT spec
+.\" AOCC end
 .IL LLD load lnk
 Load logical value.
 .AT spec
@@ -1556,6 +2038,11 @@ Store float
 .IL DST store lnk lnk
 Store double
 .AT spec trm
+.\" AOCC begin
+.IL QPST store lnk lnk
+Store quad
+.AT spec trm
+.\" AOCC end
 .IL QST store lnk lnk
 Store m128
 .AT spec trm
@@ -1577,6 +2064,15 @@ Store the real part of a double complex
 .AT spec trm
 .IL CDSTI store lnk lnk
 Store the imaginary part of a double complex
+.\" AOCC begin
+.IL CQST store lnk lnk
+.AT spec trm
+.IL CQSTR store lnk lnk
+Store the real part of a quad complex
+.AT spec trm
+.IL CQSTI store lnk lnk
+Store the imaginary part of a quad complex
+.\" AOCC end
 .AT spec trm
 .IL LST store lnk lnk
 .AT spec trm
@@ -1624,7 +2120,7 @@ loads and stores or a call (JSR) to one of:
 Zero memory locations.
 lnk1 - base address to zero
 lnk2 - number of units to zero
-stc  - data type of units to zero: char, short, int, dble
+stc  - data type of units to zero: char, short, int, dble, quad
 The expansion of this ILM can generate ILI for a sequence of
 stores or a JSR to one of
 "c_bzero"  zero bytes
@@ -1753,6 +2249,9 @@ Call m128 function
 .IL QFUNCA proc n stc lnk lnk*
 Call m128 function
 .AT spec
+.IL PQFUNCA proc n stc sym lnk lnk*
+Call m128 function through procedure pointer
+.AT spec
 .CL M256FUNC proc n lnk lnk*
 Call m256 function
 .AT spec
@@ -1806,6 +2305,8 @@ in the CALL statement.
 .AT spec
 .CL CDFUNC proc n lnk lnk*
 .AT spec dcmplx
+.CL CQFUNC proc n lnk lnk*
+.AT spec
 .FL CFUNC proc n sym lnk*
 .AT spec
 .IL CFUNCA proc n stc lnk lnk*
@@ -1824,6 +2325,17 @@ Call double complex function through procedure pointer.
 .AT spec dcmplx
 .IL CDVFUNCA proc n stc sym lnk sym lnk*
 .AT spec dcmplx
+./" AOCC begin
+.FL CQFUNC proc n sym lnk*
+.AT spec
+.IL CQFUNCA proc n stc lnk lnk*
+.AT spec
+.IL PCQFUNCA proc n stc sym lnk lnk*
+Call quad complex function through procedure pointer.
+.AT spec
+.IL CQVFUNCA proc n stc sym lnk sym lnk*
+.AT spec
+./" AOCC end
 .IL LFUNC proc n sym lnk*
 .AT spec
 .IL LFUNCA proc n stc lnk lnk*
@@ -2114,6 +2626,7 @@ computed as (x+y) >> 1
 .OP ICON t1 =i'1
 .OP IADD t2 p1 p2
 .OP RSHIFT r t2 t1
+.OP SHIFTA r t2 t1
 .IL UHADD arth lnk lnk
 hadd(x,y), where x and y are unsigned char or unsigned short, and
 computed as (x+y) >> 1
@@ -2169,6 +2682,7 @@ computed as (x+y+1) >> 1
 .OP IADD t2 p1 p2
 .OP IADD t2 t2 t1
 .OP RSHIFT r t2 t1
+.OP SHIFTA r t2 t1
 .IL URHADD arth lnk lnk
 rhadd(x,y), where x and y are unsigned char or unsigned short, and
 computed as (x+y+1) >> 1
@@ -2332,6 +2846,12 @@ Return the value of an expression in a variable format item (<expr>).
 .AT spec trm
 .IL PRAGMA misc stc1 stc2 stc3
 pragma/directive ILM
+.\" AOCC Begin
+.IL QFLOATK arth lnk
+Convert long long to quad precision (QFLOAT intrinsic).
+.AT i8
+.OP QFLOATK r p1
+.\" AOCC end
 .IL FLOATK arth lnk
 Convert long long to real number (REAL and FLOAT intrinsics).
 .AT i8
@@ -2410,6 +2930,8 @@ Exponentiation - integer to an integer power.
 .AT spec
 .IL CDTOK intr lnk lnk
 .AT spec dcmplx
+.IL CQTOK intr lnk lnk
+.AT spec
 .IL KCMP arth lnk lnk
 .AT spec
 .IL UKCMP arth lnk lnk
@@ -2429,6 +2951,12 @@ Convert real number to integer*8 (INT and IFIX intrinsics).
 Convert double precision floating point number to integer*8.
 .AT i8
 .OP DFIXK r p1
+./" AOCC begin
+.IL KQFIX arth lnk
+Convert quad precision floating point number to integer*8.
+.AT i8
+.OP QFIXK r p1
+./" AOCC end
 .IL UKDFIX arth lnk
 Convert double precision floating point number to integer*8.
 .AT spec i8
@@ -2772,6 +3300,19 @@ Cast an unsigned integer to a 64-bit integer.
 64-bit integer LEADZ intrinsic
 .AT i8
 .OP KLEADZ r p1
+.IL BTRAILZ intr lnk
+8-bit integer TRAILZ intrinsic
+.OP ITRAILZI r p1 iv0
+.IL STRAILZ intr lnk
+16-bit integer TRAILZ intrinsic
+.OP ITRAILZI r p1 iv1
+.IL ITRAILZ intr lnk
+32-bit integer TRAILZ intrinsic
+.OP ITRAILZ r p1
+.IL KTRAILZ intr lnk
+64-bit integer TRAILZ intrinsic
+.AT i8
+.OP KTRAILZ r p1
 .IL BPOPCNT intr lnk
 8-bit integer POPCNT intrinsic
 .OP IPOPCNTI r p1 iv0

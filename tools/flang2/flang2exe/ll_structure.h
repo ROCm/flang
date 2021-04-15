@@ -157,10 +157,10 @@ typedef enum LL_IRVersion {
   LL_Version_6_0 = 60,
   LL_Version_7_0 = 70,
   LL_Version_8_0 = 80,
-  LL_Version_8_9 = 89,
   LL_Version_9_0 = 90,
   LL_Version_10_0 = 100,
   LL_Version_11_0 = 110,
+  LL_Version_12_0 = 120,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -408,13 +408,20 @@ INLINE static bool ll_feature_debug_info_ver11(const LL_IRFeatures *feature) {
 }
 
 /**
+   \brief Version 12.0 debug metadata
+ */
+INLINE static bool ll_feature_debug_info_ver12(const LL_IRFeatures *feature) {
+  return (get_llvm_ir_version() >= LL_Version_12_0);
+}
+
+/**
    \brief Version 9.0 onwards uses 3 field syntax for constructors
    and destructors
  */
 INLINE static bool
 ll_feature_three_argument_ctor_and_dtor(const LL_IRFeatures *feature)
 {
-  return feature->version >= LL_Version_8_9;
+  return feature->version >= LL_Version_9_0;
 }
 
 INLINE static bool
@@ -507,6 +514,8 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 #define ll_feature_debug_info_ver80(f) ((f)->version >= LL_Version_8_0)
 #define ll_feature_debug_info_ver90(f) ((f)->version >= LL_Version_9_0)
 #define ll_feature_debug_info_ver11(f) (get_llvm_ir_version() >= LL_Version_11_0)
+#define ll_feature_debug_info_ver12(f)                                         \
+  (get_llvm_ir_version() >= LL_Version_12_0)
 #define ll_feature_three_argument_ctor_and_dtor(f) \
   ((f)->version >= LL_Version_9_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
@@ -673,6 +682,7 @@ typedef enum LL_MDClass {
   LL_DIBasicType_string, /* deprecated */
   LL_DIStringType,
   LL_DICommonBlock,
+  LL_DIGenericSubRange,
   LL_MDClass_MAX /**< must be last value and < 64 (6 bits) */
 } LL_MDClass;
 
@@ -703,6 +713,8 @@ typedef enum LL_DW_OP_t {
   LL_DW_OP_int,
   LL_DW_OP_push_object_address,
   LL_DW_OP_mul,
+  LL_DW_OP_over,
+  LL_DW_OP_and,
   LL_DW_OP_MAX /**< must be last value */
 } LL_DW_OP_t;
 

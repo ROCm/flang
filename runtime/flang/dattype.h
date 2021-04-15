@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
+/* 
+ * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
+ *
+ * Added support for quad precision
+ * Last modified: Feb 2020
+ *
+ */
 
 /**
  * \file
@@ -28,8 +36,11 @@
 #define TY_NCHAR 16
 #define TY_INT8 17
 #define TY_LOG8 18
+#define TY_QCMPLX 19
 
-#define Is_complex(parm) ((parm) == TY_CMPLX || (parm) == TY_DCMPLX)
-#define Is_real(parm) ((parm) == TY_REAL || (parm) == TY_DBLE)
+// AOCC : TY_QCMPLX
+#define Is_complex(parm) ((parm) == TY_CMPLX || (parm) == TY_DCMPLX || (parm) == TY_QCMPLX)
+// AOCC : TY_QUAD
+#define Is_real(parm) ((parm) == TY_REAL || (parm) == TY_DBLE || (param) == TY_QUAD)
 
 #define REAL_ALLOWED(param) ((Is_complex(param)) || Is_real(param))
