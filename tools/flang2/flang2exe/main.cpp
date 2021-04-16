@@ -1181,6 +1181,7 @@ ompaccel_create_globalctor()
     ompaccel_register_tgt();
     gbl.currsub = cur_func_sptr;
     // AOCC Begin
+    llutil_struct_def_reset();
     gbl.internal = temp_internal;
     // AOCC End
   }
