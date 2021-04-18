@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /** \brief Internal representation of argument parser */
 struct arg_parser_ {
@@ -310,7 +311,12 @@ parse_arguments(const arg_parser_t *parser, int argc, char **argv)
   if (!parser->input_file_name_ptr) {
     interr("Input file name is not registered", 0, ERR_Fatal);
   }
-
+  // Display version sha and exit
+  extern char *flang_version_sha;
+  if (argv[1] && strcmp(argv[1],"--version") == 0) {
+    fprintf(stderr, "%s\n", flang_version_sha);
+    exit(0);
+  }
   /* First grab the source file name */
   if (*argv[1] != '-') {
     *parser->input_file_name_ptr = argv[1];

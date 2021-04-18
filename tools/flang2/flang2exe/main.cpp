@@ -104,6 +104,8 @@ static char *who[] = {"init", "import",   "expand", "", "",
 static INT xtimes[_N_WHO];
 static char *cmdline = NULL;
 static char *ccff_filename = NULL;
+char *flang_version_sha = {FLANG_SHA};
+
 #include "ccffinfo.h"
 
 #if DEBUG
@@ -605,6 +607,12 @@ init(int argc, char *argv[])
   char *file_suffix;
   char *idfname;
   time_t now;
+
+  // Display version sha and exit
+  if (argv[1] && strcmp(argv[1],"--version") == 0) {
+    fprintf(stderr, "%s\n", flang_version_sha);
+    exit(0);
+  }
 
   file_suffix = FTNFILE; /* default suffix for source files */
                          /*
