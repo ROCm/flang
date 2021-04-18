@@ -30,6 +30,9 @@
  *
  * Added support to identify generic functions in derived classes
  * Last modified: Dec 2020
+ *
+ * Support to access tbp through pointers.
+ * Last modified: Jan 2021
  */
 
 
@@ -4693,6 +4696,14 @@ add_ptr_assign(int dest, int src, int std)
     gen_contig_check(dest, dest, 0, gbl.lineno, false, std);
     ast = mk_stmt(A_CONTINUE, 0); /* return a continue statement */
   }
+  //AOCC Begin
+  if(A_TYPEG(src) == A_ID && A_TYPEG(dest) == A_ID &&
+     STYPEG(A_SPTRG(src)) == ST_VAR && SCG(A_SPTRG(src)) == SC_BASED &&
+     STYPEG(A_SPTRG(dest)) == ST_VAR && SCG(A_SPTRG(dest)) == SC_BASED &&
+     TBPLNKG(A_SPTRG(src)) && A_DTYPEG(src) == A_DTYPEG(dest) &&
+     !is_deferlenchar_ast(dest))
+      gen_alloc_dealloc(TK_ALLOCATE, dest, NULL);
+  //AOCC End
   return ast;
 }
 
@@ -7115,7 +7126,8 @@ mkmember(int structd, int base, int nmx)
     //AOCC Begin
     } else if ((STYPEG(BINDG(sptr)) == ST_USERGENERIC) &&
         (STYPEG(A_ALIASG(base)) == ST_USERGENERIC ||
-        STYPEG(A_ALIASG(base)) == ST_PROC)){
+        STYPEG(A_ALIASG(base)) == ST_PROC ||
+        STYPEG(A_ALIASG(base)) == ST_ENTRY)){
       char* var = SYMNAME(A_ALIASG(base));
       if(!strncmp(SYMNAME(sptr),var,strlen(var))){
         A_ALIASP(base,0);

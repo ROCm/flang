@@ -12,6 +12,8 @@
  * Implemented diagnostics for simpler case of uninitialized variable use.
  * Last modified: Dec 2020
  *
+ * Implemented pass to move all allocations outside target region
+ * Last modified: Jan 2021
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: May 2020
@@ -2746,6 +2748,95 @@ static bool ompaccel_has_switched_parsec() {
 
   ast_unvisit();
   return false;
+}
+
+typedef struct {
+  int std;
+  int move_after;
+} MoveCandidate2;
+
+// Pass to move all allocations outside target region. This pass will move
+// only standalone allocations. ompaccel_ast_alloc_array will move
+// allocations inside if construct
+void ompaccel_ast_alloc_array2() {
+  ast_visit(1, 1);
+
+  bool in_target = false;
+  int btarget_std = -1;
+  int etarget_std = -1;
+  int last_std = -1;
+  int btarget_prevstd = -1;
+  int alloc_sptr = -1;
+  int num_candidates = 0;
+  const int max_candidates = 100;
+  MoveCandidate2 candidates[max_candidates];
+
+  for (int std = STD_NEXT(0); std > 0; std = STD_NEXT(std)) {
+    int ast = STD_AST(std);
+    int asttype = A_TYPEG(ast);
+
+    if (asttype == A_MP_TARGET) {
+      in_target = true;
+      btarget_std = std;
+      btarget_prevstd = last_std;
+    } else if (asttype == A_MP_ENDTARGET) {
+      in_target = false;
+      etarget_std = std;
+      // TODO: Optimise this!
+      for (unsigned int i = 0; i < num_candidates; ++i) {
+        if (candidates[i].move_after == -1) {
+          candidates[i].move_after = std;
+        }
+      }
+    }
+
+    if (in_target && asttype == A_ALLOC) {
+      if (A_TKNG(ast) == TK_ALLOCATE) {
+        int subscr_ast = A_SRCG(ast);
+        if (A_TYPEG(subscr_ast) == A_SUBSCR) {
+          int sptr_ast = A_LOPG(subscr_ast);
+          alloc_sptr = A_SPTRG(sptr_ast);
+        }
+        if (alloc_sptr != -1) {
+          int stblk_ast = A_STBLKG(STD_AST(btarget_prevstd));
+          int uplevel_sptr = PARUPLEVELG(A_SPTRG(stblk_ast));
+          if (PARSYMSG(uplevel_sptr)) {
+            LLUplevel *uplevel = llmp_get_uplevel(uplevel_sptr);
+            if (MIDNUMG(alloc_sptr)) {
+              alloc_sptr = MIDNUMG(alloc_sptr);
+              if (SCG(alloc_sptr) == SC_PRIVATE)
+                SCP(alloc_sptr, SC_LOCAL);
+            }
+            llmp_add_shared_var(uplevel, alloc_sptr);
+          }
+          alloc_sptr = -1;
+        }
+
+        MoveCandidate2 cand;
+        cand.std = std;
+        cand.move_after = btarget_prevstd;
+        candidates[num_candidates++] = cand;
+        assert(num_candidates < max_candidates, "More than expected candidates",
+               num_candidates, ERR_Fatal);
+      } else if (A_TKNG(ast) == TK_DEALLOCATE) {
+        MoveCandidate2 cand;
+        cand.std = std;
+        cand.move_after = -1;
+        candidates[num_candidates++] = cand;
+        assert(num_candidates < max_candidates, "More than expected candidates",
+               num_candidates, ERR_Fatal);
+      }
+    }
+
+    last_std = std;
+  }
+
+  for (unsigned i = 0; i < num_candidates; ++i) {
+    remove_stmt(candidates[i].std);
+    insert_stmt_after(candidates[i].std, candidates[i].move_after);
+  }
+
+  ast_unvisit();
 }
 
 typedef struct {
