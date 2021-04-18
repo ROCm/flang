@@ -464,6 +464,7 @@ main(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_LLVM
           if (flg.omptarget) {
             ompaccel_ast_alloc_array();
+	    ompaccel_ast_alloc_array2();
           }
 #endif
 
