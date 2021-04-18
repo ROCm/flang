@@ -291,6 +291,8 @@ static int *idxstack = NULL;
 static hashmap_t sincos_map;
 static hashmap_t sincos_imap;
 static LL_MDRef cached_loop_metadata;
+static LL_MDRef cached_unroll_enable_metadata;
+static LL_MDRef cached_unroll_disable_metadata;
 // AOCC Begin
 static LL_MDRef cached_loop_vec_metadata;
 static LL_MDRef access_group_metadata;
@@ -393,6 +395,7 @@ static const char *get_atomicrmw_opname(LL_InstrListFlags);
 static const char *get_atomic_memory_order_name(int);
 static void insert_llvm_memcpy(int, int, OPERAND *, OPERAND *, int, int, int);
 static void insert_llvm_memset(int, int, OPERAND *, int, int, int, int);
+static void insert_llvm_prefetch(int ilix, OPERAND *dest_op);
 static SPTR get_call_sptr(int);
 static LL_Type *make_function_type_from_args(LL_Type *return_type,
                                              OPERAND *first_arg_op,
@@ -1035,11 +1038,39 @@ cons_novectorize_metadata(void)
 }
 
 INLINE static LL_MDRef
+cons_nounroll_metadata(void)
+{
+  LL_MDRef lvcomp[1];
+  LL_MDRef loopUnroll;
+  LL_MDRef rv;
+
+  if (LL_MDREF_IS_NULL(cached_unroll_disable_metadata)) {
+   rv = ll_create_flexible_md_node(cpu_llvm_module);
+   lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.unroll.disable");
+   loopUnroll= ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 1);
+   ll_extend_md_node(cpu_llvm_module, rv, rv);
+   ll_extend_md_node(cpu_llvm_module, rv, loopUnroll);
+   cached_unroll_disable_metadata=rv;
+  }
+  return cached_unroll_disable_metadata;
+}
+
+INLINE static LL_MDRef
 cons_vectorize_metadata(void)
 {
   LL_MDRef lvcomp[2];
 
   lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.enable");
+  lvcomp[1] = ll_get_md_i1(1);
+  return ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
+}
+
+INLINE static LL_MDRef
+cons_vectorizealways_metadata(void)
+{
+  LL_MDRef lvcomp[2];
+
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.always");
   lvcomp[1] = ll_get_md_i1(1);
   return ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
 }
@@ -1355,6 +1386,23 @@ cons_loops_vectorize_metadata(void)
   } // if
   return cached_loop_vec_metadata;
 } // cons_loops_vectorize_metadata
+
+/*
+ * When vector always pragma is specified, only
+ * "llvm.loop.vectorize.always" metadata has to be generated.
+ */
+static LL_MDRef
+cons_loops_vectorizealways_metadata(void)
+{
+  if (LL_MDREF_IS_NULL(cached_loop_vec_metadata)) {
+    LL_MDRef vectorize = cons_vectorizealways_metadata();
+    LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    ll_extend_md_node(cpu_llvm_module, md, md);
+    ll_extend_md_node(cpu_llvm_module, md, vectorize);
+    cached_loop_vec_metadata = md;
+  } // if
+  return cached_loop_vec_metadata;
+} // cons_loops_vectorizealways_metadata
 // AOCC End
 
 static LL_MDRef
@@ -1375,6 +1423,36 @@ cons_no_depchk_metadata(void)
     cached_loop_metadata = md;
   }
   return cached_loop_metadata;
+}
+
+static LL_MDRef
+cons_unroll_metadata(void) //Calls the metadata for unroll
+{
+  LL_MDRef lvcomp[1];
+  LL_MDRef unroll;
+  if (LL_MDREF_IS_NULL(cached_unroll_enable_metadata)) {
+    lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.unroll.enable");
+    unroll= ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 1);
+    LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+    ll_extend_md_node(cpu_llvm_module, md, md);
+    ll_extend_md_node(cpu_llvm_module, md, unroll);
+    cached_unroll_enable_metadata = md;
+  }
+  return cached_unroll_enable_metadata;
+}
+
+static LL_MDRef
+cons_unroll_count_metadata(int unroll_factor)
+{
+  LL_MDRef lvcomp[2];
+  LL_MDRef unroll;
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.unroll.count");
+  lvcomp[1] = ll_get_md_i32(cpu_llvm_module, unroll_factor);
+  unroll= ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
+  LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
+  ll_extend_md_node(cpu_llvm_module, md, md);
+  ll_extend_md_node(cpu_llvm_module, md, unroll);
+  return md;
 }
 
 INLINE static bool
@@ -1419,11 +1497,12 @@ int get_alloca_addrspace(LL_Module *module) {
 #endif
 
 /*
- * Check if the break instruction is having vector/novector pragma effect.
- *  "!llvm.loop" metadata will be generated for the break instruction if
- *  VECTOR/NOVECTOR pragma is specified for a loop.
+ * Check if the break instruction is having a loop pragma
+ * (vector/novector/vector always) pragma effect. "!llvm.loop" metadata
+ * will be generated for the break instruction if
+ * VECTOR/NOVECTOR/VECTOR ALWAYS pragma is specified for a loop.
  */
-static bool check_for_vector_novector_directive(int break_line_number, int xflag) {
+static bool check_for_loop_directive(int break_line_number, int xbit, int xflag) {
   int iter;
   LPPRG *lpprg;
 
@@ -1432,10 +1511,8 @@ static bool check_for_vector_novector_directive(int break_line_number, int xflag
     // Loop thru all the loop pragmas
     for (iter = 1; iter < direct.lpg.avail; iter++) {
       lpprg = direct.lpg.stgb + iter;
-      // check if vector/novector pragma is specified
-      // x[183] = 0x4000000   => !dir$ NOVECTOR
-      // x[183] = 0x80000000  => !dir$ VECTOR
-      if ((lpprg->dirset.x[183] & xflag)
+      // check if xbit/xflag pair is available
+      if ((lpprg->dirset.x[xbit] & xflag)
           &&
           (break_line_number == lpprg->end_line)) {
         return  true;
@@ -1449,7 +1526,7 @@ static bool check_for_vector_novector_directive(int break_line_number, int xflag
   } // if
 
   return false;
-} // check_for_vector_novector_directive
+} // check_for_loop_directive
 
 /*
  * Fix ivdep loop directive for nested loops
@@ -1573,6 +1650,7 @@ schedule(void)
   bool is_ivdep_directive = false;
   // AOCC End
   CG_cpu_compile = true;
+  int unroll_factor = 0;
 
   funcId++;
   assign_fortran_storage_classes();
@@ -1685,7 +1763,7 @@ restartConcur:
       {
         if (current_module->debug_info && (BIH_FINDEX(gbl.entbih) != 0)) {
           lldbg_emit_subprogram(current_module->debug_info, func_sptr, funcType,
-                              BIH_FINDEX(gbl.entbih), targetNVVM);
+                              BIH_FINDEX(gbl.entbih), targetNVVM, false);
           lldbg_set_func_ptr(current_module->debug_info, func_ptr);
 	}
       }
@@ -1812,6 +1890,14 @@ restartConcur:
     } else {
       clear_rw_nodepchk();
     }
+    if (flg.x[9] > 0)
+      unroll_factor = flg.x[9];
+    if (XBIT(11, 0x2) && unroll_factor)
+      BIH_UNROLL_COUNT(bih) = true;
+    else if (XBIT(11, 0x1))
+      BIH_UNROLL(bih) = true;
+    else if (XBIT(11, 0x400))
+      BIH_NOUNROLL(bih) = true;
     close_pragma();
 
     // AOCC Begin
@@ -1927,24 +2013,24 @@ restartConcur:
         make_stmt(STMT_BR, ilix, false, next_bih_label, ilt);
 
         // AOCC Begin
-        // Added support for vector, novector and ivdep pragma to generate the
+        // Added support for vector, vector always, novector and ivdep pragma to generate the
         // required metadata
-        //   0x4000000  => xflag[183] value for NOVECTOR
+        //   0x4000000  => xflag[183] value for NOVECTOR (and VECTOR NEVER)
         //   0x80000000 => xflag[183] value for VECTOR
+        //   0x1        => xflag[200] value for VECTOR ALWAYS
         if (ignore_simd_block(bih)
             ||
-            (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x4000000))) {
+            (check_for_loop_directive(ILT_LINENO(ilt), 183, 0x4000000))) {
           LL_MDRef loop_md = cons_novectorize_metadata();
           INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
           if (i) {
-            i->flags |= SIMD_BACKEDGE_FLAG;
+            i->flags |= LOOP_BACKEDGE_FLAG;
             i->misc_metadata = loop_md;
           }
-
         } else if (((!XBIT(69, 0x100000)) &&
                     BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
                    ||
-                   (check_for_vector_novector_directive(ILT_LINENO(ilt), 0x80000000))
+                   (check_for_loop_directive(ILT_LINENO(ilt), 183, 0x80000000))
                    ||
                    (is_ivdep_directive) || BIH_SIMD(bih)) {
           LL_MDRef loop_md;
@@ -1957,7 +2043,41 @@ restartConcur:
           }
           INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
           if (i) {
-            i->flags |= SIMD_BACKEDGE_FLAG;
+            i->flags |= LOOP_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+        } else if ((!XBIT(69, 0x100000)) && check_for_loop_directive(ILT_LINENO(ilt), 200, 0x1)) {
+          LL_MDRef loop_md;
+          if (rw_nodepcheck) {
+            loop_md = cons_no_depchk_metadata();
+          } else {
+            loop_md = cons_loops_vectorizealways_metadata();
+          }
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= LOOP_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+        }
+        if (BIH_UNROLL(bih)) {
+          LL_MDRef loop_md = cons_unroll_metadata();
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= LOOP_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+        } else if (BIH_UNROLL_COUNT(bih)) {
+          LL_MDRef loop_md = cons_unroll_count_metadata(unroll_factor);
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= LOOP_BACKEDGE_FLAG;
+            i->misc_metadata = loop_md;
+          }
+        } else if (BIH_NOUNROLL(bih)) {
+          LL_MDRef loop_md = cons_nounroll_metadata();
+          INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
+          if (i) {
+            i->flags |= LOOP_BACKEDGE_FLAG;
             i->misc_metadata = loop_md;
           }
         }
@@ -2019,6 +2139,9 @@ restartConcur:
         }
       } else if (opc == IL_FENCE) {
         gen_llvm_fence_instruction(ilix);
+      } else if (opc == IL_PREFETCH) {
+        LL_Type *optype = make_lltype_from_dtype(DT_CPTR);
+        insert_llvm_prefetch(ilix, gen_llvm_expr(ILI_OPND(ilix, 1), optype));
       } else {
       /* may be a return; otherwise mostly ignored */
       /* However, need to keep track of FREE* ili, to match them
@@ -2181,8 +2304,19 @@ restartConcur:
     lldbg_cleanup_missing_bounds(current_module->debug_info,
 		                 BIH_FINDEX(gbl.entbih));
   hashmap_clear(llvm_info.homed_args); /* Don't home entry trampoline parms */
-  if (processHostConcur)
+  if (processHostConcur) {
     print_entry_subroutine(current_module);
+// AOCC Begin
+    /* local variable metadata nodes are created for every entry in the
+     * mdnodes_fwdvars hashmap before cleanup. These local variables are created
+     * for the purpose of array bounds, etc. They were previously marked to be
+     * created in lldbg_fwd_local_variable() and gets created here.
+     */
+    if (flg.debug || XBIT(120, 0x1000))
+      lldbg_cleanup_missing_bounds(current_module->debug_info,
+                                 BIH_FINDEX(gbl.entbih));
+// AOCC End
+  }
   ll_destroy_function(llvm_info.curr_func);
   llvm_info.curr_func = NULL;
 
@@ -2618,7 +2752,7 @@ maybe_fixup_x86_abi_return(LL_Type *sig)
  * \param emit_func_signature_for_call
  * \return 1 if debug op was written, 0 otherwise
  */
-static int
+int
 write_I_CALL(INSTR_LIST *curr_instr, bool emit_func_signature_for_call)
 {
   /* Function invocation description as a list of OPERAND values */
@@ -3513,7 +3647,7 @@ write_instructions(LL_Module *module)
           print_token(llvm_instr_names[i_name]);
           print_space(1);
           write_operands(instrs->operands, 0);
-          if (instrs->flags & SIMD_BACKEDGE_FLAG) {
+          if (instrs->flags & LOOP_BACKEDGE_FLAG) {
             char buf[32];
             LL_MDRef loop_md = instrs->misc_metadata;
             snprintf(buf, 32, ", !llvm.loop !%u", LL_MDREF_value(loop_md));
@@ -4877,6 +5011,52 @@ gen_call_pgocl_intrinsic(char *fname, OPERAND *params, LL_Type *return_ll_type,
 }
 
 static void
+insert_llvm_prefetch(int ilix, OPERAND *dest_op)
+{
+  OPERAND *call_op;
+
+  DBGTRACEIN("")
+
+  const char *intrinsic_name = "@llvm.prefetch";
+  char *fname = (char *)getitem(LLVM_LONGTERM_AREA, strlen(intrinsic_name) + 1);
+  strcpy(fname, intrinsic_name);
+  INSTR_LIST *Curr_Instr = make_instr(I_CALL);
+  Curr_Instr->flags |= CALL_INTRINSIC_FLAG;
+  Curr_Instr->operands = call_op = make_operand();
+  call_op->ot_type = OT_CALL;
+  call_op->ll_type = make_void_lltype();
+  Curr_Instr->ll_type = call_op->ll_type;
+  call_op->string = fname;
+  call_op->next = dest_op;
+
+  /* setup rest of the parameters for llvm.prefetch */
+  LL_Type *int32_type = make_int_lltype(32);
+  /* prefetch type: 0 = read, 1 = write */
+  dest_op->next = make_constval_op(int32_type, 0, 0);
+  /* temporal locality specifier: 3 = extremely local, keep in cache */
+  dest_op->next->next = make_constval_op(int32_type, 3, 0);
+  /* cache type: 0 = instruction, 1 = data */
+  dest_op->next->next->next = make_constval_op(int32_type, 1, 0);
+  ad_instr(ilix, Curr_Instr);
+
+  /* add global define of @llvm.prefetch to external function list, if needed */
+  static bool prefetch_defined = false;
+  if (!prefetch_defined) {
+    prefetch_defined = true;
+    const char *intrinsic_decl = "declare void @llvm.prefetch(i8* nocapture, i32, i32, i32)";
+    char *gname = (char *)getitem(LLVM_LONGTERM_AREA, strlen(intrinsic_decl) + 1);
+    strcpy(gname, intrinsic_decl);
+    EXFUNC_LIST *exfunc = (EXFUNC_LIST *)getitem(LLVM_LONGTERM_AREA, sizeof(EXFUNC_LIST));
+    memset(exfunc, 0, sizeof(EXFUNC_LIST));
+    exfunc->func_def = gname;
+    exfunc->flags |= EXF_INTRINSIC;
+    add_external_function_declaration(fname, exfunc);
+  }
+
+  DBGTRACEOUT("")
+} /* insert_llvm_prefetch */
+
+static void
 insert_llvm_memset(int ilix, int size, OPERAND *dest_op, int len, int value,
                    int align, int is_volatile)
 {
@@ -5001,13 +5181,7 @@ void insert_llvm_dbg_declare(LL_MDRef mdnode, SPTR sptr, LL_Type *llTy,
       const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
       LL_MDRef md;
       if (ll_feature_debug_info_ver11(&current_module->ir)) {
-       /* For associate statement, we have replaced the type to its associated
-	* variable's type. Add a DW_OP_deref so that debugger can show the value.*/
-        if (REVMIDLNKG(sptr) && CCSYMG(sptr) && !SDSCG(REVMIDLNKG(sptr))
-			&& ADDRTKNG(REVMIDLNKG(sptr)))
-          md = lldbg_emit_expression_mdnode(di, 1, deref);
-        else
-          md = lldbg_emit_empty_expression_mdnode(di);
+        md = lldbg_emit_empty_expression_mdnode(di);
       } else {
         /* Handle the Fortran allocatable array cases. Emit expression
          * mdnode with single argument of DW_OP_deref to workaround known
@@ -11409,7 +11583,9 @@ needDebugInfoFilt(SPTR sptr)
     return true;
   /* Fortran case needs to be revisited when we start to support debug, for now
    * just the obvious case */
-  return (!CCSYMG(sptr) || DCLDG(sptr) || ftn_array_need_debug_info(sptr));
+  return (!CCSYMG(sptr) || DCLDG(sptr) ||
+          is_procedure_ptr((SPTR)REVMIDLNKG(sptr)) ||
+          ftn_array_need_debug_info(sptr));
 }
 #ifdef OMP_OFFLOAD_LLVM
 INLINE static bool
@@ -11783,8 +11959,9 @@ addDebugForLocalVar(SPTR sptr, LL_Type *type)
 {
   if (need_debug_info(sptr) || pointer_scalar_need_debug_info(sptr)) {
     /* Dummy sptrs are treated as local (see above) */
-    if (ll_feature_debug_info_ver11(&current_module->ir) &&
-        ftn_array_need_debug_info(sptr)) {
+    if ((ll_feature_debug_info_ver11(&current_module->ir) &&
+        ftn_array_need_debug_info(sptr)) &&
+        (DTYPEG(REVMIDLNKG(sptr)) != DT_DEFERCHAR)) {
       SPTR array_sptr = (SPTR)REVMIDLNKG(sptr);
       LL_MDRef array_md =
           lldbg_emit_local_variable(current_module->debug_info, array_sptr,
@@ -12066,6 +12243,7 @@ process_sptr_offset(SPTR sptr, ISZ_T off)
         hashmap_lookup(llvm_info.homed_args, INT2HKEY(midnum), NULL)) {
       LLTYPE(sptr) = LLTYPE(midnum);
       SNAME(sptr) = SNAME(midnum);
+      DBGTRACEOUT("")
       return;
     }
     if (hashmap_lookup(llvm_info.homed_args, INT2HKEY(sptr), NULL)) {
@@ -12228,13 +12406,16 @@ match_types(LL_Type *ty1, LL_Type *ty2)
   assert(ty1 && ty2, "match_types(): missing argument", 0, ERR_Fatal);
 
   DBGTRACEIN2("match_types: ty1=%s, ty2=%s\n", ty1->str, ty2->str);
-  if (ty1 == ty2)
-    return MATCH_OK;
+  if (ty1 == ty2) {
+    ret_type = MATCH_OK;
+    goto return_match_types;
+  }
 
   if (ty1->data_type == LL_ARRAY) {
     LL_Type *ele1 = ll_type_array_elety(ty1);
     LL_Type *ele2 = ll_type_array_elety(ty2);
-    return ele2 ? match_types(ele1, ele2) : MATCH_NO;
+    ret_type = (ele2 ? match_types(ele1, ele2) : MATCH_NO);
+    goto return_match_types;
   }
 
   if ((ty1->data_type == LL_PTR) || (ty2->data_type == LL_PTR)) {
@@ -12289,8 +12470,9 @@ match_types(LL_Type *ty1, LL_Type *ty2)
     ret_type = MATCH_NO;
   }
 
+return_match_types:
   if (ll_type_int_bits(ty1)) {
-    DBGTRACEOUT4(" returns %d(%s) ty1 = %s%d", ret_type, match_names(ret_type),
+    DBGTRACEOUT4(" returns %d(%s) ty1 = %s ty1 size = %d", ret_type, match_names(ret_type),
                  ty1->str, (int)(ll_type_bytes(ty1) * BITS_IN_BYTE))
   } else {
     DBGTRACEOUT3(" returns %d(%s) ty1 = %s", ret_type, match_names(ret_type),
@@ -13575,6 +13757,7 @@ isNVVM(char *fn_name)
 #endif
          // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
+         (strncmp(fn_name, "fib_", 4) == 0) ||
          (strncmp(fn_name, "llvm.fma", 8) == 0);
 }
 #endif
@@ -13770,6 +13953,10 @@ formalsAddDebug(SPTR sptr, unsigned i, LL_Type *llType, bool mayHide)
       sptr = new_sptr;
     }
     LL_DebugInfo *db = current_module->debug_info;
+    if (ll_feature_debug_info_ver11(&cpu_llvm_module->ir) &&
+        STYPEG(sptr) == ST_ARRAY && CCSYMG(sptr) &&
+        !LL_MDREF_IS_NULL(get_param_mdnode(db, sptr)))
+      return;
     LL_MDRef param_md = lldbg_emit_param_variable(
         db, sptr, BIH_FINDEX(gbl.entbih), i, CCSYMG(sptr));
     if (!LL_MDREF_IS_NULL(param_md)) {
@@ -14992,4 +15179,16 @@ is_vector_x86_mmx(LL_Type *type) {
     return true;
   }
   return false;
+}
+
+int
+get_parnum(SPTR sptr)
+{
+  for (int parnum = 1; parnum <= llvm_info.abi_info->nargs; parnum++) {
+    if (llvm_info.abi_info->arg[parnum].sptr == sptr) {
+      return parnum;
+    }
+  }
+
+  return 0;
 }

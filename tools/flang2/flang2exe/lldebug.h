@@ -23,6 +23,10 @@
    \param sptr
    \param ret_dtype
    \param findex
+   \param targetNVVM
+// AOCC Begin
+   \param entryfunc
+// AOCC End
 
    Side-effect: stores the metadata node in the LL_DebugInfo struct.
 
@@ -30,7 +34,7 @@
    lldbg_set_func_ptr().
  */
 void lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype,
-                           int findex, bool targetNVVM);
+                           int findex, bool targetNVVM, bool entryfunc);
 
 /**
    \brief Create a metadata node for the outlined subprogram \p sptr
@@ -275,4 +279,10 @@ void lldbg_reset_module(LL_DebugInfo *db);
 
 /// \brief Get the debug location mdnode of the current procedure.
 LL_MDRef lldbg_get_subprogram_line(LL_DebugInfo *db);
+
+/// \brief Return TRUE if SPTR is pointer to procedure.
+LOGICAL is_procedure_ptr(SPTR sptr);
+
+/// \brief Get parameter mdnode for SPTR
+LL_MDRef get_param_mdnode(LL_DebugInfo *db, int sptr);
 #endif /* LLDEBUG_H_ */

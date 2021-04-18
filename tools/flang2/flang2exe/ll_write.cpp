@@ -1123,6 +1123,19 @@ static const MDTemplate Tmpl_DIModule_11[] = {
   //{ "isysroot",               StringField, FlgOptional }
 };
 
+static const MDTemplate Tmpl_DIModule_12[] = {
+  { "DIModule", TF, 6 },
+  { "tag",                      DWTagField, FlgHidden },
+  { "scope",                    NodeField },
+  { "name",                     StringField },
+  { "file",                     NodeField, FlgOptional },
+  { "line",                     UnsignedField, FlgOptional },
+  { "isDecl",                   BoolField, FlgOptional }
+  //,{ "configMacros",          StringField, FlgOptional },
+  //{ "includePath",            StringField, FlgOptional },
+  //{ "isysroot",               StringField, FlgOptional }
+};
+
 static const MDTemplate Tmpl_DISubprogram[] = {
   { "DISubprogram", TF, 20 },
   { "tag",                      DWTagField, FlgHidden },
@@ -2158,6 +2171,10 @@ emitDINamespace(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnode,
 static void
 emitDIModule(FILE *out, LLVMModuleRef mod, const LL_MDNode *mdnd, unsigned mdi)
 {
+  if (ll_feature_debug_info_ver12(&mod->ir)) {
+    emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule_12);
+    return;
+  }
   if (ll_feature_debug_info_ver11(&mod->ir)) {
     emitTmpl(out, mod, mdnd, mdi, Tmpl_DIModule_11);
     return;

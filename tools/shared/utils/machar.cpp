@@ -183,7 +183,7 @@ private:
   bool
   is_space(const std::string &text, size_t i, size_t j)
   {
-    return line.find_first_not_of(" ", i) >= j;
+    return line.find_first_not_of(" ", i, j - i) >= j;
   }
 
   void
