@@ -161,6 +161,11 @@ void build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
 /**
    \brief ...
  */
+int write_I_CALL(INSTR_LIST *curr_instr, bool emit_func_signature_for_call);
+
+/**
+   \brief ...
+ */
 void cg_fetch_clen_parampos(SPTR *len, int *param, SPTR sptr);
 
 /**
@@ -317,4 +322,5 @@ int get_alloca_addrspace(LL_Module *module);
  */
 bool pointer_scalar_need_debug_info(SPTR sptr);
 
+int get_parnum(SPTR sptr);
 #endif

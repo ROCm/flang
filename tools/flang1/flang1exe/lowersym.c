@@ -3603,6 +3603,7 @@ lower_symbol(int sptr)
   case ST_STRUCT:
   case ST_UNION:
   case ST_VAR:
+    putval("lineno", LINENOG(sptr));
     putbit("addrtaken", ADDRTKNG(sptr));
     putbit("argument", ARGG(sptr));
     putbit("assigned", ASSNG(sptr));

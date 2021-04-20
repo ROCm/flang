@@ -103,6 +103,8 @@ static char *who[] = {"init",     "parser",   "bblock", "vectorize", "optimize",
 #define _N_WHO (sizeof(who) / sizeof(char *))
 static INT xtimes[_N_WHO];
 static LOGICAL postprocessing = TRUE;
+char *flang_version_sha = {FLANG_SHA};
+//char *flang_version_sha[] = {FLANG_SHA};
 
 /* Feature names for Fortran front-end */
 #if defined(TARGET_LINUX_X8664)
@@ -464,6 +466,7 @@ main(int argc, char *argv[])
 #ifdef OMP_OFFLOAD_LLVM
           if (flg.omptarget) {
             ompaccel_ast_alloc_array();
+	    ompaccel_ast_alloc_array2();
           }
 #endif
 

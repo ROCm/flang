@@ -88,10 +88,7 @@ if (NOT DEFINED LIBOMP_EXPORT_DIR)
   find_library( 
     FLANG_LIBOMP
     libomp.so
-    HINTS
-    ${CMAKE_BINARY_DIR}/lib
-    ${OPENMP_BUILD_DIR}
-    NO_DEFAULT_PATH)
+    HINTS ${CMAKE_BINARY_DIR}/lib)
   target_link_libraries(flangrti_shared ${FLANG_LIBOMP})
 endif()
 

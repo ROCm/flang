@@ -185,5 +185,4 @@
 	test/x86_64_offloading/src/target_if1.f90
 	test/x86_64_offloading/src/teams_distribute2.f90
 	tools/flang1/flang1exe/fcprop.c
-	tools/flang2/utils/upper/upperilm_ppc64le.in
 
