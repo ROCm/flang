@@ -7136,8 +7136,7 @@ addarth(ILI *ilip)
 
   case IL_DATAN:
  #ifdef OMP_OFFLOAD_LLVM
-      if (flg.amdgcn_target &&
-          (gbl.ompaccel_intarget || OMPACCFUNCDEVG(gbl.currsub))) {
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
         (void)mk_prototype("atan", "f pure", DT_DBLE, 1, DT_DBLE);
         ilix = ad_func(IL_DFRQP, IL_QJSR, "atan", 1, op1);
         return ad1altili(opc, op1, ilix);

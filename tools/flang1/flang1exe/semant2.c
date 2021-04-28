@@ -99,7 +99,6 @@ semant2(int rednum, SST *top)
   int pfx;
   int (*p_cmp)(int, int);
   int set_aclp;
-  int past = 0, cast = 0;   // AOCC
 
   switch (rednum) {
 
@@ -1314,26 +1313,6 @@ semant2(int rednum, SST *top)
       }
       SST_LSYMP(LHS, sptr);
     }
-    // AOCC Begin
-#ifdef OMP_OFFLOAD_AMD
-    if(flg.omptarget)
-      if (sem.parallel || sem.task || sem.target || sem.teams || sem.orph) {
-        // replace obj%p(i) with ptr(i) to map and access the pointer member
-        // where, p is a pointer member of obj a structure type variable
-        //        ptr is a compiler created pointer
-        ast = SST_ASTG(RHS(1));
-        if(A_TYPEG(ast) == A_SUBSCR && A_TYPEG(A_LOPG(ast)) == A_MEM ) {
-            past = get_cc_pointer(A_SPTRG(A_PARENTG(A_LOPG(ast))),sptr1);
-            if(past) {
-                A_LOPP(SST_ASTG(RHS(1)), past);
-                ref_object(A_SPTRG(past));
-                cast = add_ptr_assign(past, A_LOPG(SST_ASTG(RHS(1))), 0);
-                add_stmt_before(cast, STD_NEXT(0));
-            }
-        }
-      }
-#endif
-    // AOCC End
     SST_PARENP(LHS, 0);
     break;
   /*
