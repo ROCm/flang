@@ -241,8 +241,9 @@ static void rewrite_omp_target_construct() {
     target_ast = ast;
 
     ifast = A_IFPARG(target_ast);
-    if (!ifast)
+    if (!ifast) {
       continue;
+    }
 
     // Create new if-then-else structure.
     new_if = mk_stmt(A_IFTHEN, 0);
@@ -279,14 +280,18 @@ static void rewrite_omp_target_construct() {
       std = STD_NEXT(std);
       assert(std > 0, "", ast, 4);
       ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_TEAMS) {
-        assert(false, "", ast, 4);
+      if (A_TYPEG(ast) == A_MP_TEAMS) {
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
+        if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
+          assert(false, "", ast, 4);
+        }
       }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
-        assert(false, "", ast, 4);
+      if (A_TYPEG(ast) == A_MP_PARALLEL) {
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
       }
       std = STD_NEXT(std);
       assert(std > 0, "", ast, 4);
@@ -297,6 +302,7 @@ static void rewrite_omp_target_construct() {
     while (std > 0) {
       ast = STD_AST(std);
       if (A_TYPEG(ast) == A_MP_ENDTARGET ||
+          A_TYPEG(ast) == A_MP_ENDPARALLEL ||
           A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
         break;
       new_stmt = ast_rewrite(ast);
@@ -319,11 +325,16 @@ static void rewrite_omp_target_construct() {
     }
 
     if (found_inner_scope) {
-      assert(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE, "", ast, 4);
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
+
+      if(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE) {
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
+        if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
+          assert(false, "", ast, 4);
+        }
+      }
+      if(A_TYPEG(ast) != A_MP_ENDPARALLEL) {
         assert(false, "", ast, 4);
       }
       std = STD_NEXT(std);
