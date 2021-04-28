@@ -13754,7 +13754,6 @@ isNVVM(char *fn_name)
          (strncmp(fn_name, "asinf", 5) == 0) ||
          (strncmp(fn_name, "asin", 4) == 0) ||
          (strncmp(fn_name, "__ockl_get", 10) == 0) ||
-         (strncmp(fn_name, "temperton", 9) == 0) ||
 #endif
          // AOCC End
          (strncmp(fn_name, "omp_", 4) == 0) ||
