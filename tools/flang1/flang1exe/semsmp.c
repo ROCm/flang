@@ -6537,6 +6537,11 @@ emit_bpar(void)
   A_ENDLABP(ast, 0);
   if (CL_PRESENT(CL_IF)) {
     if (mp_iftype != OMP_DEFAULT && (mp_iftype & OMP_PARALLEL) != OMP_PARALLEL)
+#ifdef OMP_OFFLOAD_AMD
+     if (flg.omptarget && !CL_PRESENT(CL_DIST_SCHEDULE) && mp_iftype & OMP_TARGET)
+       ;
+     else
+#endif
       error(155, 3, gbl.lineno,
             "IF (parallel:) or IF is expected in PARALLEL "
             "or combined PARALLEL construct ",
@@ -7571,11 +7576,9 @@ do_reduction(void)
       if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
         DTYPEP(reduc_symp->Private, DT_DBLE);
       }
-#if 1
       if (DTYPEG(reduc_symp->Private) == DT_CMPLX && flg.amdgcn_target) {
         DTYPEP(reduc_symp->Private, DT_DCMPLX);
       }
-#endif
       // AOCC End
       set_parref_flag(reduc_symp->shared, reduc_symp->shared,
                       BLK_UPLEVEL_SPTR(sem.scope_level));
@@ -7981,6 +7984,8 @@ do_map()
 
   ITEM *item;
   int ast;
+  int past = 0, cast = 0;   // AOCC
+
   if (CL_PRESENT(CL_MAP)) {
     for (item = (ITEM *)CL_FIRST(CL_MAP); item != ITEM_END; item = item->next) {
       // AOCC Begin
@@ -7996,10 +8001,30 @@ do_map()
         }
         continue;
       }
+      // replace obj%p(i) with ptr(i) to map and access the pointer member
+      // where, p is a pointer member of obj a structure type variable
+      //        ptr is a compiler created pointer
+      //
+      // This is used when obj%p is mapped using map clause
+      if(A_TYPEG(item->ast) == A_MEM &&
+              POINTERG(A_SPTRG(A_MEMG(item->ast))) &&
+              SCG(A_SPTRG(A_MEMG(item->ast))) == SC_BASED) {
+        past = get_cc_pointer(A_SPTRG(A_PARENTG(item->ast)),
+                                    A_SPTRG(A_MEMG(item->ast)));
+        if(past){
+            cast = add_ptr_assign(past, item->ast, 0);
+            add_stmt_after(cast, sem.last_std);
+        }
+      }
       // AOCC End
       ast = mk_stmt(A_MP_MAP, 0);
       (void)add_stmt(ast);
-      A_LOPP(ast, item->ast);
+      // AOCC Begin
+      if(cast)
+          A_LOPP(ast, past);
+      else
+      // AOCC End
+          A_LOPP(ast, item->ast);
       A_PRAGMATYPEP(ast, item->t.cltype);
       // AOCC Begin
       if (A_TYPEG(item->ast) == A_MEM) {
