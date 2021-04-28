@@ -1215,7 +1215,7 @@ exp_load(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_LLD:
     confl = false;
     dt = dt_nme(nme);
-    if (!flg.amdgcn_target && dt && DT_ISSCALAR(dt) && SCALAR_SIZE(dt, 4) != 4)
+    if (dt && DT_ISSCALAR(dt) && SCALAR_SIZE(dt, 4) != 4)
       confl = true;
     CHECK_NME(nme, confl);
     load = ad3ili(IL_LD, addr, nme, MSZ_WORD);

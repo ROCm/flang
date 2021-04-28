@@ -2212,24 +2212,15 @@ compute_sdsc_subscr(ILM *ilmp, bool bigobj)
   if (STYPEG(sdsc) == ST_MEMBER) {
     /* find the base ILM and NME */
     basep = (ILM *)(ilmb.ilm_base + ILM_OPND(ilmp, 2));
-    if (ILM_OPC(basep) == IM_PLD) {
-      assert(ILM_OPC(basep) == IM_PLD, "compute_sdsc_subscr: not PLD",
-             ILM_OPND(ilmp, 2), ERR_Severe);
-      basep = (ILM *)(ilmb.ilm_base + ILM_OPND(basep, 1));
-      assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not MEMBER",
-             ILM_OPND(ilmp, 2), ERR_Severe);
-      base = ILM_OPND(basep, 1);
-      basenm = NME_OF(base);
-      base = ILI_OF(base);
-      assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
-    } else {
-      assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not PLD",
-             ILM_OPND(ilmp, 2), ERR_Severe);
-      base = ILM_OPND(basep, 1);
-      basenm = NME_OF(base);
-      base = ILI_OF(base);
-      assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
-    }
+    assert(ILM_OPC(basep) == IM_PLD, "compute_sdsc_subscr: not PLD",
+           ILM_OPND(ilmp, 2), ERR_Severe);
+    basep = (ILM *)(ilmb.ilm_base + ILM_OPND(basep, 1));
+    assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not MEMBER",
+           ILM_OPND(ilmp, 2), ERR_Severe);
+    base = ILM_OPND(basep, 1);
+    basenm = NME_OF(base);
+    base = ILI_OF(base);
+    assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
   }
 
   /* compute the static descriptor linearized version of this
