@@ -476,6 +476,7 @@ main(int argc, char *argv[])
   upper_init();
   if (!findex)
     gbl.findex = addfile(gbl.file_name, NULL, 0, 0, 0, 1, 0);
+#if 0
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget) {
     init_test();
@@ -483,6 +484,7 @@ main(int argc, char *argv[])
     gbl.func_count--;
     gbl.multi_func_count = gbl.func_count;
   }
+#endif
 #endif
   do { /* loop once for each user program unit */
 
