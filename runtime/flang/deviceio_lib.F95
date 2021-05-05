@@ -11,6 +11,11 @@ module f90deviceio
       integer :: i
       !$omp declare target (f90printi)
     end subroutine f90printi
+    subroutine f90printl(N,i)
+      character(*) :: N
+      integer(8) :: i
+      !$omp declare target (f90printl)
+    end subroutine f90printl
     subroutine f90printf(N,f)
       character(*) :: N
       real(4) :: f
