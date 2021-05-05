@@ -301,10 +301,17 @@ static void rewrite_omp_target_construct() {
     // clone all the statements found below.
     while (std > 0) {
       ast = STD_AST(std);
-      if (A_TYPEG(ast) == A_MP_ENDTARGET ||
-          A_TYPEG(ast) == A_MP_ENDPARALLEL ||
-          A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
+      if (A_TYPEG(ast) == A_MP_ENDTARGET) break;
+      if (found_inner_scope) {
+	 if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
+             A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
         break;
+      }
+      else if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
+              A_TYPEG(ast) == A_MP_PARALLEL) {
+          std = STD_NEXT(std);
+          continue;
+      }
       new_stmt = ast_rewrite(ast);
       // Disable the parallel execution of A_MP_PDO for now.
       // TODO: Does this need to be enabled for any case?
