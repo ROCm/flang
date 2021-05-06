@@ -299,16 +299,14 @@ static void rewrite_omp_target_construct() {
     }
 
     // clone all the statements found below.
+    // don't clone PARALLEL and DISTRIBUTE construcs
     while (std > 0) {
       ast = STD_AST(std);
       if (A_TYPEG(ast) == A_MP_ENDTARGET) break;
-      if (found_inner_scope) {
-	 if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
-             A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
-        break;
-      }
-      else if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
-              A_TYPEG(ast) == A_MP_PARALLEL) {
+      if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
+              A_TYPEG(ast) == A_MP_PARALLEL || 
+              A_TYPEG(ast) == A_MP_DISTRIBUTE || 
+              A_TYPEG(ast) == A_MP_ENDDISTRIBUTE ) {
           std = STD_NEXT(std);
           continue;
       }
@@ -331,29 +329,6 @@ static void rewrite_omp_target_construct() {
       std = STD_NEXT(std);
     }
 
-    if (found_inner_scope) {
-
-      if(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE) {
-        std = STD_NEXT(std);
-        assert(std > 0, "", ast, 4);
-        ast = STD_AST(std);
-        if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
-          assert(false, "", ast, 4);
-        }
-      }
-      if(A_TYPEG(ast) != A_MP_ENDPARALLEL) {
-        assert(false, "", ast, 4);
-      }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_EMPSCOPE) {
-        assert(false, "", ast, 4);
-      }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-    }
     assert(A_TYPEG(ast) == A_MP_ENDTARGET, "", ast, 4);
 
     // Match for A_EMPSCOPE.
