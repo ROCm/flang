@@ -1244,12 +1244,22 @@ assemble_end(void)
               AG_ISMOD(gblsym) ? "external" : "common", name);
       fprintf(ASMFIL, "%s, align %d",
               AG_ISMOD(gblsym) ? "" : " zeroinitializer", align_value);
+      if (flg.omptarget && gbl.ompaccfile) {
+         fprintf(gbl.ompaccfile, "%%struct%s = type < { %s } > \n", name, typed);
+         fprintf(gbl.ompaccfile, "@%s = %s global %%struct%s ", name,
+                 AG_ISMOD(gblsym) ? "external" : "common", name);
+         fprintf(gbl.ompaccfile, "%s, align %d",
+                 AG_ISMOD(gblsym) ? "" : " zeroinitializer", align_value);
+      }
       for (llObjtodbgFirst(listp, &i); !llObjtodbgAtEnd(&i);
            llObjtodbgNext(&i)) {
         print_dbg_line(llObjtodbgGet(&i));
       }
       llObjtodbgFree(listp);
       fprintf(ASMFIL, "\n");
+      if (flg.omptarget && gbl.ompaccfile) {
+          fprintf(gbl.ompaccfile, "\n");
+      }
       AG_DSIZE(gblsym) = 1;
     }
   }
