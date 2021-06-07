@@ -295,6 +295,7 @@ static LL_MDRef cached_unroll_enable_metadata;
 static LL_MDRef cached_unroll_disable_metadata;
 // AOCC Begin
 static LL_MDRef cached_loop_vec_metadata;
+static LL_MDRef cached_loop_ivdep_metadata;
 static LL_MDRef access_group_metadata;
 // AOCC End
 
@@ -1066,11 +1067,11 @@ cons_vectorize_metadata(void)
 }
 
 INLINE static LL_MDRef
-cons_vectorizealways_metadata(void)
+cons_ivdep_metadata(void)
 {
   LL_MDRef lvcomp[2];
 
-  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.always");
+  lvcomp[0] = ll_get_md_string(cpu_llvm_module, "llvm.loop.vectorize.ivdep.enable");
   lvcomp[1] = ll_get_md_i1(1);
   return ll_get_md_node(cpu_llvm_module, LL_PlainMDNode, lvcomp, 2);
 }
@@ -1388,21 +1389,23 @@ cons_loops_vectorize_metadata(void)
 } // cons_loops_vectorize_metadata
 
 /*
- * When vector always pragma is specified, only
- * "llvm.loop.vectorize.always" metadata has to be generated.
+ * When ivdep pragma is specified, "llvm.loop.vectorize.ivdep.enable" metadata
+ * has to be generated.
  */
 static LL_MDRef
-cons_loops_vectorizealways_metadata(void)
+cons_loops_ivdep_metadata(void)
 {
-  if (LL_MDREF_IS_NULL(cached_loop_vec_metadata)) {
-    LL_MDRef vectorize = cons_vectorizealways_metadata();
+  if (LL_MDREF_IS_NULL(cached_loop_ivdep_metadata)) {
+    LL_MDRef vectorize = cons_vectorize_metadata();
+    LL_MDRef ivdep = cons_ivdep_metadata();
     LL_MDRef md = ll_create_flexible_md_node(cpu_llvm_module);
     ll_extend_md_node(cpu_llvm_module, md, md);
     ll_extend_md_node(cpu_llvm_module, md, vectorize);
-    cached_loop_vec_metadata = md;
+    ll_extend_md_node(cpu_llvm_module, md, ivdep);
+    cached_loop_ivdep_metadata = md;
   } // if
-  return cached_loop_vec_metadata;
-} // cons_loops_vectorizealways_metadata
+  return cached_loop_ivdep_metadata;
+} // cons_loops_vectorize_metadata
 // AOCC End
 
 static LL_MDRef
@@ -1605,7 +1608,7 @@ static void process_params(void) {
   unsigned smax = stb.stg_avail;
   for (SPTR sptr = get_symbol_start(); sptr < smax; ++sptr) {
     DTYPE dtype = DTYPEG(sptr);
-    if (STYPEG(sptr) == ST_PARAM && should_preserve_param(dtype)) {
+    if (STYPEG(sptr) == ST_PARAM && should_preserve_param(dtype) && !SCOPEG(sptr)) {
       if (DTY(dtype) == TY_ARRAY || DTY(dtype) == TY_STRUCT) {
         /* array and derived types have 'var$ac' constant variable
          * lets use that, by renaming that to 'var'.
@@ -2046,13 +2049,13 @@ restartConcur:
             i->flags |= LOOP_BACKEDGE_FLAG;
             i->misc_metadata = loop_md;
           }
-        } else if ((!XBIT(69, 0x100000)) && check_for_loop_directive(ILT_LINENO(ilt), 200, 0x1)) {
-          LL_MDRef loop_md;
-          if (rw_nodepcheck) {
-            loop_md = cons_no_depchk_metadata();
-          } else {
-            loop_md = cons_loops_vectorizealways_metadata();
-          }
+        } else if (((!XBIT(69, 0x100000)) &&
+                    BIH_NODEPCHK(bih) && (!BIH_NODEPCHK2(bih)))
+                   ||
+                   (check_for_loop_directive(ILT_LINENO(ilt), 200, 0x01))
+                   ||
+                   (is_ivdep_directive) || BIH_SIMD(bih)) {
+          LL_MDRef loop_md = cons_loops_ivdep_metadata();
           INSTR_LIST *i = find_last_executable(llvm_info.last_instr);
           if (i) {
             i->flags |= LOOP_BACKEDGE_FLAG;
@@ -4156,6 +4159,8 @@ ad_instr(int ilix, INSTR_LIST *instr)
 static bool
 cancel_store(int ilix, int op_ili, int addr_ili)
 {
+  if(!ENABLE_CSE_OPT)
+    return false;
   ILI_OP op_opc = ILI_OPC(op_ili);
   bool csed = false;
 
@@ -5265,7 +5270,8 @@ gen_const_expr(int ilix, LL_Type *expected_type)
       operand->ll_type = expected_type;
     } else {
       // AOCC Begin
-      if (expected_type && expected_type->data_type == LL_PTR)
+      if (expected_type && (expected_type->data_type == LL_PTR) ||
+                           (expected_type->data_type == LL_DOUBLE))
         operand->ll_type = make_lltype_from_dtype(DT_INT8);
       else
         operand->ll_type = make_lltype_from_dtype(DT_INT);
@@ -14357,17 +14363,15 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
   if (need_debug_info(SPTR_NULL)) {
     /* 'attributes #0 = { ... }' to be emitted later */
     print_token(" #0");
-  } else if (!XBIT(183, 0x10)) {
+  } else if (!XBIT(183, 0x10) || XBIT(14, 0x8)) {
     /* Nobody sets -x 183 0x10, besides Flang. We're disabling LLVM inlining for
      * proprietary compilers. */
+    /* 2nd XBIT - Apply noinline attribute if the pragma "noinline" is given */
     print_token(" noinline");
   }
 // AOCC BEGIN
-  else if (XBIT(14, 0x8)) {
-    /* Apply noinline attribute if the pragma "noinline" is given */
-    print_token(" noinline");
-  } else if (XBIT(191, 0x2)) {
-    /* Apply alwaysinline attribute if the pragma "alwaysinline" is given */
+  if (XBIT(191, 0x2)) {
+    /* Apply alwaysinline attribute if the pragma "forceinline" is given */
     print_token(" alwaysinline");
   }
 // AOCC END
@@ -15118,6 +15122,24 @@ add_debug_cmnblk_variables(LL_DebugInfo *db, SPTR sptr)
       SNAME(var) = SYMNAME(var);
       addDebugForGlobalVar(var, variable_offset_in_aggregate(var, 0));
       SNAME(var) = save_ptr;
+    }
+  }
+  // Constants debuginfo support is part of LLVM13.
+  if(ll_feature_debug_info_ver13(&current_module->ir)) {
+    for (SPTR sptr = get_symbol_start(); sptr < stb.stg_avail; ++sptr) {
+      TY_KIND Ty = DTY(DTYPEG(sptr));
+      // Constants support is limited to integers for now.
+      if (STYPEG(sptr) == ST_PARAM && SCOPEG(sptr) && !CCSYMG(sptr) && Ty == TY_INT) {
+        debug_name = new_debug_name(SYMNAME(SCOPEG(sptr)), SYMNAME(sptr),
+                                    SYMNAME(var));
+        if (hashset_lookup(sptr_added, debug_name))
+          continue;
+        hashset_insert(sptr_added, debug_name);
+        save_ptr = SNAME(sptr);
+        SNAME(sptr) = SYMNAME(sptr);
+        addDebugForGlobalVar(sptr, variable_offset_in_aggregate(var, 0));
+        SNAME(sptr) = save_ptr;
+      }
     }
   }
   if (gbl.rutype != RU_BDATA && NEEDMODG(scope) && !has_alias) {

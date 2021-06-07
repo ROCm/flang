@@ -128,6 +128,7 @@ static LL_ABI_Info *ll_abi_for_missing_prototype(LL_Module *module,
 static bool LLTYPE_equiv(LL_Type *ty1, LL_Type *ty2);
 
 static int is_gpu_module = false;
+static int tgt_offload_entry_count = 0;
 
 void 
 llvm_set_acc_module(void)
@@ -1309,7 +1310,7 @@ make_lltype_from_sptr(SPTR sptr)
     return make_ptr_lltype(get_ftn_static_lltype(sptr));
   } else if (CFUNCG(sptr) && SCG(sptr) == SC_EXTERN) {
     return make_ptr_lltype(get_ftn_cbind_lltype(sptr));
-  } else if (SCG(sptr) == SC_LOCAL && SOCPTRG(sptr)) {
+  } else if (SCG(sptr) == SC_LOCAL && SOCPTRG(sptr) && STYPEG(sptr) != ST_PARAM) {
     return make_ptr_lltype(get_local_overlap_vartype());
   }
 
@@ -3402,6 +3403,11 @@ process_dtype_struct(DTYPE dtype)
   /* if empty (extended) type - don't call process_symlinked_sptr -> oop508 */
   if (is_empty_typedef(dtype))
     def->values = 0;
+  if (!strcmp(d_name,"%struct.__tgt_offload_entry_")) {
+      if (tgt_offload_entry_count > 0)
+         def->printed=1;
+      tgt_offload_entry_count++;
+  }
   def->values = process_symlinked_sptr(
       DTyAlgTyMember(dtype), ZSIZEOF(dtype), (dty == TY_UNION),
                              (DTyAlgTyAlign(dtype) + 1) * 8);

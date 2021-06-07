@@ -5060,7 +5060,7 @@ Temporary flags
 Turn on C++ prototype implementation of the gnu visibility attribute 
 "hidden"
 .XB 0x02:
-Enable "alwaysinline" attribute for a function, using "alwaysinline" pragma
+Enable "alwaysinline" attribute for a function, using "forceinline" pragma
 
 .XF "192:"
 More Accelerator flags
@@ -5265,9 +5265,9 @@ Non-zero value enable -Mvect=fastfuse.  This flag is/must be passed only when
 to enable -Mvect=fastfuse.  default value is 10.
 
 .XF "200:"
-Extended LLVM options (after XF 191)
+Extended metadata flags
 .XB 0x01:
-Enable vectorization always
+Signify IVDEP pragma.
 
 .XF "201:"
 Enable/Disable Accelerator optimizations

@@ -31,6 +31,14 @@
 #include "semsym.h"
 #endif
 #include "direct.h"
+// AOCC BEGIN
+#include "debug.h"
+
+// string for using with -debug-only= command line argument
+#ifdef DEBUG
+static const char *DEBUG_ONLY = "pragma";
+#endif // DEBUG
+// AOCC END
 
 #if defined(TARGET_X8664) && (!defined(FE90) || defined(PGF90))
 #include "x86.h"
@@ -424,7 +432,7 @@ p_pragma(char *pg, int pline)
 #define SW_LIBM 70
 #define SW_SIMD 71
 // AOCC BEGIN
-#define SW_ALWAYSINLINE 73
+#define SW_FORCEINLINE 73
 // AOCC END
 
 struct c {
@@ -445,7 +453,7 @@ static struct c table[] = {
     {"align", SW_ALIGN, false, S_NONE, S_NONE},
     {"altcode", SW_ALTCODE, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
 // AOCC BEGIN
-    {"alwaysinline", SW_ALWAYSINLINE, true, S_ROUTINE, S_ROUTINE | S_GLOBAL},
+    {"forceinline", SW_FORCEINLINE, false, S_ROUTINE, S_ROUTINE | S_GLOBAL},
 // AOCC END
     {"assoc", SW_ASSOC, true, S_LOOP, S_LOOP | S_ROUTINE | S_GLOBAL},
     {"bounds", SW_BOUNDS, true, S_ROUTINE, S_ROUTINE | S_GLOBAL},
@@ -599,17 +607,19 @@ do_sw(void)
       bclr(DIR_OFFSET(currdir, vect), 0x04);
     break;
   case SW_IVDEP:
-    no_specified = true;
     // AOCC Begin
     // Do not pass DEPCHK flag to flang2 if user has disabled processing
     // loop vectorizing pragmas
-    if (flg.disable_loop_vectorize_pragmas) {
+    if (flg.disable_loop_vectorize_pragmas)
       break;
+    if (no_specified) {
+      bclr(DIR_OFFSET(currdir, x[200]), 0x01);
     } else {
-      bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+      bset(DIR_OFFSET(currdir, x[200]), 0x01);
+      DEBUG_LOG("Encountered ivdep directive\n");
     }
+    break;
     // AOCC End
-  /*  fall thru  */
   case SW_DEPCHK:
     if (no_specified)
       assn(DIR_OFFSET(currdir, depchk), 0);
@@ -685,18 +695,24 @@ do_sw(void)
     if (no_specified) {
       bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
       bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
+      DEBUG_LOG("Encountered novector directive\n");
     } else {
       typ = gtok();
       if (typ != T_IDENT) {
         bclr(DIR_OFFSET(currdir, x[183]), 0x4000000);
         bset(DIR_OFFSET(currdir, x[183]), 0x80000000);
+        DEBUG_LOG("Encountered vector directive\n");
         break;
       }
       if (strcmp(ctok, "always") == 0) {
-        bset(DIR_OFFSET(currdir, x[200]), 0x1);
+        no_specified = true;
+        bset(DIR_OFFSET(currdir, x[69]), 0x200000);
+        assn(DIR_OFFSET(currdir, depchk), 0);
+        DEBUG_LOG("Encountered vector always directive\n");
       } else if (strcmp(ctok, "never") == 0) {
         bset(DIR_OFFSET(currdir, x[183]), 0x4000000);
         bclr(DIR_OFFSET(currdir, x[183]), 0x80000000);
+        DEBUG_LOG("Encountered vector never directive\n");
       } else {
         backup_nowarn = gbl.nowarn;
         gbl.nowarn = false;
@@ -705,11 +721,10 @@ do_sw(void)
       }
     }
     break;
-  case SW_ALWAYSINLINE:
-    if (no_specified)
-      bclr(DIR_OFFSET(currdir, x[191]), 0x2);
-    else
-      bset(DIR_OFFSET(currdir, x[191]), 0x2);
+  case SW_FORCEINLINE:
+    bclr(DIR_OFFSET(currdir, x[14]), 0x8);
+    bset(DIR_OFFSET(currdir, x[191]), 0x2);
+    DEBUG_LOG("Encountered forceinline directive\n");
     break;
 // AOCC END
   case SW_VINTR:
@@ -1230,9 +1245,15 @@ do_sw(void)
       if (no_specified) { // !dir$ nounroll
         bset(DIR_OFFSET(currdir, x[11]), 0x400);
         bclr(DIR_OFFSET(currdir, x[11]), 0x3);
+        // AOCC BEGIN
+        DEBUG_LOG("Encountered nounroll directive\n");
+        // AOCC END
       } else { // !dir$ unroll
         bset(DIR_OFFSET(currdir, x[11]), 0x1);
         bclr(DIR_OFFSET(currdir, x[11]), 0x402);
+        // AOCC BEGIN
+        DEBUG_LOG("Encountered unroll directive\n");
+        // AOCC END
       }
     } else if (typ == T_EQUAL || typ == T_LP) {
       // !dir$ unroll = n or !dir$ unroll(n)
@@ -1341,7 +1362,11 @@ do_sw(void)
      * mark routine or all routines as not-to-be-extracted, and therefore
      * not to be inlined
      */
+    bclr(DIR_OFFSET(currdir, x[191]), 0x2);
     bset(DIR_OFFSET(currdir, x[14]), 8);
+    // AOCC BEGIN
+    DEBUG_LOG("Encountered noinline pragma\n");
+    // AOCC END
     break;
   case SW_ZEROTRIP:
     if (no_specified)

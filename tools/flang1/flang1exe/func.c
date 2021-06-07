@@ -4044,7 +4044,7 @@ rewrite_sub_ast(int ast, int lc)
       return ast;
     args = rewrite_sub_args(ast, lc);
 
-   
+
     /* try again to inline it */
     if (A_OPTYPEG(ast) == I_MINLOC)
       ast = inline_reduction_f90(ast, arg_gbl.lhs, lc, NULL);
@@ -6107,6 +6107,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_IANY:         // AOCC
   case I_IPARITY:      // AOCC
   case I_PARITY:       // AOCC
+  case I_NINT:         // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
   case I_MAXVAL:
@@ -6207,6 +6208,15 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     }
     srcarray = mk_binop(operator, src1, src2, dtype);
     break;
+  // AOCC begin
+  case I_NINT:
+    dest = arg_gbl.lhs;
+    argt = ARGT_ARG(args, 0);
+    // Not inlining the intrinsic if it is passed as func argument
+    if (dest == 0)
+      return ast;
+    break;
+  // AOCC end
   case I_PARITY:     // AOCC
   case I_ALL:
   case I_ANY:
@@ -6231,8 +6241,71 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
         return ast;
     break;
   }
-  // AOCC end
+    /* Inlining nint intrinsic
+    // if (d > 0)
+         return (int)(d + 0.5f);
+       else
+         return (int)(d - 0.5f);
+    */
+  if (A_OPTYPEG(ast) == I_NINT) {
+    int tmp;
+    stdnext = arg_gbl.std;
+    tmp = mk_cval(0, DT_INT);
+    tmp = mk_binop(OP_GT, argt, tmp, astb.bnd.dtype);
 
+    operand = mk_binop(OP_ADD, argt, mk_cnst(stb.flthalf), A_DTYPEG(argt));
+    asn = mk_assn_stmt(dest, operand, DT_INT);
+
+    ifast = mk_stmt(A_IFTHEN, 0);
+    A_IFEXPRP(ifast, tmp);
+    std = add_stmt_before(ifast, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    std = add_stmt_before(asn, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    tmp = mk_stmt(A_ELSE, 0);
+    std = add_stmt_before(tmp, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    operand = mk_binop(OP_SUB, argt, mk_cnst(stb.flthalf), A_DTYPEG(argt));
+    asn = mk_assn_stmt(dest, operand, DT_INT);
+    std = add_stmt_before(asn, stdnext);
+
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    endif = mk_stmt(A_ENDIF, 0);
+    std = add_stmt_before(endif, stdnext);
+    STD_LINENO(std) = lineno;
+    STD_LOCAL(std) = 1;
+    STD_PAR(std) = STD_PAR(stdnext);
+    STD_TASK(std) = STD_TASK(stdnext);
+    STD_ACCEL(std) = STD_ACCEL(stdnext);
+    STD_KERNEL(std) = STD_KERNEL(stdnext);
+
+    return dest;
+  }
+ // AOCC end
   if (astdim) {
     if (A_TYPEG(astdim) != A_CNST) {
       return ast;
@@ -6944,6 +7017,7 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     STD_ACCEL(std) = STD_ACCEL(stdnext);
     STD_KERNEL(std) = STD_KERNEL(stdnext);
     break;
+
   case I_IALL:
   case I_IANY:
     if (A_OPTYPEG(ast) == I_IALL)
@@ -7088,7 +7162,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
       }
     }
   }
-
   if (ALLOCG(sptrtmp)) {
     newast = mk_stmt(A_ALLOC, 0);
     A_TKNP(newast, TK_DEALLOCATE);
@@ -7768,8 +7841,7 @@ mmul_arg(int arr, int transpose, MMUL *mm)
   }
   /* ldim must be before any tranpose */
   if (STYPEG(sptr) == ST_MEMBER) {
-    ldim = ADD_EXTNTAST(DTYPEG(sptr), 0);
-    ldim = check_member(mm->addr, ldim);
+    return FALSE;
   }
 #ifdef NOEXTENTG
   else if (HCCSYMG(sptr) && SCG(sptr) == SC_LOCAL && ALLOCG(sptr) &&
@@ -7790,9 +7862,8 @@ mmul_arg(int arr, int transpose, MMUL *mm)
     ldim = mk_extent_expr(AD_LWBD(tad, 0), AD_UPBD(tad, 0));
   }
 #endif
-  else {
-    ldim = ADD_EXTNTAST(DTYPEG(sptr), 0);
-  }
+  else
+    return FALSE;
   if (transpose) {
     /*  extents are post-tranposed */
     m = mm->extent[0];

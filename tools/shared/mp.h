@@ -13,6 +13,8 @@
  * Changes to support AMDGPU OpenMP offloading.
  * Date of modification 04th February 2020
  *
+ * Added support for openmp schedule clause
+ * Last modified: March 2021
  */
 
 /* mp.h  -  various OpenMP definitions */
@@ -49,6 +51,10 @@
 #define MP_SCH_AUTO 0x5
 #define MP_SCH_DIST_STATIC 0x6  /* use in distribute parallel for */
 #define MP_SCH_DIST_DYNAMIC 0x7 /* use in distribute parallel for */
+#define MP_MOD_NONMONOTONIC (1 << 29) // AOCC
+#define MP_MOD_MONOTONIC (1 << 30) // AOCC
+#define MP_MOD_SIMD (1 << 31) // AOCC
+
 
 /* The second byte represents special case flags for static (maskable) */
 #define MP_SCH_SPC_MASK 0x0000FF00

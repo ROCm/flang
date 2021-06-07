@@ -655,7 +655,7 @@ FtnRteRtn ftnRtlRtns[] = {
     {"secndsd", "", true, ""},
     {"shape", "", true, "k"},
     {"size", "", true, "k"},
-    {"spread", "", false, ""},
+    {"spread", "", true, ""},
     {"spread_descriptor", "", true, ""},
     {"spreadca", "", false, ""},
     {"spreadcs", "", false, ""},

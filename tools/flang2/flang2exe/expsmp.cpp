@@ -1475,7 +1475,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     break;
   case IM_ETEAMS:
 #ifdef OMP_OFFLOAD_LLVM
-      if (flg.omptarget) {
+      if (flg.omptarget && gbl.ompaccel_intarget) {
         exp_ompaccel_eteams(ilmp, curilm, outlinedCnt, decrOutlinedCnt);
         break;
       }

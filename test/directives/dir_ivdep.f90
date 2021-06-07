@@ -1,14 +1,8 @@
 !! check for pragma support for IVDEP (!dir$ ivdep)
-!RUN: %flang -S -Menable-vectorize-pragmas=true -O2 -emit-llvm %s -o - | FileCheck %s
+!RUN: %flang -S -Menable-vectorize-pragmas=true -emit-llvm %s -o - | FileCheck %s
 !CHECK: define void @sumivdep_{{.*$}}
-!CHECK: {{.*}}!llvm.access.group{{.*}}
-!CHECK: vector.ph:{{.*}}
-!CHECK: {{.*}}shufflevector{{.*}}
-!CHECK: vector.body:{{.*}}
-!CHECK: {{.*}}add <2 x i64>{{.*}}
 !CHECK: {{.*}}"llvm.loop.vectorize.enable", i1 true{{.*}}
-!CHECK: {{.*}}"llvm.loop.parallel_accesses"{{.*}}
-!CHECK: {{.*}}"llvm.loop.isvectorized", i32 1{{.*}}
+!CHECK: {{.*}}"llvm.loop.vectorize.ivdep.enable", i1 true{{.*}}
 
 SUBROUTINE sumivdep(myarr1,myarr2,ub)
   INTEGER, POINTER :: myarr1(:)

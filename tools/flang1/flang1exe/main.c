@@ -57,6 +57,11 @@
 #include "commopt.h"
 #include "scan.h"
 #include "hlvect.h"
+// AOCC BEGIN
+#ifdef DEBUG
+#include "debug.h"
+#endif // DEBUG
+// AOCC END
 
 #define IPA_ENABLED                  0
 #define IPA_NO_ASM                   0
@@ -878,13 +883,24 @@ init(int argc, char *argv[])
   register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
                        (bool *)&(flg.disable_loop_vectorize_pragmas), false);
+
+  // Debug Logs
+#ifdef DEBUG
+  register_boolean_arg(arg_parser, "debug-log", (bool *)&(flg.debug_log), 0);
+  register_string_arg(arg_parser, "debug-only", &(flg.debug_only_strs), NULL);
+#endif // DEBUG
   // AOCC end
   register_boolean_arg(arg_parser, "es", (bool *)&(flg.es), false);
   register_boolean_arg(arg_parser, "pp", (bool *)&(flg.p), false);
 
   /* Set values form command line arguments */
   parse_arguments(arg_parser, argc, argv);
-  flg.source_file = sourcefile;//AOCC
+  // AOCC BEGIN
+  flg.source_file = sourcefile;
+#ifdef DEBUG
+  DEBUG_LOG_INIT(flg.debug_log, flg.debug_only_strs);
+#endif // DEBUG
+  // AOCC END
 
   /* Direct debug output */
   if (was_value_set(arg_parser, &(flg.dbg)) ||
@@ -1479,6 +1495,11 @@ finish(void)
   ipasave_fini();
   DUMP("fini");
   symtab_fini();
+  // AOCC BEGIN
+#ifdef DEBUG
+  DEBUG_LOG_DEINIT();
+#endif // DEBUG
+  // AOCC END
   fih_fini();
   ast_fini();
   direct_fini();

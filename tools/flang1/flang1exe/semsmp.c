@@ -14,6 +14,10 @@
  *
  * Support for x86-64 OpenMP offloading
  * Last modified: Mar 2020
+ *
+ * Added support for openmp schedule clause
+ * Last modified : March 2021
+ *
  */
 
 /** \file
@@ -48,6 +52,7 @@ static void accel_sched_errchk();
 static void accel_nosched_errchk();
 static void accel_pragmagen(int, int, int);
 
+static int modifier(char *); //AOCC
 static int sched_type(char *);
 static void set_iftype(int, char *, char *, char *);
 static void validate_if(int, char *);
@@ -271,7 +276,8 @@ int tgt_distribute_ast = 0; /* AOCC */
 #define CL_ACCDETACH 108
 #define CL_ACCCOMPARE 109
 #define CL_PGICOMPARE 110
-#define CL_MAXV 111 /* This must be the last clause */
+#define CL_MP_MODIFIER 111
+#define CL_MAXV 112 /* This must be the last clause */
 /*
  * define bit flag for each statement which may have clauses.  Used for
  * checking for illegal clauses.
@@ -317,219 +323,221 @@ int tgt_distribute_ast = 0; /* AOCC */
 static struct cl_tag { /* clause table */
   int present;
   BIGINT64 val;
+  BIGINT64 mod; // added a mod field to store the modifier argument
   void *first;
   void *last;
   char *name;
   BIGINT64 stmt; /* stmts which may use the clause */
 } cl[CL_MAXV] = {
-    {0, 0, NULL, NULL, "DEFAULT",
+    {0, 0, 0, NULL, NULL, "DEFAULT",
      BT_PAR | BT_PARDO | BT_PARSECTS | BT_PARWORKS | BT_TASK | BT_TEAMS |
          BT_TASKLOOP},
-    {0, 0, NULL, NULL, "PRIVATE",
+    {0, 0, 0, NULL, NULL, "PRIVATE",
      BT_PAR | BT_PDO | BT_PARDO | BT_DOACROSS | BT_SECTS | BT_PARSECTS |
          BT_SINGLE | BT_PARWORKS | BT_TASK | BT_ACCPARALLEL | BT_ACCKDO |
          BT_ACCPDO | BT_ACCKLOOP | BT_ACCPLOOP | BT_SIMD | BT_TARGET |
          BT_TASKLOOP | BT_TEAMS | BT_DISTRIBUTE | BT_ACCSERIAL | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "SHARED",
+    {0, 0, 0, NULL, NULL, "SHARED",
      BT_PAR | BT_PARDO | BT_DOACROSS | BT_PARSECTS | BT_PARWORKS | BT_TASK |
          BT_TASKLOOP | BT_TEAMS},
-    {0, 0, NULL, NULL, "FIRSTPRIVATE",
+    {0, 0, 0, NULL, NULL, "FIRSTPRIVATE",
      BT_PAR | BT_PDO | BT_PARDO | BT_SECTS | BT_PARSECTS | BT_SINGLE |
          BT_PARWORKS | BT_TASK | BT_ACCPARALLEL | BT_TARGET | BT_TEAMS |
          BT_TASKLOOP | BT_DISTRIBUTE | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "LASTPRIVATE",
+    {0, 0, 0, NULL, NULL, "LASTPRIVATE",
      BT_PDO | BT_PARDO | BT_DOACROSS | BT_SECTS | BT_PARSECTS | BT_SIMD |
          BT_TASKLOOP | BT_DISTRIBUTE},
-    {0, 0, NULL, NULL, "SCHEDULE", BT_PDO | BT_PARDO},
-    {0, 0, NULL, NULL, "ORDERED", BT_PDO | BT_PARDO},
-    {0, 0, NULL, NULL, "REDUCTION",
+    {0, 0, 0, NULL, NULL, "SCHEDULE", BT_PDO | BT_PARDO},
+    {0, 0, 0, NULL, NULL, "ORDERED", BT_PDO | BT_PARDO},
+    {0, 0, 0, NULL, NULL, "REDUCTION",
      BT_PAR | BT_PDO | BT_PARDO | BT_DOACROSS | BT_SECTS | BT_PARSECTS |
          BT_PARWORKS | BT_ACCPARALLEL | BT_ACCKDO | BT_ACCPDO | BT_ACCKLOOP |
          BT_ACCPLOOP | BT_SIMD | BT_TEAMS | BT_ACCSERIAL | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "IF",
+    {0, 0, 0, NULL, NULL, "IF",
      BT_PAR | BT_PARDO | BT_PARSECTS | BT_PARWORKS | BT_TASK | BT_ACCREG |
          BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG | BT_ACCSCALARREG |
          BT_ACCUPDATE | BT_ACCENTERDATA | BT_ACCEXITDATA | BT_TARGET |
          BT_TASKLOOP | BT_ACCSERIAL | BT_ACCHOSTDATA},
-    {0, 0, NULL, NULL, "COPYIN",
+    {0, 0, 0, NULL, NULL, "COPYIN",
      BT_PAR | BT_PARDO | BT_PARSECTS | BT_PARWORKS | BT_ACCREG | BT_ACCKERNELS |
          BT_ACCPARALLEL | BT_ACCDATAREG | BT_ACCSCALARREG | BT_ACCDECL |
          BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "COPYPRIVATE", BT_SINGLE},
-    {0, 0, NULL, NULL, "MP_SCHEDTYPE", BT_DOACROSS},
-    {0, 0, NULL, NULL, "CHUNK", BT_DOACROSS},
-    {0, 0, NULL, NULL, "NOWAIT",
+    {0, 0, 0, NULL, NULL, "COPYPRIVATE", BT_SINGLE},
+    {0, 0, 0, NULL, NULL, "MP_SCHEDTYPE", BT_DOACROSS},
+    {0, 0, 0, NULL, NULL, "CHUNK", BT_DOACROSS},
+    {0, 0, 0, NULL, NULL, "NOWAIT",
      BT_SINGLE | BT_SECTS | BT_PDO | BT_ACCREG | BT_ACCKERNELS |
          BT_ACCPARALLEL | BT_ACCSCALARREG | BT_ACCENDREG | BT_CUFKERNEL |
          BT_TARGET},
-    {0, 0, NULL, NULL, "NUM_THREADS",
+    {0, 0, 0, NULL, NULL, "NUM_THREADS",
      BT_PAR | BT_PARDO | BT_PARSECTS | BT_PARWORKS},
-    {0, 0, NULL, NULL, "COLLAPSE",
+    {0, 0, 0, NULL, NULL, "COLLAPSE",
      BT_PDO | BT_PARDO | BT_ACCKDO | BT_ACCPDO | BT_ACCKLOOP | BT_ACCPLOOP |
          BT_SIMD | BT_TASKLOOP | BT_DISTRIBUTE | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "UNTIED", BT_TASK | BT_TASKLOOP},
-    {0, 0, NULL, NULL, "COPYOUT",
+    {0, 0, 0, NULL, NULL, "UNTIED", BT_TASK | BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "COPYOUT",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCEXITDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "LOCAL",
+    {0, 0, 0, NULL, NULL, "LOCAL",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "CACHE", BT_ACCKDO},
-    {0, 0, NULL, NULL, "SHORTLOOP",
+    {0, 0, 0, NULL, NULL, "CACHE", BT_ACCKDO},
+    {0, 0, 0, NULL, NULL, "SHORTLOOP",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "VECTOR",
+    {0, 0, 0, NULL, NULL, "VECTOR",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "PARALLEL",
+    {0, 0, 0, NULL, NULL, "PARALLEL",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP},
-    {0, 0, NULL, NULL, "SEQ",
+    {0, 0, 0, NULL, NULL, "SEQ",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "HOST", BT_ACCKDO | BT_ACCKLOOP},
-    {0, 0, NULL, NULL, "UNROLL",
+    {0, 0, 0, NULL, NULL, "HOST", BT_ACCKDO | BT_ACCKLOOP},
+    {0, 0, 0, NULL, NULL, "UNROLL",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "KERNEL", BT_ACCKDO | BT_ACCKLOOP},
-    {0, 0, NULL, NULL, "COPY",
+    {0, 0, 0, NULL, NULL, "KERNEL", BT_ACCKDO | BT_ACCKLOOP},
+    {0, 0, 0, NULL, NULL, "COPY",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "MIRROR", BT_ACCDATAREG | BT_ACCDECL},
-    {0, 0, NULL, NULL, "REFLECTED", BT_ACCDECL},
-    {0, 0, NULL, NULL, "UPDATE HOST",
+    {0, 0, 0, NULL, NULL, "MIRROR", BT_ACCDATAREG | BT_ACCDECL},
+    {0, 0, 0, NULL, NULL, "REFLECTED", BT_ACCDECL},
+    {0, 0, 0, NULL, NULL, "UPDATE HOST",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "UPDATE SELF",
+    {0, 0, 0, NULL, NULL, "UPDATE SELF",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "UPDATE DEVICE",
+    {0, 0, 0, NULL, NULL, "UPDATE DEVICE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "INDEPENDENT",
+    {0, 0, 0, NULL, NULL, "INDEPENDENT",
      BT_ACCKDO | BT_ACCPDO | BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "WAIT",
+    {0, 0, 0, NULL, NULL, "WAIT",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSCALARREG |
          BT_ACCENDREG | BT_CUFKERNEL | BT_ACCDATAREG | BT_ACCUPDATE |
          BT_ACCENTERDATA | BT_ACCEXITDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "TILE", BT_CUFKERNEL},
-    {0, 0, NULL, NULL, "KERNEL_GRID", BT_CUFKERNEL},
-    {0, 0, NULL, NULL, "KERNEL_BLOCK", BT_CUFKERNEL},
-    {0, 0, NULL, NULL, "UNROLL", /* for sequential loops */
+    {0, 0, 0, NULL, NULL, "TILE", BT_CUFKERNEL},
+    {0, 0, 0, NULL, NULL, "KERNEL_GRID", BT_CUFKERNEL},
+    {0, 0, 0, NULL, NULL, "KERNEL_BLOCK", BT_CUFKERNEL},
+    {0, 0, 0, NULL, NULL, "UNROLL", /* for sequential loops */
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "UNROLL", /* for parallel loops */
+    {0, 0, 0, NULL, NULL, "UNROLL", /* for parallel loops */
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP},
-    {0, 0, NULL, NULL, "UNROLL", /* for vector loops */
+    {0, 0, 0, NULL, NULL, "UNROLL", /* for vector loops */
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "CREATE",
+    {0, 0, 0, NULL, NULL, "CREATE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT",
+    {0, 0, 0, NULL, NULL, "PRESENT",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT_OR_COPY",
+    {0, 0, 0, NULL, NULL, "PRESENT_OR_COPY",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT_OR_COPYIN",
+    {0, 0, 0, NULL, NULL, "PRESENT_OR_COPYIN",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT_OR_COPYOUT",
+    {0, 0, 0, NULL, NULL, "PRESENT_OR_COPYOUT",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCEXITDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT_OR_CREATE",
+    {0, 0, 0, NULL, NULL, "PRESENT_OR_CREATE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "PRESENT_OR_NOT",
+    {0, 0, 0, NULL, NULL, "PRESENT_OR_NOT",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "ASYNC",
+    {0, 0, 0, NULL, NULL, "ASYNC",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCUPDATE | BT_ACCENTERDATA | BT_ACCEXITDATA |
          BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "STREAM", BT_CUFKERNEL},
-    {0, 0, NULL, NULL, "DEVICE", BT_CUFKERNEL},
-    {0, 0, NULL, NULL, "WORKER",
+    {0, 0, 0, NULL, NULL, "STREAM", BT_CUFKERNEL},
+    {0, 0, 0, NULL, NULL, "DEVICE", BT_CUFKERNEL},
+    {0, 0, 0, NULL, NULL, "WORKER",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "GANG",
+    {0, 0, 0, NULL, NULL, "GANG",
      BT_ACCKDO | BT_ACCKLOOP | BT_ACCPDO | BT_ACCPLOOP | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "NUM_WORKERS",
+    {0, 0, 0, NULL, NULL, "NUM_WORKERS",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "NUM_GANGS",
+    {0, 0, 0, NULL, NULL, "NUM_GANGS",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "VECTOR_LENGTH",
+    {0, 0, 0, NULL, NULL, "VECTOR_LENGTH",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "USE_DEVICE", BT_ACCHOSTDATA},
-    {0, 0, NULL, NULL, "DEVICEPTR",
+    {0, 0, 0, NULL, NULL, "USE_DEVICE", BT_ACCHOSTDATA},
+    {0, 0, 0, NULL, NULL, "DEVICEPTR",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG | BT_ACCSERIAL | BT_ACCDECL},
-    {0, 0, NULL, NULL, "DEVICE_RESIDENT", BT_ACCDECL},
-    {0, 0, NULL, NULL, "FINAL", BT_TASK | BT_TASKLOOP},
-    {0, 0, NULL, NULL, "MERGEABLE", BT_TASK | BT_TASKLOOP},
-    {0, 0, NULL, NULL, "DEVICEID",
+    {0, 0, 0, NULL, NULL, "DEVICE_RESIDENT", BT_ACCDECL},
+    {0, 0, 0, NULL, NULL, "FINAL", BT_TASK | BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "MERGEABLE", BT_TASK | BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "DEVICEID",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCUPDATE | BT_ACCHOSTDATA | BT_ACCENTERDATA |
          BT_ACCEXITDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "DELETE", BT_ACCEXITDATA},
-    {0, 0, NULL, NULL, "PDELETE", BT_ACCEXITDATA},
-    {0, 0, NULL, NULL, "LINK", BT_ACCDECL},
-    {0, 0, NULL, NULL, "DEVICE_TYPE",
+    {0, 0, 0, NULL, NULL, "DELETE", BT_ACCEXITDATA},
+    {0, 0, 0, NULL, NULL, "PDELETE", BT_ACCEXITDATA},
+    {0, 0, 0, NULL, NULL, "LINK", BT_ACCDECL},
+    {0, 0, 0, NULL, NULL, "DEVICE_TYPE",
      BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCKDO | BT_ACCPDO | BT_ACCKERNELS |
          BT_ACCPARALLEL | BT_ACCINITSHUTDOWN | BT_ACCSET | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "AUTO",
+    {0, 0, 0, NULL, NULL, "AUTO",
      BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCKDO | BT_ACCPDO | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "TILE",
+    {0, 0, 0, NULL, NULL, "TILE",
      BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCKDO | BT_ACCPDO | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "GANG(STATIC:)",
+    {0, 0, 0, NULL, NULL, "GANG(STATIC:)",
      BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCKDO | BT_ACCPDO | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "DEFAULT(NONE)",
+    {0, 0, 0, NULL, NULL, "DEFAULT(NONE)",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCREG | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "NUM_GANGS(dim:2)",
+    {0, 0, 0, NULL, NULL, "NUM_GANGS(dim:2)",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "NUM_GANGS(dim:3)",
+    {0, 0, 0, NULL, NULL, "NUM_GANGS(dim:3)",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "GANG(DIM:)", BT_ACCPLOOP | BT_ACCPDO | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "DEFAULT(PRESENT)",
+    {0, 0, 0, NULL, NULL, "GANG(DIM:)", BT_ACCPLOOP | BT_ACCPDO | BT_ACCSLOOP},
+    {0, 0, 0, NULL, NULL, "DEFAULT(PRESENT)",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCREG | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "COLLAPSE(FORCE)",
+    {0, 0, 0, NULL, NULL, "COLLAPSE(FORCE)",
      BT_ACCKLOOP | BT_ACCPLOOP | BT_ACCKDO | BT_ACCPDO | BT_ACCSLOOP},
-    {0, 0, NULL, NULL, "FINALIZE", BT_ACCEXITDATA},
-    {0, 0, NULL, NULL, "IF_PRESENT", BT_ACCUPDATE | BT_ACCHOSTDATA},
-    {0, 0, NULL, NULL, "SAFELEN", BT_SIMD | BT_PDO | BT_PARDO},
-    {0, 0, NULL, NULL, "SIMDLEN", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
-    {0, 0, NULL, NULL, "LINEAR", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
-    {0, 0, NULL, NULL, "ALIGNED", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
-    {0, 0, NULL, NULL, "USE_DEVICE_PTR", BT_TARGET},
-    {0, 0, NULL, NULL, "DEPEND", BT_TASK | BT_TARGET},
-    {0, 0, NULL, NULL, "INBRANCH", BT_DECLSIMD},
-    {0, 0, NULL, NULL, "NOTINBRANCH", BT_DECLSIMD},
-    {0, 0, NULL, NULL, "UNIFORM", BT_DECLSIMD},
-    {0, 0, NULL, NULL, "GRAINSIZE", BT_TASKLOOP},
-    {0, 0, NULL, NULL, "NUM_TASKS", BT_TASKLOOP},
-    {0, 0, NULL, NULL, "NOGROUP", BT_TASKLOOP},
-    {0, 0, NULL, NULL, "OMPDEVICE", BT_TARGET},
-    {0, 0, NULL, NULL, "MAP", BT_TARGET},
-    {0, 0, NULL, NULL, "DEFAULTMAP", BT_TARGET},
-    {0, 0, NULL, NULL, "TO", BT_TARGET},
-    {0, 0, NULL, NULL, "LINK", BT_TARGET},
-    {0, 0, NULL, NULL, "FROM", BT_TARGET},
-    {0, 0, NULL, NULL, "NUM_TEAMS", BT_TEAMS},
-    {0, 0, NULL, NULL, "THREAD_LIMIT", BT_TEAMS},
-    {0, 0, NULL, NULL, "DIST_SCHEDULE", BT_DISTRIBUTE},
-    {0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP | BT_TASK},  //AOCC
-    {0, 0, NULL, NULL, "IS_DEVICE_PTR", BT_TARGET},
-    {0, 0, NULL, NULL, "SIMD", BT_PDO | BT_PARDO | BT_SIMD},
-    {0, 0, NULL, NULL, "THREADS", BT_TARGET},
-    {0, 0, NULL, NULL, "DEVICE_NUM", BT_ACCINITSHUTDOWN | BT_ACCSET},
-    {0, 0, NULL, NULL, "DEFAULT_ASYNC", BT_ACCSET},
-    {0, 0, NULL, NULL, "DECLARE", BT_ACCDECL},
-    {0, 0, NULL, NULL, "PROC_BIND", BT_PAR | BT_PARDO},
-    {0, 0, NULL, NULL, "NO_CREATE",
+    {0, 0, 0, NULL, NULL, "FINALIZE", BT_ACCEXITDATA},
+    {0, 0, 0, NULL, NULL, "IF_PRESENT", BT_ACCUPDATE | BT_ACCHOSTDATA},
+    {0, 0, 0, NULL, NULL, "SAFELEN", BT_SIMD | BT_PDO | BT_PARDO},
+    {0, 0, 0, NULL, NULL, "SIMDLEN", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "LINEAR", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "ALIGNED", BT_SIMD | BT_PDO | BT_PARDO | BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "USE_DEVICE_PTR", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "DEPEND", BT_TASK | BT_TARGET},
+    {0, 0, 0, NULL, NULL, "INBRANCH", BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "NOTINBRANCH", BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "UNIFORM", BT_DECLSIMD},
+    {0, 0, 0, NULL, NULL, "GRAINSIZE", BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "NUM_TASKS", BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "NOGROUP", BT_TASKLOOP},
+    {0, 0, 0, NULL, NULL, "OMPDEVICE", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "MAP", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "DEFAULTMAP", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "TO", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "LINK", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "FROM", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "NUM_TEAMS", BT_TEAMS},
+    {0, 0, 0, NULL, NULL, "THREAD_LIMIT", BT_TEAMS},
+    {0, 0, 0, NULL, NULL, "DIST_SCHEDULE", BT_DISTRIBUTE},
+    {0, 0, 0, NULL, NULL, "PRIORITY", BT_TASKLOOP | BT_TASK},  //AOCC
+    {0, 0, 0, NULL, NULL, "IS_DEVICE_PTR", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "SIMD", BT_PDO | BT_PARDO | BT_SIMD},
+    {0, 0, 0, NULL, NULL, "THREADS", BT_TARGET},
+    {0, 0, 0, NULL, NULL, "DEVICE_NUM", BT_ACCINITSHUTDOWN | BT_ACCSET},
+    {0, 0, 0, NULL, NULL, "DEFAULT_ASYNC", BT_ACCSET},
+    {0, 0, 0, NULL, NULL, "DECLARE", BT_ACCDECL},
+    {0, 0, 0, NULL, NULL, "PROC_BIND", BT_PAR | BT_PARDO},
+    {0, 0, 0, NULL, NULL, "NO_CREATE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCDECL | BT_ACCENTERDATA | BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "ATTACH",
+    {0, 0, 0, NULL, NULL, "ATTACH",
      BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG | BT_ACCENTERDATA |
          BT_ACCSERIAL},
-    {0, 0, NULL, NULL, "DETACH", BT_ACCEXITDATA},
-    {0, 0, NULL, NULL, "COMPARE",
+    {0, 0, 0, NULL, NULL, "DETACH", BT_ACCEXITDATA},
+    {0, 0, 0, NULL, NULL, "COMPARE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
 };
 
 #define CL_PRESENT(d) cl[d].present
+#define CL_MOD(d) cl[d].mod //AOCC
 #define CL_VAL(d) cl[d].val
 #define CL_NAME(d) cl[d].name
 #define CL_STMT(d) cl[d].stmt
@@ -2959,27 +2967,54 @@ semsmp(int rednum, SST *top)
 
   /* ------------------------------------------------------------------ */
   /*
-   *	<schedule> ::= SCHEDULE <sched type> |
+   *	<schedule> ::= SCHEDULE ( <sched type> ) |
    */
   case SCHEDULE1:
     add_clause(CL_SCHEDULE, TRUE);
     CL_VAL(CL_SCHEDULE) = SST_IDG(RHS(2));
     break;
   /*
-   *	<schedule> ::= MP_SCHEDTYPE = <id name> |
+   * storing the modifier passes in clause table
+   *
+   *    <schedule> ::= SCHEDULE ( <modifier> ) |
    */
+  // AOCC begin
   case SCHEDULE2:
+    add_clause(CL_SCHEDULE, TRUE);
+    CL_MOD(CL_SCHEDULE) = SST_IDG(RHS(2));
+    CL_MOD(CL_SCHEDULE) = modifier(scn.id.name); 
+    break;
+  // AOCC end
+  /*
+   *    <schedule> ::= MP_SCHEDTYPE = <id name> |
+   */
+  case SCHEDULE3:
     add_clause(CL_MP_SCHEDTYPE, TRUE);
     CL_VAL(CL_SCHEDULE) = sched_type(scn.id.name + SST_CVALG(RHS(3)));
     break;
   /*
    *	<schedule> ::= CHUNK = <expression>
    */
-  case SCHEDULE3:
+  case SCHEDULE4:
     add_clause(CL_CHUNK, TRUE);
     chk_scalartyp(RHS(3), DT_INT, FALSE);
     chunk = SST_ASTG(RHS(3));
     break;
+
+/* ------------------------------------------------------------------ */
+  /*
+   *    <modifier> ::= |
+   */
+  case MODIFIER1:
+    SST_IDP(LHS, DI_MOD_NONMONOTONIC);
+    break;
+  /*
+   *    <modifier> ::= <id name>
+   */
+  case MODIFIER2:
+    SST_IDP(LHS, modifier(scn.id.name));
+    break;
+
 
   /* ------------------------------------------------------------------ */
   /*
@@ -2989,11 +3024,19 @@ semsmp(int rednum, SST *top)
     SST_IDP(LHS, DI_SCH_STATIC);
     break;
   /*
-   *	<sched type> ::= ( <id name> <opt chunk> )
+   *	<sched type> ::= ( <id name> <opt chunk> ) 
    */
   case SCHED_TYPE2:
     SST_IDP(LHS, sched_type(scn.id.name + SST_CVALG(RHS(2))));
     break;
+ /*
+   *    <sched_mod type> ::= : <id name> <opt chunk> )
+   */
+  // AOCC begin
+  case SCHED_MOD_TYPE1:
+    SST_IDP(LHS, sched_type(scn.id.name + SST_CVALG(RHS(2))));
+    break;
+  // AOCC end
 
   /* ------------------------------------------------------------------ */
   /*
@@ -6246,6 +6289,24 @@ accel_pragmagen(int pragma, int pragma1, int pragma2)
 {
 }
 
+// AOCC begin
+static int
+modifier(char *nm)
+{
+  if (sem_strcmp(nm, "nonmonotonic") == 0)
+    return DI_MOD_NONMONOTONIC;
+ 
+  if (sem_strcmp(nm, "monotonic") == 0)
+    return DI_MOD_MONOTONIC;
+
+  if (sem_strcmp(nm, "simd") == 0)
+    return DI_MOD_SIMD;
+
+  error(34, 3, gbl.lineno, nm, CNULL);
+  return DI_MOD_NONMONOTONIC;
+}
+//AOCC end
+
 static int
 sched_type(char *nm)
 {
@@ -6608,6 +6669,7 @@ do_schedule(int doif)
   DI_DISTCHUNK(doif) = 0;
   if (CL_PRESENT(CL_SCHEDULE) || CL_PRESENT(CL_MP_SCHEDTYPE)) {
     DI_SCHED_TYPE(doif) = CL_VAL(CL_SCHEDULE);
+    DI_SCHED_MODIFIER(doif) = CL_MOD(CL_SCHEDULE);
     if (chunk) {
       if (DI_SCHED_TYPE(doif) == DI_SCH_RUNTIME ||
           DI_SCHED_TYPE(doif) == DI_SCH_AUTO) {
@@ -10593,7 +10655,7 @@ gen_reduction_ompaccel(REDUC *reducp, REDUC_SYM *reduc_symp, LOGICAL rmme,
       ast_reditem = mk_stmt(A_MP_REDUCTIONITEM, 0);
       A_SHSYMP(ast_reditem, current_redsym->shared);
       A_PRVSYMP(ast_reditem, current_redsym->Private);
-      if (current_red->opr == 0)
+      if (current_red->opr == 0 || current_red-> opr == OP_LOG)
         A_REDOPRP(ast_reditem, current_red->intrin);
       else
         A_REDOPRP(ast_reditem, current_red->opr);

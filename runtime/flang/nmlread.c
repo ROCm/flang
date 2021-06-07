@@ -2167,8 +2167,17 @@ static int
 read_record(void)
 {
   if (internal_file) {
-    if (n_irecs == 0)
+    if (n_irecs == 0) {
+      // AOCC Begin
+      // In case of allocatable arrays, single record will
+      // hold the full details. If the buffer is not empty,
+      // continue processing the buffer.
+      if (currc && *currc && byte_cnt) {
+        return 0;
+      }
+      // AOCC End
       return FIO_EEOF;
+    }
     if (accessed)
       in_recp += rec_len;
     n_irecs--;

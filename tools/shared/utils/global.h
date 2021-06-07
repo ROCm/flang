@@ -236,6 +236,10 @@ typedef struct {
   bool amdgcn_target; /*chech if we are offloading to amd gcn */
   bool x86_64_omptarget; /*chech if we are offloading to x86-64 */
   bool disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
+#ifdef DEBUG
+  LOGICAL debug_log; /* TRUE enables all debug log statements */
+  char *debug_only_strs; /* enables only debug log categories in this string */
+#endif // DEBUG
   // AOCC End
 } FLG;
 

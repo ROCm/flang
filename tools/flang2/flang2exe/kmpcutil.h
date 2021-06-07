@@ -14,6 +14,10 @@
  *
  * Support for x86-64 OpenMP offloading
  *  Last modified: Apr 2020
+ *
+ * Added support for SIMD modifier of schedule clause
+ *  Last modified: March 2021
+ *
  */
 
 #ifndef KMPC_RUNTIME_H_
@@ -73,6 +77,8 @@ typedef enum _kmpc_sched_e {
   KMP_NM_ORD_STATIC = 194,
   KMP_NM_ORD_AUTO = 198,
   KMP_NM_UPPER = 200,
+  KMP_SCH_GUIDED_SIMD = 46,
+  KMP_SCH_RUNTIME_SIMD = 47,  
   KMP_SCH_DEFAULT = KMP_SCH_STATIC
 } kmpc_sched_e;
 

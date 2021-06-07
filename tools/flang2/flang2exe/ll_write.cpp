@@ -1524,8 +1524,9 @@ static const MDTemplate Tmpl_DISubrange_pre11[] = {
 };
 
 static const MDTemplate Tmpl_DISubrange[] = {
-  { "DISubrange", TF, 4 },
+  { "DISubrange", TF, 5 },
   { "tag",                      DWTagField, FlgHidden },
+  { "count",                    SignedOrMDField },
   { "lowerBound",               SignedOrMDField },
   { "upperBound",               SignedOrMDField },
   { "stride",                   SignedOrMDField }
@@ -2315,6 +2316,8 @@ ll_dw_op_to_name(LL_DW_OP_t op)
     return "DW_OP_stack_value";
   case LL_DW_OP_constu:
     return "DW_OP_constu";
+  case LL_DW_OP_consts:
+    return "DW_OP_consts";
   case LL_DW_OP_plus_uconst:
     return "DW_OP_plus_uconst";
   case LL_DW_OP_push_object_address:
@@ -2339,7 +2342,9 @@ decode_expression_op(LLVMModuleRef mod, LL_MDRef md, char *buff)
   bool isLiteralOp;
 
   if (LL_MDREF_kind(md) == MDRef_Constant) {
-    strcpy(buff, mod->constants[LL_MDREF_value(md)]->data);
+  // Emit the constant as an unsigned value.
+  char *ptr;
+  sprintf(buff, "%lu", strtoul( mod->constants[LL_MDREF_value(md)]->data, &ptr, 10));
     return buff;
   }
   DEBUG_ASSERT(LL_MDREF_kind(md) == MDRef_SmallInt32, "not int");

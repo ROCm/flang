@@ -1,9 +1,9 @@
 !RUN: %flang -g -S -emit-llvm %s -o - | FileCheck %s
 
-!CHECK: distinct !DIGlobalVariable(name: "cvar1", linkageName: "cname_", scope: [[CBLOCK:![0-9]+]]
+!CHECK: distinct !DIGlobalVariable(name: "cvar1", scope: [[CBLOCK:![0-9]+]]
 !CHECK: [[CBLOCK]] = distinct !DICommonBlock(scope: !3, declaration: null, name: "cname")
 !CHECK-NOT: distinct !DIGlobalVariable(name: "cname"
-!CHECK: distinct !DIGlobalVariable(name: "cvar2", linkageName: "cname_", scope: [[CBLOCK]]
+!CHECK: distinct !DIGlobalVariable(name: "cvar2", scope: [[CBLOCK]]
 
 program main
   integer :: cvar1, cvar2

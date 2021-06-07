@@ -9,6 +9,9 @@
  * Notified per clause 4(b) of the license.
  *
  * Last Modified: May 2020
+ *
+ * Added support for openmp schedule clause
+ * Date of modification: Jan 2021
  */
 
 /**
@@ -31,6 +34,8 @@
 #define A_TKNP(s,v) A_hw21P(s,v)
 #define A_NTRIPLEG(s)   A_hw21G(s)
 #define A_NTRIPLEP(s,v) A_hw21P(s,v)
+#define A_SCHED_MODIFIERG(s)   A_hw23G(s) // AOCC
+#define A_SCHED_MODIFIERP(s,v) A_hw23P(s,v) // AOCC 
 #define A_SCHED_TYPEG(s)   A_hw21G(s)
 #define A_SCHED_TYPEP(s,v) A_hw21P(s,v)
 #define A_CANCELKINDG(s)   A_hw21G(s)
@@ -258,6 +263,7 @@ typedef struct {
 /*  AST typedef declarations:  */
 
 typedef struct {
+    uint16_t hw23; // added to store modifier argument so that it can be accessed in flang2
     int16_t type;
     uint8_t f1:1, f2:1, f3:1, f4:1, f5:1, f6:1, f7:1, f8:1;
     uint8_t hw1:8;
