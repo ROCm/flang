@@ -336,7 +336,7 @@ static struct {
      ~(ET_B(ET_ACCESS) | ET_B(ET_DIMENSION) | ET_B(ET_EXTERNAL) |
        ET_B(ET_INTENT) | ET_B(ET_POINTER) | ET_B(ET_TARGET) | ET_B(ET_STATIC) |
        ET_B(ET_VOLATILE) | ET_B(ET_ASYNCHRONOUS) | ET_B(ET_PROTECTED) |
-       ET_B(ET_CONTIGUOUS))},
+       ET_B(ET_SAVE) | ET_B(ET_CONTIGUOUS))},
     {"value",
      ~(ET_B(ET_ACCESS) | ET_B(ET_DIMENSION) | ET_B(ET_EXTERNAL) |
        ET_B(ET_INTENT) | ET_B(ET_PARAMETER) | ET_B(ET_POINTER) | ET_B(ET_SAVE) |
@@ -11453,8 +11453,35 @@ procedure_stmt:
   case PROC_DCL3:
     sptr = SST_SYMG(RHS(3));
     sem.proc_initializer = true;
-    goto proc_dcl_init;
+    // AOCC begin
+    if (INMODULEG(SST_SYMG(RHS(3)))) {
+        sptr = SST_SYMG(RHS(1));
+        sem.proc_initializer = true;
 
+        sptr = decl_procedure_sym(sptr, proc_interf_sptr, entity_attr.exist);
+        sptr = setup_procedure_sym(sptr, proc_interf_sptr, entity_attr.exist,
+                                   entity_attr.access);
+        if (!TYPDG(sptr)) {
+           TYPDP(sptr, 1);
+           if (SCG(sptr) == SC_DUMMY) {
+             IS_PROC_DUMMYP(sptr, 1);
+           }
+        }
+        sem.dinit_data = FALSE;
+        inited = TRUE;
+        SST_IDP(RHS(3), S_IDENT);
+        get_static_descriptor(sptr);
+        get_all_descriptors(sptr);
+        if (POINTERG(sptr) && (!IN_MODULE_SPEC)) {
+            ast = assign_pointer(RHS(1), RHS(3));
+            add_stmt(ast);
+            SST_ASTP(RHS(1), ast);
+            goto entity_decl_end;
+        }
+        break;
+    }
+    // AOCC end
+    goto proc_dcl_init;
 
   /* ------------------------------------------------------------------ */
   /*
@@ -11555,7 +11582,6 @@ proc_dcl_init:
       sptr =
           setup_procedure_sym(sptr, proc_interf_sptr, attr, entity_attr.access);
     }
-
     /* Error while creating proc symbol */
     if (sptr == 0)
       break;

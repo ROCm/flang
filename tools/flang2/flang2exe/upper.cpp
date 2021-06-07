@@ -2873,9 +2873,14 @@ read_symbol(void)
     break;
 
   case ST_PARAM:
+    linenum = getval("lineno");
     decl = getbit("decl");       /* + */
     Private = getbit("private"); /* + */
     ref = getbit("ref");
+    Scope = getval("scope");
+    if (Scope) {
+      Scope = symbolxref[Scope];
+    }
     if (TY_ISWORD(DTY(dtype))) {
       val[0] = getval("val");
     } else {
@@ -2884,11 +2889,13 @@ read_symbol(void)
 
     newsptr = get_or_create_symbol(sptr);
 
+    LINENOP(newsptr, linenum);
     STYPEP(newsptr, stype);
     SCP(newsptr, sclass);
     DTYPEP(newsptr, dtype);
 
     REFP(newsptr, ref);
+    SCOPEP(newsptr, Scope);
     CONVAL1P(newsptr, val[0]);
     break;
 

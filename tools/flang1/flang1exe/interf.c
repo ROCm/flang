@@ -83,7 +83,7 @@ interf_init()
 #if DEBUG
   assert(sizeof(SYM) / sizeof(INT) == 44, "bad SYM size",
          sizeof(SYM) / sizeof(INT), 4);
-  assert(sizeof(AST) / sizeof(int) == 19, "interf_init:inconsistent AST size",
+  assert(sizeof(AST) / sizeof(int) == 20, "interf_init:inconsistent AST size",
          sizeof(AST) / sizeof(int), 2);
 #endif
 }

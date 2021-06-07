@@ -4665,6 +4665,7 @@ ENTF90(NEARESTX, nearestx)(__REAL4_T f, __LOG_T sign)
     else
       --x.i;
   }
+  
   return x.f;
 }
 
@@ -4691,6 +4692,7 @@ ENTF90(NEARESTDX, nearestdx)(__REAL8_T d, __LOG_T sign)
         --x.ll;
     }
   }
+  
   return x.d;
 }
 
@@ -4704,20 +4706,23 @@ __REAL16_T
 ENTF90(NEARESTQX, nearestqx)(__REAL16_T q, __LOG_T sign)
 {
   __REAL16_SPLIT x;
+  __REAL16_SPLIT y;
 
   x.q = q;
+  y.q = 1.0/100000.0;
   if (x.q == 0.0) {
     x.ll.h = (sign & 1) ? 0x0000000000000001 : 0x8000000000000001;
     x.ll.l = 0;
   } else {
     if ((x.ll.h >> 112 & 0x7FFF) != 0x7FFF) { /* not nan or inf */
       if ((x.q < 0) ^ (sign & GET_DIST_MASK_LOG))
-        ++x.ll.h;
+        x.q = x.q + y.q;
       else
-        --x.ll.h;
+        x.q = x.q - y.q;
     }
   }
-  return x.q;
+  
+  return x.q; 
 }
 __REAL16_T
 ENTF90(NEARESTQ, nearestq)(__REAL16_T *q, __LOG_T *sign)

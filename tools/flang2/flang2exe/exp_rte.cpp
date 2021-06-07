@@ -5632,7 +5632,7 @@ exp_strcpy(STRDESC *str1, STRDESC *str2)
 #define STR_MOVE_THRESH 256 // AOCC
       if (!XBIT(125, 0x800) && str1->liscon && str2->liscon &&
 	  // AOCC (allow strcpy inlining for target offloading )
-          (flg.omptarget && str1->lval <= STR_MOVE_THRESH)) { 
+          (flg.omptarget /* && str1->lval <= STR_MOVE_THRESH */)) { 
         /*
          * perform a 'block move' of the rhs to the lhs -- the move
          * will move a combination of 8 (64-bit only) 4, 2, and 1

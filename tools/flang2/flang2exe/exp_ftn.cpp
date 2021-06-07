@@ -65,6 +65,14 @@
 #endif
 #include "ccffinfo.h"
 #include "symfun.h"
+// AOCC BEGIN
+#include "debug.h"
+
+// string for using with -debug-only= command line argument
+#ifdef DEBUG
+static const char *DEBUG_ONLY = "exp-ftn";
+#endif // DEBUG
+// AOCC END
 
 #ifdef __cplusplus
 /* clang-format off */
@@ -169,8 +177,8 @@ is_ishft(int curilm)
   return false;
 }
 
-static 
-ILI_OP 
+#ifdef OMP_OFFLOAD_LLVM
+static ILI_OP
 verify_supported_device_mathfn(ILM_OP opc)
 {
     switch (opc) {
@@ -209,6 +217,8 @@ verify_supported_device_mathfn(ILM_OP opc)
     }
     return (ILI_OP)0;
 }
+#endif
+
 void
 exp_ac(ILM_OP opc, ILM *ilmp, int curilm)
 {
@@ -2212,15 +2222,24 @@ compute_sdsc_subscr(ILM *ilmp, bool bigobj)
   if (STYPEG(sdsc) == ST_MEMBER) {
     /* find the base ILM and NME */
     basep = (ILM *)(ilmb.ilm_base + ILM_OPND(ilmp, 2));
-    assert(ILM_OPC(basep) == IM_PLD, "compute_sdsc_subscr: not PLD",
-           ILM_OPND(ilmp, 2), ERR_Severe);
-    basep = (ILM *)(ilmb.ilm_base + ILM_OPND(basep, 1));
-    assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not MEMBER",
-           ILM_OPND(ilmp, 2), ERR_Severe);
-    base = ILM_OPND(basep, 1);
-    basenm = NME_OF(base);
-    base = ILI_OF(base);
-    assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
+    if (ILM_OPC(basep) == IM_PLD) {
+      assert(ILM_OPC(basep) == IM_PLD, "compute_sdsc_subscr: not PLD",
+             ILM_OPND(ilmp, 2), ERR_Severe);
+      basep = (ILM *)(ilmb.ilm_base + ILM_OPND(basep, 1));
+      assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not MEMBER",
+             ILM_OPND(ilmp, 2), ERR_Severe);
+      base = ILM_OPND(basep, 1);
+      basenm = NME_OF(base);
+      base = ILI_OF(base);
+      assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
+    } else {
+      assert(ILM_OPC(basep) == IM_MEMBER, "compute_sdsc_subscr: not PLD",
+             ILM_OPND(ilmp, 2), ERR_Severe);
+      base = ILM_OPND(basep, 1);
+      basenm = NME_OF(base);
+      base = ILI_OF(base);
+      assert(base, "compute_sdsc_subscr: base is NULL", base, ERR_Severe);
+    }
   }
 
   /* compute the static descriptor linearized version of this
@@ -4485,6 +4504,9 @@ exp_misc(ILM_OP opc, ILM *ilmp, int curilm)
   case IM_PREFETCH:
     ilix = ILI_OF(ILM_OPND(ilmp, 1)); /* address */
     nme = NME_OF(ILM_OPND(ilmp, 1));
+    // AOCC BEGIN
+    DEBUG_LOG("Encountered mem prefetch directive.\n");
+    // AOCC END
     /* Use the generic LLVM prefetch intrinsic. */
     ilix = ad3ili(IL_PREFETCH, ilix, 0, nme);
     chk_block(ilix);

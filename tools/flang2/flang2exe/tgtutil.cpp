@@ -409,7 +409,7 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
     } else if (llis_function_kind(dtype)) {
       ompaccelInternalFail("Don't know how to implicitly define map type for function data type ");
     } else if (llis_struct_kind(dtype)) {
-      ompaccelInternalFail("Don't know how to implicitly define map type for struct data type ");
+      final_maptype |= OMP_TGT_MAPTYPE_LITERAL;
     } else {
       ompaccelInternalFail("Unknown data type");
     }
@@ -435,7 +435,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
   OMPACCEL_SYM midnum_sym;
   DTYPE param_dtype, load_dtype;
   SPTR param_sptr;
-  LOGICAL isPointer, isArray, isMidnum, showMinfo, isThis; //AOCC
+  LOGICAL isPointer, isArray, isMidnum, showMinfo, isThis, isStruct; //AOCC
   /* fill the arrays */
   /* Build the list: (size, sptr) pairs. */
 
@@ -458,6 +458,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     isPointer = llis_pointer_kind(param_dtype);
     //AOCC Begin
     isArray = llis_array_kind(param_dtype);
+    isStruct = llis_struct_kind(param_dtype) && !is_complex_dtype(param_dtype);
     //AOCC End
 
     /* This is for fortran allocatable arrays.
@@ -470,6 +471,12 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
         SPTR midnum_sptr = MIDNUMG(targetinfo->quiet_symbols[j].host_sym);
         if (midnum_sptr == param_sptr || HASHLKG(midnum_sptr) == param_sptr) {
           midnum_sym = targetinfo->quiet_symbols[j];
+          // AOCC Begin
+          // No need to put `TO` in map type for 'target update from'
+          if(targetinfo->mode == mode_target_update && 
+                  targetinfo->quiet_symbols[j].map_type & OMP_TGT_MAPTYPE_FROM )
+            targetinfo->quiet_symbols[j].map_type &= ~(OMP_TGT_MAPTYPE_TO);
+          // AOCC End
           isMidnum = TRUE;
           break;
         }
@@ -479,7 +486,13 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     showMinfo = true;
     /* Implicit map(to:) for the array descriptor */
     if(DESCARRAYG(param_sptr)) {
-      targetinfo->symbols[i].map_type = OMP_TGT_MAPTYPE_TARGET_PARAM | OMP_TGT_MAPTYPE_TO;
+      // AOCC Begin
+      if(targetinfo->mode == mode_target_update &&
+                targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_FROM)
+        targetinfo->symbols[i].map_type &= ~(OMP_TGT_MAPTYPE_TO);
+      else
+      // AOCC End
+        targetinfo->symbols[i].map_type = OMP_TGT_MAPTYPE_TARGET_PARAM | OMP_TGT_MAPTYPE_TO; 
       showMinfo = false;
     }
     // AOCC Begin
@@ -488,7 +501,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     // As per OpenMP standards 4.5 data mapping rules, from section 2.15.5
     //   " If a variable is not a scalar then it is treated as if it had
     //     appeared in a map clause with a map-type of tofrom."
-    if (targetinfo->symbols[i].map_type == 0 && (isArray || isPointer)) {
+    if (targetinfo->symbols[i].map_type == 0 && (isArray || isPointer || isStruct)) {
       temp_map_type = OMP_TGT_MAPTYPE_FROM |
                       OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_TARGET_PARAM;
     }
@@ -502,7 +515,13 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       targetinfo->symbols[i].map_type = temp_map_type;
     }
     if (isMidnum) {
-      targetinfo->symbols[i].map_type |= OMP_TGT_MAPTYPE_TO;
+      // AOCC Begin
+      if(targetinfo->mode == mode_target_update &&
+        targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_FROM)
+          targetinfo->symbols[i].map_type &= ~(OMP_TGT_MAPTYPE_TO);
+      else
+      // AOCC End
+        targetinfo->symbols[i].map_type |= OMP_TGT_MAPTYPE_TO;
     }
 #endif
     // AOCC End
@@ -546,8 +565,8 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
         iliy = mk_ompaccel_ldsptr(param_sptr);
         load_dtype = param_dtype;
       // AOCC Begin
-      } else if (AD_SDSC(ad) && AD_ZBASE(ad) &&
-                                targetinfo->symbols[i].ili_sptr) {
+      } else if (targetinfo->symbols[i].ili_sptr && AD_SDSC(ad)
+                                                 && AD_ZBASE(ad)) {
         iliy = targetinfo->symbols[i].ili_sptr;
         load_dtype = DT_ADDR;
       // AOCC End
@@ -574,7 +593,16 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {
-      if(isMidnum)
+      bool useMidnum = true;
+      if(isMidnum) {
+        DTYPE dtype = DTYPEG(midnum_sym.host_sym);
+	if (llis_array_kind(dtype)) {
+          ADSC *ad = AD_DPTR(dtype);
+          int numdim = AD_NUMDIM(ad);
+          if (numdim == 0 ) useMidnum = false;
+        }
+      }
+      if(isMidnum && useMidnum )
         ilix = _tgt_target_fill_size(midnum_sym.host_sym,
                                      targetinfo->symbols[i].map_type,
                                      targetinfo->symbols[i].ili_base); // AOCC

@@ -23,6 +23,9 @@
  * Added code to support SHIFTA intrinsic
  *   Last modified: April 2020
  *
+ * Added support for schedule openmp clause
+ * Last modified : March 2021
+ *
  */
 
 /**
@@ -307,6 +310,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
       ITEM *region_vars;       // accelerator region copy/local/mirror vars
       union {
         struct {               // OpenMP - DO
+          int modifier;        // AOCC
           int sched_type;      // one of DI_SCHxxx
           int chunk;           // sptr for chunk size (0 if absent)
           LOGICAL is_ordered;  // loop has the ordered attribute?
@@ -352,6 +356,16 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
 #define DI_SCH_AUTO 5
 #define DI_SCH_DIST_STATIC 6
 #define DI_SCH_DIST_DYNAMIC 7
+#define DI_MOD_NONMONOTONIC 8
+#define DI_MOD_MONOTONIC 9
+#define DI_DEP_MOD_SOURCE 10
+#define DI_DEP_TYPE_SINK 10
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+#define DI_DEP_TYPE_MUTEXINOUTSET 14
+#define DI_DEP_TYPE_DEPOBJ 15
+#define DI_MOD_SIMD 16
 
 #define DI_ID(d) sem.doif_base[d].Id
 #define DI_LINENO(d) sem.doif_base[d].lineno
@@ -401,6 +415,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
 #define DI_ALLOCATED(d) sem.doif_base[d].u.u4.allocated
 #define DI_REGIONVARS(d) sem.doif_base[d].u.u4.region_vars
 #define DI_SCHED_TYPE(d) sem.doif_base[d].u.u4.v.v1.sched_type
+#define DI_SCHED_MODIFIER(d) sem.doif_base[d].u.u4.v.v1.modifier //AOCC
 #define DI_CHUNK(d) sem.doif_base[d].u.u4.v.v1.chunk
 #define DI_DISTCHUNK(d) sem.doif_base[d].u.u4.v.v1.dist_chunk
 #define DI_IS_ORDERED(d) sem.doif_base[d].u.u4.v.v1.is_ordered

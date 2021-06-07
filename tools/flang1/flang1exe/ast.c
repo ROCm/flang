@@ -77,7 +77,7 @@ ast_init(void)
   int i;
 
 #if DEBUG
-  assert(sizeof(AST) / sizeof(int) == 19, "bad AST size",
+  assert(sizeof(AST) / sizeof(int) == 20, "bad AST size",
          sizeof(AST) / sizeof(int), 4);
 #endif
 

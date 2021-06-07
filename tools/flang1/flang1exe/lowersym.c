@@ -4354,9 +4354,14 @@ lower_symbol(int sptr)
     break;
 
   case ST_PARAM:
+    putval("lineno", LINENOG(sptr));
     putbit("decl", DCLDG(sptr));
     putbit("private", PRIVATEG(sptr));
     putbit("ref", REFG(sptr));
+    if (STYPEG((SCOPEG(sptr))) == ST_MODULE)
+      putsym("scope", SCOPEG(sptr));
+    else
+      putsym("scope", 0);
     if (TY_ISWORD(DTY(dtype))) {
       putval("val", CONVAL1G(sptr));
     } else {

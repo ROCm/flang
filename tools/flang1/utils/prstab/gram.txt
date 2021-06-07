@@ -22,6 +22,9 @@
 #
 # Adding grammer for use_device_ptr
 # Date of modification 29th April 2020
+# 
+# Added grammar for openmp schedule clause
+# Date of modification: Jan 2021
 #
 
 <stmt> ::= <stbeg> <statement> <stend>
@@ -1896,11 +1899,17 @@
 <lastprivate> ::= LASTPRIVATE ( <pflsr list> )
 
 <schedule> ::= SCHEDULE <sched type> |
-               MP_SCHEDTYPE = <id name> |
+	       SCHEDULE ( <modifier> |
+	       MP_SCHEDTYPE = <id name> |
                CHUNK = <expression>
 
+<modifier> ::= |
+               <id name> <sched_mod type> 
+
+<sched_mod type> ::= : <id name> <opt chunk> )
+
 <sched type> ::= |
-		 ( <id name> <opt chunk> )
+                 ( <id name> <opt chunk> )
 
 <opt chunk> ::= |
 		, <expression>

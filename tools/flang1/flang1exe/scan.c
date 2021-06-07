@@ -244,7 +244,12 @@ static char *stmtb;                /* buffer containing current Fortran stmt
                                     * terminated  by NULL. */
 static char *stmtbefore = NULL;    /* 'stmtb' before crunch */
 static char *stmtbafter = NULL;    /* 'stmtb' after crunch */
-static short *last_char = NULL;    /* position in stmb of the last char for each
+// AOCC Begin
+// Changed the type of last_char from short to int.
+// when the data set is huge, last_char is supposed to hold value
+// bigger than 32767.
+// AOCC End
+static int *last_char = NULL;    /* position in stmb of the last char for each
                                   * line */
 static int card_count; /* number of cards making up the current stmt */
 static int max_card;   /* maximum number of cards read in for any
@@ -440,7 +445,7 @@ scan_init(FILE *fd)
   if (stmtbafter == NULL)
     error(7, 4, 0, CNULL, CNULL);
   stmtb = stmtbefore;
-  last_char = (short *)sccalloc((BIGUINT64)(max_card * sizeof(short)));
+  last_char = (int *)sccalloc((BIGUINT64)(max_card * sizeof(int)));
   if (last_char == NULL)
     error(7, 4, 0, CNULL, CNULL);
 
@@ -9583,7 +9588,7 @@ realloc_stmtb(void)
   else
     stmtb = stmtbafter;
   last_char =
-      (short *)sccrelal((char *)last_char, (BIGUINT64)(max_card * sizeof(short)));
+      (int *)sccrelal((char *)last_char, (BIGUINT64)(max_card * sizeof(int)));
   if (last_char == NULL)
     error(7, 4, 0, CNULL, CNULL);
 }

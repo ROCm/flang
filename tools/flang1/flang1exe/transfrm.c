@@ -241,8 +241,9 @@ static void rewrite_omp_target_construct() {
     target_ast = ast;
 
     ifast = A_IFPARG(target_ast);
-    if (!ifast)
+    if (!ifast) {
       continue;
+    }
 
     // Create new if-then-else structure.
     new_if = mk_stmt(A_IFTHEN, 0);
@@ -279,14 +280,18 @@ static void rewrite_omp_target_construct() {
       std = STD_NEXT(std);
       assert(std > 0, "", ast, 4);
       ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_TEAMS) {
-        assert(false, "", ast, 4);
+      if (A_TYPEG(ast) == A_MP_TEAMS) {
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
+        if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
+          assert(false, "", ast, 4);
+        }
       }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
-        assert(false, "", ast, 4);
+      if (A_TYPEG(ast) == A_MP_PARALLEL) {
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
       }
       std = STD_NEXT(std);
       assert(std > 0, "", ast, 4);
@@ -294,11 +299,19 @@ static void rewrite_omp_target_construct() {
     }
 
     // clone all the statements found below.
+    // don't clone PARALLEL and DISTRIBUTE construcs
     while (std > 0) {
       ast = STD_AST(std);
-      if (A_TYPEG(ast) == A_MP_ENDTARGET ||
-          A_TYPEG(ast) == A_MP_ENDDISTRIBUTE)
-        break;
+      if (A_TYPEG(ast) == A_MP_ENDTARGET) break;
+      if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
+              A_TYPEG(ast) == A_MP_PARALLEL || 
+              A_TYPEG(ast) == A_MP_TEAMS ||
+              A_TYPEG(ast) == A_MP_ENDTEAMS ||
+              A_TYPEG(ast) == A_MP_DISTRIBUTE || 
+              A_TYPEG(ast) == A_MP_ENDDISTRIBUTE ) {
+          std = STD_NEXT(std);
+          continue;
+      }
       new_stmt = ast_rewrite(ast);
       // Disable the parallel execution of A_MP_PDO for now.
       // TODO: Does this need to be enabled for any case?
@@ -318,24 +331,6 @@ static void rewrite_omp_target_construct() {
       std = STD_NEXT(std);
     }
 
-    if (found_inner_scope) {
-      assert(A_TYPEG(ast) == A_MP_ENDDISTRIBUTE, "", ast, 4);
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_ENDTEAMS) {
-        assert(false, "", ast, 4);
-      }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) != A_MP_EMPSCOPE) {
-        assert(false, "", ast, 4);
-      }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-    }
     assert(A_TYPEG(ast) == A_MP_ENDTARGET, "", ast, 4);
 
     // Match for A_EMPSCOPE.

@@ -239,7 +239,11 @@ typedef struct {
   FORTRAN_STD std;
   LOGICAL disable_loop_vectorize_pragmas; /* Disable Loop vecroizing pragmas */
   LOGICAL x86_64_omptarget; /* IF offloading target is x86-64 */
-  LOGICAL amdgcn_target /* IF offloading target is AMDGPU */
+  LOGICAL amdgcn_target; /* IF offloading target is AMDGPU */
+#ifdef DEBUG
+  LOGICAL debug_log; /* TRUE enables all debug log statements */
+  char *debug_only_strs; /* enables only debug log categories in this string */
+#endif // DEBUG
   // AOCC end
 } FLG;
 

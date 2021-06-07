@@ -23,6 +23,9 @@
  * Support for ifort's mm_prefetch intrinsic
  * Last modified: Jun 2020
  *
+ * Added support for openmp schedule clause
+ * Last modified : March 2021
+ *
  */
 
 /**
@@ -2017,7 +2020,7 @@ lower_do_stmt(int std, int ast, int lineno, int label)
   int doinitast, doendast, doincast, plast, plastdt;
   int dotop, dobottom, dotrip, doinc, dovar, dost, p_lb, p_ub;
   int doinitilm, doendilm, doincilm, dotripilm, lop, lilm, ilm;
-  int dtype, schedtype;
+  int dtype, schedtype, modifier;
   int hack, rilm, dest, src;
 
   plast = A_LASTVALG(ast);
@@ -2129,6 +2132,20 @@ lower_do_stmt(int std, int ast, int lineno, int label)
   ilm = lower_ilm(doendast);
   doendilm = lower_conv_ilm(doendast, ilm, A_NDTYPEG(doendast), dtype);
 
+  // AOCC begin
+  /* fetching the modifier and assigning it to schedtype so 
+     that extra argument to parallel loop is avoided. 
+     Schedule type passed to the parallel loop is or-ed with
+     modifier which is passed as a new schedule type */
+  if (A_SCHED_MODIFIERG(ast) == DI_MOD_NONMONOTONIC) {
+    schedtype = MP_MOD_NONMONOTONIC;
+  } else if (A_SCHED_MODIFIERG(ast) == DI_MOD_MONOTONIC) {
+    schedtype = MP_MOD_MONOTONIC;
+  } else if (A_SCHED_MODIFIERG(ast) == DI_MOD_SIMD) {
+    schedtype = MP_MOD_SIMD;
+  } 
+  // AOCC end
+
   if (A_TYPEG(ast) != A_MP_PDO || A_TASKLOOPG(ast)) {
     /* sequential DO:
      *  doinc = doincilm
@@ -2138,6 +2155,7 @@ lower_do_stmt(int std, int ast, int lineno, int label)
      *  dovar = dovar + doinc
      *  DOEND(lab,lab)
      */
+    
     if (A_TASKLOOPG(ast)) {
       /* lower taskloop as a regular loop */
       int ub;
@@ -2311,6 +2329,7 @@ lower_do_stmt(int std, int ast, int lineno, int label)
       schedtype = 0x5;
     else
       schedtype = 0x1;
+ 
     if (A_ORDEREDG(ast)) {
       if ((A_SCHED_TYPEG(ast) == DI_SCH_AUTO) ||
           (A_SCHED_TYPEG(ast) == DI_SCH_RUNTIME)) {
@@ -2460,15 +2479,23 @@ lower_do_stmt(int std, int ast, int lineno, int label)
      */
     int ldotrip, ldotripilm, ncpusilm, lcpuilm, labo, dox, dovarilm, chunkast,
         chunkilm;
-    schedtype = 0x000;
-    if (A_SCHED_TYPEG(ast) == MP_SCH_DIST_STATIC) {
-      schedtype = MP_SCH_DIST_STATIC;
-    }
-    // AOCC Begin
-    else if (A_SCHED_TYPEG(ast) == MP_SCH_TEAMS_DIST) {
-      schedtype = MP_SCH_ATTR_DEVICEDIST;
+    
+    // AOCC begin
+    if (A_SCHED_MODIFIERG(ast) != 0) {
+      schedtype = schedtype | (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
+    } else {
+      // AOCC end
+      schedtype = 0x000;
+      if (A_SCHED_TYPEG(ast) == MP_SCH_DIST_STATIC) {
+        schedtype = MP_SCH_DIST_STATIC;
+      }
+      // AOCC Begin
+      else if (A_SCHED_TYPEG(ast) == MP_SCH_TEAMS_DIST) {
+        schedtype = MP_SCH_ATTR_DEVICEDIST;
+      }
     }
     // AOCC End
+   
     llvm_omp_sched(std, ast, dtype, dotop, dobottom, dovar, plast, dotrip,
                    doinitilm, doinc, doincilm, doendilm, schedtype, lineno);
   } else {
@@ -2492,7 +2519,14 @@ lower_do_stmt(int std, int ast, int lineno, int label)
      */
     int chunkilm, ncpusilm, lcpuilm, ostep, ostepilm, odovar, doend;
     int itrip, itop, ibottom, itripilm, iendilm, istepilm, iinitilm, chunkast;
-    schedtype = (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
+    
+    // AOCC begin
+    if (A_SCHED_MODIFIERG(ast) != 0) {
+      schedtype = schedtype | (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
+    } else {
+      schedtype = (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
+    }
+    // AOCC end
     if (A_SCHED_TYPEG(ast) == MP_SCH_DIST_STATIC) {
       schedtype = schedtype | MP_SCH_DIST_STATIC;
     }

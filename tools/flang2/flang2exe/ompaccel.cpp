@@ -61,6 +61,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "expreg.h"
 
 // Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
 #define GV_Warp_Size 64
@@ -225,6 +226,7 @@ mk_ompaccel_load(int ili, DTYPE dtype, int nme)
         return ad3ili(IL_LD, ili, nme, MSZ_WORD);
     // AOCC Begin
     case DT_INT8:
+    case DT_LOG:
       return ad3ili(IL_LDKR, ili, nme, MSZ_I8);
     // AOCC End
     case DT_REAL:
@@ -357,9 +359,39 @@ mk_ompaccel_and(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
 }
 
 static int
+mk_ompaccel_or(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2)
+{
+  ILI_OP opc;
+  int dt = 0;
+  bool uu = FALSE;
+  if (!ili1)
+    return ili2;
+  if (!ili2)
+    return ili1;
+  if (_pointer_type(dtype1) || _pointer_type(dtype2)) {
+    return ad3ili(IL_AADD, ili1, ili2, 0);
+  } else {
+    _long_unsigned(ili1, &dt, &uu, dtype1);
+    _long_unsigned(ili2, &dt, &uu, dtype2);
+    /* signed */
+    if (!uu) {
+      opc = IL_OR;
+    } else {
+      opc = IL_KOR;
+    }
+  }
+  return ad2ili(opc, ili1, ili2);
+}
+
+static int
 mk_ompaccel_iand(int ili1, int ili2)
 {
   return mk_ompaccel_and(ili1, DT_INT, ili2, DT_INT);
+}
+static int
+mk_ompaccel_ior(int ili1, int ili2)
+{
+  return mk_ompaccel_or(ili1, DT_INT, ili2, DT_INT);
 }
 
 static int
@@ -707,6 +739,10 @@ mk_reduction_op(int redop, int lili, DTYPE dtype1, int rili, DTYPE dtype2)
     return mk_ompaccel_add(lili, dtype1, rili, dtype2);
   case 3:
     return mk_ompaccel_mul(lili, dtype1, rili, dtype2);
+  case 17:  // OP_LOR
+    return mk_ompaccel_or(lili, dtype1, rili, dtype2);
+  case 18:  // OP_LAND
+    return mk_ompaccel_and(lili, dtype1, rili, dtype2);
     //AOCC Begin
   case 373:
     return mk_ompaccel_max(lili, dtype1, rili, dtype2);
@@ -2412,7 +2448,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
     // todo ompaccel more
     if (dtypeReductionItem == DT_DBLE) {
       rili = mk_ompaccel_load(rili, DT_DBLE, addnme(NT_VAR, sptrRedItem, 0, 0));
-    } else if (dtypeReductionItem == DT_INT) {
+    } else if (dtypeReductionItem == DT_INT || dtypeReductionItem == DT_LOG) {
       rili = mk_ompaccel_ld(rili, addnme(NT_IND, SPTR_NULL,
                                          addnme(NT_VAR, sptrRedItem, 0, 0), 0));
       rili = ad1ili(IL_FLOAT, rili);
@@ -2421,7 +2457,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
           mk_ompaccel_load(rili, DT_FLOAT, addnme(NT_VAR, sptrRedItem, 0, 0));
       rili = ad1ili(IL_DBLE, rili);
     // AOCC Begin
-    } else if (dtypeReductionItem == DT_INT8) {
+    } else if (dtypeReductionItem == DT_INT8 || dtypeReductionItem == DT_LOG8) {
       rili = mk_ompaccel_ld(rili, addnme(NT_IND, SPTR_NULL,
                                          addnme(NT_VAR, sptrRedItem, 0, 0), 0));
       rili = ad1ili(IL_DBLE, rili);
@@ -2995,6 +3031,18 @@ static void emit_array_reduction(SPTR sptrReduceData) {
                             addnme(NT_VAR, sptrReductionItem, 0, 0),
                             store_addr);
     break;
+  case 17:  // OP_LOR
+    ili = mk_ompaccel_or(ili, dtypeReductionItem, bili, dtypeReductionItem);
+    ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                            addnme(NT_VAR, sptrReductionItem, 0, 0),
+                            store_addr);
+    break;
+  case 18:  // OP_LAND
+    ili = mk_ompaccel_and(ili, dtypeReductionItem, bili, dtypeReductionItem);
+    ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                            addnme(NT_VAR, sptrReductionItem, 0, 0),
+                            store_addr);
+    break;
   case 373:
     ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
     ili = mk_ompaccel_store(ili, dtypeReductionItem,
@@ -3138,6 +3186,18 @@ exp_ompaccel_reduction(ILM *ilmp, int curilm)
                                 addnme(NT_VAR, sptrReductionItem, 0, 0),
                                 mk_address(sptrReductionItem));
         break;
+      case 17:  // OP_LOR
+        ili = mk_ompaccel_or(ili, dtypeReductionItem, bili, dtypeReductionItem);
+        ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                                addnme(NT_VAR, sptrReductionItem, 0, 0),
+                                mk_address(sptrReductionItem));
+        break;
+      case 18:  // OP_LAND
+        ili = mk_ompaccel_and(ili, dtypeReductionItem, bili, dtypeReductionItem);
+        ili = mk_ompaccel_store(ili, dtypeReductionItem,
+                                addnme(NT_VAR, sptrReductionItem, 0, 0),
+                                mk_address(sptrReductionItem));
+        break;
       case 373:
         ili = mk_ompaccel_max(ili, dtypeReductionItem, bili, dtypeReductionItem);
         ili = mk_ompaccel_store(ili, dtypeReductionItem,
@@ -3264,14 +3324,54 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
       length_sptr = ILM_SymOPND((ILM *)
                                   (ilmb.ilm_base + ILM_SymOPND(ilmp, 3)), 1);
     label = ILM_OPND(ilmp, 2);    /* map type */
-  // AOCC End
+  } else if (ILM_OPC(mapop) == IM_MEMBER) {
+    return;                       // no need to map non-pointer members explicitly
   }
+  // AOCC End
 
   // AOCC Begin
   if (STYPEG(sptr) == ST_MEMBER && ILM_OPC(ilmp) == IM_MP_MAP_MEM) {
+    int baseilix = 0;
+    int nmex = 0;
+    ISZ_T val;
+    int ilix, ili1, op1, nme, addr, load;
+
     base = ILM_OPND(ilmp, 3);
-    base = ILI_OF(base);
+    baseilix = ILI_OF(base);
+    // baseilix and ili_sptr need to be computed for pointer type member
+    // of structure for constructs which enclose a target region
+    if(!baseilix) {
+      SPTR sym = ILM_SymOPND((ILM *)(ilmb.ilm_base + base), 1);
+      baseilix = mk_address(sym);
+      nmex = addnme(NT_VAR, sym, 0, (INT)0);
+      ILM_RESULT(base) = baseilix;
+      ILM_NME(base) = nmex;
+    }
+
     ili_sptr = ILI_OF(argilm);
+    if(!ili_sptr) {
+      val = ADDRESSG(sptr);
+      ili1 = ad_aconi(val);
+      if(baseilix) {
+        ilix = ad3ili(IL_AADD, baseilix, ili1, 0);
+        nmex = addnme(NT_MEM, PSMEMG(sptr), NME_OF(base), 0);
+      } else {
+        ilix = ili1;
+        nmex = NME_UNK;
+      }
+      ILM_RESULT(ILM_OPND(mapop, 1)) = ilix;
+      ILM_NME(ILM_OPND(mapop, 1)) = nmex;
+      op1 = ILM_OPND(mapop, 1);
+      addr = op1;
+      nme = NME_OF(addr);
+      addr = ILI_OF(addr);
+      load = ad2ili(IL_LDA, addr, nme);
+      ADDRCAND(load, nme);
+      ILM_RESULT(argilm) = load;
+      ILM_NME(argilm) = addnme(NT_IND, SPTR_NULL, nme, 0);
+      ili_sptr = load;
+    }
+    base = baseilix;
   }
   // AOCC End
 
@@ -3308,6 +3408,19 @@ exp_ompaccel_emap(ILM *ilmp, int curilm)
     return;
   ompaccel_symreplacer(true);
   targetinfo = ompaccel_tinfo_current_get();
+  // AOCC Begin
+  // A struct variable not mapped using map clause but used in target region
+  // need to be mapped by reference.
+  // TODO : add other constructs also which enclose a target region
+  if(targetinfo && 
+          (targetinfo->mode == mode_target || 
+           targetinfo->mode == mode_target_parallel_for))
+    for(int i=0; i < targetinfo->n_symbols; ++i) {
+      if(STYPEG(targetinfo->symbols[i].host_sym) == ST_STRUCT)
+        tinfo_update_maptype(targetinfo->symbols, targetinfo->n_symbols,
+             targetinfo->symbols[i].host_sym, targetinfo->symbols[i].map_type);
+    }
+  // AOCC End
   if (targetinfo != NULL) {
     if (ompaccel_tinfo_current_target_mode() == mode_target_data_enter_region ||
         ompaccel_tinfo_current_target_mode() == mode_target_data_region) {
