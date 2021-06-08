@@ -2822,7 +2822,10 @@ addarth(ILI *ilip)
    * using flang runtime math library
   */
 #ifdef OMP_OFFLOAD_LLVM
-  (void)mk_prototype("tgt_fort_ptr_assn_i8", "f pure", DT_INT8, 5, DT_CPTR,DT_CPTR, DT_CPTR,DT_CPTR,DT_CPTR);
+
+  (void)mk_prototype("__tgt_fort_ptr_assn_i8", "f", DT_INT8, 5, DT_CPTR,DT_CPTR, DT_CPTR,DT_CPTR,DT_CPTR);
+  (void)mk_prototype("__atomic_compare_exchange", "f", DT_INT,6, DT_INT8,DT_CPTR,DT_CPTR,DT_CPTR,DT_INT, DT_INT);
+
   if (flg.amdgcn_target && gbl.ompaccel_intarget) {
     ilix = lowered_to_device_libm(opc,op1,op2);
     if (ilix) return ilix;

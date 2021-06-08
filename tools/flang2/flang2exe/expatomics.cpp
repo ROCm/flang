@@ -2958,9 +2958,9 @@ _exp_mp_atomic_update(DTYPE dtype, int* opnd, int* nme)
     ASSNP(desired_sptr, 1);
     chk_block(result);
 
-    if (!flg.omptarget && (dtype == DT_CMPLX || //AOCC
+    if (dtype == DT_CMPLX ||
         dtype == DT_DCMPLX
-        || (size != 1 && size != 2 && size !=4 && size !=8)))
+        || (size != 1 && size != 2 && size !=4 && size !=8)) 
     {
       size_ili = ad_icon(size);
       ADDRTKNP(expected_sptr, 1);
