@@ -4569,6 +4569,7 @@ rewrite_calls(void)
     case A_MP_REDUCTIONITEM:
     case A_MP_DEFAULTMAP: // AOCC
     case A_MP_TARGETDECLARE: // AOCC
+    case A_MP_USE_DEVICE_PTR: // AOCC
       break;
     default:
       interr("rewrite_subroutine: unknown stmt found", ast, 4);

@@ -3023,6 +3023,10 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
         target_ili_num_threads = ILI_OF(ILM_OPND(ilmp, 4));
       }
     break;
+    case IM_MP_USE_DEVICE_PTR:
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG))
+        exp_ompaccel_use_device_ptr(ilmp, curilm, outlinedCnt);
+      break;
 #endif /* end #ifdef OMP_OFFLOAD_LLVM */
     default:
       interr("exp_smp: unsupported opc", opc, ERR_Severe);

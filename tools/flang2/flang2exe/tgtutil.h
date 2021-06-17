@@ -62,6 +62,8 @@ struct tgt_api_entry_t {
   const DTYPE ret_dtype;  /* TGT API function return value type       */
 };
 
+extern int dataregion;  // AOCC
+
 /**
    \brief Register the file and load cubin file
  */

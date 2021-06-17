@@ -3637,6 +3637,11 @@ OpenMP Default map
 .lp
 OpenMP target declare
 .lp
+.SM MP_USE_DEVICE_PTR
+.SI "use_device_ptr"
+.lp
+OpenMP use device ptr
+.lp
 .\" AOCC End
 .SM MP_MAP
 .SI "map"

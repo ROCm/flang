@@ -3400,6 +3400,12 @@ exp_ompaccel_map(ILM *ilmp, int curilm, int outlinedCnt)
 }
 
 void
+exp_ompaccel_use_device_ptr(ILM *ilmp, int curilm, int outlinedCnt)
+{
+  exp_ompaccel_map(ilmp, curilm, outlinedCnt);
+}
+
+void
 exp_ompaccel_emap(ILM *ilmp, int curilm)
 {
   int ili;

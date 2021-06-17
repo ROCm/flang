@@ -71,7 +71,7 @@ static SPTR init_tgt_target_syms(const char *kernelname, SPTR sptr = SPTR_NULL);
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
 
 #define MXIDLEN 100
-static int dataregion = 0;
+int dataregion = 0;
 
 static DTYPE tgt_offload_entry_type = DT_NONE;
 
