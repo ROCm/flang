@@ -813,6 +813,7 @@ MP_BREDUCTION
 MP_EREDUCTION
 MP_REDUCTIONITEM sym sym num
 MP_TARGETMODE num ilm ilm ilm
+MP_USE_DEVICE_PTR ilm num
 HFLD	ilm
 HFST	ilm	ilm
 HFCON	sym
