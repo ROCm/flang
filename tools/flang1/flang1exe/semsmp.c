@@ -7967,7 +7967,7 @@ do_usedeviceptr()
   if (CL_PRESENT(CL_USE_DEVICE_PTR)) {
     for (item = (ITEM *)CL_FIRST(CL_USE_DEVICE_PTR); item != ITEM_END;
                                                      item = item->next) {
-      ast = mk_stmt(A_MP_MAP, 0);
+      ast = mk_stmt(A_MP_USE_DEVICE_PTR, 0);    // AOCC
       (void)add_stmt(ast);
       A_LOPP(ast, item->ast);
       A_PRAGMATYPEP(ast, item->t.cltype);

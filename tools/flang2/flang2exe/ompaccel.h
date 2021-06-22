@@ -27,6 +27,7 @@
 #include "llmputil.h"
 #include "expand.h"
 #include "kmpcutil.h" // AOCC
+#include <vector>     // AOCC
 
 /* Find if the func_sptr whether it is a kernel or not. */
 #define IS_OMP_DEVICE_KERNEL(func_sptr) (OMPACCFUNCKERNELG(func_sptr))
@@ -96,6 +97,11 @@ struct _OMPACCEL_TARGET{
 };
 
 static bool isOmpaccelRegistered = false;
+
+// AOCC Begin
+// Keeping target data tinfos in a stack. Array wont work for nested cases.
+extern std::vector<OMPACCEL_TINFO *>  targetDataTinfos;
+// AOCC End
 
 extern OMPACCEL_TINFO **tinfos;
 
@@ -504,6 +510,10 @@ void exp_ompaccel_map(ILM *, int, int);
    \brief Expand ILM and emit code for emap
  */
 void exp_ompaccel_emap(ILM *, int);
+/**
+   \brief Expand ILM and emit code for use_device_ptr
+ */
+void exp_ompaccel_use_device_ptr(ILM *, int, int);
 /**
    \brief Expand ILM and emit code for looptripcount
  */

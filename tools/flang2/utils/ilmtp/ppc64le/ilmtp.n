@@ -3833,6 +3833,13 @@ Begin directive
 .IL MP_END_DIR SMP
 End directive
 .AT spec trm
+.IL MP_USE_DEVICE_PTR SMP lnk stc
+use the device pointer for symbol
+.nf
+lnk - symbol whose address need to be mapped        
+stc - map type
+.fi
+.AT spec trm
 .IL HFLD load lnk
 Load half precision
 .AT spec

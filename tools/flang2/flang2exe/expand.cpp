@@ -2545,14 +2545,36 @@ exp_ref(ILM_OP opc, ILM *ilmp, int curilm)
   int base;   /* base ili of reference	 */
   int basenm; /* names entry of base ili	 */
   int dtype;
+  int istarget_data_ptr = 0;    // AOCC
 
   switch (opc) {
 
   case IM_BASE:
     /* get the base symbol entry  */
     sym = ILM_SymOPND(ilmp, 1);
-    ili1 = create_ref(sym, &basenm, 0, 0, &ILM_CLEN(curilm), &ILM_MXLEN(curilm),
-                      &ILM_RESTYPE(curilm));
+    // AOCC Begin
+    // check whether a device ptr in returned
+    // when use_device_ptr() clause is used
+    if(!gbl.outlined && !targetDataTinfos.empty()) {
+      char name[16];
+      OMPACCEL_TINFO * ctinfo1 = targetDataTinfos.back();
+      for (int i = 0; i < ctinfo1->n_symbols; ++i) {
+        if (sym == ctinfo1->symbols[i].host_sym &&
+              (ctinfo1->symbols[i].map_type & OMP_TGT_MAPTYPE_RETURN_PARAM)) {
+          // address is returened in base array
+          sprintf(name, "edata%d_base", dataregion-1);
+          SPTR arg_base_sptr = getsymbol(name);
+          basenm = add_arrnme(NT_ARR, arg_base_sptr, 
+                  addnme(NT_VAR, arg_base_sptr, 0, 0), 0, ad_icon(i), FALSE);
+          ili1 = ad_acon(arg_base_sptr, i * TARGET_PTRSIZE);
+          istarget_data_ptr = 1;    // found the address on device
+        }
+      }
+    }
+    if(!istarget_data_ptr)
+    // AOCC End
+        ili1 = create_ref(sym, &basenm, 0, 0, &ILM_CLEN(curilm), 
+                                &ILM_MXLEN(curilm), &ILM_RESTYPE(curilm));
     break;
 
   case IM_MEMBER:
