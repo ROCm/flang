@@ -2824,6 +2824,7 @@ addarth(ILI *ilip)
    * using flang runtime math library
   */
 #ifdef OMP_OFFLOAD_LLVM
+  (void)mk_prototype("tgt_fort_ptr_assn_i8", "f pure", DT_INT8, 5, DT_CPTR,DT_CPTR, DT_CPTR,DT_CPTR,DT_CPTR);
   if (flg.amdgcn_target && gbl.ompaccel_intarget) {
     int ilix = lowered_to_device_libm(opc,op1,op2);
     if (ilix) return ilix;
