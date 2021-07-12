@@ -7789,6 +7789,11 @@ gen_call_expr(int ilix, DTYPE ret_dtype, INSTR_LIST *call_instr, int call_sptr)
         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
         abi->is_pure = 0;
       }
+      if (strcmp(SYMNAME(call_sptr),"fort_ptr_assn_i8") == 0) {
+        SPTR sptr = mk_prototype_llvm("fort_ptr_assn_i8", "", DT_INT8, 5, DT_CPTR,DT_CPTR,DT_CPTR,DT_CPTR,DT_CPTR);
+        LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+        abi->is_pure = 0;
+      }
   }
   // AOCC End
   if (call_instr == NULL)
