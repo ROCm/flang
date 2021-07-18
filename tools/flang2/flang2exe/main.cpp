@@ -58,6 +58,11 @@
 #include <stdbool.h>
 #include "flang/ArgParser/arg_parser.h"
 #include "dtypeutl.h"
+// AOCC BEGIN
+#ifdef DEBUG
+#include "debug.h"
+#endif // DEBUG
+// AOCC END
 
 static bool process_input(char *argv0, bool *need_cuda_constructor);
 
@@ -735,10 +740,22 @@ init(int argc, char *argv[])
   register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
                        (bool *)&(flg.disable_loop_vectorize_pragmas), false);
+
+  // Debug Logs
+#ifdef DEBUG
+  register_boolean_arg(arg_parser, "debug-log", (bool *)&(flg.debug_log), 0);
+  register_string_arg(arg_parser, "debug-only", &(flg.debug_only_strs), NULL);
+#endif // DEBUG
   // AOCC End
 
   /* Run argument parser */
   parse_arguments(arg_parser, argc, argv);
+
+  // AOCC Begin
+#ifdef DEBUG
+  DEBUG_LOG_INIT(flg.debug_log, flg.debug_only_strs);
+#endif // DEBUG
+  // AOCC End
 
   /* Process debug output settings */
   if (was_value_set(arg_parser, &(flg.dbg)) ||
@@ -1086,6 +1103,9 @@ finish()
     gbl.ompaccfile = NULL;
   }
   #endif
+#ifdef DEBUG
+  DEBUG_LOG_DEINIT();
+#endif // DEBUG
   // AOCC End
 
   if (ccff_filename)

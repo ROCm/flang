@@ -458,7 +458,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     isPointer = llis_pointer_kind(param_dtype);
     //AOCC Begin
     isArray = llis_array_kind(param_dtype);
-    isStruct = llis_struct_kind(param_dtype);
+    isStruct = llis_struct_kind(param_dtype) && !is_complex_dtype(param_dtype);
     //AOCC End
 
     /* This is for fortran allocatable arrays.
@@ -593,7 +593,16 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {
-      if(isMidnum)
+      bool useMidnum = true;
+      if(isMidnum) {
+        DTYPE dtype = DTYPEG(midnum_sym.host_sym);
+	if (llis_array_kind(dtype)) {
+          ADSC *ad = AD_DPTR(dtype);
+          int numdim = AD_NUMDIM(ad);
+          if (numdim == 0 ) useMidnum = false;
+        }
+      }
+      if(isMidnum && useMidnum )
         ilix = _tgt_target_fill_size(midnum_sym.host_sym,
                                      targetinfo->symbols[i].map_type,
                                      targetinfo->symbols[i].ili_base); // AOCC
@@ -1072,11 +1081,6 @@ init_tgt_target_syms(const char *_kernelname, SPTR func_sptr)
   strcpy(sname_entry, ".openmp.offload.entry.");
   strcat(sname_entry, kernelname);
   eptr3 = (SPTR)addnewsym(sname_entry);
-#if 0
-  // AOCC Begin
-  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
-  // AOCC End
-#endif
   DTYPEP(eptr3, tgt_offload_entry_type);
   SCP(eptr3, SC_EXTERN);
   STYPEP(eptr3, ST_STRUCT);

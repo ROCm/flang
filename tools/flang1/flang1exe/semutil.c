@@ -33,6 +33,9 @@
  *
  * Support to access tbp through pointers.
  * Last modified: Jan 2021
+ *
+ * Added support for openmp schedule clause
+ * Date of modification: Jan 2021
  */
 
 
@@ -6439,11 +6442,13 @@ do_parbegin(DOINFO *doinfo)
     A_CHUNKP(ast, DI_CHUNK(sem.doif_depth));
     A_DISTCHUNKP(ast, DI_DISTCHUNK(sem.doif_depth)); /* currently unused */
     A_SCHED_TYPEP(ast, DI_SCHED_TYPE(sem.doif_depth));
+    A_SCHED_MODIFIERP(ast, DI_SCHED_MODIFIER(sem.doif_depth)); // AOCC
     A_ORDEREDP(ast, DI_IS_ORDERED(sem.doif_depth));
   } else {
     A_CHUNKP(ast, 0);
     A_DISTCHUNKP(ast, 0);
     A_SCHED_TYPEP(ast, 0);
+    A_SCHED_MODIFIERP(ast, 0);
     A_ORDEREDP(ast, 0);
   }
   if (doinfo->lastval_var) {

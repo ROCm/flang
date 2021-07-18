@@ -89,5 +89,5 @@ program foo
 
   res(n) = sum1
   exp(n) = 210
-  call check_double(res, exp, n)
+  call check_double(res, exp, 10)
 end program foo

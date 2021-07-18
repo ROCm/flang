@@ -305,6 +305,8 @@ static void rewrite_omp_target_construct() {
       if (A_TYPEG(ast) == A_MP_ENDTARGET) break;
       if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
               A_TYPEG(ast) == A_MP_PARALLEL || 
+              A_TYPEG(ast) == A_MP_TEAMS ||
+              A_TYPEG(ast) == A_MP_ENDTEAMS ||
               A_TYPEG(ast) == A_MP_DISTRIBUTE || 
               A_TYPEG(ast) == A_MP_ENDDISTRIBUTE ) {
           std = STD_NEXT(std);

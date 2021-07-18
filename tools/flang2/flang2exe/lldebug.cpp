@@ -189,15 +189,17 @@ static LL_MDRef lldbg_fwd_local_variable(LL_DebugInfo *db, int sptr, int findex,
                                          int emit_dummy_as_local);
 static void lldbg_emit_imported_entity(LL_DebugInfo *db, SPTR entity_sptr,
                                        SPTR func_sptr, IMPORT_TYPE entity_type);
-static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef lb,
-                                             LL_MDRef ub, LL_MDRef st);
+static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef count,
+                                             LL_MDRef lb, LL_MDRef ub,
+                                             LL_MDRef st);
 static LL_MDRef lldbg_create_generic_subrange_mdnode(LL_DebugInfo *db,
                                                      LL_MDRef lb, LL_MDRef ub,
                                                      LL_MDRef st);
 static LL_MDRef lldbg_create_subrange_via_sdsc(LL_DebugInfo *db, int findex,
                                                SPTR sptr, int rank);
 static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
-                                      int rank, LL_MDRef *lbnd_expr_mdnode,
+                                      int rank, LL_MDRef *count_expr_mdnode,
+                                      LL_MDRef *lbnd_expr_mdnode,
                                       LL_MDRef *ubnd_expr_mdnode,
                                       LL_MDRef *stride_expr_mdnode);
 
@@ -615,13 +617,28 @@ lldbg_create_global_variable_mdnode(LL_DebugInfo *db, LL_MDRef context,
        */
       const unsigned deref = lldbg_encode_expression_arg(LL_DW_OP_deref, 0);
       expr_mdnode = lldbg_emit_expression_mdnode(db, 1, deref);
-    } else
-    if (ll_feature_use_5_diexpression(&db->module->ir)) {
-      const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus_uconst, 0);
-      expr_mdnode = lldbg_emit_expression_mdnode(db, cnt, add, v);
+    } else if(SCOPEG(sptr) && STYPEG(sptr) == ST_PARAM) {
+       /* Store the constant value as an unsigned 64 bit value,
+	* This will help in dealing with -ve values. */
+	char buffer[64];
+	int convalue = CONVAL1G(sptr);
+	sprintf(buffer, "%d", convalue);
+	char *ptr;
+	ISZ_T uvalue = strtoul(buffer, &ptr, 10);
+        const unsigned value = lldbg_encode_expression_arg(LL_DW_OP_int,
+        CONVAL1G(sptr));
+        const unsigned consts_op = lldbg_encode_expression_arg(LL_DW_OP_consts,
+        0);
+        const unsigned stack_op = lldbg_encode_expression_arg(
+        LL_DW_OP_stack_value, 0);
+        expr_mdnode = lldbg_emit_expression_mdnode(db, 3/*Count of operands*/,
+        consts_op, convalue >= 0 ? value : uvalue, stack_op);
+    } else if (ll_feature_use_5_diexpression(&db->module->ir)) {
+        const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus_uconst, 0);
+        expr_mdnode = lldbg_emit_expression_mdnode(db, cnt, add, v);
     } else {
-      const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus, 0);
-      expr_mdnode = lldbg_emit_expression_mdnode(db, cnt, add, v);
+        const unsigned add = lldbg_encode_expression_arg(LL_DW_OP_plus, 0);
+        expr_mdnode = lldbg_emit_expression_mdnode(db, cnt, add, v);
     }
     llmd_add_md(mdb2, expr_mdnode);
     cur_mdnode = llmd_finish(mdb2);
@@ -966,14 +983,15 @@ lldbg_create_aggregate_members_type(LL_DebugInfo *db, SPTR first, int findex,
           db->need_dup_composite_type |= true;
         }
       } else {
-        if (!ll_feature_debug_info_ver11(&db->module->ir)) {
+        if (!SDSCG(element))
           element = SYMLKG(element);
-          assert(element > NOSYM,
-                 "lldbg_create_aggregate_members_type: element not exists",
-                 element, ERR_Fatal);
+        assert(element > NOSYM,
+               "lldbg_create_aggregate_members_type: element not exists",
+               element, ERR_Fatal);
+        is_desc_member = true;
+        if (!ll_feature_debug_info_ver11(&db->module->ir)) {
           db->need_dup_composite_type = false;
         }
-        is_desc_member = true;
       }
     }
     elem_dtype = DTYPEG(element);
@@ -1305,10 +1323,10 @@ lldbg_create_ftn_subrange_via_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
 }
 
 static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
-                                      int rank, LL_MDRef *lbnd_expr_mdnode,
+                                      int rank, LL_MDRef *count_expr_mdnode,
+                                      LL_MDRef *lbnd_expr_mdnode,
                                       LL_MDRef *ubnd_expr_mdnode,
-                                      LL_MDRef *stride_expr_mdnode)
-{
+                                      LL_MDRef *stride_expr_mdnode) {
 
   /*
    * Please consider below derived type, which has allocatable array as member.
@@ -1334,6 +1352,8 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
   const int F90_Desc_byte_len = 8 * (DESC_HDR_BYTE_LEN - DESC_HDR_TAG);
   const int F90_DescDim_size = 8 * DESC_DIM_LEN;    /* sizeof(F90_DescDim)*/
   const int F90_Desc_dim_offset = 8 * DESC_HDR_LEN; /* offsetof(F90_Desc, dim)*/
+  const int count_offset_wrt_lbound =
+      8 * (DESC_DIM_EXTENT - DESC_DIM_LOWER); /* offsetof(F90_DescDim, extent)*/
   const int ubound_offset_wrt_lbound =
       8 * (DESC_DIM_UPPER - DESC_DIM_LOWER); /* offsetof(F90_DescDim, ubound)*/
   const int lstride_offset_wrt_lbound =
@@ -1343,9 +1363,11 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
   const int target_size_offset = descr_offset_wrt_array + F90_Desc_byte_len;
   const int lower_offset =
       descr_offset_wrt_array + F90_Desc_dim_offset + (rank * F90_DescDim_size);
+  const int count_offset = lower_offset + count_offset_wrt_lbound;
   const int upper_offset = lower_offset + ubound_offset_wrt_lbound;
   const int stride_offset = lower_offset + lstride_offset_wrt_lbound;
 
+  const unsigned v0 = lldbg_encode_expression_arg(LL_DW_OP_int, count_offset);
   const unsigned v1 = lldbg_encode_expression_arg(LL_DW_OP_int, lower_offset);
   const unsigned v2 = lldbg_encode_expression_arg(LL_DW_OP_int, upper_offset);
   const unsigned v3 = lldbg_encode_expression_arg(LL_DW_OP_int, stride_offset);
@@ -1358,6 +1380,9 @@ static void lldbg_get_bounds_for_sdsc(LL_DebugInfo *db, int findex, SPTR sptr,
   const unsigned pushobj =
       lldbg_encode_expression_arg(LL_DW_OP_push_object_address, 0);
 
+  if (count_expr_mdnode)
+    *count_expr_mdnode =
+        lldbg_emit_expression_mdnode(db, 4, pushobj, add, v0, deref);
   if (lbnd_expr_mdnode)
     *lbnd_expr_mdnode =
       lldbg_emit_expression_mdnode(db, 4, pushobj, add, v1, deref);
@@ -1427,11 +1452,11 @@ static LL_MDRef lldbg_create_subrange_via_sdsc(LL_DebugInfo *db, int findex,
                                                SPTR sptr, int rank)
 {
   LL_MDRef lbnd_expr_mdnode, ubnd_expr_mdnode, stride_expr_mdnode;
-  lldbg_get_bounds_for_sdsc(db, findex, sptr, rank, &lbnd_expr_mdnode,
+  lldbg_get_bounds_for_sdsc(db, findex, sptr, rank, NULL, &lbnd_expr_mdnode,
                             &ubnd_expr_mdnode, &stride_expr_mdnode);
 
-  return lldbg_create_subrange_mdnode(db, lbnd_expr_mdnode, ubnd_expr_mdnode,
-                                      stride_expr_mdnode);
+  return lldbg_create_subrange_mdnode(db, ll_get_md_null(), lbnd_expr_mdnode,
+                                      ubnd_expr_mdnode, stride_expr_mdnode);
 }
 
 static LL_MDRef lldbg_create_subrange_mdnode_pre11(LL_DebugInfo *db, ISZ_T lb,
@@ -1463,13 +1488,17 @@ static LL_MDRef lldbg_create_subrange_mdnode_pre11(LL_DebugInfo *db, ISZ_T lb,
   return llmd_finish(mdb);
 }
 
-static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef lb,
-                                             LL_MDRef ub, LL_MDRef st)
-{
+static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef count,
+                                             LL_MDRef lb, LL_MDRef ub,
+                                             LL_MDRef st) {
   LLMD_Builder mdb = llmd_init(db->module);
 
   llmd_set_class(mdb, LL_DISubRange);
   llmd_add_i32(mdb, make_dwtag(db, DW_TAG_subrange_type));
+  if (count != ll_get_md_null())
+    llmd_add_md(mdb, count);
+  else
+    llmd_add_null(mdb);
   llmd_add_md(mdb, lb);
   if (ub != ll_get_md_null())
     llmd_add_md(mdb, ub);
@@ -3344,14 +3373,18 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                 } else if ((SCG(sptr) == SC_DUMMY) && data_sptr &&
                            db->cur_subprogram_mdnode) {
                   // assumed shape array
-                  LL_MDRef s_bnd;
+                  LL_MDRef count, s_bnd;
                   init_subrange_bound(db, &lbv, lower_bnd, 1, findex);
                   init_subrange_bound(db, &ubv, upper_bnd, 0, findex);
-                  lldbg_get_bounds_for_sdsc(db, findex, data_sptr, i, NULL,
-                                            NULL, &s_bnd);
+                  lldbg_get_bounds_for_sdsc(db, findex, data_sptr, i, &count,
+                                            NULL, NULL, &s_bnd);
 
-                  subscript_mdnode =
-                      lldbg_create_subrange_mdnode(db, lbv, ubv, s_bnd);
+                  if (ll_feature_debug_info_ver13(&db->module->ir))
+                    subscript_mdnode = lldbg_create_subrange_mdnode(
+                        db, count, lbv, ll_get_md_null(), s_bnd);
+                  else
+                    subscript_mdnode = lldbg_create_subrange_mdnode(
+                        db, ll_get_md_null(), lbv, ubv, s_bnd);
                 } else {
                   // explicit shape array, assumed size array
                   init_subrange_bound(db, &lbv, lower_bnd, 1, findex);
@@ -3360,7 +3393,7 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                     init_subrange_bound(db, &ubv, upper_bnd, 0, findex);
 
                   subscript_mdnode =
-                      lldbg_create_subrange_mdnode(db, lbv, ubv, st);
+                      lldbg_create_subrange_mdnode(db, NULL, lbv, ubv, st);
                 }
                 llmd_add_md(mdb, subscript_mdnode);
               } else {
@@ -3436,8 +3469,8 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
         ub = DTyVecLength(dtype) - 1;
         if (ll_feature_debug_info_ver11(&db->module->ir))
           subscript_mdnode = lldbg_create_subrange_mdnode(
-              db, ll_get_md_i64(db->module, lb), ll_get_md_i64(db->module, ub),
-              ll_get_md_null());
+              db, ll_get_md_null(), ll_get_md_i64(db->module, lb),
+              ll_get_md_i64(db->module, ub), ll_get_md_null());
         else
           subscript_mdnode =
               lldbg_create_subrange_mdnode_pre11(db, lb, DTyVecLength(dtype));
@@ -3561,7 +3594,7 @@ lldbg_emit_global_variable(LL_DebugInfo *db, SPTR sptr, ISZ_T off, int findex,
     }
   }
   mdref = lldbg_create_global_variable_mdnode(
-      db, scope_mdnode, display_name, SYMNAME(sptr), get_llvm_name(sptr), file_mdnode, decl_line,
+      db, scope_mdnode, display_name, SYMNAME(sptr), "", file_mdnode, decl_line,
       type_mdnode, is_local, DEFDG(sptr) || (sc != SC_EXTERN), value, -1, flags,
       off, sptr, fwd);
 
@@ -4133,8 +4166,8 @@ lldbg_create_cmblk_gv_mdnode(LL_DebugInfo *db, LL_MDRef cmnblk_mdnode,
   align[0] = 0;
   if (ll_feature_debug_info_ver11(&db->module->ir))
     subscript_mdnode = lldbg_create_subrange_mdnode(
-        db, ll_get_md_i64(db->module, lb), ll_get_md_i64(db->module, ub),
-        ll_get_md_null());
+        db, ll_get_md_null(), ll_get_md_i64(db->module, lb),
+        ll_get_md_i64(db->module, ub), ll_get_md_null());
   else
     subscript_mdnode = lldbg_create_subrange_mdnode_pre11(db, lb, sz);
   llmd_add_md(mdb, subscript_mdnode);
