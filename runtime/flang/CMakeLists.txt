@@ -616,7 +616,8 @@ set_source_files_properties(
 set_source_files_properties(
   omp_lib.F95
   PROPERTIES
-  OBJECT_OUTPUTS ${CMAKE_Fortran_MODULE_DIRECTORY}/iso_c_binding.mod
+  OBJECT_DEPENDS ${CMAKE_Fortran_MODULE_DIRECTORY}/iso_c_binding.mod
+  OBJECT_OUTPUTS ${CMAKE_Fortran_MODULE_DIRECTORY}/omp_lib.mod
   )
 
 set_source_files_properties(
