@@ -614,8 +614,31 @@ semant3(int rednum, SST *top)
           sem.mpaccatomic.seen = FALSE;
       }
 
-      ast = assign(RHS(2), RHS(5));
-      *LHS = *RHS(2);
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      // when assigning to a complex scalar in target region
+      // but not in a nested parallel
+      // create a private symbol of that and assign to it
+      int lhs_sptr = SST_SYMG(RHS(2));
+      int lhs_sptr_dtype = DTYPEG(lhs_sptr);
+      int lhs_ast = SST_ASTG(RHS(2));
+      if (sem.target && sem.teams && !sem.parallel
+            && lhs_sptr > 1 && DTY(lhs_sptr_dtype) == TY_CMPLX
+             && SCG(lhs_sptr) != SC_PRIVATE) {
+        int prvt_lhs_sptr = decl_private_sym(lhs_sptr);
+        SST lhs_sst;
+        (void)mk_storage(prvt_lhs_sptr, &lhs_sst);
+        ast = assign(&lhs_sst, RHS(5));
+      } else {
+#endif
+// AOCC End
+        ast = assign(RHS(2), RHS(5));
+        *LHS = *RHS(2);
+// AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+      }
+#endif
+// AOCC End
       /* assign() will return 0 if the rhs is an array-valued function
        * for which the lhs becomes the result argument.
        */
