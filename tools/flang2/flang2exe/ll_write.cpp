@@ -794,6 +794,12 @@ ll_write_local_objects(FILE *out, LL_Function *function)
                             object->address.data, object->type->str);
       fputc('\n', out);
     }
+    if (object->type->data_type == LL_I32 || object->type->data_type == LL_I64) {
+      fprintf(out, "\tstore %s 0, %s* %s",object->type->str, object->type->str, object->address.data);
+      if (object->align_bytes)
+        fprintf(out, ", align %u", object->align_bytes);
+      fputc('\n', out);
+    }
 #else
     fprintf(out, "\t%s = alloca %s", object->address.data, object->type->str);
     if (object->align_bytes)
