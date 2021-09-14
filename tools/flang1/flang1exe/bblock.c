@@ -2552,6 +2552,8 @@ static int clone_stblk(int ast) {
       if (debug_me) {
         printf("[ompaccel-ast] mapping %s\n", getprint(orig_uplevel->vals[i]));
       }
+      if (ENCLFUNCG(orig_uplevel->vals[i]))
+	ENCLFUNCP(orig_uplevel->vals[i], cloned_scope_sptr-2);
 
       llmp_add_shared_var(cloned_uplevel, orig_uplevel->vals[i]);
     }
@@ -2567,7 +2569,7 @@ static int clone_stblk(int ast) {
 }
 
 /* returns a cloned BMPSCOPE of \p std */
-static int clone_bmpscope_std(int std) {
+int clone_bmpscope_std(int std) {
   int new_ast = new_node(A_MP_BMPSCOPE);
   int new_stblk = clone_stblk(A_STBLKG(STD_AST(std)));
 
