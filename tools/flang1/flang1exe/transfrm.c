@@ -87,6 +87,7 @@ struct pure_gbl pure_gbl;
 extern int pghpf_type_sptr;
 int pghpf_local_mode_sptr = 0;
 
+#ifdef OMP_OFFLOAD_LLVM
 // AOCC BEGIN
 /* maximum number of AST statement clones */
 #define MAX_CLONES 1000
@@ -271,54 +272,30 @@ static void rewrite_omp_target_construct() {
     std = STD_NEXT(std);
     ast = STD_AST(std);
 
-    // There might be another inner BMPSCOPE for
-    // some constructs. Handle them too.
-    // TODO: Add more patterns.
-    found_inner_scope = 0;
-    if (A_TYPEG(ast) == A_MP_BMPSCOPE) {
-      found_inner_scope = 1;
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-      if (A_TYPEG(ast) == A_MP_TEAMS) {
-        std = STD_NEXT(std);
-        assert(std > 0, "", ast, 4);
-        ast = STD_AST(std);
-        if (A_TYPEG(ast) != A_MP_DISTRIBUTE) {
-          assert(false, "", ast, 4);
-        }
-      }
-      if (A_TYPEG(ast) == A_MP_PARALLEL) {
-        std = STD_NEXT(std);
-        assert(std > 0, "", ast, 4);
-        ast = STD_AST(std);
-      }
-      std = STD_NEXT(std);
-      assert(std > 0, "", ast, 4);
-      ast = STD_AST(std);
-    }
+    int outer_scope = 1;
+    int team_scope = 0;
 
-    // clone all the statements found below.
-    // don't clone PARALLEL and DISTRIBUTE construcs
     while (std > 0) {
       ast = STD_AST(std);
       if (A_TYPEG(ast) == A_MP_ENDTARGET) break;
-      if (A_TYPEG(ast) == A_MP_ENDPARALLEL ||
-              A_TYPEG(ast) == A_MP_PARALLEL || 
-              A_TYPEG(ast) == A_MP_DISTRIBUTE || 
-              A_TYPEG(ast) == A_MP_ENDDISTRIBUTE ) {
-          std = STD_NEXT(std);
-          continue;
-      }
-      new_stmt = ast_rewrite(ast);
-      // Disable the parallel execution of A_MP_PDO for now.
-      // TODO: Does this need to be enabled for any case?
-      if (A_TYPEG(ast) == A_MP_PDO) {
-        A_DISTPARDOP(new_stmt, 0);
-        A_DISTRIBUTEP(new_stmt,0);
-        A_TASKLOOPP(new_stmt, 0);
-        A_SCHED_TYPEP(new_stmt, 0);
-        A_ORDEREDP(new_stmt, 0);
+      if (A_TYPEG(ast) == A_MP_TEAMS) team_scope = 1;
+      if (A_TYPEG(ast) == A_MP_BMPSCOPE) {
+	  if (outer_scope || !team_scope) {
+	    new_stmt = STD_AST(clone_bmpscope_std(begin_std));
+	  } else {
+	    new_stmt = STD_AST(clone_bmpscope_std(std));
+	  }
+          int stblk_ast = A_STBLKG(new_stmt);
+          int uplevel_sptr = PARUPLEVELG(A_SPTRG(stblk_ast));
+          int uplevel_sptr2 = PARUPLEVELG(A_STBLKG(ast));
+	  if (!outer_scope) {
+	     llmp_uplevel_set_parent(uplevel_sptr, uplevel_sptr-2);
+	  }
+	  outer_scope = 0;
+      } else {
+          new_stmt = ast_rewrite(ast);
+          if (A_TYPEG(ast) == A_MP_PARALLEL) 
+	    A_IFPARP(new_stmt, 0);
       }
       A_DESTP(new_stmt, A_DESTG(ast));
       A_SRCP(new_stmt, A_SRCG(ast));
@@ -342,8 +319,10 @@ static void rewrite_omp_target_construct() {
     add_stmt_after(new_end, std);
     // Insert the cloned statements in the
     // else part.
-    while (curr > 0)
-      add_stmt_after(cloned_stmts[--curr],std);
+    while (curr > 0) {
+      int cloned_ast = cloned_stmts[--curr];
+      add_stmt_after(cloned_ast,std);
+    }
     add_stmt_after(new_else, std);
 
     // Move to next node.
@@ -353,8 +332,7 @@ static void rewrite_omp_target_construct() {
   ast_unvisit();
 }
 
-void rewrite_omp_map_array_section()
-{
+void rewrite_omp_map_array_section() {
   int std = 0, bmpstd;
   int ast = 0, lop;
   int ast2 = 0, shape, src;
@@ -399,6 +377,7 @@ void rewrite_omp_map_array_section()
 
   ast_unvisit();
 }
+#endif
 // AOCC END
 
 void
@@ -413,6 +392,7 @@ transform(void)
     trans_get_descrs();
 
 // AOCC BEGIN
+#ifdef OMP_OFFLOAD_LLVM
     if (flg.omptarget) {
       /* Handle if-clause in OpenMP statements.
       */
@@ -435,6 +415,7 @@ transform(void)
       }
 #endif
     }
+#endif
 // AOCC END
 
 /* turn block wheres into single wheres */
