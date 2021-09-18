@@ -8,6 +8,9 @@
 .\" * Modifications Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
 .\" * Notified per clause 4(b) of the license.
 .\" *
+.\" * Added support for openmp schedule clause
+.\" * Date of modification: Jan 2021
+.\" *
 .\" * Last Modified: May 2020
 .\" */
 .NS 30 "Abstract Syntax Tree"
@@ -233,6 +236,10 @@ Always an unsigned halfword.
 Used when it's known (or there's a practical limit)
 that its value does not exceed 65335.
 .SF hw22 w11:h2
+Always an unsigned halfword.
+Used where it's known (or there's a practical limit)
+that its value does not exceed 65335.
+.SF hw23 w11:h3
 Always an unsigned halfword.
 Used where it's known (or there's a practical limit)
 that its value does not exceed 65335.
@@ -2814,6 +2821,8 @@ AST pointer to the last value variable.
 Schedule type (see DI_SCH macros in semant.h)
 .OV ORDERED hw22
 If nonzero, loop has the ORDERED attribute.
+.OV SCHED_MODIFIER hw23
+Schedule modifier (see DI_SCH macros in semant.h)
 .SE DISTCHUNK w9
 AST pointer to the disribute chunk size; this field is zero if the chunk clause
 is not present.

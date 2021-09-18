@@ -21,6 +21,9 @@
  * Added code to support cotan intrinsic
  *  Last modified: Oct 2020
  *
+ * Added support for openmp schedule clause
+ * Last modified: March 2021
+ *
 
  */
 
@@ -193,6 +196,7 @@ typedef struct { /* DO-IF stack entries */
         int sect_var; /* where to store section number */
       } v1;
       struct {           /* parallel do statements */
+        int modifier;    /* AOCC */
         int sched_type;  /* one of DI_SCHxxx if a parallel do */
         int chunk;       /* When the parallel do is parsed, this
                           * field is the sptr representing the chunk size
@@ -234,6 +238,17 @@ typedef struct { /* DO-IF stack entries */
 #define DI_SCH_RUNTIME 4
 #define DI_SCH_AUTO 5
 #define DI_SCH_DIST_STATIC 6
+#define DI_MOD_NONMONOTONIC 8
+#define DI_MOD_MONOTONIC 9
+#define DI_DEP_MOD_SOURCE 10
+#define DI_DEP_TYPE_SINK 10
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+#define DI_DEP_TYPE_MUTEXINOUTSET 14
+#define DI_DEP_TYPE_DEPOBJ 15
+#define DI_MOD_SIMD 16
+
 
 #define DI_ID(d) sem.doif_base[d].Id
 #define DI_LINENO(d) sem.doif_base[d].lineno
@@ -252,6 +267,7 @@ typedef struct { /* DO-IF stack entries */
 #define DI_NOSCOPE_AVL(d) sem.doif_base[d].omp.no_scope_avail
 #define DI_CRITSYM(d) sem.doif_base[d].omp.v.v1.sect_lab
 #define DI_SCHED_TYPE(d) sem.doif_base[d].omp.v.v2.sched_type
+#define DI_SCHED_MODIFIER(d) sem.doif_base[d].omp.v.v2.modifier //AOCC
 #define DI_CHUNK(d) sem.doif_base[d].omp.v.v2.chunk
 #define DI_IS_ORDERED(d) sem.doif_base[d].omp.v.v2.is_ordered
 #define DI_REDUC(d) sem.doif_base[d].omp.reduc

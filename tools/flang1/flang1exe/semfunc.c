@@ -9775,7 +9775,7 @@ ref_pd(SST *stktop, ITEM *list)
     }
     if (shaper)
       dtyper = get_array_dtype(1, dtyper);
-    goto gen_call;
+    break;
 
   case PD_cmplx:
     if (count < 1 || count > 3) {

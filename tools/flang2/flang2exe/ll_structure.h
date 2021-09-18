@@ -161,6 +161,7 @@ typedef enum LL_IRVersion {
   LL_Version_10_0 = 100,
   LL_Version_11_0 = 110,
   LL_Version_12_0 = 120,
+  LL_Version_13_0 = 130,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -415,6 +416,13 @@ INLINE static bool ll_feature_debug_info_ver12(const LL_IRFeatures *feature) {
 }
 
 /**
+   \brief Version 13.0 debug metadata
+ */
+INLINE static bool ll_feature_debug_info_ver13(const LL_IRFeatures *feature) {
+  return (get_llvm_ir_version() >= LL_Version_13_0);
+}
+
+/**
    \brief Version 9.0 onwards uses 3 field syntax for constructors
    and destructors
  */
@@ -516,6 +524,8 @@ ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 #define ll_feature_debug_info_ver11(f) (get_llvm_ir_version() >= LL_Version_11_0)
 #define ll_feature_debug_info_ver12(f)                                         \
   (get_llvm_ir_version() >= LL_Version_12_0)
+#define ll_feature_debug_info_ver13(f)                                         \
+  (get_llvm_ir_version() >= LL_Version_13_0)
 #define ll_feature_three_argument_ctor_and_dtor(f) \
   ((f)->version >= LL_Version_9_0)
 #define ll_feature_use_distinct_metadata(f) ((f)->version >= LL_Version_3_8)
@@ -709,6 +719,7 @@ typedef enum LL_DW_OP_t {
   LL_DW_OP_xderef,
   LL_DW_OP_stack_value,
   LL_DW_OP_constu,
+  LL_DW_OP_consts,
   LL_DW_OP_plus_uconst,
   LL_DW_OP_int,
   LL_DW_OP_push_object_address,

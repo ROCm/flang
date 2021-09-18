@@ -458,7 +458,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     isPointer = llis_pointer_kind(param_dtype);
     //AOCC Begin
     isArray = llis_array_kind(param_dtype);
-    isStruct = llis_struct_kind(param_dtype);
+    isStruct = llis_struct_kind(param_dtype) && !is_complex_dtype(param_dtype);
     //AOCC End
 
     /* This is for fortran allocatable arrays.
@@ -593,7 +593,16 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       ilix = ikmove(targetinfo->symbols[i].ili_length);
       ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
     } else {
-      if(isMidnum)
+      bool useMidnum = true;
+      if(isMidnum) {
+        DTYPE dtype = DTYPEG(midnum_sym.host_sym);
+	if (llis_array_kind(dtype)) {
+          ADSC *ad = AD_DPTR(dtype);
+          int numdim = AD_NUMDIM(ad);
+          if (numdim == 0 ) useMidnum = false;
+        }
+      }
+      if(isMidnum && useMidnum )
         ilix = _tgt_target_fill_size(midnum_sym.host_sym,
                                      targetinfo->symbols[i].map_type,
                                      targetinfo->symbols[i].ili_base); // AOCC

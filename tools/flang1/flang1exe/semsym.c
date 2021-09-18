@@ -889,6 +889,15 @@ declsym(int first, SYMTYPE stype, LOGICAL errflg)
       push_sym(sptr);
       goto return1;
     }
+    if (stype == ST_VAR && st == ST_PROC) {
+      /* the existing symbol is module procedure and declare the new symbol for
+        for procedure pointer refering to subroutine*/ 
+      IGNOREP(sptr, 1); /* hide the procedure symbol */
+      oldsptr = sptr;
+      sptr = insert_sym(first);
+      sptr = replace_variable(sptr, stype);
+      goto return1;
+    }
     // AOCC END
     if (stype == ST_ENTRY && sptralias == sptr && sem.mod_sym &&
         st == ST_PROC && ENCLFUNCG(sptr) == sem.mod_sym) {

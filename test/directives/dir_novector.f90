@@ -12,6 +12,6 @@ subroutine add(arr1,arr2,arr3,N)
   end do
 end subroutine
 ! CHECK: {{.*}}"llvm.loop.vectorize.width", i1 true{{.*}}
-! CHECK-NOT: load <[[VF:[0-9]+]] x i32>
-! CHECK-NOT: sub {{.*}} <[[VF]] x i32>
-! CHECK-NOT: store <[[VF]] x i32>
+! CHECK-NOT: load <{{.*}} x i32>
+! CHECK-NOT: sub {{.*}} <{{.*}} x i32>
+! CHECK-NOT: store <{{.*}} x i32>

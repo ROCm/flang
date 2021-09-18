@@ -2544,8 +2544,9 @@ inline bool IS_QUAD0(int x)
 #define IS_QUAD0 is_quad0  // AOCC
 #endif
 
-static 
-int lowered_to_device_libm(ILI_OP opc,int op1,int op2)
+#ifdef OMP_OFFLOAD_LLVM
+static int 
+lowered_to_device_libm(ILI_OP opc,int op1,int op2)
 {
     int ilix;
     switch (opc) {
@@ -2676,6 +2677,7 @@ int lowered_to_device_libm(ILI_OP opc,int op1,int op2)
     }
     return 0;
 }
+#endif
 /**
  * \brief adds arithmetic ili
  */
@@ -2826,7 +2828,7 @@ addarth(ILI *ilip)
 #ifdef OMP_OFFLOAD_LLVM
   (void)mk_prototype("tgt_fort_ptr_assn_i8", "f pure", DT_INT8, 5, DT_CPTR,DT_CPTR, DT_CPTR,DT_CPTR,DT_CPTR);
   if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-    int ilix = lowered_to_device_libm(opc,op1,op2);
+    ilix = lowered_to_device_libm(opc,op1,op2);
     if (ilix) return ilix;
   }
 #endif
@@ -7224,9 +7226,9 @@ addarth(ILI *ilip)
   case IL_FATAN2:
  #ifdef OMP_OFFLOAD_LLVM
       if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("atan2f", "f pure", DT_FLOAT, 1, DT_FLOAT);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2f", 1, op1);
-        return ad1altili(opc, op1, ilix);
+        (void)mk_prototype("atan2f", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2f", 2, op1, op2);
+        return ad2altili(opc, op1, op2, ilix);
       }
 #endif
     if (XBIT_NEW_MATH_NAMES) {
@@ -7284,9 +7286,9 @@ addarth(ILI *ilip)
   case IL_DATAN2:
  #ifdef OMP_OFFLOAD_LLVM
       if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-        (void)mk_prototype("atan2", "f pure", DT_DBLE, 1, DT_DBLE);
-        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2", 1, op1);
-        return ad1altili(opc, op1, ilix);
+        (void)mk_prototype("atan2", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
+        ilix = ad_func(IL_DFRQP, IL_QJSR, "atan2", 2, op1, op2);
+        return ad2altili(opc, op1, op2, ilix);
       }
 #endif
     if (XBIT_NEW_MATH_NAMES) {
