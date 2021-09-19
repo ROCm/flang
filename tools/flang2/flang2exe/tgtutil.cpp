@@ -103,6 +103,14 @@ public:
       return {"__tgt_target_data_end", 0, DT_NONE};
     case TGT_API_TARGETUPDATE:
       return {"__tgt_target_data_update", 0, DT_NONE};
+    case TGT_API_TARGET_WITH_DEPS:
+      return {"__tgt_target_with_deps", 0, DT_INT};
+    case TGT_API_TARGET_DATA_BEGIN_WITH_DEPS:
+      return {"__tgt_target_data_begin_with_deps", 0, DT_NONE};
+    case TGT_API_TARGET_DATA_END_WITH_DEPS:
+      return {"__tgt_target_data_end_with_deps", 0, DT_NONE};
+    case TGT_API_TARGETUPDATE_WITH_DEPS:
+      return {"__tgt_target_data_update_with_deps", 0, DT_NONE};
     default:
       return {nullptr, 0, DT_NONE};
     }
@@ -121,6 +129,10 @@ static const struct tgt_api_entry_t tgt_api_calls[] = {
     [TGT_API_TARGET_DATA_BEGIN] = {"__tgt_target_data_begin", 0, DT_VOID_NONE},
     [TGT_API_TARGET_DATA_END] = {"__tgt_target_data_end", 0, DT_VOID_NONE},
     [TGT_API_TARGETUPDATE] = {"__tgt_target_data_update", 0, DT_VOID_NONE}};
+    [TGT_API_TARGET_WITH_DEPS] = {"__tgt_target_with_deps", 0, DT_INT},
+    [TGT_API_TARGET_DATA_BEGIN_WITH_DEPS] = {"__tgt_target_data_begin_with_deps", 0, DT_VOID_NONE},
+    [TGT_API_TARGET_DATA_END_WITH_DEPS] = {"__tgt_target_data_end_with_deps", 0, DT_VOID_NONE},
+    [TGT_API_TARGETUPDATE_WITH_DEPS] = {"__tgt_target_data_update_with_deps", 0, DT_VOID_NONE};
 #endif
 static int
 gen_null_arg()
@@ -622,6 +634,101 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
 }
 
 int
+ll_make_tgt_target_with_deps(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr,
+                             depend_info_t* depend_info_list, int dependCnt)
+{
+  SPTR sptr, arg_base_sptr, arg_size_sptr, args_sptr, args_maptypes_sptr;
+  char *name, *rname;
+  OMPACCEL_TINFO *targetinfo;
+  int ili_hostptr;
+  int total_args = dependCnt*3+9;
+  std::vector<int> dependinfotokmpc;
+  int *locargs = (int*)malloc(total_args*sizeof(int));
+  DTYPE *locarg_types = (DTYPE*)malloc(total_args*sizeof(DTYPE));
+
+  for (int i = 0, j = 0; i < dependCnt && j < dependCnt*3; i++, j+=3) {
+    dependinfotokmpc.push_back(mk_address(depend_info_list[i].base_addr));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].size));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].dependencetype));
+  }
+
+  rname = SYMNAME(outlined_func_sptr);
+  NEW(name, char, strlen(rname)+16); // AOCC
+
+  targetinfo = ompaccel_tinfo_get(outlined_func_sptr);
+#if OMP_OFFLOAD_LLVM
+  // AOCC begin
+  if (flg.x86_64_omptarget)
+    sptr = init_tgt_target_syms(rname, outlined_func_sptr);
+  else
+    sptr = init_tgt_target_syms(rname);
+  // AOCC end
+  ili_hostptr = ad_acon(sptr, 0);
+#endif
+  int k = 0;
+  for(std::vector<int>::iterator it = dependinfotokmpc.begin(); it != dependinfotokmpc.end(); it++) {
+    locargs[k] = *it;
+    locarg_types[k+9] = DT_INT;
+    k++;
+  }
+  locarg_types[0] = DT_INT8;
+  locarg_types[1] = DT_ADDR;
+  locarg_types[2] = DT_INT;
+  locarg_types[3] = DT_ADDR;
+  locarg_types[4] = DT_ADDR;
+  locarg_types[5] = DT_ADDR;
+  locarg_types[6] = DT_ADDR;
+  locarg_types[7] = DT_INT;
+  locarg_types[8] = DT_INT;
+
+  if (targetinfo->n_symbols == 0) {    
+    locargs[dependCnt*3+8] = ad_icon(device_id);
+    locargs[dependCnt*3+7] = ili_hostptr;
+    locargs[dependCnt*3+6] = ad_icon(targetinfo->n_symbols);
+    locargs[dependCnt*3+5] = gen_null_arg();
+    locargs[dependCnt*3+4] = gen_null_arg();
+    locargs[dependCnt*3+3] = gen_null_arg();
+    locargs[dependCnt*3+2] = gen_null_arg();
+    locargs[dependCnt*3+1] = ad_icon(dependCnt);
+    locargs[dependCnt*3] = ad_icon(dependCnt*3);
+    
+    // call the RT
+    int call_ili = mk_tgt_api_call(TGT_API_TARGET_WITH_DEPS, total_args, locarg_types, locargs);
+    return call_ili;
+  } else {
+    sprintf(name, "%s_base", rname);
+    arg_base_sptr = make_array_sptr(name, DT_CPTR, targetinfo->n_symbols);
+    sprintf(name, "%s_size", rname);
+    arg_size_sptr = make_array_sptr(name, DT_INT8, targetinfo->n_symbols);
+    sprintf(name, "%s_args", rname);
+    args_sptr = make_array_sptr(name, DT_CPTR, targetinfo->n_symbols);
+    sprintf(name, "%s_type", rname);
+    args_maptypes_sptr = make_array_sptr(name, DT_INT8, targetinfo->n_symbols);
+
+    tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
+                           args_maptypes_sptr, targetinfo);
+    
+    locargs[dependCnt*3+8] = ad_icon(device_id);
+    locargs[dependCnt*3+7] = ili_hostptr;
+    locargs[dependCnt*3+6] = ad_icon(targetinfo->n_symbols);
+    locargs[dependCnt*3+5] = ad_acon(arg_base_sptr, 0);
+    locargs[dependCnt*3+4] = ad_acon(args_sptr, 0);
+    locargs[dependCnt*3+3] = ad_acon(arg_size_sptr, 0);
+    locargs[dependCnt*3+2] = ad_acon(args_maptypes_sptr, 0);
+    locargs[dependCnt*3+1] = ad_icon(dependCnt);
+    locargs[dependCnt*3] = ad_icon(dependCnt*3);
+
+#ifdef OMP_OFFLOAD_LLVM
+  change_target_func_smbols(outlined_func_sptr, stblk_sptr);
+#endif
+    // call the RT
+    int call_ili = mk_tgt_api_call(TGT_API_TARGET_WITH_DEPS, total_args, locarg_types, locargs);
+
+    return call_ili;
+  }  
+}
+
+int
 ll_make_tgt_target(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr)
 {
   SPTR sptr, arg_base_sptr, arg_size_sptr, args_sptr, args_maptypes_sptr;
@@ -816,6 +923,74 @@ ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
 }
 
 int
+ll_make_tgt_target_data_begin_with_deps(int device_id, OMPACCEL_TINFO *targetinfo,
+                                        depend_info_t* depend_info_list, int dependCnt)
+{
+  int call_ili, nargs;
+  SPTR arg_base_sptr, args_sptr, arg_size_sptr, args_maptypes_sptr;
+  char name[16];
+
+  int total_args = dependCnt*3+9;
+  std::vector<int> dependinfotokmpc;
+  int *locargs = (int*)malloc(total_args*sizeof(int));
+  DTYPE *locarg_types = (DTYPE*)malloc(total_args*sizeof(DTYPE));
+
+  for (int i = 0, j = 0; i < dependCnt && j < dependCnt*3; i++, j+=3) {
+    dependinfotokmpc.push_back(mk_address(depend_info_list[i].base_addr));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].size));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].dependencetype)); 
+  }
+  
+  locarg_types[0] = DT_INT8;
+  locarg_types[1] = DT_INT;
+  locarg_types[2] = DT_ADDR;
+  locarg_types[3] = DT_ADDR;
+  locarg_types[4] = DT_ADDR;
+  locarg_types[5] = DT_ADDR;
+  locarg_types[6] = DT_INT;
+  locarg_types[7] = DT_INT;
+
+  if (targetinfo == NULL) {
+    interr("Map item list is not found", 0, ERR_Fatal);
+  }
+  nargs = targetinfo->n_symbols;
+
+  sprintf(name, "edata%d_base", dataregion);
+  arg_base_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "edata%d_size", dataregion);
+  arg_size_sptr = make_array_sptr(name, DT_INT8, nargs);
+  sprintf(name, "edata%d_args", dataregion);
+  args_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "edata%d_type", dataregion);
+  args_maptypes_sptr = make_array_sptr(name, DT_INT8, nargs);
+  dataregion++;
+
+  tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
+                         args_maptypes_sptr, targetinfo);
+
+  int k = 0;
+  for(std::vector<int>::iterator it = dependinfotokmpc.begin(); it != dependinfotokmpc.end(); it++) {
+    locargs[k] = *it;
+    locarg_types[k+9] = DT_INT;
+    k++;
+  }
+
+  locargs[dependCnt*3+7] = ad_icon(device_id);
+  locargs[dependCnt*3+6] = ad_icon(nargs);
+  locargs[dependCnt*3+5] = ad_acon(arg_base_sptr, 0);
+  locargs[dependCnt*3+4] = ad_acon(args_sptr, 0);
+  locargs[dependCnt*3+3] = ad_acon(arg_size_sptr, 0);
+  locargs[dependCnt*3+2] = ad_acon(args_maptypes_sptr, 0);
+  locargs[dependCnt*3+1] = ad_icon(dependCnt);
+  locargs[dependCnt*3] = ad_icon(dependCnt*3);
+
+  call_ili =
+      mk_tgt_api_call(TGT_API_TARGET_DATA_BEGIN_WITH_DEPS, total_args, locarg_types, locargs);
+
+  return call_ili;
+}
+
+int
 ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)
 {
   int call_ili, nargs;
@@ -853,6 +1028,69 @@ ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)
   // call the RT
   call_ili =
       mk_tgt_api_call(TGT_API_TARGET_DATA_BEGIN, 6, locarg_types, locargs);
+
+  return call_ili;
+}
+
+static int
+_tgt_target_fill_targetdata_with_deps(int device_id, OMPACCEL_TINFO *targetinfo, int tgt_api,
+                                      depend_info_t* depend_info_list, int dependCnt)
+{
+  int call_ili, nargs;
+  SPTR arg_base_sptr, args_sptr, arg_size_sptr, args_maptypes_sptr;
+  char name[16];
+  int total_args = dependCnt*3+8;
+  std::vector<int> dependinfotokmpc;
+  int *locargs = (int*)malloc(total_args*sizeof(int));
+  DTYPE *locarg_types = (DTYPE*)malloc(total_args*sizeof(DTYPE));
+
+  for (int i = 0, j = 0; i < dependCnt && j < dependCnt*3; i++, j+=3) {
+    dependinfotokmpc.push_back(mk_address(depend_info_list[i].base_addr));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].size));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].dependencetype));
+  }
+  
+  locarg_types[0] = DT_INT8;
+  locarg_types[1] = DT_INT;
+  locarg_types[2] = DT_ADDR;
+  locarg_types[3] = DT_ADDR;
+  locarg_types[4] = DT_ADDR;
+  locarg_types[5] = DT_ADDR;
+  locarg_types[6] = DT_INT;
+  locarg_types[7] = DT_INT;
+  
+  nargs = targetinfo->n_symbols;
+  
+  sprintf(name, "xdata%d_base", dataregion);
+  arg_base_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "xdata%d_size", dataregion);
+  arg_size_sptr = make_array_sptr(name, DT_INT8, nargs);
+  sprintf(name, "xdata%d_args", dataregion);
+  args_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "xdata%d_type", dataregion);
+  args_maptypes_sptr = make_array_sptr(name, DT_INT8, nargs);
+  dataregion++;
+ 
+  tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
+                         args_maptypes_sptr, targetinfo);
+
+  int k = 0;
+  for(std::vector<int>::iterator it = dependinfotokmpc.begin(); it != dependinfotokmpc.end(); it++) {
+    locargs[k] = *it;
+    locarg_types[k+8] = DT_INT;
+    k++;
+  }
+
+  locargs[dependCnt*3+7] = ad_icon(device_id);
+  locargs[dependCnt*3+6] = ad_icon(nargs);
+  locargs[dependCnt*3+5] = ad_acon(arg_base_sptr, 0);
+  locargs[dependCnt*3+4] = ad_acon(args_sptr, 0);
+  locargs[dependCnt*3+3] = ad_acon(arg_size_sptr, 0);
+  locargs[dependCnt*3+2] = ad_acon(args_maptypes_sptr, 0);
+  locargs[dependCnt*3+1] = ad_icon(dependCnt);
+  locargs[dependCnt*3] = ad_icon(dependCnt*3);
+
+  call_ili = mk_tgt_api_call(tgt_api, total_args, locarg_types, locargs);
 
   return call_ili;
 }
@@ -898,6 +1136,14 @@ _tgt_target_fill_targetdata(int device_id, OMPACCEL_TINFO *targetinfo, int tgt_a
   call_ili = mk_tgt_api_call(tgt_api, 6, locarg_types, locargs);
 
   return call_ili;
+}
+
+int
+ll_make_tgt_target_data_end_with_deps(int device_id, OMPACCEL_TINFO *targetinfo,
+                                      depend_info_t* depend_info_list, int dependCnt)
+{
+  return _tgt_target_fill_targetdata_with_deps(device_id, targetinfo, TGT_API_TARGET_DATA_END_WITH_DEPS,
+                                               depend_info_list, dependCnt);
 }
 
 int
@@ -1350,6 +1596,73 @@ void
 init_tgtutil()
 {
   tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+}
+
+int
+ll_make_tgt_target_update_with_deps(int device_id, OMPACCEL_TINFO *targetinfo,
+                                    depend_info_t* depend_info_list, int dependCnt)
+{
+  int call_ili, nargs;
+  SPTR arg_base_sptr, arg_sptr, arg_size_sptr, arg_map_sptr;
+  char name[16];
+  int local_args[12];
+  int total_args = dependCnt*3+8;
+  std::vector<int> dependinfotokmpc;
+  int *locargs = (int*)malloc(total_args*sizeof(int));
+  DTYPE *locarg_types = (DTYPE*)malloc(total_args*sizeof(DTYPE));
+
+  for (int i = 0, j = 0; i < dependCnt && j < dependCnt*3; i++, j+=3) {
+    dependinfotokmpc.push_back(mk_address(depend_info_list[i].base_addr));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].size));
+    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].dependencetype));
+  }
+
+  locarg_types[0] = DT_INT8;
+  locarg_types[1] = DT_INT;
+  locarg_types[2] = DT_ADDR;
+  locarg_types[3] = DT_ADDR;
+  locarg_types[4] = DT_ADDR;
+  locarg_types[5] = DT_ADDR;
+  locarg_types[6] = DT_INT;
+  locarg_types[7] = DT_INT;
+
+  if (targetinfo == NULL) {
+    interr("Map item list is not found", 0, ERR_Fatal);
+  }
+  nargs = targetinfo->n_symbols;
+
+  sprintf(name, "update%d_base", updateregion);
+  arg_base_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "update%d_size", updateregion);
+  arg_size_sptr = make_array_sptr(name, DT_INT8, nargs);
+  sprintf(name, "update%d_args", updateregion);
+  arg_sptr = make_array_sptr(name, DT_CPTR, nargs);
+  sprintf(name, "update%d_type", updateregion);
+  arg_map_sptr = make_array_sptr(name, DT_INT8, nargs);
+  updateregion++;
+
+  tgt_target_fill_params(arg_base_sptr, arg_size_sptr, arg_sptr,
+                         arg_map_sptr, targetinfo);
+
+  int k = 0;
+  for(std::vector<int>::iterator it = dependinfotokmpc.begin(); it != dependinfotokmpc.end(); it++) {
+    locargs[k] = *it;
+    locarg_types[k+8] = DT_INT;
+    k++;
+  }
+
+  locargs[dependCnt*3+7] = ad_icon(device_id);
+  locargs[dependCnt*3+6] = ad_icon(nargs);
+  locargs[dependCnt*3+5] = ad_acon(arg_base_sptr, 0);
+  locargs[dependCnt*3+4] = ad_acon(arg_sptr, 0);
+  locargs[dependCnt*3+3] = ad_acon(arg_size_sptr, 0);
+  locargs[dependCnt*3+2] = ad_acon(arg_map_sptr, 0);
+  locargs[dependCnt*3+1] = ad_icon(dependCnt);
+  locargs[dependCnt*3] = ad_icon(dependCnt*3);
+
+  call_ili =
+      mk_tgt_api_call(TGT_API_TARGETUPDATE_WITH_DEPS, total_args, locarg_types, local_args);
+  
 }
 
 // AOCC Begin

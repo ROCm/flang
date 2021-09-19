@@ -48,6 +48,8 @@
 #define A_ORDEREDP(s,v) A_hw22P(s,v)
 #define A_MEM_ORDERG(s)   A_hw22G(s)
 #define A_MEM_ORDERP(s,v) A_hw22P(s,v)
+#define A_DEPENDENCE_TYPEG(s)   A_hw24G(s)
+#define A_DEPENDENCE_TYPEP(s,v) A_hw24P(s,v)
 
 /* A_BINOP, A_UNOP OP_ macros; also used by semant */
 
@@ -263,6 +265,7 @@ typedef struct {
 /*  AST typedef declarations:  */
 
 typedef struct {
+    uint16_t hw24; // added to access depend type in flang2
     uint16_t hw23; // added to store modifier argument so that it can be accessed in flang2
     int16_t type;
     uint8_t f1:1, f2:1, f3:1, f4:1, f5:1, f6:1, f7:1, f8:1;
