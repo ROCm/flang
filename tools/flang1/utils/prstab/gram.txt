@@ -545,7 +545,7 @@
 	   DEVICE        |
 	   PINNED        |
 	   SHARED        |
-	   CONSTANT	 |
+           CONSTANT	 |
 	   PROTECTED     |
 	   ASYNCHRONOUS  |
 	   ABSTRACT |
@@ -1725,7 +1725,7 @@
 		<mp endsections> <opt nowait> |
 		<mp flush> |
 		<mp flush> ( <ident list> ) |
-		<mp ordered> <opt ordered list> |
+                <mp ordered> <opt ordered list> |
 		<mp endordered> |
 		<mp workshare> |
 		<mp endworkshare> <opt nowait> |
@@ -1794,7 +1794,7 @@
 		<mp endtargteamsdistpardosimd> |
                 <mp taskgroup> |
                 <mp endtaskgroup> |
-                <mp cancellationpoint> <id name>
+                <mp cancellationpoint> <id name> 
 
 <opt csident> ::= |
 		  ( <id name> )
@@ -1863,7 +1863,7 @@
                DEVICE ( <expression> ) |
                <map clause> |
 	       <depend clause> |
-	       IS_DEVICE_PTR ( <ident list> ) |
+	       IS_DEVICE_PTR ( <accel data list> ) |
 	       DEFAULTMAP ( <id name> : <id name> ) |
 	       <motion clause> |
 	       DIST_SCHEDULE ( <id name> <opt distchunk> ) |
@@ -1963,13 +1963,14 @@
 
 <depend clause> ::= DEPEND ( <depend attr> )
 
-<depend attr> ::=  <id name> |
- 		   <id name> : <depend data list>
+<depend attr> ::= <id name> |
+ 		  <id name> : <depend data list>
 
 <motion clause> ::= TO ( <accel data list> ) |
                     FROM ( <accel data list> )
 
-<depend data list> ::= <var ref list> |
+<depend data list> ::= <depend data list> <opt comma> <depend data list> |
+                       <var ref list> |
                        <depend data>
 
 <depend data> ::= <ident> <addop> <constant>

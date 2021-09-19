@@ -524,6 +524,22 @@ hash_substr(int a, DTYPE dtype, int lop, int left, int right)
 }
 
 int
+mk_depend_id(int id)
+{
+  if (id <= NOSYM || id >= stb.stg_avail) {
+    interr("mk_id: invalid symbol table index", id, ERR_Severe);
+  }
+  INT hashval;
+  int nd;
+  hashval = HSH_2(A_ID, DTYPEG(id), id);
+  ADD_NODE(nd, A_ID, hashval);
+  if (DTYPEG(id))
+    A_DTYPEP(nd, DTYPEG(id));
+  A_SPTRP(nd, id);
+  return nd;
+}
+
+int
 mk_id(int id)
 {
   int ast = mk_id_noshape(id);
@@ -5413,6 +5429,7 @@ ast_rewrite(int ast)
   case A_MP_EORDERED:
   case A_MP_ENDTASK:
   case A_MP_ETASKLOOP:
+  case A_MP_DEPEND:
     break;
   case A_PREFETCH:
     lop = ast_rewrite(A_LOPG(ast));
@@ -6163,6 +6180,8 @@ ast_trav_recurse(int ast, int *extra_arg)
   case A_MP_DEFAULTMAP: // AOCC
   case A_MP_TARGETDECLARE: // AOCC
   case A_MP_USE_DEVICE_PTR: // AOCC
+  case A_MP_IS_DEVICE_PTR: // AOCC
+  case A_MP_DEPEND: // AOCC
     break;
   case A_MP_BMPSCOPE:
 #if DEBUG
@@ -6741,6 +6760,7 @@ _dump_one_ast(int i, FILE *file)
   case A_MP_BORDERED:
   case A_MP_EORDERED:
   case A_MP_FLUSH:
+  case A_MP_DEPEND:
     break;
   case A_MP_PRE_TLS_COPY:
   case A_MP_COPYIN:
@@ -7180,6 +7200,7 @@ dump_ast_tree(int i)
   case A_MP_COPYPRIVATE:
   case A_MP_ECOPYPRIVATE:
   case A_MP_FLUSH:
+  case A_MP_DEPEND:
     break;
   default:
     fprintf(gbl.dbgfil, "NO DUMP AVL");

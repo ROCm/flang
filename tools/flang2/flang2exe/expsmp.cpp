@@ -52,6 +52,15 @@
 #endif
 #include "symfun.h"
 
+#define DI_DEP_MOD_SOURCE 17
+#define DI_DEP_TYPE_SINK 10
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+#define DI_MOD_SIMD 16
+#define THREADS 1
+#define SIMD 2
+
 #ifdef __cplusplus
 inline SPTR GetPARUPLEVEL(SPTR sptr) {
   return static_cast<SPTR>(PARUPLEVELG(sptr));
@@ -80,6 +89,10 @@ static int allocThreadprivate(SPTR sym, int *tmpthr);
 
 #define mk_prototype mk_prototype_llvm
 
+static depend_info_t* depend_info_list;
+static int dependvectorSize;
+static int dependCnt; /* counting the number of depend variables */
+static int loopCnt;   /* counter to record the number of loops */
 static int availIreg; /* next available integer register for jsr */
 static int availFreg; /* next available floating point register for jsr */
 static int maxIreg;   /* max # of integer registers used by jsr */
@@ -981,7 +994,16 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   }
 #endif
   // AOCC end
-
+  int orderedoptclause = 0;
+  int dependencetype = 0;
+  static int dependtotal = -1;
+  static int dependvectortotal = -1;
+  static int *dependvector;
+  static int dependvectorIndex = 0;
+  static int dependlistSize = -1;
+  static int dependlistIndex = 0;
+  static int deptype = 0;
+  static SPTR dependlistElem = SPTR_NULL;
   int argili = 0;
   int ili, tili, ili_arg;
   int lastilt;
@@ -1622,6 +1644,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       BIH_NOMERGE(expb.curbih) = true;
       critCnt++;
       bihb.csfg = BIH_CS(expb.curbih) = true;
+      orderedoptclause = ILM_OPND(ilmp, 1);
       ili = ll_make_kmpc_ordered();
       iltb.callfg = 1;
       chk_block(ili);
@@ -1630,7 +1653,20 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
   }
   case IM_MPEORDERED: {
     if (!ll_ilm_is_rewriting()) {
-      ili = ll_make_kmpc_end_ordered();
+      if (orderedoptclause == THREADS || orderedoptclause == SIMD) {
+        ili = ll_make_kmpc_end_ordered();
+      }
+      if (dependencetype != 0) {
+        if (dependencetype == DI_DEP_TYPE_SINK) {
+          ili = ll_make_kmpc_ordered_depend_sink(dependvector);
+        } else if (dependencetype == DI_DEP_MOD_SOURCE) {
+          ili = ll_make_kmpc_ordered_depend_source(dependvector);
+        }
+      } else {
+        ili = ll_make_kmpc_end_ordered();
+      }
+      dependvectorIndex = 0;
+      dependvectortotal = 0;
       iltb.callfg = 1;
       BIH_CS(expb.curbih) = true;
       chk_block(ili);
@@ -1734,7 +1770,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       wr_block();
       cr_block();
     }
-
+    loopCnt++;
     break;
   }
   case IM_MPDISTLOOP: {
@@ -1770,7 +1806,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       wr_block();
       cr_block();
     }
-
+    loopCnt++;
     break;
   }
   case IM_MPLOOPFINI: {
@@ -1783,6 +1819,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     if (outlinedCnt >= 1)
       break;
     const int sched = mp_sched_to_kmpc_sched(ILM_OPND(ilmp, 2));
+    const int orderedloopCnt = ILM_OPND(ilmp, 3);
+    /*
+     * ordered(n) implementation, nth loop is executed in order
+     */
+    if ((sched == KMP_ORD_STATIC || sched == KMP_ORD_DYNAMIC_CHUNKED) && orderedloopCnt != 0) {
+      if (orderedloopCnt == loopCnt)
+        ili = ll_make_kmpc_dispatch_fini(ILM_DTyOPND(ilmp, 1));
+    }
     if (sched == KMP_ORD_STATIC || sched == KMP_ORD_DYNAMIC_CHUNKED) {
       ili = ll_make_kmpc_dispatch_fini(ILM_DTyOPND(ilmp, 1));
       iltb.callfg = 1;
@@ -1794,6 +1838,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       iltb.callfg = 1;
       chk_block(ili);
     }
+    loopCnt--;
     break;
   }
   case IM_BPDO:
@@ -2356,6 +2401,49 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     iltb.callfg = 1;
     chk_block(ili);
     break;
+  
+  case IM_DEPEND:
+  {
+    dependvectorSize = ILM_OPND(ilmp, 4);
+    dependCnt = ILM_OPND(ilmp, 1);
+
+    if (dependCnt > 0 && dependlistIndex == 0)
+      depend_info_list = (depend_info_t*)malloc(dependCnt*sizeof(depend_info_t));
+
+    if (dependvectorSize > 0 && dependvectorIndex == 0)
+      dependvector = (int*)malloc(dependvectorSize*sizeof(int));
+
+    if (dependCnt != 0 && dependlistIndex == 0)
+      dependtotal = 0;
+    if (dependvectorSize != 0 && dependvectorIndex == 0)
+      dependvectortotal = 0;
+    if (dependtotal == dependCnt)
+      break;
+    if (dependvectortotal == dependvectorSize)
+      break;
+    
+    if (dependlistElem != ILM_SymOPND(ilmp, 2) || deptype != ILM_OPND(ilmp, 3)) {
+      dependlistElem = ILM_SymOPND(ilmp, 2);
+      deptype = ILM_OPND(ilmp, 3);
+      if (deptype == DI_DEP_TYPE_SINK || deptype == DI_DEP_MOD_SOURCE) {
+        dependvector[dependvectorIndex] = dependlistElem;
+        dependvectorIndex++;
+        dependvectortotal++;
+      } else {
+        depend_info_t depend_info;
+        depend_info.base_addr = dependlistElem;
+        depend_info.size = sizeof(dependlistElem);
+        depend_info.dependencetype = ILM_OPND(ilmp, 3);
+        if (dependlistIndex == 0) {
+          depend_info_list = (depend_info_t*)malloc(dependCnt*sizeof(depend_info_t));
+        }
+        depend_info_list[dependlistIndex] = depend_info;
+        dependlistIndex++;
+        dependtotal++;
+     }
+   }
+ }
+ break;
 
   case IM_BTASK:
   case IM_BTASKLOOP:
@@ -2736,7 +2824,17 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       }
       if (opc == IM_ETASK) {
         /* Make api call */
-        ili = ll_make_kmpc_task(taskAllocSptr);
+        if (dependCnt == 0)
+          ili = ll_make_kmpc_task(taskAllocSptr);
+        else {
+          int total;
+          if (dependvectortotal != -1)
+            total = dependvectortotal;
+          else if (dependtotal != -1)
+            total = dependtotal; 
+          ili = ll_make_kmpc_task_with_deps(taskAllocSptr, depend_info_list, total);
+          dependvectortotal = -1;
+        }
       } else {
         TASKLP_TASK = ad2ili(IL_LDA, ad_acon(taskAllocSptr, 0),
                              addnme(NT_VAR, taskAllocSptr, 0, 0));
@@ -2868,19 +2966,60 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       exp_ompaccel_targetdata(ilmp, curilm, opc);
 
     exp_label(end_label);
+    //OMPACCEL_TINFO *targetinfo;
+   // targetinfo = ompaccel_tinfo_current_get_targetdata(); 
+    if (IM_BTARGETDATA) {
+      if (dependCnt != 0) {
+    OMPACCEL_TINFO *targetinfo;
+    targetinfo = ompaccel_tinfo_current_get_targetdata(); 
+        int total;
+        if (dependvectortotal != -1)
+          total = dependvectortotal;
+        else if (dependtotal != -1)
+          total = dependtotal;
+        ili = ll_make_tgt_target_data_begin_with_deps(OMPACCEL_DEFAULT_DEVICEID, targetinfo,
+                                          depend_info_list, total);
+        dependvectortotal = -1;
+      }
+    }
 #endif
     break;
   case IM_ETARGETUPDATE:
   case IM_ETARGETDATA:
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
     if(!flg.omptarget || IS_OMP_DEVICE_CG) break;
-    OMPACCEL_TINFO *targetinfo;
     int ili;
     wr_block();
     cr_block();
+    OMPACCEL_TINFO *targetinfo;
+    targetinfo = ompaccel_tinfo_current_get_targetdata();
     if(opc == IM_ETARGETDATA) {
-      targetinfo = ompaccel_tinfo_current_get_targetdata();
-      ili = ll_make_tgt_target_data_end(OMPACCEL_DEFAULT_DEVICEID, targetinfo);
+      if (dependCnt == 0) {
+        ili = ll_make_tgt_target_data_end(OMPACCEL_DEFAULT_DEVICEID, targetinfo);
+      } else {
+        int total;
+        if (dependvectortotal != -1)
+          total = dependvectortotal;
+        else if (dependtotal != -1)
+          total = dependtotal;
+        ili = ll_make_tgt_target_data_end_with_deps(OMPACCEL_DEFAULT_DEVICEID, targetinfo,
+                                          depend_info_list, total);
+        dependvectortotal = -1;
+      }
+    }
+    if (opc == IM_ETARGETUPDATE) {
+      if (dependCnt == 0) {
+        ili = ll_make_tgt_target_update(OMPACCEL_DEFAULT_DEVICEID, targetinfo);
+      } else {
+        int total;
+        if (dependvectortotal != -1)
+          total = dependvectortotal;
+        else if (dependtotal != -1) 
+          total = dependtotal;
+        ili = ll_make_tgt_target_update_with_deps(OMPACCEL_DEFAULT_DEVICEID, targetinfo,
+                                          depend_info_list, total);
+        dependvectortotal = -1;
+      } 
     }
     iltb.callfg = 1;
     chk_block(ili);
@@ -3027,6 +3166,12 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_use_device_ptr(ilmp, curilm, outlinedCnt);
       break;
+    // AOCC Begin
+    case IM_MP_IS_DEVICE_PTR:
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG))
+        exp_ompaccel_is_device_ptr(ilmp, curilm);
+      break;
+    // AOCC End
 #endif /* end #ifdef OMP_OFFLOAD_LLVM */
     default:
       interr("exp_smp: unsupported opc", opc, ERR_Severe);
