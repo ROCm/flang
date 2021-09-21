@@ -9882,7 +9882,7 @@ check_targetdata(int type, char *nm)
           error(533, 3, gbl.lineno, CL_NAME(i), nm);
         break;
       case CL_NOWAIT:
-        if (type != OMP_TARGETENTERDATA && type != OMP_TARGETEXITDATA)
+        if (type != OMP_TARGETENTERDATA && type != OMP_TARGETEXITDATA && type != OMP_TARGETUPDATE)
           error(533, 3, gbl.lineno, CL_NAME(i), nm);
         break;
       case CL_USE_DEVICE_PTR:
