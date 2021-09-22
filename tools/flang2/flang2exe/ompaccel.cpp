@@ -3406,6 +3406,23 @@ exp_ompaccel_use_device_ptr(ILM *ilmp, int curilm, int outlinedCnt)
   exp_ompaccel_map(ilmp, curilm, outlinedCnt);
 }
 
+// AOCC Begin
+void
+exp_ompaccel_is_device_ptr(ILM *ilmp, int curilm)
+{
+  int label, argilm;
+  SPTR sptr;
+  argilm = ILM_OPND(ilmp, 1);
+  ILM *mapop = (ILM *)(ilmb.ilm_base + argilm);
+  if (ILM_OPC(mapop) == IM_BASE) {
+    sptr = ILM_SymOPND(mapop, 1);
+    label = ILM_OPND(ilmp, 2);
+  }
+
+  ompaccel_tinfo_current_addupdate_mapitem(sptr, label);
+}
+// AOCC End
+
 void
 exp_ompaccel_emap(ILM *ilmp, int curilm)
 {

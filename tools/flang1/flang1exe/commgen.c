@@ -2137,6 +2137,7 @@ pointer_squeezer(int ast)
   case A_PRAGMA:
   case A_MP_CANCEL:
   case A_MP_CANCELLATIONPOINT:
+  case A_MP_DEPEND:
     astnew = ast;
     break;
   default:
