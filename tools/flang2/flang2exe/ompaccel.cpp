@@ -539,6 +539,7 @@ mk_ompaccel_max(int ili1, DTYPE dtype1, int ili2, DTYPE dtype2) {
          ERR_Fatal);
   return ad2ili(opc, ili1, ili2);
 }
+
 /*
  * Returning min
  */

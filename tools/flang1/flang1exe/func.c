@@ -6109,7 +6109,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_IANY:         // AOCC
   case I_IPARITY:      // AOCC
   case I_PARITY:       // AOCC
-  case I_NINT:         // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
   case I_MAXVAL:
@@ -6210,15 +6209,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     }
     srcarray = mk_binop(operator, src1, src2, dtype);
     break;
-  // AOCC begin
-  case I_NINT:
-    dest = arg_gbl.lhs;
-    argt = ARGT_ARG(args, 0);
-    // Not inlining the intrinsic if it is passed as func argument
-    if (dest == 0)
-      return ast;
-    break;
-  // AOCC end
   case I_PARITY:     // AOCC
   case I_ALL:
   case I_ANY:
