@@ -78,6 +78,7 @@ static int get_derived_type(SST *, LOGICAL);
 extern int target_ast;
 extern int reduction_kernel;
 #endif
+int dependsource;
 void get_subtree(int ast, int* par, int* sib);
 int sib, par;
 // AOCC End
@@ -3154,6 +3155,7 @@ errorstop_shared:
     doinfo->init_expr = SST_ASTG(RHS(4));
     doinfo->limit_expr = SST_ASTG(RHS(6));
     doinfo->step_expr = SST_ASTG(RHS(7));
+    dependsource = doinfo->index_var;
 
     // <concurrent control> branches here for directive processing.
     do_directive_processing:

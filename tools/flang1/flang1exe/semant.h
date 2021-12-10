@@ -358,7 +358,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
 #define DI_SCH_DIST_DYNAMIC 7
 #define DI_MOD_NONMONOTONIC 8
 #define DI_MOD_MONOTONIC 9
-#define DI_DEP_MOD_SOURCE 10
+#define DI_DEP_MOD_SOURCE 17
 #define DI_DEP_TYPE_SINK 10
 #define DI_DEP_TYPE_IN 11
 #define DI_DEP_TYPE_OUT 12

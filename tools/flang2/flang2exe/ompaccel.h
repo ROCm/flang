@@ -515,6 +515,10 @@ void exp_ompaccel_emap(ILM *, int);
  */
 void exp_ompaccel_use_device_ptr(ILM *, int, int);
 /**
+   \brief Expand ILM and emit code for is_device_ptr
+ */
+void exp_ompaccel_is_device_ptr(ILM *, int);  // AOCC
+/**
    \brief Expand ILM and emit code for looptripcount
  */
 void exp_ompaccel_looptripcount(ILM *, int);

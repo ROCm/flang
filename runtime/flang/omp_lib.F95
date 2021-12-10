@@ -519,6 +519,22 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_active_level_,omp_get_active_level_) :
       integer (kind=omp_integer_kind) omp_get_max_task_priority
     end function omp_get_max_task_priority
 
+#if 1
+    function omp_target_is_present(ptr, idev) bind(C, name='omp_target_is_present')
+      use omp_lib_kinds
+      use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+      type(c_ptr), value :: ptr
+      integer (kind=omp_integer_kind), value :: idev
+      logical (kind=omp_logical_kind) omp_target_is_present
+      end function omp_target_is_present
+#else
+    function omp_target_is_present(ptr) bind(C, name='omp_target_is_present')
+      use omp_lib_kinds
+      use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+      type(c_ptr), value :: ptr
+      logical (kind=omp_logical_kind) omp_target_is_present
+    end function omp_target_is_present
+#endif
     subroutine omp_init_lock_with_hint(svar, hint) bind(C, name='omp_init_lock_with_hint')
       use omp_lib_kinds
       integer (kind=omp_lock_kind) svar
@@ -530,7 +546,6 @@ DECDIR ATTRIBUTES ALIAS:OMP_NAME(_omp_get_active_level_,omp_get_active_level_) :
       integer (kind=omp_nest_lock_kind) nvar
       integer (kind=omp_lock_hint_kind), value :: hint
     end subroutine omp_init_nest_lock_with_hint
-
   end interface
 
 

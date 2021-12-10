@@ -1897,7 +1897,7 @@ print_token(const char *tk)
 {
   assert(tk, "print_token(): missing token", 0, ERR_Fatal);
   if (flg.omptarget && LLVMFIL == gbl.ompaccfile && !strncmp(tk,"@fort_ptr_assn",14)) {
-    fprintf(LLVMFIL, "@tgt_");
+    fprintf(LLVMFIL, "@__tgt_");
     fprintf(LLVMFIL, tk+1);
   }
   else

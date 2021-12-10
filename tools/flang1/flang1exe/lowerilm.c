@@ -66,6 +66,14 @@ int lower_disable_subscr_chk = 0;
 #define ArgumentBase 3
 int get_byval(int, int);
 
+extern int dependencetype;
+extern int isdependflag;
+extern SPTR dependvalue;
+extern int dependCnt;
+extern int dependvectorSize;
+extern int orderedloopCnt;
+extern int orderedoptclause;
+
 extern void setrefsymbol(int symbol);
 
 /*
@@ -2627,7 +2635,7 @@ llvm_lower_enddo_stmt(int lineno, int label, int std, int ispdo)
   if (idotrip) {
     /* DO loop */
     if ((schedtype & MP_SCH_ATTR_ORDERED)) {
-      plower("odn", "MPLOOPFINI", dtype, schedtype);
+      plower("odnn", "MPLOOPFINI", dtype, schedtype, orderedloopCnt);
     }
     lilm = lower_sptr(idovar, VarBase);
     lilm = lower_typeload(dtype, lilm);
@@ -2680,7 +2688,7 @@ llvm_lower_enddo_stmt(int lineno, int label, int std, int ispdo)
     }
     plower("oL", "LABEL", dobottom);
     if (!(schedtype & MP_SCH_ATTR_ORDERED)) {
-      plower("odn", "MPLOOPFINI", dtype, schedtype);
+      plower("odnn", "MPLOOPFINI", dtype, schedtype, orderedloopCnt);
     }
     lower_end_stmt(std);
 
@@ -2691,7 +2699,7 @@ llvm_lower_enddo_stmt(int lineno, int label, int std, int ispdo)
     }
     plower("oL", "LABEL", dobottom);
 
-    plower("odn", "MPLOOPFINI", dtype, schedtype);
+    plower("odnn", "MPLOOPFINI", dtype, schedtype, orderedloopCnt);
     lower_end_stmt(std);
   }
 
@@ -2801,7 +2809,7 @@ lower_enddo_stmt(int lineno, int label, int std, int ispdo)
 
       plower("oS", "BR", dotop);
       plower("oL", "LABEL", dobottom);
-      plower("odn", "MPLOOPFINI", dtype, schedtype);
+      plower("odnn", "MPLOOPFINI", dtype, schedtype, orderedloopCnt);
       lower_end_stmt(std);
 
       /* if lastprivate */
@@ -2821,7 +2829,7 @@ lower_enddo_stmt(int lineno, int label, int std, int ispdo)
   ) {
 /* handle the 'while' loop */
     if (ispdo && (schedtype & MP_SCH_ATTR_ORDERED)) {
-      plower("odn", "MPLOOPFINI", dtype, schedtype);
+      plower("odnn", "MPLOOPFINI", dtype, schedtype, orderedloopCnt);
     }
     lower_end_stmt(0);
     lower_enddo_stmt(lineno, 0, std, ispdo);
@@ -5146,6 +5154,15 @@ lower_stmt(int std, int ast, int lineno, int label)
     lower_end_stmt(std);
     break;
 
+  case A_MP_DEPEND:
+    lower_start_stmt(lineno, label, TRUE, std);
+    lop = A_LOPG(ast);
+    dependencetype = A_DEPENDENCE_TYPEG(ast);
+    sptr = A_SPTRG(lop);
+    plower("onSnn", "DEPEND", dependCnt, sptr, dependencetype, dependvectorSize);
+    lower_end_stmt(std);
+    break;
+
   case A_MP_TASK:
   case A_MP_TASKLOOP:
     lowersym.task_depth++;
@@ -5424,6 +5441,16 @@ lower_stmt(int std, int ast, int lineno, int label)
       }
       lower_end_stmt(std);
     break;
+  // AOCC Begin
+  case A_MP_IS_DEVICE_PTR:
+    lower_start_stmt(lineno, label, TRUE, std);
+    lop = A_LOPG(ast);
+    lower_expression(lop);
+    flag = A_PRAGMATYPEG(STD_AST(std));
+    plower("oin", "MP_IS_DEVICE_PTR", lower_base(lop), flag);
+    lower_end_stmt(std);
+    break;
+  // AOCC End
   case A_MP_USE_DEVICE_PTR:
       lower_start_stmt(lineno, label, TRUE, std);
       lop = A_LOPG(ast);
@@ -5619,8 +5646,8 @@ lower_stmt(int std, int ast, int lineno, int label)
     break;
 
   case A_MP_BORDERED:
-    lower_start_stmt(lineno, label, TRUE, std);
-    plower("o", "MPBORDERED");
+    lower_start_stmt(lineno, label, TRUE, std); 
+    plower("on", "MPBORDERED", orderedoptclause);
     lower_end_stmt(std);
     break;
 

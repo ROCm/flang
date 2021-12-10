@@ -52,6 +52,8 @@ static void accel_sched_errchk();
 static void accel_nosched_errchk();
 static void accel_pragmagen(int, int, int);
 
+static void depend_data(ITEM*);
+static int depend_type(char *);
 static int modifier(char *); //AOCC
 static int sched_type(char *);
 static void set_iftype(int, char *, char *, char *);
@@ -123,6 +125,7 @@ static void do_map();
 // AOCC Begin
 static void do_tofrom();
 static void do_usedeviceptr();
+static void do_isdeviceptr(); // AOCC
 static LOGICAL use_atomic_for_reduction(int, REDUC *, REDUC_SYM *);
 // AOCC End
 
@@ -155,6 +158,24 @@ int teams_ast = 0; // AOCC
 int distribute_pdo_ast = 0; /* AOCC */
 int distribute_doif = 0; /* AOCC */
 int tgt_distribute_ast = 0; /* AOCC */
+
+//AOCC begin
+int dependencetype; /* dependence type */
+int isdependflag;   /* flag indicating depend is present
+                     * seperate flag is used as
+                     * it is required in flang2
+                     */
+int dependvalueSize; /* total number of depend variables */
+int dependCnt;         
+SPTR dependvalue;
+int dependvectorSize; /* size of vector of iterations for depend */
+int orderedloopCnt;   /* n value in ordered(n) is stored */
+int orderedoptclause; /* optional clause passed with ordered */  
+extern int dependsource;
+int dependvaluecount = -1;
+int nextdepend = 1;
+
+//AOCC end
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -319,6 +340,8 @@ int tgt_distribute_ast = 0; /* AOCC */
 #define BT_ACCSET 0x4000000000
 #define BT_ACCSERIAL 0x8000000000
 #define BT_ACCSLOOP 0x10000000000
+#define THREADS 1
+#define SIMD 2
 
 static struct cl_tag { /* clause table */
   int present;
@@ -625,9 +648,9 @@ static void rewrite_distr_sched() {
 void
 semsmp(int rednum, SST *top)
 {
-  int sptr, sptr1, sptr2, ilmptr;
+  int sptr, sptr1, sptr2;
   int dtype;
-  ITEM *itemp; /* Pointers to items */
+  ITEM *itemp; /* Pointers to items */ 
   int doif;
   int prev_doif;
   int ast, arg, std;
@@ -647,6 +670,10 @@ semsmp(int rednum, SST *top)
   REDUC_SYM *reduc_symp_last;
   REDUC_SYM *reduc_symp_curr;
   SST *e1;
+  static ITEM *firstdependitem;
+  int opn1, opn2;
+  static ITEM *itemp2 = NULL;
+  
 
   switch (rednum) {
   /* ------------------------------------------------------------------ */
@@ -1187,10 +1214,49 @@ semsmp(int rednum, SST *top)
           break;
         }
       }
+      /* 
+       * when ordered depend(sink:(iteration list) is used,
+       * each iteration in the iteration list is written to
+       * ilm file as a seperate ilm block
+       */
+      if (dependencetype == DI_DEP_TYPE_SINK) {
+        for (itemp = CL_FIRST(CL_DEPEND); itemp && itemp != ITEM_END; itemp = itemp->next) {
+          sptr2 = itemp->t.stkp->value.wval.w1;
+          int sptr_ast = mk_id(sptr2);
+          ast = mk_stmt(A_MP_DEPEND, 0);
+          (void)add_stmt(ast);
+          A_LOPP(ast, sptr_ast);
+          A_DEPENDENCE_TYPEP(ast, dependencetype);
+          dependvectorSize++;
+        }
+      }
+      /*
+       * when ordered depend(source) is used, thecurrent iteration
+       * satisfies the dependences. So the current iteration
+       * is stored as an ILM block in end ordered as the index
+       * variable will be known after parsing the do loop
+       */
+      else if (dependencetype == DI_DEP_MOD_SOURCE) {
+        if (dependsource != 0) {
+          sptr2 = dependsource;
+          int sptr_ast = mk_id(sptr2);
+          ast = mk_stmt(A_MP_DEPEND, 0);
+          (void)add_stmt(ast);
+          A_LOPP(ast, sptr_ast);
+          A_DEPENDENCE_TYPEP(ast, dependencetype);
+          dependvectorSize++;
+        } else {
+          error(155, 3, gbl.lineno,
+                "Depend with ordered should be inside the loop", CNULL);
+        }
+      }
+      /*
+       * when just ordered is used
+       */
       ast = mk_stmt(A_MP_BORDERED, 0);
       (void)add_stmt(ast);
       ast = 0;
-
+      
       if (sem.parallel && doif == 0) {
         /* DO directive not present */
         error(155, 3, gbl.lineno, "Illegal context for", "ORDERED");
@@ -1199,7 +1265,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, ast);
     break;
   /*
-   *	<mp stmt> ::= <mp endordered>
+   *	<mp stmt> ::= <mp endordered> <opt ordered list>
    */
   case MP_STMT24:
     ast = 0;
@@ -1364,6 +1430,26 @@ semsmp(int rednum, SST *top)
       }
       (void)add_stmt(ast);
       sem.task++;
+    }
+    /*
+     * when depend clause is specified with task
+     * all data related to depend clause is written
+     * to ilm file as seperate ilm blocks by 
+     * creating a seperate statement specifically
+     * for depend. This helps us to use the depend
+     * data when used with other clauses also.
+     */
+    if (CL_PRESENT(CL_DEPEND)) {
+      for (itemp = CL_FIRST(CL_DEPEND); itemp && itemp != ITEM_END; itemp = itemp->next) {
+        sptr2 = itemp->t.stkp->value.wval.w1;
+        int sptr_ast = mk_id(sptr2);
+        ast = mk_stmt(A_MP_DEPEND, 0);
+        (void)add_stmt(ast);
+        A_LOPP(ast, sptr_ast);
+        A_DEPENDENCE_TYPEP(ast, A_DEPENDENCE_TYPEG(sptr_ast)); 
+        dependvaluecount = -1;
+        nextdepend = 1;
+      }
     }
     par_push_scope(FALSE);
     begin_parallel_clause(sem.doif_depth);
@@ -1668,6 +1754,7 @@ semsmp(int rednum, SST *top)
       mp_iftype = IF_DEFAULT;
     }
     if (CL_PRESENT(CL_DEPEND)) {
+      depend_data(CL_FIRST(CL_DEPEND));
     }
     if (CL_PRESENT(CL_NOWAIT)) {
     }
@@ -1694,6 +1781,7 @@ semsmp(int rednum, SST *top)
       mp_iftype = IF_DEFAULT;
     }
     if (CL_PRESENT(CL_DEPEND)) {
+      depend_data(CL_FIRST(CL_DEPEND));
     }
     if (CL_PRESENT(CL_NOWAIT)) {
     }
@@ -1720,6 +1808,7 @@ semsmp(int rednum, SST *top)
       mp_iftype = IF_DEFAULT;
     }
     if (CL_PRESENT(CL_DEPEND)) {
+      depend_data(CL_FIRST(CL_DEPEND));
     }
     if (CL_PRESENT(CL_NOWAIT)) {
     }
@@ -2618,15 +2707,51 @@ semsmp(int rednum, SST *top)
     /*
      *	<par attr> ::= <depend clause> |
      */
-  case PAR_ATTR27:
-    error(547, ERR_Warning, gbl.lineno, "DEPEND", CNULL);
+  case PAR_ATTR27: 
     break;
   /*
-   *	<par attr> ::= IS_DEVICE_PTR ( <ident list> ) |
+   *	<par attr> ::= IS_DEVICE_PTR ( <accel data list> ) |    // AOCC
    */
-  case PAR_ATTR28:
-    error(547, ERR_Warning, gbl.lineno, "IS_DEVICE_PTR", CNULL);
-    break;
+  case PAR_ATTR28: {
+    // AOCC Begin
+    ITEM *itemp, *itembeg, *itemend;
+    int type = OMP_TGT_MAPTYPE_TARGET_PARAM |
+                OMP_TGT_MAPTYPE_LITERAL;
+    int clause = CL_IS_DEVICE_PTR;
+
+    itembeg = SST_BEGG(RHS(3));
+    itemend = SST_ENDG(RHS(3));
+    if (itembeg == ITEM_END)
+        return;
+    for (itemp = itembeg; itemp != ITEM_END; itemp = itemp->next) {
+      int sptr = A_SPTRG(itemp->ast);
+      if (SCG(sptr) != SC_DUMMY && !PASSBYVALG(sptr)) {
+        error(155, 3, gbl.lineno,
+            "A non DUMMY object is used in IS_DEVICE_PTR clause", NULL);
+      } else if (ALLOCG(sptr)) {
+        error(155, 3, gbl.lineno,
+          "Object with allocatable attribute is used in IS_DEVICE_PTR clause",
+          NULL);
+      } else if (POINTERG(sptr)) {
+        error(155, 3, gbl.lineno,
+          "Object with pointer attribute is used in IS_DEVICE_PTR clause",
+          NULL);
+      } else if (PASSBYVALG(sptr)) {
+        error(155, 3, gbl.lineno,
+          "Object with value attribute is used in IS_DEVICE_PTR clause",
+          NULL);
+      }
+      itemp->t.cltype = type;
+    }
+    add_clause(clause, FALSE);
+    if (CL_FIRST(clause) == NULL)
+        CL_FIRST(clause) = itembeg;
+    else
+        ((ITEM *)CL_FIRST(clause))->next = itembeg;
+    CL_LAST(clause) = itemend;
+    // AOCC End
+    }
+  break;
   /*
    *	<par attr> ::= DEFAULTMAP ( <id name> : <id name> ) |
    */
@@ -2771,7 +2896,8 @@ semsmp(int rednum, SST *top)
    */
   case OPT_EXPRESSION2:
     add_clause(CL_ORDERED, TRUE);
-    error(547, ERR_Warning, gbl.lineno, "ORDERED(n)", CNULL);
+    chk_scalartyp(RHS((2)), DT_INT4, FALSE);
+    orderedloopCnt = SST_CVALG(RHS(2));
     break;
   /* ------------------------------------------------------------------ */
   /*
@@ -2801,19 +2927,18 @@ semsmp(int rednum, SST *top)
    *    <ordered attr> ::=  SIMD |
    */
   case ORDERED_ATTR1:
-    error(547, ERR_Warning, gbl.lineno, "SIMD", CNULL);
+    orderedoptclause = SIMD;    
     break;
   /*
    *    <ordered attr> ::= THREADS |
    */
   case ORDERED_ATTR2:
-    error(547, ERR_Warning, gbl.lineno, "THREAD", CNULL);
+    orderedoptclause = THREADS;
     break;
   /*
    *    <ordered attr> ::= DEPEND <depend attr>
    */
   case ORDERED_ATTR3:
-    error(547, ERR_Warning, gbl.lineno, "DEPEND", CNULL);
     break;
 
   /* ------------------------------------------------------------------ */
@@ -3431,6 +3556,8 @@ semsmp(int rednum, SST *top)
    *    <depend clause> ::= DEPEND ( <depend attr> )
    */
   case DEPEND_CLAUSE1:
+    add_clause(CL_DEPEND, TRUE);
+    CL_VAL(CL_DEPEND) = SST_IDG(RHS(2));
     break;
 
   /* ------------------------------------------------------------------ */
@@ -3439,14 +3566,28 @@ semsmp(int rednum, SST *top)
    */
   case DEPEND_ATTR1:
     /* expect SOURCE keyword */
+    dependencetype = depend_type(scn.id.name + SST_CVALG(RHS(1)));
+    if (dependencetype != DI_DEP_MOD_SOURCE) {
+      error(155, 3, gbl.lineno,
+            "List of depend items needs to be specified", CNULL);
+    }
+    SST_IDP(LHS, dependencetype);
     break;
   /*
    *    <depend attr> ::= <id name> : <depend data list>
    */
   case DEPEND_ATTR2:
     /* expect sink or in/out/inout here in id name */
+    dependencetype = depend_type(scn.id.name + SST_CVALG(RHS(1)));
+    for (itemp = CL_FIRST(CL_DEPEND); itemp != ITEM_END; itemp = itemp->next) {
+      sptr2 = itemp->t.stkp->value.wval.w1;
+      int sptr_ast = mk_depend_id(sptr2);
+      A_DEPENDENCE_TYPEP(sptr_ast, dependencetype);
+      if (dependencetype != DI_DEP_MOD_SOURCE || dependencetype != DI_DEP_TYPE_SINK) 
+        dependCnt++; /* count of total number of depend variables */
+    }
     break;
-
+  
   /* ------------------------------------------------------------------ */
   /*
    *	<motion clause> ::= TO ( <var ref list> ) |
@@ -3481,21 +3622,68 @@ semsmp(int rednum, SST *top)
 
   /* ------------------------------------------------------------------ */
   /*
-   *    <depend data list> ::= <var ref list> |
+   *    <depend data list> ::= <depend data list> <opt comma> <depend data list> |
    */
   case DEPEND_DATA_LIST1:
     break;
   /*
-   *    <depend data list> ::= <depend data>
+   *    <depend data list> ::= <var ref list> |
    */
   case DEPEND_DATA_LIST2:
+    itemp = SST_ENDG(RHS(1));
+    if (CL_FIRST(CL_DEPEND) == NULL) {
+      CL_FIRST(CL_DEPEND) = itemp;
+      firstdependitem = itemp;
+      dependvaluecount = 1;
+    } else {
+      if (nextdepend == -1) {
+        firstdependitem = itemp;
+        nextdepend = 1;
+      }
+    }
+    if (itemp2)
+      itemp2->next = itemp;
+    itemp2 = itemp;
+    itemp->next = ITEM_END;
+    isdependflag = 1;
     break;
-
+  /*
+   *    <depend data list> ::= <depend data>
+   */
+  case DEPEND_DATA_LIST3:
+    break;
   /* ------------------------------------------------------------------ */
   /*
    *    <depend data> ::= <ident> <addop> <constant>
    */
   case DEPEND_DATA1:
+    opn2 = A_SPTRG(SST_ASTG(RHS(3)));
+    opc = SST_OPTYPEG(RHS(2));
+    opn1 = SST_SYMG(RHS(1));
+    dtype = DTYPEG(opn1);
+    dependvalue = A_SPTRG(mk_binop(opc, opn1, opn2, dtype));
+    e1 = (SST *)getitem(0, sizeof(SST));
+    itemp = (ITEM *)getitem(0, sizeof(ITEM));
+    SST_SYMP(e1, dependvalue);
+    SST_DTYPEP(e1, DTYPEG(dependvalue));
+    itemp->t.stkp = e1;
+    if (dependvaluecount == -1) {
+      CL_FIRST(CL_DEPEND) = itemp;
+      firstdependitem = itemp;
+      SST_BEGP(LHS, itemp);
+      dependvaluecount = 1;
+    } else {
+      if (nextdepend == -1) {
+        firstdependitem = itemp;
+        nextdepend = 1;
+      }
+    }
+    if (itemp2)
+      itemp2->next = itemp;
+    itemp2 = itemp;
+    itemp->next = ITEM_END;
+    SST_ENDP(RHS(1), itemp);
+    isdependflag = 1;
     break;
 
   /* ------------------------------------------------------------------ */
@@ -6106,7 +6294,7 @@ static void
 add_clause(int clause, LOGICAL one_only)
 {
   if (CL_PRESENT(clause)) {
-    if (one_only)
+    if (one_only && !(CL_PRESENT(CL_DEPEND)))
       error(155, 3, gbl.lineno, "Repeated clause -", CL_NAME(clause));
   } else
     CL_PRESENT(clause) = 1;
@@ -6289,7 +6477,47 @@ accel_pragmagen(int pragma, int pragma1, int pragma2)
 {
 }
 
-// AOCC begin
+static void
+depend_data(ITEM* firstdependitem)
+{
+  int sptr, ast, sptr_ast;
+  ITEM* itemp;
+  for (itemp = firstdependitem; itemp != ITEM_END; itemp = itemp->next) {
+    sptr = itemp->t.stkp->value.wval.w1;
+    int sptr_ast = mk_id(sptr);
+    ast = mk_stmt(A_MP_DEPEND, 0);
+    (void)add_stmt(ast);
+    A_LOPP(ast, sptr_ast);
+    A_DEPENDENCE_TYPEP(ast, A_DEPENDENCE_TYPEG(sptr_ast));
+    dependvaluecount = -1;
+    nextdepend = 1;
+    if (dependencetype == DI_DEP_TYPE_SINK)
+        dependvectorSize++;
+  }
+}
+
+//AOCC begin
+static int
+depend_type(char *nm)
+{
+  if (sem_strcmp(nm, "source") == 0)
+    return DI_DEP_MOD_SOURCE;
+  if (sem_strcmp(nm, "sink") == 0)
+    return DI_DEP_TYPE_SINK;
+  if (sem_strcmp(nm, "in") == 0)
+    return DI_DEP_TYPE_IN;
+  if (sem_strcmp(nm, "out") == 0)
+    return DI_DEP_TYPE_OUT;
+  if (sem_strcmp(nm, "inout") == 0)
+    return DI_DEP_TYPE_INOUT;
+  if (sem_strcmp(nm, "mutexinoutset") == 0)
+    return DI_DEP_TYPE_MUTEXINOUTSET;
+  if (sem_strcmp(nm, "depobj") == 0)
+    return DI_DEP_TYPE_DEPOBJ;
+
+  error(34, 3, gbl.lineno, nm, CNULL);  
+}
+
 static int
 modifier(char *nm)
 {
@@ -6553,6 +6781,7 @@ emit_btarget(int atype)
       A_IFPARP(ast, CL_VAL(CL_IF));
   }
   if (CL_PRESENT(CL_DEPEND)) {
+    depend_data(CL_FIRST(CL_DEPEND));
   }
   if (CL_PRESENT(CL_NOWAIT)) {
   }
@@ -8033,6 +8262,26 @@ do_usedeviceptr()
     }
   }
 }
+
+static void
+do_isdeviceptr()
+{
+  if (!flg.omptarget)
+    return;
+
+  ITEM *item;
+  int ast;
+
+  if (CL_PRESENT(CL_IS_DEVICE_PTR)) {
+    for (item = (ITEM *)CL_FIRST(CL_IS_DEVICE_PTR); item != ITEM_END;
+                                                    item = item->next) {
+      ast = mk_stmt(A_MP_IS_DEVICE_PTR, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+}
 // AOCC End
 
 static void
@@ -8345,6 +8594,7 @@ begin_parallel_clause(int doif)
 
   switch (DI_ID(doif)) {
   case DI_TARGET:
+    do_isdeviceptr();   // AOCC
     do_map();
     break;
   default:
@@ -9882,7 +10132,7 @@ check_targetdata(int type, char *nm)
           error(533, 3, gbl.lineno, CL_NAME(i), nm);
         break;
       case CL_NOWAIT:
-        if (type != OMP_TARGETENTERDATA && type != OMP_TARGETEXITDATA)
+        if (type != OMP_TARGETENTERDATA && type != OMP_TARGETEXITDATA && type != OMP_TARGETUPDATE)
           error(533, 3, gbl.lineno, CL_NAME(i), nm);
         break;
       case CL_USE_DEVICE_PTR:

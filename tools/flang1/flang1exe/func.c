@@ -4435,6 +4435,7 @@ rewrite_calls(void)
     case A_MP_TASKREG:
     case A_MP_TASKDUP:
     case A_MP_ETASKDUP:
+    case A_MP_DEPEND:
       break;
     case A_MP_TASKLOOPREG:
     case A_MP_ETASKLOOPREG:
@@ -4570,6 +4571,7 @@ rewrite_calls(void)
     case A_MP_DEFAULTMAP: // AOCC
     case A_MP_TARGETDECLARE: // AOCC
     case A_MP_USE_DEVICE_PTR: // AOCC
+    case A_MP_IS_DEVICE_PTR: // AOCC
       break;
     default:
       interr("rewrite_subroutine: unknown stmt found", ast, 4);
@@ -6107,7 +6109,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
   case I_IANY:         // AOCC
   case I_IPARITY:      // AOCC
   case I_PARITY:       // AOCC
-  case I_NINT:         // AOCC
   case I_COUNT:
   case I_DOT_PRODUCT:
   case I_MAXVAL:
@@ -6208,15 +6209,6 @@ inline_reduction_f90(int ast, int dest, int lc, LOGICAL *doremove)
     }
     srcarray = mk_binop(operator, src1, src2, dtype);
     break;
-  // AOCC begin
-  case I_NINT:
-    dest = arg_gbl.lhs;
-    argt = ARGT_ARG(args, 0);
-    // Not inlining the intrinsic if it is passed as func argument
-    if (dest == 0)
-      return ast;
-    break;
-  // AOCC end
   case I_PARITY:     // AOCC
   case I_ALL:
   case I_ANY:
