@@ -1822,12 +1822,11 @@ ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)
 int
 ll_make_kmpc_spmd_kernel_init(int sptr)
 {
-  int args[3];
-  DTYPE arg_types[3] = {DT_INT, DT_SINT, DT_SINT};
-  args[2] = sptr; // ld_sptr(sptr);
-  args[1] = gen_null_arg();
+  int args[2];
+  DTYPE arg_types[2] = {DT_INT, DT_SINT};
+  args[1] = sptr; // ld_sptr(sptr);
   args[0] = gen_null_arg();
-  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 3, arg_types, args);
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 2, arg_types, args);
 }
 
 // AOCC Begin
