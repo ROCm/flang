@@ -3365,8 +3365,6 @@ sym - upperD
 stc -  dtype of loop bound type
 stc -  schedule type
 .AT spec trm
-.IL DEPEND SMP stc sym stc stc
-.AT spec trm
 .IL BTASKDUP SMP
 Begin taskdup routine
 .AT spec trm
@@ -3398,7 +3396,7 @@ sym - stride
 sym - plast
 stc - dtype of loop bound type
 .AT spec trm
-.IL MPBORDERED SMP stc
+.IL MPBORDERED SMP
 Begin KMPC ordered region
 .AT spec trm
 .IL MPEORDERED SMP

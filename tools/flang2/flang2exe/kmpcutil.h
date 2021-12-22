@@ -43,12 +43,6 @@
 #define KMPC_TASK_PROXY 0x10
 #define KMPC_TASK_PRIORITY 0x20
 
-typedef struct depend_info_t {
-  SPTR base_addr;
-  size_t size;
-  int dependencetype;
-} depend_info_t;
-
 /* KMPC Schedule Types
  * https://www.openmprtl.org/sites/default/files/resources/libomp_20151009_manual.pdf
  * Additional types mentioned in the source and used in the refereced manual's
@@ -190,9 +184,6 @@ enum {
   // AOCC End
   KMPC_API_NVPTX_PARALLEL_REDUCE_NOWAIT_SIMPLE_SPMD,
   KMPC_API_NVPTX_END_REDUCE_NOWAIT,
-  KMPC_API_TASK_ALLOC_WITH_DEPS,
-  KMPC_API_DOACROSS_WAIT,
-  KMPC_API_DOACROSS_POST,
   /* End - OpenMP Accelerator RT (libomptarget-nvptx) - non standard - */
   KMPC_API_N_ENTRIES /* <-- Always last */
 };
@@ -280,11 +271,8 @@ int ll_make_kmpc_end_master(void);
 /**
    \brief ...
  */
-int ll_make_kmpc_end_ordered();
+int ll_make_kmpc_end_ordered(void);
 
-int ll_make_kmpc_ordered_depend_sink(int* dependvector);
-
-int ll_make_kmpc_ordered_depend_source(int* dependvector);
 /**
    \brief ...
  */
@@ -366,7 +354,7 @@ int ll_make_kmpc_omp_wait_deps(const loop_args_t *inargs);
 /**
    \brief ...
  */
-int ll_make_kmpc_ordered();
+int ll_make_kmpc_ordered(void);
 
 /**
    \brief ...
@@ -439,7 +427,7 @@ int ll_make_kmpc_task_wait(void);
 /**
    \brief ...
  */
-int ll_make_kmpc_task_with_deps(SPTR task_sptr, depend_info_t* depend_info_list, int dependCnt);
+int ll_make_kmpc_task_with_deps(const loop_args_t *inargs);
 
 /**
    \brief ...

@@ -46,10 +46,6 @@ enum {
   TGT_API_TARGET_DATA_END_NOWAIT,
   TGT_API_TARGET_DATA_END_NOWAIT_DEPEND,
   TGT_API_TARGETUPDATE,
-  TGT_API_TARGET_WITH_DEPS,
-  TGT_API_TARGET_DATA_BEGIN_WITH_DEPS,
-  TGT_API_TARGET_DATA_END_WITH_DEPS,
-  TGT_API_TARGETUPDATE_WITH_DEPS,
   TGT_API_N_ENTRIES /* <-- Always last */
 };
 
@@ -67,21 +63,6 @@ struct tgt_api_entry_t {
 };
 
 extern int dataregion;  // AOCC
-/**
-   \target with depend 
-*/
-
-int ll_make_tgt_target_with_deps(SPTR, int64_t, SPTR, depend_info_t*, int);
-
-int ll_make_tgt_target_data_begin_with_deps(int, OMPACCEL_TINFO*, depend_info_t*, int);
-
-static int _tgt_target_fill_targetdata_with_deps(int, OMPACCEL_TINFO*, int, depend_info_t*, int);
-
-int ll_make_tgt_target_data_end_with_deps(int, OMPACCEL_TINFO*, depend_info_t*, int);
-
-int ll_make_tgt_target_update_with_deps(int, OMPACCEL_TINFO*, depend_info_t*, int);
-
-
 
 /**
    \brief Register the file and load cubin file
