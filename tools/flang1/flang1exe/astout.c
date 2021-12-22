@@ -2299,7 +2299,6 @@ print_ast(int ast)
   case A_MP_EMPSCOPE:
   case A_MP_FLUSH:
   case A_MP_ETASKLOOPREG:
-  case A_MP_DEPEND:
     lbuff[0] = '!';
     put_string(astb.atypes[atype]);
     break;

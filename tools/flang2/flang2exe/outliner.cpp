@@ -326,9 +326,6 @@ get_opc_name(ILM_OP opc)
     case IM_BTASK:
       return "TASK";
     break;
-    case IM_DEPEND:
-      return "DEPEND";
-    break;
     default:
       return "NOPC";
     break;

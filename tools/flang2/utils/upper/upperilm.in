@@ -114,7 +114,6 @@ BRF	ilm	sym
 BRT	ilm	sym
 BDISTRIBUTE
 BSECTIONS	sym
-DEPEND  num     sym     num     num
 BTASK	sym	num	ilm	ilm
 BTASKDUP
 BTASKLOOP	sym	num	ilm	ilm	ilm 	ilm
@@ -557,11 +556,11 @@ MEMBER	ilm	sym
 MM_PREFETCH	ilm	ilm
 # AOCC end
 MOD	ilm	ilm
-MPBORDERED      num
+MPBORDERED
 MPEORDERED
 MPDISTLOOP	sym	sym	sym	sym	sym	sym	dtype	num
 MPLOOP	sym	sym	sym	sym	sym	dtype	num
-MPLOOPFINI	dtype	num     num
+MPLOOPFINI	dtype	num
 MPSCHED	sym	sym	sym	sym	dtype
 MPTASKLOOP	sym	sym	sym	sym	dtype
 MP_ATOMIC

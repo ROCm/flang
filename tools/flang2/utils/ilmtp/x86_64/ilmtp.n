@@ -3796,7 +3796,7 @@ stc -  dtype of loop bound type
 taskloop lastprivate offset on task structure
 sym - offset constant
 .AT spec trm
-.IL MPLOOPFINI SMP stc stc stc
+.IL MPLOOPFINI SMP stc stc
 Begin parallel do/loop
 stc - dtype of loop bound type
 stc - schedule type
@@ -3809,7 +3809,7 @@ sym - stride
 sym - plast
 stc - dtype of loop bound type
 .AT spec trm
-.IL MPBORDERED SMP stc
+.IL MPBORDERED SMP
 Begin KMPC ordered region
 .AT spec trm
 .IL MPEORDERED SMP
@@ -3850,8 +3850,6 @@ stc - bit vector:
 Task firstprivate
 sym - symbol table pointer to the shared variable.
 sym - symbol table pointer to the private copy.
-.AT spec trm
-.IL DEPEND SMP stc sym stc stc
 .AT spec trm
 .IL BTASK SMP sym stc lnk lnk
 Begin task
