@@ -56,6 +56,8 @@
 #include "semstk.h"
 #include "machar.h"
 #include "ast.h"
+#include "extern.h"
+
 #define RTE_C
 #include "rte.h"
 #include "pd.h"
@@ -96,6 +98,7 @@ static bool is_selector(SPTR sptr);
 //AOCC Begin
 static void replace_acl_temp_with_lhs(SST *sst_rhstemp, SST *sst_lhs);
 static bool expand_reshape(SST *sst_rhs, SST *sst_lhs);
+extern void rewrite_asts_collapse_loop(struct collapse_loop);
 extern int distribute_doif;
 extern int distribute_pdo_ast;
 extern int tgt_distribute_ast;
@@ -6636,6 +6639,11 @@ collapse_begin(DOINFO *doinfo)
    * Same with the init expr.
    */
   doinfo->init_expr = collapse_expr(doinfo->init_expr, dtype, "Xa");
+  if (A_TYPEG(doinfo->init_expr+1) == A_ASN &&
+          A_TYPEG(A_DESTG(doinfo->init_expr+1)) == A_ID &&
+          A_DESTG(doinfo->init_expr+1) == doinfo->init_expr)
+    collapse_loop.instruction_range_start = A_STDG(doinfo->init_expr + 1);
+
   /*
    *  lp_cnt <-- (e2 - e1 + e3) / e3
    */
@@ -6743,6 +6751,7 @@ collapse_add(DOINFO *doinfo)
   ast = mk_binop(OP_MUL, dest_ast, ast, coll_st.dtype);
   ast = mk_assn_stmt(dest_ast, ast, coll_st.dtype);
   (void)add_stmt(ast);
+  collapse_loop.instruction_range_end = A_STDG(ast);
 
   if (doinfo->collapse == 1) {
     DOINFO *dinf;
@@ -6775,6 +6784,14 @@ collapse_add(DOINFO *doinfo)
     else
       ast = do_parbegin(dinf);
     std = add_stmt(ast);
+    collapse_loop.parallel_loop = A_STDG(ast);
+    // Apply the collapse loop transformation
+    rewrite_asts_collapse_loop(collapse_loop);
+    collapse_loop.distributed_loop = 0;
+    collapse_loop.instruction_range_start = 0;
+    collapse_loop.instruction_range_end = 0;
+    collapse_loop.parallel_loop = 0;
+
     sem.doif_depth = sv;
     if (DI_ID(sv) == DI_DOCONCURRENT)
       STD_BLKSYM(std) = DI_CONC_BLOCK_SYM(sv);
