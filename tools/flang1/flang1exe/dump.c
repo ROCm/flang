@@ -1335,7 +1335,6 @@ dast(int astx)
   case A_MP_ENDTEAMS:
   case A_MP_ENDDISTRIBUTE:
   case A_MP_DISTRIBUTE:
-  case A_MP_DEPEND:
     break;
   case A_MP_PRE_TLS_COPY:
   case A_MP_COPYIN:

@@ -53,7 +53,6 @@
 #include "llassem.h"
 #include "ll_ftn.h"
 #include "symfun.h"
-#include <vector>
 
 #define MXIDLEN 250
 static DTYPE kmpc_ident_dtype;
@@ -99,10 +98,6 @@ public:
       return {"__kmpc_ordered", IL_NONE, DT_VOID_NONE, 0};
     case KMPC_API_END_ORDERED:
       return {"__kmpc_end_ordered", IL_NONE, DT_VOID_NONE, 0};
-    case KMPC_API_DOACROSS_WAIT:
-      return {"__kmpc_doacross_wait", IL_DFRIR, DT_INT, 0};
-    case KMPC_API_DOACROSS_POST:
-      return {"__kmpc_doacross_post", IL_DFRIR, DT_INT, 0};
     case KMPC_API_FOR_STATIC_INIT:
       return {"__kmpc_for_static_init_%d%s", IL_NONE, DT_VOID_NONE,
               KMPC_FLAG_STR_FMT};
@@ -145,8 +140,6 @@ public:
       return {"__kmpc_omp_task_complete_if0", IL_NONE, DT_VOID_NONE, 0};
     case KMPC_API_TASK_ALLOC:
       return {"__kmpc_omp_task_alloc", IL_DFRAR, DT_CPTR, 0};
-    case KMPC_API_TASK_ALLOC_WITH_DEPS:
-      return {"__kmpc_omp_task_alloc_with_deps", IL_DFRIR, DT_INT, 0};
     case KMPC_API_TASK_WAIT:
       return {"__kmpc_omp_taskwait", IL_DFRIR, DT_INT, 0};
     case KMPC_API_TASK_YIELD:
@@ -699,6 +692,8 @@ KMPC_GENERIC_P_I(ll_make_kmpc_master, KMPC_API_MASTER)
 KMPC_GENERIC_P_I(ll_make_kmpc_end_master, KMPC_API_END_MASTER)
 KMPC_GENERIC_P_I(ll_make_kmpc_single, KMPC_API_SINGLE)
 KMPC_GENERIC_P_I(ll_make_kmpc_end_single, KMPC_API_END_SINGLE)
+KMPC_GENERIC_P_I(ll_make_kmpc_ordered, KMPC_API_ORDERED)
+KMPC_GENERIC_P_I(ll_make_kmpc_end_ordered, KMPC_API_END_ORDERED)
 KMPC_GENERIC_P_I(ll_make_kmpc_for_static_fini, KMPC_API_FOR_STATIC_FINI)
 KMPC_GENERIC_P_I(ll_make_kmpc_task_wait, KMPC_API_TASK_WAIT)
 KMPC_GENERIC_P_I(ll_make_kmpc_taskgroup, KMPC_API_TASKGROUP)
@@ -1533,112 +1528,9 @@ ll_make_kmpc_taskloop(int *inargs)
 }
 
 int
-ll_make_kmpc_ordered()
+ll_make_kmpc_task_with_deps(const loop_args_t *inargs)
 {
-  int args[2];
-  DTYPE arg_types[2] = {DT_CPTR, DT_INT};
-  args[1] = gen_null_arg();
-  args[0] = ll_get_gtid_val_ili();
-  return mk_kmpc_api_call(KMPC_API_ORDERED, 2, arg_types, args);
-}
-
-int 
-ll_make_kmpc_end_ordered()
-{
-  int args[2];
-  DTYPE arg_types[2] = {DT_CPTR, DT_INT};
-  args[1] = gen_null_arg();
-  args[0] = ll_get_gtid_val_ili();
-  return mk_kmpc_api_call(KMPC_API_END_ORDERED, 2, arg_types, args);
-}
-
-int
-ll_make_kmpc_ordered_depend_sink(int* dependvector)
-{
-  int args[3];
-  DTYPE arg_types[3] = {DT_CPTR, DT_INT, DT_INT};
-  args[2] = gen_null_arg();
-  args[1] = ll_get_gtid_val_ili();
-  args[0] = *dependvector;
-  return mk_kmpc_api_call(KMPC_API_DOACROSS_WAIT, 3, arg_types, args);
-}
-
-int
-ll_make_kmpc_ordered_depend_source(int* dependvector)
-{
-  int args[3];
-  DTYPE arg_types[3] = {DT_CPTR, DT_INT, DT_INT};
-  args[2] = gen_null_arg();
-  args[1] = ll_get_gtid_val_ili();
-  args[0] = *dependvector;
-  return mk_kmpc_api_call(KMPC_API_DOACROSS_POST, 3, arg_types, args);
-}
-
-/*
- * all data related to depend clause is passed to kmp function
- * which then converts the data to a required format and executes
- * depend clause
- *
- * task_sptr : sptr of the task with which depend is used.
- * depend_info_list : every depend variable is stored in depend_info_t struct with it's
- *                    address, dependence type and size. depend_info_list is
- *                    a list of depend_info_t structs with the details of all the depend variables
- * dependCnt : total number of depend variables
- */
-
-int
-ll_make_kmpc_task_with_deps(SPTR task_sptr, depend_info_t* depend_info_list, int dependCnt)
-{
-  /*
-   * KMPC_API_TASK_ALLOC_WITH_DEPS function takes 5 fixed arguments and one array argument
-   * that contains the variable arguments.
-   * the variable number of arguments include address, size and dependence type of each dependence type of each depend variable.
-   * Hence the total number of variable arguments will be 3*number of depend variables.
-   */
-  int total_args = dependCnt*3+5;
-  std::vector<int> dependinfotokmpc;
-  int *args = (int*)malloc(total_args*sizeof(int));
-  DTYPE *arg_types = (DTYPE*)malloc(total_args*sizeof(DTYPE));
-  arg_types[0] = DT_CPTR;
-  arg_types[1] = DT_INT;
-  arg_types[2] = DT_CPTR;
-  arg_types[3] = DT_INT;
-  arg_types[4] = DT_INT;
-
- /* depend_info_list is expanded into an array dependinfotokmpc that will
-  * contain address, size and dependence type of all the variables. This
-  * array is passed to KMPC_API_TASK_ALLOC_WITH_DEPS as a list of variable
-  * arguments.
-  * i iterates through the depend_info_list, which is a struct list.
-  * j iterates through dependinfotokmpc array
-  */
-
-  for (int i = 0, j = 0; i < dependCnt && j < dependCnt*3; i++, j+=3) {
-    dependinfotokmpc.push_back(mk_address(depend_info_list[i].base_addr));
-    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].size));
-    dependinfotokmpc.push_back(ad_icon(depend_info_list[i].dependencetype));
-  }
-
-  /* the args array and arg_types arrays are filled */
-  int k = 0;
-  for(std::vector<int>::iterator it = dependinfotokmpc.begin(); it != dependinfotokmpc.end(); it++) {
-    args[k] = *it;
-    arg_types[k+5] = DT_INT;
-    k++;
-  }
-
-  args[dependCnt*3+4] = gen_null_arg();
-  args[dependCnt*3+3] = ll_get_gtid_val_ili();
-  args[dependCnt*3+2] = ad2ili(IL_LDA, ad_acon(task_sptr, 0),
-                   addnme(NT_VAR, task_sptr, 0, 0));
-  args[dependCnt*3+1] = ad_icon(dependCnt);
-  args[dependCnt*3] = ad_icon(dependCnt*3);
-
-  int call_ili = mk_kmpc_api_call(KMPC_API_TASK_ALLOC_WITH_DEPS, total_args, arg_types, args);
-  free(args);
-  free(arg_types);
-
-  return call_ili;
+  return 0;
 }
 
 int
@@ -1822,11 +1714,12 @@ ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)
 int
 ll_make_kmpc_spmd_kernel_init(int sptr)
 {
-  int args[2];
-  DTYPE arg_types[2] = {DT_INT, DT_SINT};
-  args[1] = sptr; // ld_sptr(sptr);
+  int args[3];
+  DTYPE arg_types[3] = {DT_INT, DT_SINT, DT_SINT};
+  args[2] = sptr; // ld_sptr(sptr);
+  args[1] = gen_null_arg();
   args[0] = gen_null_arg();
-  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 2, arg_types, args);
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 3, arg_types, args);
 }
 
 // AOCC Begin

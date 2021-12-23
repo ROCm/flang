@@ -4435,7 +4435,6 @@ rewrite_calls(void)
     case A_MP_TASKREG:
     case A_MP_TASKDUP:
     case A_MP_ETASKDUP:
-    case A_MP_DEPEND:
       break;
     case A_MP_TASKLOOPREG:
     case A_MP_ETASKLOOPREG:

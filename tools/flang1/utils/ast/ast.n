@@ -2827,8 +2827,6 @@ Schedule type (see DI_SCH macros in semant.h)
 If nonzero, loop has the ORDERED attribute.
 .OV SCHED_MODIFIER hw23
 Schedule modifier (see DI_SCH macros in semant.h)
-.OV DEPENDENCE_TYPE hw24
-Dependence type for depend clause
 .SE DISTCHUNK w9
 AST pointer to the disribute chunk size; this field is zero if the chunk clause
 is not present.
@@ -3134,9 +3132,6 @@ Ast of the logical expression appearing in the final clause; zero if not present
 Ast of integer expression appearing in the priority clause; zero if not present.
 .SE LOP
 AST pointer to the corresponding \f(CWA_MP_ENDTASK\fP.
-.lp
-.SM MP_DEPEND
-.SI "depend"
 .lp
 .SM MP_TASKLOOP
 .SI "taskloop"
