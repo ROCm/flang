@@ -252,3 +252,12 @@ struct pure_gbl {
 };
 
 extern struct pure_gbl pure_gbl;
+
+struct collapse_loop {
+        int distributed_loop;
+        int instruction_range_start;
+        int instruction_range_end;
+        int parallel_loop;
+};
+
+extern struct collapse_loop collapse_loop;
