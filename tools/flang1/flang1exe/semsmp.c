@@ -43,6 +43,7 @@
 #include "llmputil.h"
 #include "mp.h"
 #include "atomic_common.h"
+#include "extern.h"
 
 /* contents of this file:  */
 
@@ -158,6 +159,7 @@ int teams_ast = 0; // AOCC
 int distribute_pdo_ast = 0; /* AOCC */
 int distribute_doif = 0; /* AOCC */
 int tgt_distribute_ast = 0; /* AOCC */
+struct collapse_loop collapse_loop = {0, 0, 0, 0};
 
 //AOCC begin
 int dependencetype; /* dependence type */
@@ -7085,6 +7087,8 @@ do_distbegin(DOINFO *doinfo, int do_label, int construct_name)
   DI_NAME(doif) = construct_name;
   direct_loop_enter();
   (void)add_stmt(dast);
+  if (CL_PRESENT(CL_COLLAPSE))
+    collapse_loop.distributed_loop = A_STDG(dast);
 
   /* simulate enter_dir(DI_PARDO...)  */
   {

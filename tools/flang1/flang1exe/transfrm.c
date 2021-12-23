@@ -78,6 +78,7 @@ static int get_sdsc_ast(SPTR sptrsrc, int astsrc);
 static int build_poly_func_node(int dest, int src, int intrin_type);
 static int mk_poly_test(int dest, int src, int optype, int intrin_type);
 static int count_allocatable_members(int ast);
+void rewrite_asts_collapse_loop(struct collapse_loop);
 
 FINFO_TBL finfot;
 static int init_idx[MAXSUBS + MAXSUBS];
@@ -908,6 +909,55 @@ in_wheresymlist(ITEM *list, int sptr)
     }
   }
   return FALSE;
+}
+
+/* move few STD nodes ahead of distributed do loop.
+ * update the upper bound of distributed loop as that of parallel loop.
+ */
+void
+rewrite_asts_collapse_loop(struct collapse_loop collapse_loop)
+{
+  if ((collapse_loop.distributed_loop != 0) &&
+            (collapse_loop.instruction_range_start != 0) &&
+            (collapse_loop.instruction_range_end != 0) &&
+            (collapse_loop.parallel_loop != 0)) {
+
+    // move range of STD nodes ahead of distributed do loop
+    move_range_before(collapse_loop.instruction_range_start,
+                      collapse_loop.instruction_range_end,
+                      collapse_loop.distributed_loop);
+
+    /* add an assignment statement to assign a new value to the upper bound of
+     * distributed loop which is same as that of parallel loop.
+     * add this newly created assignment statement just before the distributed
+     * loop.
+     */
+    int collapse_assn_ast =
+           mk_assn_stmt(A_M2G(STD_AST(collapse_loop.distributed_loop)),
+                A_DESTG(STD_AST(collapse_loop.instruction_range_end)), DT_INT);
+    (void)add_stmt_before(collapse_assn_ast, collapse_loop.distributed_loop);
+
+    /* set the lower bound of both distributed and parallel loop to 1 and
+     * add this assignement statement just before distributed loop.
+     */
+    collapse_assn_ast =
+           mk_assn_stmt(A_M1G(STD_AST(collapse_loop.distributed_loop)),
+                astb.i1, DT_INT);
+    (void)add_stmt_before(collapse_assn_ast, collapse_loop.distributed_loop);
+
+   /* update the lower bound, upper bound and stride of parallel loop as that
+    * of distributed loop. This makes it possible to pass the proper bounds to
+    * the second runtime kmpc call corresponding to the parallel loop.
+    * Here the bounds returned as reference by the first kmpc call
+    * corresponding to distributed loop are used during second kmpc call.
+    */
+    A_M1P(STD_AST(collapse_loop.parallel_loop),
+                    A_M1G(STD_AST(collapse_loop.distributed_loop)));
+    A_M2P(STD_AST(collapse_loop.parallel_loop),
+                    A_M2G(STD_AST(collapse_loop.distributed_loop)));
+    A_M3P(STD_AST(collapse_loop.parallel_loop),
+                    A_M3G(STD_AST(collapse_loop.distributed_loop)));
+  }
 }
 
 /*

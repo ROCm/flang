@@ -56,6 +56,7 @@
 #include "fih.h"
 
 #include "atomic_common.h"
+#include "extern.h"
 
 static void gen_dinit(int, SST *);
 static void pop_subprogram(void);
