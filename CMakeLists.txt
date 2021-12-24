@@ -375,10 +375,16 @@ if ( FLANG_EXECUTABLE_VERSION )
   add_definitions( -DFLANG_VERSION_MAJOR="${FLANG_VERSION_MAJOR} " )
   add_definitions( -DFLANG_VERSION_MINOR="${FLANG_VERSION_MINOR} " )
 endif()
-execute_process(COMMAND git log -1 --format=format:%H WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE FLANG_SHA)
-string(STRIP ${FLANG_SHA} FLANG_SHA)
-message(STATUS "MY_VAR=${FLANG_SHA}")
-add_definitions( -DFLANG_SHA="Flang Sha ${FLANG_SHA} ")
+execute_process(COMMAND git log -1 --format=format:%H WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE FLANG_SHA RESULT_VARIABLE rc)
+
+if(NOT rc EQUAL "0")
+  add_definitions( -DFLANG_SHA="Flang Sha NULL ")
+  message("Warning: Unable to get Flang Sha. Return Code: ${rc} Flang Sha: NULL!!!")
+else()
+  string(STRIP ${FLANG_SHA} FLANG_SHA)
+  message(STATUS "MY_VAR=${FLANG_SHA}")
+  add_definitions( -DFLANG_SHA="Flang Sha ${FLANG_SHA} ")
+endif()
 
 option(FLANG_INCLUDE_TESTS
        "Generate build targets for the Flang unit tests."
