@@ -1624,6 +1624,7 @@ write_bss(void)
       if (bss_written_through_ctor) return;
       bss_written_through_ctor = true;
   }
+  if (flg.omptarget && ASMFIL == gbl.ompaccfile) return;
   // AOCC end
   if (gbl.bss_addr) {
     fprintf(ASMFIL, "%%struct%s = type <{[%" ISZ_PF "d x i8]}>\n", bss_nm,
