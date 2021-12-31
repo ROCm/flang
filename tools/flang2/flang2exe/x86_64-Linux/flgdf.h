@@ -61,6 +61,8 @@ FLG flg = {
     false,      /* omptarget - don't allow OpenMP Offload directives */
     25,         /* errorlimit */
     false,      /* trans_inv */
+    64,         /* Warp size for target */
+    NULL,       /* Arch of the omp target */
 #ifdef TARGET_X86
     0,                                     /* tpcount */
     0,          0, 0, 0, 0, 0, 0, 0, 0, 0, /* tpvalue */
