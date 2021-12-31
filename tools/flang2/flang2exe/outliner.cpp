@@ -2676,8 +2676,10 @@ ll_make_outlined_ompaccel_func(SPTR stblk_sptr, SPTR scope_sptr, bool iskernel)
     arg_sptr = (SPTR)uplevel->vals[i];
     if (!arg_sptr && !ompaccel_tinfo_current_is_registered(arg_sptr))
       continue;
-    if (SCG(arg_sptr) == SC_PRIVATE)
-      continue;
+    if (SCG(arg_sptr) == SC_PRIVATE) {
+      // Not skipping private variable
+      // continue;  // AOCC
+    }
     if (DESCARRAYG(arg_sptr))
       continue;
 
