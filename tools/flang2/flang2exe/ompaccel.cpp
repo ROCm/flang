@@ -64,9 +64,8 @@
 #include "expreg.h"
 
 // Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
-#define GV_Warp_Size 64
-#define GV_Warp_Size_Log2 6
-#define GV_Warp_Size_Log2_Mask 63
+int warp_size_log2;
+int warp_size_log2_mask;
 // AOCC End
 #include "../../flang1/flang1exe/global.h"
 
@@ -905,7 +904,7 @@ ompaccel_nvvm_get(nvvm_sregs sreg)
     ll_process_routine_parameters(sptr);
     return ll_ad_outlined_func2(IL_DFRIR, IL_JSR, sptr, 0, nullptr);
   case warpSize:
-    return ad_icon(GV_Warp_Size);
+    return ad_icon(flg.warp_size);
   case blockDimX:
   case gridDimX:
     dim = 0;
@@ -2354,7 +2353,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
 #endif
   if (flg.amdgcn_target) {
     sptrShmem = mk_ompaccel_addsymbol(
-        name, mk_ompaccel_array_dtype(DT_INT8, GV_Warp_Size),
+        name, mk_ompaccel_array_dtype(DT_INT8, flg.warp_size),
         SC_EXTERN, ST_ARRAY);
   } else {
   // AOCC End
@@ -2372,7 +2371,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   ili = ompaccel_nvvm_get(threadIdX);
   // AOCC Begin
   if (flg.amdgcn_target)
-    ili = mk_ompaccel_iand(ili, ad_icon(GV_Warp_Size_Log2_Mask));
+    ili = mk_ompaccel_iand(ili, ad_icon(warp_size_log2_mask));
   else
   // AOCC End
     ili = mk_ompaccel_iand(ili, ad_icon(31));
@@ -2385,7 +2384,7 @@ ompaccel_nvvm_emit_inter_warp_copy(OMPACCEL_RED_SYM *ReductionItems,
   ili = ompaccel_nvvm_get(threadIdX);
   // AOCC Begin
   if (flg.amdgcn_target)
-    ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(GV_Warp_Size_Log2), DT_UINT);
+    ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(warp_size_log2), DT_UINT);
   else
   //  AOCC End
     ili = mk_ompaccel_shift(ili, DT_UINT, ad_icon(5), DT_UINT);
