@@ -108,7 +108,6 @@ extern OMPACCEL_TINFO **tinfos;
 extern int warp_size_log2;
 extern int warp_size_log2_mask;
 
-
 #define NVVM_WARPSIZE 32
 
 typedef enum NVVM_SREG_ENUM {
