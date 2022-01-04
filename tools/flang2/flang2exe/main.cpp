@@ -58,6 +58,7 @@
 #include <stdbool.h>
 #include "flang/ArgParser/arg_parser.h"
 #include "dtypeutl.h"
+#include <cmath>
 // AOCC BEGIN
 #ifdef DEBUG
 #include "debug.h"
@@ -740,6 +741,8 @@ init(int argc, char *argv[])
   register_string_arg(arg_parser, "std", &flg.std_string, "unknown");
   register_boolean_arg(arg_parser, "disable-vectorize-pragmas",
                        (bool *)&(flg.disable_loop_vectorize_pragmas), false);
+  register_integer_arg(arg_parser, "warp_size", &(flg.warp_size), 64);
+  register_string_arg(arg_parser, "march", &flg.march, NULL);
 
   // Debug Logs
 #ifdef DEBUG
@@ -816,6 +819,9 @@ init(int argc, char *argv[])
     interr("Erroneous -std option", 0, ERR_Fatal);
   }
   // AOCC end
+
+  warp_size_log2 = log2(flg.warp_size);
+  warp_size_log2_mask = flg.warp_size - 1;
 
   /* Free memory */
   destroy_arg_parser(&arg_parser);
