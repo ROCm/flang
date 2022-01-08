@@ -2306,6 +2306,14 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     break;
 
+  /* AOCC
+   *	<mp stmt> ::= <mp requires unified_shared_memory>
+   */
+  case MP_STMT93:
+    ast = mk_stmt(A_MP_REQUIRESUNIFIEDSHAREDMEMORY, 0);
+    SST_ASTP(LHS, ast);
+    break;
+
   /* ------------------------------------------------------------------ */
   /*
    *	<opt csident> ::= |

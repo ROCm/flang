@@ -3364,6 +3364,8 @@ sym - upperD
 stc -  dtype of loop bound type
 stc -  schedule type
 .AT spec trm
+.IL REQUIRES stc
+.AT spec trm
 .IL BTASKDUP SMP
 Begin taskdup routine
 .AT spec trm

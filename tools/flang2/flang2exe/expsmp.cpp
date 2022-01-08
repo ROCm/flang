@@ -66,6 +66,7 @@ inline SPTR GetPARUPLEVEL(SPTR sptr) {
 #include <iterator>
 static bool in_parallel = false;
 std::list<int> targetVector;
+int HasRequiresUnifiedSharedMemory = false;
 // AOCC End
 
 static int incrOutlinedCnt(void);
@@ -1545,6 +1546,7 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       iltb.callfg = 1;
       chk_block(ili);
     }
+
     // AOCC End
     wr_block();
     cr_block();
@@ -2785,6 +2787,14 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
     iltb.callfg = 1;
     chk_block(ili);
     break;
+
+  case IM_REQUIRES: {
+    int requireClause = ILM_OPND(ilmp,1);
+    if (requireClause == OMP_REQ_UNIFIED_SHARED_MEMORY) {
+      HasRequiresUnifiedSharedMemory = true;
+    }
+    break;
+  }
 
   case IM_BMPPG:
     if (ll_ilm_is_rewriting())

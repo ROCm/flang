@@ -696,6 +696,14 @@ prettytoken(int tkntyp, INT tknval)
   case TK_MP_PDO:
     sprintf(symbuf, "DO");
     break;
+  // AOCC Begin
+  case TK_MP_REQUIRES:
+    sprintf(symbuf, "%s", "REQUIRES");
+    break;
+  case TK_MP_REQUIRESUNIFIEDSHAREDMEMORY:
+    sprintf(symbuf, "%s", "REQUIRES UNIFIED_SHARED_MEMORY");
+    break;
+  // AOCC End
   case TK_MP_SECTION:
     sprintf(symbuf, "SECTION");
     break;
