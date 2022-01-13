@@ -257,11 +257,22 @@ static void rewrite_omp_target_construct() {
     add_stmt_before(new_if, begin_std);
     A_IFPARP(ast, 0);
 
-    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
+    // Next statement could be an assignment to a private variable
+    // when in_reduction is used
+    // or local variable when in_reduction is used
     std = STD_NEXT(std);
     assert(std > 0, "", ast, 4);
     ast = STD_AST(std);
 
+    while (A_TYPEG(ast) == A_ASN) {
+        assert(SCG(A_SPTRG(A_DESTG(ast))) == SC_PRIVATE ||
+               SCG(A_SPTRG(A_DESTG(ast))) == SC_LOCAL , "", ast, 4);
+        std = STD_NEXT(std);
+        assert(std > 0, "", ast, 4);
+        ast = STD_AST(std);
+    }
+
+    // Next statements should be list of A_MP_MAP and one A_MP_EMAP
     while (A_TYPEG(ast) != A_MP_EMAP) {
       assert(A_TYPEG(ast) == A_MP_MAP, "", ast, 4);
       std = STD_NEXT(std);

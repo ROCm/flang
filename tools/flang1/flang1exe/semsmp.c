@@ -69,6 +69,7 @@ static void do_copyin(void);
 static void do_copyprivate(void);
 static int size_of_allocatable(int);
 static void do_default_clause(int);
+static void end_in_reduction(REDUC *, int); // AOCC
 static void begin_parallel_clause(int);
 static void end_reduction(REDUC *, int);
 static void end_lastprivate(int);
@@ -124,6 +125,7 @@ static void do_map();
 // AOCC Begin
 static void do_tofrom();
 static void do_usedeviceptr();
+static void do_in_reduction();  // AOCC
 static void do_isdeviceptr();
 static LOGICAL use_atomic_for_reduction(int, REDUC *, REDUC_SYM *);
 // AOCC End
@@ -278,9 +280,10 @@ struct collapse_loop collapse_loop = {0, 0, 0, 0};
 #define CL_ACCATTACH 107
 #define CL_ACCDETACH 108
 #define CL_ACCCOMPARE 109
-#define CL_PGICOMPARE 110
-#define CL_MP_MODIFIER 111
-#define CL_MAXV 112 /* This must be the last clause */
+#define CL_IN_REDUCTION 110
+#define CL_PGICOMPARE 111
+#define CL_MP_MODIFIER 112
+#define CL_MAXV 113 /* This must be the last clause */
 /*
  * define bit flag for each statement which may have clauses.  Used for
  * checking for illegal clauses.
@@ -537,6 +540,7 @@ static struct cl_tag { /* clause table */
     {0, 0, 0, NULL, NULL, "COMPARE",
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
+    {0, 0, 0, NULL, NULL, "IN_REDUCTION", BT_TARGET}, //  AOCC
 };
 
 #define CL_PRESENT(d) cl[d].present
@@ -2805,9 +2809,14 @@ semsmp(int rednum, SST *top)
       ((ITEM *)CL_LAST(clause))->next = itembeg;
     CL_LAST(clause) = itemend;
     break;
-  }
-  // AOCC END
-  /* ------------------------------------------------------------------ */
+   }
+   /*
+    * <par attr> ::= IN_REUDCTION ( <in_reduction> )
+    */
+  case PAR_ATTR40:
+     break;
+     // AOCC END
+     /* ------------------------------------------------------------------ */
   /*
    *    <opt expression> ::= |
    */
@@ -3199,6 +3208,130 @@ semsmp(int rednum, SST *top)
            reduc_symp_curr = reduc_symp_curr->next) {
         if (reduc_symp_curr->shared == reduc_symp->shared) {
           error(155, 2, gbl.lineno, "Duplicate name in reduction clause -",
+                SYMNAME(reduc_symp->shared));
+          break;
+        }
+      }
+
+      reduc_symp_last->next = reduc_symp;
+      reduc_symp_last = reduc_symp;
+      if (STYPEG(reduc_symp->shared) != ST_VAR &&
+          STYPEG(reduc_symp->shared) != ST_ARRAY) {
+        error(155, 3, gbl.lineno,
+              "Reduction variable must be a scalar or array variable -",
+              SYMNAME(reduc_symp->shared));
+        /*
+         * pass up 0 so that do_reduction() & end_reduction()
+         * will ignore this item.
+         */
+        reduc_symp->shared = 0;
+      } else {
+        dtype = DTYPEG(reduc_symp->shared);
+        dtype = DDTG(dtype);
+        if (!DT_ISBASIC(dtype)) {
+          error(155, 3, gbl.lineno,
+                "Reduction variable must be of intrinsic type -",
+                SYMNAME(reduc_symp->shared));
+          reduc_symp->shared = 0;
+        }
+      }
+    }
+    /* skip past the fake REDUC_SYM item */
+    reducp->list = reducp->list->next;
+    //AOCC Begin
+#ifdef OMP_OFFLOAD_AMD
+    if (target_ast) {
+      reduction_kernel = 1;
+    }
+#endif
+    // AOCC End
+    break;
+  /* ------------------------------------------------------------------ */
+  /*
+   * <in_reduction> ::= <reduc op> : <pflsr list>
+   */
+  case IN_REDUCTION1:
+    if (SST_IDG(RHS(1)) == 1 && SST_SYMG(RHS(1)) == 0)
+      /* error occurred, so just ignore it */
+      break;
+    add_clause(CL_IN_REDUCTION, FALSE);
+    /*
+     * Need to keep the REDUC items around until the end of the
+     * parallel do, so allocate them in area 1.
+     */
+    reducp = (REDUC *)getitem(1, sizeof(REDUC));
+    reducp->next = NULL;
+    if (SST_IDG(RHS(1)) == 0) {
+      reducp->opr = SST_OPTYPEG(RHS(1));
+      if (reducp->opr == OP_LOG)
+        reducp->intrin = SST_OPCG(RHS(1));
+    } else {
+      reducp->opr = 0;
+      reducp->intrin = SST_SYMG(RHS(1));
+    }
+    rhstop = 3;
+    goto in_reduction_shared;
+    break;
+  /*
+   * <in_reduction> ::= <pflsr list>
+   */
+  case IN_REDUCTION2:
+    add_clause(CL_IN_REDUCTION, FALSE);
+    /*
+     * Need to keep the REDUC items around until the end of the
+     * parallel do, so allocate them in area 1.
+     */
+    reducp = (REDUC *)getitem(1, sizeof(REDUC));
+    reducp->next = NULL;
+    reducp->opr = OP_ADD;
+    rhstop = 1;
+  in_reduction_shared:
+    /* AOCC begin */
+    if (flg.x86_64_omptarget) {
+      /* This is a temporary workaround for dynamic array reduction where we
+       * serialize the kernel.
+       */
+      bool skip_reduction = false;
+      for (itemp = SST_BEGG(RHS(rhstop)); itemp != ITEM_END;
+          itemp = itemp->next) {
+        if (ALLOCG(itemp->t.sptr)) {
+          if (teams_ast) {
+            A_THRLIMITP(teams_ast, mk_cnst(stb.i1));
+            A_NTEAMSP(teams_ast, mk_cnst(stb.i1));
+          }
+          skip_reduction = true;
+        }
+      }
+      if (skip_reduction)
+        break;
+    }
+    /* AOCC end */
+
+    if (CL_FIRST(CL_IN_REDUCTION) == NULL)
+      CL_FIRST(CL_IN_REDUCTION) = reducp;
+    else
+      ((REDUC *)CL_LAST(CL_IN_REDUCTION))->next = reducp;
+    CL_LAST(CL_IN_REDUCTION) = reducp;
+    /*
+     * create a fake REDUC_SYM item (from area 0 freed during the end of
+     * statement processing.
+     */
+    reducp->list = reduc_symp_last = (REDUC_SYM *)getitem(0, sizeof(REDUC_SYM));
+    reducp->list->next = NULL;
+    for (itemp = SST_BEGG(RHS(rhstop)); itemp != ITEM_END;
+         itemp = itemp->next) {
+      /*
+       * Need to keep the REDUC_SYM items around until the end of the
+       * parallel do, so allocate them in area 1.
+       */
+      reduc_symp = (REDUC_SYM *)getitem(1, sizeof(REDUC_SYM));
+      reduc_symp->Private = 0;
+      reduc_symp->shared = itemp->t.sptr;
+      reduc_symp->next = NULL;
+      for (reduc_symp_curr = reducp->list->next; reduc_symp_curr;
+           reduc_symp_curr = reduc_symp_curr->next) {
+        if (reduc_symp_curr->shared == reduc_symp->shared) {
+          error(155, 2, gbl.lineno, "Duplicate name in in_reduction clause -",
                 SYMNAME(reduc_symp->shared));
           break;
         }
@@ -8085,6 +8218,167 @@ do_usedeviceptr()
 }
 
 static void
+do_in_reduction()
+{
+  REDUC *in_reducp;
+  REDUC_SYM *in_reduc_symp;
+
+  if(CL_PRESENT(CL_IN_REDUCTION)) {
+    for (in_reducp = CL_FIRST(CL_IN_REDUCTION); in_reducp;
+            in_reducp = in_reducp->next) {
+      for (in_reduc_symp = in_reducp->list; in_reduc_symp;
+              in_reduc_symp = in_reduc_symp->next) {
+        int dtype, ast;
+        INT val[4];
+        INT conval;
+        SST cnst;
+        SST lhs;
+        char *nm;
+
+        if (in_reduc_symp->shared == 0)
+          /* error illegal reduction variable */
+          continue;
+        in_reduc_symp->Private = decl_private_sym(in_reduc_symp->shared);
+
+        if (DTYPEG(in_reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
+          DTYPEP(in_reduc_symp->Private, DT_DBLE);
+        }
+        if (DTYPEG(in_reduc_symp->Private) == DT_CMPLX && flg.amdgcn_target) {
+          DTYPEP(in_reduc_symp->Private, DT_DCMPLX);
+        }
+
+        set_parref_flag(in_reduc_symp->shared, in_reduc_symp->shared,
+                        BLK_UPLEVEL_SPTR(sem.scope_level));
+        (void)mk_storage(in_reduc_symp->Private, &lhs);
+
+        // initialization of the private copy
+        dtype = DT_INT;
+        switch (in_reducp->opr) {
+          case 0:
+            nm = SYMNAME(in_reducp->intrin);
+            if (strcmp(nm, "max") == 0) {
+              dtype = DTYPEG(in_reduc_symp->shared);
+              dtype = DDTG(dtype);
+              if (DT_ISINT(dtype)) {
+                if (size_of(dtype) <= 4) {
+                  conval = 0x80000000;
+                  dtype = DT_INT;
+                } else {
+                  val[0] = 0x80000000;
+                  val[1] = 0x00000000;
+                  conval = getcon(val, dtype);
+                }
+              } else if (dtype == DT_REAL)
+                /* -3.402823466E+38 */
+                conval = 0xff7fffff;
+              else if (dtype == DT_QUAD) {
+                val[0] = 0xffffffff;
+                val[1] = 0xffffffff;
+                val[2] = 0xffefffff;
+                val[3] = 0xffffffff;
+                conval = getcon(val, DT_QUAD);
+
+              } else {
+                /* -1.79769313486231571E+308 */
+                val[0] = 0xffefffff;
+                val[1] = 0xffffffff;
+                conval = getcon(val, DT_DBLE);
+              }
+              break;
+            }
+            if (strcmp(nm, "min") == 0) {
+              dtype = DTYPEG(in_reduc_symp->shared);
+              dtype = DDTG(dtype);
+              if (DT_ISINT(dtype)) {
+                if (size_of(dtype) <= 4) {
+                  conval = 0x7fffffff;
+                  dtype = DT_INT;
+                } else {
+                  val[0] = 0x7fffffff;
+                  val[1] = 0xffffffff;
+                  conval = getcon(val, dtype);
+                }
+              } else if (dtype == DT_REAL) {
+                /* 3.402823466E+38 */
+                conval = 0x7f7fffff;
+              } else if (dtype == DT_QUAD) {
+                val[0] = 0xffffffff;
+                val[1] = 0xffffffff;
+                val[2] = 0x7fefffff;
+                val[3] = 0xffffffff;
+                conval = getcon(val, DT_QUAD);
+              } else {
+                /* 1.79769313486231571E+308 */
+                val[0] = 0x7fefffff;
+                val[1] = 0xffffffff;
+                conval = getcon(val, DT_DBLE);
+              }
+              break;
+            }
+            if (strcmp(nm, "iand") == 0) {
+              dtype = DTYPEG(in_reduc_symp->shared);
+              dtype = DDTG(dtype);
+              if (size_of(dtype) <= 4) {
+                conval = 0xffffffff;
+                dtype = DT_INT;
+              } else {
+                val[0] = 0xffffffff;
+                val[1] = 0xffffffff;
+                conval = getcon(val, dtype);
+              }
+              break;
+            }
+            if (strcmp(nm, "ior") == 0) {
+              conval = 0;
+              break;
+            }
+            if (strcmp(nm, "ieor") == 0) {
+              conval = 0;
+              break;
+            }
+            interr("do_in_reduction - illegal intrinsic", in_reducp->intrin, 0);
+            break;
+          case OP_ADD:
+          case OP_SUB:
+            conval = 0;
+            break;
+          case OP_MUL:
+            conval = 1;
+            break;
+          case OP_LOG:
+            dtype = DT_LOG;
+            switch (in_reducp->intrin) {
+              case OP_LAND:
+              case OP_LEQV:
+                conval = SCFTN_TRUE;
+                break;
+              case OP_LOR:
+              case OP_LNEQV:
+                conval = SCFTN_FALSE;
+                break;
+              default:
+                interr("do_in_reduction - illegal log operator",
+                  in_reducp->intrin, 0);
+            }
+            break;
+          default:
+            interr("do_in_reduction - illegal log operator",
+              in_reducp->opr, 0);
+            break;
+        }
+        SST_IDP(&cnst, S_CONST);
+        SST_DTYPEP(&cnst, dtype);
+        SST_CVALP(&cnst, conval);
+        ast = mk_cval1(conval, dtype);
+        SST_ASTP(&cnst, ast);
+        (void)add_stmt(assign(&lhs, &cnst));
+      }
+    }
+    DI_IN_REDUC(sem.doif_depth) = CL_FIRST(CL_IN_REDUCTION);
+  }
+}
+
+static void
 do_isdeviceptr()
 {
   if (!flg.omptarget)
@@ -8415,6 +8709,7 @@ begin_parallel_clause(int doif)
 
   switch (DI_ID(doif)) {
   case DI_TARGET:
+    do_in_reduction();  // AOCC
     do_isdeviceptr();   // AOCC
     do_map();
     break;
@@ -8519,6 +8814,15 @@ end_parallel_clause(int doif)
       break;
     }
   }
+  // AOCC Begin
+  switch (DI_ID(doif)) {
+    case DI_TARGET:
+        end_in_reduction(DI_IN_REDUC(doif), doif);
+      break;
+    default:
+      break;
+  }
+  // AOCC End
 }
 
 static ATOMIC_RMW_OP
@@ -8780,6 +9084,39 @@ end_reduction(REDUC *red, int doif)
     // AOCC End
   }
 }
+
+// AOCC Begin
+static void
+end_in_reduction(REDUC *in_red, int doif)
+{
+  REDUC *in_reducp;
+  REDUC_SYM *in_reduc_symp;
+  int save_par, save_target, save_teams;
+  LOGICAL in_parallel = FALSE;
+
+  if(!in_red)
+    return;
+
+  save_par = sem.parallel;
+  sem.parallel = 0;
+  save_target = sem.target;
+  sem.target = 0;
+  save_teams = sem.teams;
+  sem.teams = 0;
+  in_parallel = (save_par || save_target || save_teams);
+
+  if (DI_ID(doif) == DI_TARGET) {
+    for (in_reducp = in_red; in_reducp; in_reducp = in_reducp->next) {
+      for (in_reduc_symp = in_reducp->list; in_reduc_symp;
+           in_reduc_symp = in_reduc_symp->next) {
+        if(use_atomic_for_reduction(sem.doif_depth, in_red, in_reduc_symp)) {
+          gen_reduction(in_reducp, in_reduc_symp, FALSE, in_parallel);
+        }
+      }
+    }
+  }
+}
+// AOCC End
 
 static void
 end_lastprivate(int doif)

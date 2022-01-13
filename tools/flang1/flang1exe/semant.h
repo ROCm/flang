@@ -305,6 +305,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
       int teams;               // OpenMP use
       int distribute;          // OpenMP use
       REDUC *reduc;            // reductions for parallel constructs
+      REDUC *in_reduc;         // in_reductions for parallel constructs   // AOCC
       REDUC_SYM *lastprivate;  // lastprivate for parallel constructs
       ITEM *allocated;         // list of allocated private variables
       ITEM *region_vars;       // accelerator region copy/local/mirror vars
@@ -411,6 +412,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
 #define DI_CRITSYM(d) sem.doif_base[d].u.u4.bpar
 #define DI_BEGINP(d) sem.doif_base[d].u.u4.beginp
 #define DI_REDUC(d) sem.doif_base[d].u.u4.reduc
+#define DI_IN_REDUC(d) sem.doif_base[d].u.u4.in_reduc   // AOCC
 #define DI_LASTPRIVATE(d) sem.doif_base[d].u.u4.lastprivate
 #define DI_ALLOCATED(d) sem.doif_base[d].u.u4.allocated
 #define DI_REGIONVARS(d) sem.doif_base[d].u.u4.region_vars
