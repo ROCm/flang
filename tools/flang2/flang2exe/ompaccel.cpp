@@ -3657,6 +3657,8 @@ ompaccel_create_amd_reduction_wrappers()
 void
 ompaccel_update_devsym_maptype(SPTR dev_symbol, int map_type)
 {
+  if (!current_tinfo) // AOCC
+    return;
   int i;
   for (i = 0; i < current_tinfo->n_symbols; ++i) {
     if (current_tinfo->symbols[i].device_sym == dev_symbol) {

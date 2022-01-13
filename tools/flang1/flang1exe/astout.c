@@ -2039,7 +2039,11 @@ print_ast(int ast)
     put_string("end atomic ");
     break;
   case A_MP_ATOMIC:
+    lbuff[0] = '!';
+    put_string("mp atomic" );
   case A_MP_ENDATOMIC:
+    lbuff[0] = '!';
+    put_string("end mp atomic ");
     break;
   case A_MP_ATOMICREAD:
     lbuff[0] = '!';

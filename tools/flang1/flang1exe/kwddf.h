@@ -373,6 +373,7 @@ static KWORD t5[] = {
     {"from", TK_FROM},
     {"grainsize", TK_GRAINSIZE},
     {"if", TK_IF},
+    {"in_reduction", TK_IN_REDUCTION}, // AOCC
     {"inbranch", TK_INBRANCH},
     {"is_device_ptr", TK_IS_DEVICE_PTR},
     {"lastlocal", TK_LASTPRIVATE},

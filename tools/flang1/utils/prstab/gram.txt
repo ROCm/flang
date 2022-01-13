@@ -1874,7 +1874,8 @@
                THREAD_LIMIT ( <expression> ) |
                NOGROUP |
                NOWAIT |
-               USE_DEVICE_PTR ( <accel data list> )
+			USE_DEVICE_PTR ( <accel data list> ) |
+			IN_REDUCTION ( <in_reduction> )
 
 <opt expression> ::= |
 	             ( <expression> )
@@ -1919,6 +1920,10 @@
 
 <reduction> ::= <reduc op> : <pflsr list> |
 		<pflsr list>
+
+<in_reduction> ::= <reduc op> : <pflsr list> |
+		<pflsr list>
+
 
 <reduc op> ::= <addop> |
 	       *       |
