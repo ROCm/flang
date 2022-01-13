@@ -14399,9 +14399,10 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
 INLINE void static add_property_struct(char *func_name, int nreductions,
                                        int reductionsize)
 {
+  print_token("%struct.struct_ident_t = type { i32, i32, i32, i32, i8*}\n");
   print_token("@");
   print_token(func_name);
-  print_token("__exec_mode = weak constant i8 2\n");
+  print_token("__exec_mode = weak constant i8 1\n");
 }
 #endif
 

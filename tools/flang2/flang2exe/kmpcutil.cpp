@@ -53,9 +53,17 @@
 #include "llassem.h"
 #include "ll_ftn.h"
 #include "symfun.h"
+//AOCC Begin
+#include "tgtutil.h"
+//AOCC End
 
 #define MXIDLEN 250
 static DTYPE kmpc_ident_dtype;
+/* Structures which describes Ident Source location identification
+ * used by new OpenMP runtime
+ */
+static DTYPE ident_type;
+static DTYPE ident_type_ptr;
 
 /* Flags for use with the entry */
 #define DT_VOID_NONE DT_NONE
@@ -183,13 +191,13 @@ public:
       return {"__kmpc_for_static_init_%d%s_simple_spmd", IL_NONE, DT_VOID_NONE,
               KMPC_FLAG_STR_FMT};
       break;
-    case KMPC_API_SPMD_KERNEL_INIT:
-      return {"__kmpc_spmd_kernel_init", IL_NONE, DT_VOID_NONE, 0};
+    case KMPC_API_TARGET_INIT:
+      return {"__kmpc_target_init", IL_NONE, DT_INT, 0};
       break;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     case KMPC_API_SPMD_KERNEL_DEINIT_V2:
-      return {"__kmpc_spmd_kernel_deinit_v2", IL_NONE, DT_VOID_NONE, 0};
+      return {"__kmpc_target_deinit", IL_NONE, DT_VOID_NONE, 0};
       break;
 #endif
     // AOCC End
@@ -303,7 +311,7 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
     [KMPC_API_FOR_STATIC_INIT_SIMPLE_SPMD] =
         {"__kmpc_for_static_init_%d%s_simple_spmd", 0, DT_VOID_NONE,
          KMPC_FLAG_STR_FMT},
-    [KMPC_API_SPMD_KERNEL_INIT] = {"__kmpc_spmd_kernel_init", 0, DT_VOID_NONE,
+    [KMPC_API_TARGET_INIT] = {"__kmpc_target_init", 0, DT_INT,
                                    0},
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
@@ -1711,15 +1719,43 @@ ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)
   return mk_kmpc_api_call(KMPC_API_KERNEL_INIT_PARAMS, 1, arg_types, args);
 }
 
-int
-ll_make_kmpc_spmd_kernel_init(int sptr)
+DTYPE
+ll_make_ident_type(char *name)
 {
-  int args[3];
-  DTYPE arg_types[3] = {DT_INT, DT_SINT, DT_SINT};
-  args[2] = sptr; // ld_sptr(sptr);
-  args[1] = gen_null_arg();
-  args[0] = gen_null_arg();
-  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 3, arg_types, args);
+  TGT_ST_TYPE meminfo[] = {{"reserved_1", DT_INT, 0, 0},
+  {"flags", DT_INT, 0, 0},
+  {"reserved_2", DT_INT, 0, 0},
+  {"reserved_3", DT_INT, 0, 0},
+  {"psource", DT_ADDR, 0, 0}};
+
+  return ll_make_struct(5, name, meminfo, 0);
+}
+
+static int
+gen_int_arg(DTYPE dt, int value)
+{
+  int con, ili;
+  INT tmp[2];
+
+  tmp[0] = 0;
+  tmp[1] = value;
+  con = getcon(tmp, dt);
+  ili = ad1ili(IL_ACON, con);
+  return ili;
+}
+
+int
+ll_make_kmpc_target_init(int sptr)
+{
+  int args[4];
+  ident_type = ll_make_ident_type("struct_ident_t");
+  ident_type_ptr = get_type(2, TY_PTR, ident_type);
+  DTYPE arg_types[4] = {ident_type_ptr, DT_BLOG, DT_BLOG, DT_BLOG};
+  args[3] = gen_null_arg();
+  args[2] = gen_int_arg(DT_BLOG, 1);
+  args[1] = gen_int_arg(DT_BLOG, 1);
+  args[0] = gen_int_arg(DT_BLOG, 1);
+  return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
 }
 
 // AOCC Begin
@@ -1727,10 +1763,12 @@ ll_make_kmpc_spmd_kernel_init(int sptr)
 int
 ll_make_kmpc_spmd_kernel_deinit_v2()
 {
-  int args[1];
-  DTYPE arg_types[3] = {DT_SINT};
-  args[0] = gen_null_arg();
-  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_DEINIT_V2, 1, arg_types, args);
+  int args[3];
+  DTYPE arg_types[3] = {ident_type_ptr, DT_BLOG, DT_BLOG};
+  args[2] = gen_null_arg();
+  args[1] = gen_int_arg(DT_BLOG, 1);
+  args[0] = gen_int_arg(DT_BLOG, 1);
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_DEINIT_V2, 3, arg_types, args);
 }
 #endif
 // AOCC End

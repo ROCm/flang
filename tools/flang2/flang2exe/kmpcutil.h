@@ -170,7 +170,7 @@ enum {
   /* Begin - OpenMP Accelerator RT (libomptarget-nvptx) - non standard - */
   KMPC_API_PUSH_TARGET_TRIPCOUNT,
   KMPC_API_FOR_STATIC_INIT_SIMPLE_SPMD,
-  KMPC_API_SPMD_KERNEL_INIT,
+  KMPC_API_TARGET_INIT,
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
   KMPC_API_SPMD_KERNEL_DEINIT_V2,
@@ -494,9 +494,9 @@ int ll_make_kmpc_shuffle_f32(int, int, int);
 int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 
 /**
-  \brief SPMD mode - kernel init.
+  \brief kernel init
 */
-int ll_make_kmpc_spmd_kernel_init(int);
+int ll_make_kmpc_target_init(int);
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
