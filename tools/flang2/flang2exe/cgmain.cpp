@@ -14401,7 +14401,7 @@ INLINE void static add_property_struct(char *func_name, int nreductions,
 {
   print_token("@");
   print_token(func_name);
-  print_token("__exec_mode = weak constant i8 0\n");
+  print_token("__exec_mode = weak constant i8 2\n");
 }
 #endif
 
