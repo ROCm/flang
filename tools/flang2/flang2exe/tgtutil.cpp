@@ -74,6 +74,7 @@ static SPTR init_tgt_target_syms(const char *kernelname, SPTR sptr = SPTR_NULL);
 int dataregion = 0;
 
 static DTYPE tgt_offload_entry_type = DT_NONE;
+extern int HasRequiresUnifiedSharedMemory;
 
 /* Flags for use with the entry */
 #define DT_VOID_NONE DT_NONE
@@ -1108,7 +1109,7 @@ init_tgt_register_syms()
   // tptr1 = (SPTR)addnewsym(".omp_offloading.entries_begin"); // AOCC
   tptr1 = (SPTR)addnewsym("__start_omp_offloading_entries"); // AOCC
   // AOCC Begin
-  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_type_");
   // AOCC End
   DTYPEP(tptr1, tgt_offload_entry_type);
   /* SCP(tptr1, SC_EXTERN); */ SCP(tptr1, SC_PRIVATE); // AOCC
@@ -1200,7 +1201,7 @@ ll_make_tgt_register_requires()
   DTYPE dtype_bindesc, dtype_entry, dtype_devimage, dtype_pofbindesc;
 
   // AOCC Begin
-  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_requires_");
   // AOCC End
   dtype_entry = tgt_offload_entry_type;
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
@@ -1215,7 +1216,11 @@ ll_make_tgt_register_requires()
 
   int args[1];
   DTYPE arg_types[1] = {DT_INT8};
-  args[0] = ad_kconi(1);
+  if (HasRequiresUnifiedSharedMemory) {
+    args[0] = ad_kconi(OMP_REQ_UNIFIED_SHARED_MEMORY);
+  }
+  else
+    args[0] = ad_kconi(1);
   return mk_tgt_api_call(TGT_API_REGISTER_REQUIRES, 1, arg_types, args);
 }
 // AOCC end
@@ -1252,7 +1257,7 @@ ll_make_tgt_register_lib2()
          "OpenMP Offload structures are not found.", 0, ERR_Fatal);
   // AOCC end
 
-  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry"); //AOCC
+  dtype_entry = ll_make_tgt_offload_entry("__tgt_offload_entry_lib2_"); //AOCC
   dtype_devimage = ll_make_tgt_device_image("__tgt_device_image", dtype_entry);
   dtype_bindesc =
       ll_make_tgt_bin_descriptor("__tgt_bin_desc", dtype_entry, dtype_devimage);
@@ -1344,7 +1349,7 @@ ll_make_tgt_register_lib2()
 void
 init_tgtutil()
 {
-  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_");
+  tgt_offload_entry_type = ll_make_tgt_offload_entry("__tgt_offload_entry_type_");
 }
 
 // AOCC Begin

@@ -3851,6 +3851,8 @@ Task firstprivate
 sym - symbol table pointer to the shared variable.
 sym - symbol table pointer to the private copy.
 .AT spec trm
+.IL REQUIRES SMP stc
+.AT spec trm
 .IL BTASK SMP sym stc lnk lnk
 Begin task
 Always matches a ETASK ilm

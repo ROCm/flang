@@ -5146,6 +5146,14 @@ lower_stmt(int std, int ast, int lineno, int label)
     lower_end_stmt(std);
     break;
 
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY:
+    lower_start_stmt(lineno, label, TRUE, std);
+    // requires with clause usm is dumped with value (8)
+    // for other require clauses, appt values need to be dumped
+    plower("on", "REQUIRES", OMP_REQ_UNIFIED_SHARED_MEMORY);
+    lower_end_stmt(std);
+    break;
+
   case A_MP_TASK:
   case A_MP_TASKLOOP:
     lowersym.task_depth++;
