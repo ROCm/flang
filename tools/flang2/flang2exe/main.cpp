@@ -499,7 +499,7 @@ main(int argc, char *argv[])
   } while (!gbl.eof_flag);
 
 
-  if (flg.omptarget) {
+  if (flg.march) {
     ompaccel_create_globalctor();
   }
   cg_llvm_end();
