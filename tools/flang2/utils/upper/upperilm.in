@@ -114,6 +114,7 @@ BRF	ilm	sym
 BRT	ilm	sym
 BDISTRIBUTE
 BSECTIONS	sym
+REQUIRES num
 BTASK	sym	num	ilm	ilm
 BTASKDUP
 BTASKLOOP	sym	num	ilm	ilm	ilm 	ilm

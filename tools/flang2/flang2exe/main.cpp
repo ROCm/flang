@@ -72,6 +72,7 @@ static bool process_input(char *argv0, bool *need_cuda_constructor);
 extern int errno;
 #endif
 #endif
+extern int HasRequiresUnifiedSharedMemory;
 
 #define IS_COFF (flg.astype == 1)
 #define IS_ELF (flg.astype == 0)
@@ -482,15 +483,13 @@ main(int argc, char *argv[])
   upper_init();
   if (!findex)
     gbl.findex = addfile(gbl.file_name, NULL, 0, 0, 0, 1, 0);
-#if 0
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget) {
     init_test();
-    ompaccel_create_globalctor();
+ // ompaccel_create_globalctor();
     gbl.func_count--;
     gbl.multi_func_count = gbl.func_count;
   }
-#endif
 #endif
   do { /* loop once for each user program unit */
 
@@ -499,6 +498,10 @@ main(int argc, char *argv[])
 
   } while (!gbl.eof_flag);
 
+
+  if (flg.march) {
+    ompaccel_create_globalctor();
+  }
   cg_llvm_end();
 
   if (flg.smp) {
