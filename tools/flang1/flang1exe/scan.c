@@ -3555,6 +3555,22 @@ classify_smp(void)
       scmode = SCM_PAR;
       break;
     }
+
+  case TK_MP_REQUIRES: {
+      int savecp = cp;
+      while (cp && *cp == ' ') cp++;
+      if (is_ident(cp) && strncmp(cp, "unified_shared_memory", 21) == 0) {
+        cp += 21;
+        scn.stmtyp = tkntyp = TK_MP_REQUIRESUNIFIEDSHAREDMEMORY;
+        scmode = SCM_PAR;
+      } else {
+        scn.stmtyp = tkntyp = TK_MP_REQUIRES;
+        scmode = SCM_PAR;
+	cp=savecp;
+      }
+      break;
+    }
+
   case TK_MP_TASKLOOP:
 taskloop:
     if ((*cp == ' ' && (is_ident(cp + 1)) &&

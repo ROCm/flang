@@ -3136,6 +3136,9 @@ AST pointer to the corresponding \f(CWA_MP_ENDTASK\fP.
 .SM MP_TASKLOOP
 .SI "taskloop"
 .lp
+.SM MP_REQUIRESUNIFIEDSHAREDMEMORY
+.SI "requiresunifiedsharedmemory"
+.lp
 OpenMP taskloop directive.
 .lp
 .ul

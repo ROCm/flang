@@ -513,6 +513,7 @@ static KWORD t6[] = {
     {"teamsdistributesimd", TK_MP_TEAMSDISTSIMD},
     {"threadprivate", TK_MP_THREADPRIVATE},
     {"workshare", TK_MP_WORKSHARE},
+    {"requires", TK_MP_REQUIRES}, // AOCC
 };
 
 static KWORD t7[] = {

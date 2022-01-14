@@ -1794,7 +1794,9 @@
 		<mp endtargteamsdistpardosimd> |
                 <mp taskgroup> |
                 <mp endtaskgroup> |
-                <mp cancellationpoint> <id name>
+                <mp cancellationpoint> <id name>  |
+                <mp requiresunifiedsharedmemory>
+
 
 <opt csident> ::= |
 		  ( <id name> )

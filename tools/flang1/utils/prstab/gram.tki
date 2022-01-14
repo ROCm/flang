@@ -497,6 +497,8 @@ COPY        TK_COPY
 <mp targteamsdistpardosimd> TK_MP_TARGTEAMSDISTPARDOSIMD
 <mp targteamsdistsimd> TK_MP_TARGTEAMSDISTSIMD
 <mp task>	          TK_MP_TASK
+<mp requires>	          TK_MP_REQUIRES
+<mp requiresunifiedsharedmemory>  TK_MP_REQUIRESUNIFIEDSHAREDMEMORY
 <mp taskgroup>	    TK_MP_TASKGROUP
 <mp taskloop>	      TK_MP_TASKLOOP
 <mp taskloopsimd>	  TK_MP_TASKLOOPSIMD
