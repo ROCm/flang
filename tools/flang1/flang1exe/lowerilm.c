@@ -2485,7 +2485,9 @@ lower_do_stmt(int std, int ast, int lineno, int label)
       schedtype = schedtype | (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
     } else {
       // AOCC end
-      schedtype = 0x000;
+      schedtype = 0x000 ;
+      if (flg.amdgcn_target)
+        schedtype = schedtype | MP_SCH_ATTR_CHUNKED;
       if (A_SCHED_TYPEG(ast) == MP_SCH_DIST_STATIC) {
         schedtype = MP_SCH_DIST_STATIC;
       }
