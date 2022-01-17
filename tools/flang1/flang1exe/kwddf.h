@@ -409,6 +409,7 @@ static KWORD t5[] = {
     {"uniform", TK_UNIFORM},
     {"untied", TK_UNTIED},
     {"update", TK_UPDATE},
+    {"use_device_addr", TK_USE_DEVICE_ADDR}, // AOCC
     {"use_device_ptr", TK_USE_DEVICE_PTR}, // AOCC
     {"write", TK_WRITE},
 };

@@ -3042,6 +3042,10 @@ exp_smp(ILM_OP opc, ILM *ilmp, int curilm)
       if(flg.omptarget && !(IS_OMP_DEVICE_CG))
         exp_ompaccel_is_device_ptr(ilmp, curilm);
       break;
+    case IM_MP_USE_DEVICE_ADDR:
+      if(flg.omptarget && !(IS_OMP_DEVICE_CG))
+        exp_ompaccel_use_device_addr(ilmp, curilm, outlinedCnt);
+      break;
     // AOCC End
 #endif /* end #ifdef OMP_OFFLOAD_LLVM */
     default:

@@ -3849,6 +3849,13 @@ lnk - symbol already on target
 stc - map type
 .fi
 .AT spec trm
+.IL MP_USE_DEVICE_ADDR SMP lnk stc
+use the device address for symbol
+.nf
+lnk - symbol whose address need to be mapped
+stc - map type
+.fi
+.AT spec trm
 .IL HFLD load lnk
 Load half precision
 .AT spec
