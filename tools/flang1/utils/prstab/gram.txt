@@ -1877,7 +1877,8 @@
                NOGROUP |
                NOWAIT |
 			USE_DEVICE_PTR ( <accel data list> ) |
-			IN_REDUCTION ( <in_reduction> )
+			IN_REDUCTION ( <in_reduction> ) |
+			USE_DEVICE_ADDR ( <accel data list> )
 
 <opt expression> ::= |
 	             ( <expression> )

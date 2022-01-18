@@ -5096,7 +5096,7 @@ lower_intrinsic(int ast)
   return ilm;
 } /* lower_intrinsic */
 
-#if AST_MAX != 170 // AOCC - 170 + 1 + 1
+#if AST_MAX != 171 // AOCC - 169 + 1 + 1
 #error "Need to edit lowerexp.c to add or delete A_... AST types"
 #endif
 
@@ -6103,6 +6103,7 @@ lower_ast(int ast, int *unused)
   case A_MP_ATOMICUPDATE:
   case A_MP_ATOMICCAPTURE:
   case A_MP_USE_DEVICE_PTR:
+  case A_MP_USE_DEVICE_ADDR: // AOCC
   case A_MP_IS_DEVICE_PTR:  // AOCC
   case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
   default:
