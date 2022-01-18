@@ -125,6 +125,7 @@ static void do_map();
 // AOCC Begin
 static void do_tofrom();
 static void do_usedeviceptr();
+static void do_usedeviceaddr(); // AOCC
 static void do_in_reduction();  // AOCC
 static void do_isdeviceptr();
 static LOGICAL use_atomic_for_reduction(int, REDUC *, REDUC_SYM *);
@@ -281,9 +282,10 @@ struct collapse_loop collapse_loop = {0, 0, 0, 0};
 #define CL_ACCDETACH 108
 #define CL_ACCCOMPARE 109
 #define CL_IN_REDUCTION 110
-#define CL_PGICOMPARE 111
-#define CL_MP_MODIFIER 112
-#define CL_MAXV 113 /* This must be the last clause */
+#define CL_USE_DEVICE_ADDR 111
+#define CL_PGICOMPARE 112
+#define CL_MP_MODIFIER 113
+#define CL_MAXV 114 /* This must be the last clause */
 /*
  * define bit flag for each statement which may have clauses.  Used for
  * checking for illegal clauses.
@@ -541,6 +543,7 @@ static struct cl_tag { /* clause table */
      BT_ACCREG | BT_ACCKERNELS | BT_ACCPARALLEL | BT_ACCDATAREG |
          BT_ACCSCALARREG | BT_ACCSERIAL},
     {0, 0, 0, NULL, NULL, "IN_REDUCTION", BT_TARGET}, //  AOCC
+    {0, 0, 0, NULL, NULL, "USE_DEVICE_ADDR", BT_TARGET}, // AOCC
 };
 
 #define CL_PRESENT(d) cl[d].present
@@ -1634,6 +1637,7 @@ semsmp(int rednum, SST *top)
   }
     SST_ASTP(LHS, 0);
     do_usedeviceptr(); // AOCC
+    do_usedeviceaddr(); // AOCC
     do_map();
     break;
   /*
@@ -2815,6 +2819,30 @@ semsmp(int rednum, SST *top)
     */
   case PAR_ATTR40:
      break;
+  /*
+   *    <par attr> ::= USE_DEVICE_ADDR ( <accel data list> )
+   */
+  case PAR_ATTR41: {
+    ITEM *itemp, *itembeg, *itemend;
+    int type = OMP_TGT_MAPTYPE_RETURN_PARAM;
+
+    int clause = CL_USE_DEVICE_ADDR;
+
+    itembeg = SST_BEGG(RHS(3));
+    itemend = SST_ENDG(RHS(3));
+    if (itembeg == ITEM_END)
+      return;
+    for (itemp = itembeg; itemp != ITEM_END; itemp = itemp->next) {
+      itemp->t.cltype = type;
+    }
+    add_clause(clause, FALSE);
+    if (CL_FIRST(clause) == NULL)
+      CL_FIRST(clause) = itembeg;
+    else
+      ((ITEM *)CL_LAST(clause))->next = itembeg;
+    CL_LAST(clause) = itemend;
+    break;
+  }
      // AOCC END
      /* ------------------------------------------------------------------ */
   /*
@@ -8217,6 +8245,27 @@ do_usedeviceptr()
   }
 }
 
+// AOCC Begin
+static void
+do_usedeviceaddr()
+{
+  if (!flg.omptarget)
+    return;
+
+  ITEM *item;
+  int ast;
+  if (CL_PRESENT(CL_USE_DEVICE_ADDR)) {
+    for (item = (ITEM *)CL_FIRST(CL_USE_DEVICE_ADDR); item != ITEM_END;
+                                                     item = item->next) {
+      ast = mk_stmt(A_MP_USE_DEVICE_ADDR, 0);
+      (void)add_stmt(ast);
+      A_LOPP(ast, item->ast);
+      A_PRAGMATYPEP(ast, item->t.cltype);
+    }
+  }
+}
+// AOCC End
+
 static void
 do_in_reduction()
 {
@@ -10297,6 +10346,12 @@ check_targetdata(int type, char *nm)
         if (type != OMP_TARGETDATA)
           error(533, 3, gbl.lineno, CL_NAME(i), nm);
         break;
+      // AOCC Begin
+      case CL_USE_DEVICE_ADDR:
+        if (type != OMP_TARGETDATA)
+          error(533, 3, gbl.lineno, CL_NAME(i), nm);
+        break;
+      // AOCC End
       default:
         error(533, 3, gbl.lineno, CL_NAME(i), nm);
       }

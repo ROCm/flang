@@ -3407,6 +3407,14 @@ exp_ompaccel_use_device_ptr(ILM *ilmp, int curilm, int outlinedCnt)
 
 // AOCC Begin
 void
+exp_ompaccel_use_device_addr(ILM *ilmp, int curilm, int outlinedCnt)
+{
+  exp_ompaccel_map(ilmp, curilm, outlinedCnt);
+}
+// AOCC End
+
+// AOCC Begin
+void
 exp_ompaccel_is_device_ptr(ILM *ilmp, int curilm)
 {
   int label, argilm;

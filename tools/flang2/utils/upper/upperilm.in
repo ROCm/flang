@@ -816,6 +816,7 @@ MP_REDUCTIONITEM sym sym num
 MP_TARGETMODE num ilm ilm ilm
 MP_USE_DEVICE_PTR ilm num
 MP_IS_DEVICE_PTR ilm num
+MP_USE_DEVICE_ADDR ilm num
 HFLD	ilm
 HFST	ilm	ilm
 HFCON	sym
