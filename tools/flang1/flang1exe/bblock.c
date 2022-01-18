@@ -3193,12 +3193,8 @@ void ompaccel_ast_transform() {
   if (flg.x86_64_omptarget && XBIT(232, 0x1))
     return;
 
-  if (flg.amdgcn_target) {
-    ompaccel_ast_segregate_parsec();
-    ompaccel_ast_simplify_nested_parsec();
-  }
-
-  if (flg.x86_64_omptarget) {
+  if (flg.omptarget) {
+//    ompaccel_ast_segregate_parsec();
     ompaccel_ast_simplify_nested_parsec();
   }
 }
