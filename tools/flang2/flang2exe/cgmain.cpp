@@ -11611,7 +11611,7 @@ generating_debug_info(void)
   bool generate_debug = flg.debug && cpu_llvm_module->debug_info;
 #ifdef OMP_OFFLOAD_LLVM
   if (flg.omptarget)
-    generate_debug = flg.debug && current_module->debug_info;
+    generate_debug = flg.debug && gpu_llvm_module->debug_info;
 #endif
   return generate_debug;
 }
@@ -11660,7 +11660,7 @@ addDebugForGlobalVar(SPTR sptr, ISZ_T off)
     LL_Module *mod = cpu_llvm_module;
 #ifdef OMP_OFFLOAD_LLVM
     if (flg.omptarget)
-      mod = current_module;
+      mod = gpu_llvm_module;
 #endif
 
     /* TODO: defeat unwanted side-effects. make_lltype_from_sptr() will update
