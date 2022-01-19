@@ -2748,7 +2748,7 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   case KMP_DISTRIBUTE_STATIC:
   case KMP_DISTRIBUTE_STATIC_CHUNKED_CHUNKONE: // AOCC
     // AOCC begin
-    if (flg.x86_64_omptarget || !is_gpu_output_file() ) {
+    if (flg.x86_64_omptarget || OMPACCFUNCDEVG(gbl.currsub)) {
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end
     } else {
