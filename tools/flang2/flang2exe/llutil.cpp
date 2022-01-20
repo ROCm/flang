@@ -1785,10 +1785,6 @@ FILE *get_llasm_output_file() {
 }
 
 #endif // OMP_OFFLOAD_LLVM
-
-bool is_gpu_output_file() {
-  return (LLVMFIL == gbl.ompaccfile);
-}
 // AOCC End
 
 void

@@ -1626,10 +1626,6 @@ void use_gpu_output_file(void);
   \brief Return the current output file
  */
 FILE *get_llasm_output_file();
-/**
-  \brief return true if gpu file is currently written
- */
-bool is_gpu_output_file();
 
 #ifdef OMP_OFFLOAD_AMD
 /**
