@@ -196,7 +196,7 @@ public:
       break;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-    case KMPC_API_SPMD_KERNEL_DEINIT_V2:
+    case KMPC_API_TARGET_DEINIT:
       return {"__kmpc_target_deinit", IL_NONE, DT_VOID_NONE, 0};
       break;
 #endif
@@ -315,7 +315,7 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
                                    0},
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-    [KMPC_API_SPMD_KERNEL_DEINIT_V2] = {"__kmpc_spmd_kernel_deinit_v2", 0, DT_VOID_NONE,
+    [KMPC_API_TARGET_DEINIT] = {"__kmpc_target_deinit", 0, DT_VOID_NONE,
                                    0},
 #endif
     // AOCC End
@@ -1761,14 +1761,14 @@ ll_make_kmpc_target_init(int sptr)
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 int
-ll_make_kmpc_spmd_kernel_deinit_v2()
+ll_make_kmpc_target_deinit()
 {
   int args[3];
   DTYPE arg_types[3] = {ident_type_ptr, DT_BLOG, DT_BLOG};
   args[2] = gen_null_arg();
   args[1] = gen_int_arg(DT_BLOG, 1);
   args[0] = gen_int_arg(DT_BLOG, 1);
-  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_DEINIT_V2, 3, arg_types, args);
+  return mk_kmpc_api_call(KMPC_API_TARGET_DEINIT, 3, arg_types, args);
 }
 #endif
 // AOCC End

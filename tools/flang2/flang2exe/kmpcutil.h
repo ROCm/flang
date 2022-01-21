@@ -173,7 +173,7 @@ enum {
   KMPC_API_TARGET_INIT,
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-  KMPC_API_SPMD_KERNEL_DEINIT_V2,
+  KMPC_API_TARGET_DEINIT,
 #endif
   // AOCC End
   KMPC_API_KERNEL_INIT_PARAMS,
@@ -503,7 +503,7 @@ int ll_make_kmpc_target_init(int);
 /**
   \brief SPMD mode - kernel de_init_v2.
 */
-int ll_make_kmpc_spmd_kernel_deinit_v2();
+int ll_make_kmpc_target_deinit();
 #endif
 // AOCC End
 

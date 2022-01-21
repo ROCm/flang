@@ -2158,7 +2158,7 @@ exp_end(ILM *ilmp, int curilm, bool is_func)
   int ilix;
   if (flg.omptarget && !is_func) {
     if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
-      ilix = ll_make_kmpc_spmd_kernel_deinit_v2();
+      ilix = ll_make_kmpc_target_deinit();
       iltb.callfg = 1;
       chk_block(ilix);
     }
