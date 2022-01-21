@@ -191,6 +191,8 @@ public:
       return {"__kmpc_for_static_init_%d%s_simple_spmd", IL_NONE, DT_VOID_NONE,
               KMPC_FLAG_STR_FMT};
       break;
+    case KMPC_API_SPMD_KERNEL_INIT:
+      return {"__kmpc_spmd_kernel_init", IL_NONE, DT_VOID_NONE, 0};
     case KMPC_API_TARGET_INIT:
       return {"__kmpc_target_init", IL_NONE, DT_INT, 0};
       break;
@@ -198,6 +200,9 @@ public:
 #ifdef OMP_OFFLOAD_AMD
     case KMPC_API_TARGET_DEINIT:
       return {"__kmpc_target_deinit", IL_NONE, DT_VOID_NONE, 0};
+      break;
+    case KMPC_API_SPMD_KERNEL_DEINIT_V2:
+      return {"__kmpc_spmd_kernel_deinit_v2", IL_NONE, DT_VOID_NONE, 0};
       break;
 #endif
     // AOCC End
@@ -311,11 +316,15 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
     [KMPC_API_FOR_STATIC_INIT_SIMPLE_SPMD] =
         {"__kmpc_for_static_init_%d%s_simple_spmd", 0, DT_VOID_NONE,
          KMPC_FLAG_STR_FMT},
+    [KMPC_API_SPMD_KERNEL_INIT] = {"__kmpc_spmd_kernel_init", 0, DT_VOID_NONE,
+                                   0},
     [KMPC_API_TARGET_INIT] = {"__kmpc_target_init", 0, DT_INT,
                                    0},
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     [KMPC_API_TARGET_DEINIT] = {"__kmpc_target_deinit", 0, DT_VOID_NONE,
+                                   0},
+    [KMPC_API_SPMD_KERNEL_DEINIT_V2] = {"__kmpc_spmd_kernel_deinit_v2", 0, DT_VOID_NONE,
                                    0},
 #endif
     // AOCC End
@@ -1744,43 +1753,70 @@ gen_int_arg(DTYPE dt, int value)
   return ili;
 }
 
-int
-ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
+static int
+ll_make_kmpc_generic_target_init()
 {
   int args[4];
   ident_type = ll_make_ident_type("struct_ident_t");
   ident_type_ptr = get_type(2, TY_PTR, ident_type);
   DTYPE arg_types[4] = {ident_type_ptr, DT_BLOG, DT_BLOG, DT_BLOG};
   args[3] = gen_null_arg();
-  if (is_SPMD_mode(mode)) {
-    args[2] = gen_int_arg(DT_BLOG, 2);
-    args[1] = gen_int_arg(DT_BLOG, 0);
-    args[0] = gen_int_arg(DT_BLOG, 1);
-  } else {
-    args[2] = gen_int_arg(DT_BLOG, 1);
-    args[1] = gen_int_arg(DT_BLOG, 1);
-    args[0] = gen_int_arg(DT_BLOG, 1);
-  }
+  args[2] = gen_int_arg(DT_BLOG, 1);
+  args[1] = gen_int_arg(DT_BLOG, 1);
+  args[0] = gen_int_arg(DT_BLOG, 1);
   return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
+}
+
+static int
+ll_make_kmpc_spmd_target_init(int sptr)
+{
+  int args[3];
+  DTYPE arg_types[3] = {DT_INT, DT_SINT, DT_SINT};
+  args[2] = sptr; // ld_sptr(sptr);
+  args[1] = gen_null_arg();
+  args[0] = gen_null_arg();
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_INIT, 3, arg_types, args);
+}
+
+int
+ll_make_kmpc_target_init(int sptr, OMP_TARGET_MODE mode)
+{
+  if (is_SPMD_mode(mode)) {
+    return ll_make_kmpc_spmd_target_init(sptr);
+  }
+  return ll_make_kmpc_generic_target_init();
 }
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-int
-ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
+static int
+ll_make_kmpc_spmd_target_deinit_v2()
+{
+  int args[1];
+  DTYPE arg_types[3] = {DT_SINT};
+  args[0] = gen_null_arg();
+  return mk_kmpc_api_call(KMPC_API_SPMD_KERNEL_DEINIT_V2, 1, arg_types, args);
+}
+
+static int
+ll_make_kmpc_generic_target_deinit()
 {
   int args[3];
   DTYPE arg_types[3] = {ident_type_ptr, DT_BLOG, DT_BLOG};
   args[2] = gen_null_arg();
-  if (is_SPMD_mode(mode)) {
-    args[1] = gen_int_arg(DT_BLOG, 2);
-    args[0] = gen_int_arg(DT_BLOG, 1);
-  } else {
-    args[1] = gen_int_arg(DT_BLOG, 1);
-    args[0] = gen_int_arg(DT_BLOG, 1);
-  }
+  args[1] = gen_int_arg(DT_BLOG, 1);
+  args[0] = gen_int_arg(DT_BLOG, 1);
 
   return mk_kmpc_api_call(KMPC_API_TARGET_DEINIT, 3, arg_types, args);
+}
+
+int
+ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
+{
+  if (is_SPMD_mode(mode)) {
+    return ll_make_kmpc_spmd_target_deinit_v2();
+  }
+  return ll_make_kmpc_generic_target_deinit();
 }
 #endif
 // AOCC End
