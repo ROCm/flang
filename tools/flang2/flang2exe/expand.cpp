@@ -689,7 +689,7 @@ eval_ilm(int ilmx)
      * */
     if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
       ilix = ompaccel_nvvm_get(threadIdX);
-      ilix = ll_make_kmpc_target_init(ilix);
+      ilix = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
       iltb.callfg = 1;
       target_code_lab = getlab();
       exit_code_lab = getlab();

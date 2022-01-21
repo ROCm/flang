@@ -27,7 +27,9 @@
 #include "global.h"
 #include "symtab.h"
 #include "ili.h"
-
+//AOCC Begin
+#include "llmputil.h"
+//AOCC End
 /** \file
  * \brief Various definitions for the kmpc runtime
  */
@@ -496,14 +498,14 @@ int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 /**
   \brief kernel init
 */
-int ll_make_kmpc_target_init(int);
+int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 /**
-  \brief SPMD mode - kernel de_init_v2.
+  \brief kernel deinit
 */
-int ll_make_kmpc_target_deinit();
+int ll_make_kmpc_target_deinit(OMP_TARGET_MODE);
 #endif
 // AOCC End
 

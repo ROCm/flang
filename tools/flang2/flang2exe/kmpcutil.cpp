@@ -1745,29 +1745,41 @@ gen_int_arg(DTYPE dt, int value)
 }
 
 int
-ll_make_kmpc_target_init(int sptr)
+ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
 {
   int args[4];
   ident_type = ll_make_ident_type("struct_ident_t");
   ident_type_ptr = get_type(2, TY_PTR, ident_type);
   DTYPE arg_types[4] = {ident_type_ptr, DT_BLOG, DT_BLOG, DT_BLOG};
   args[3] = gen_null_arg();
-  args[2] = gen_int_arg(DT_BLOG, 1);
-  args[1] = gen_int_arg(DT_BLOG, 1);
-  args[0] = gen_int_arg(DT_BLOG, 1);
+  if (is_SPMD_mode(mode)) {
+    args[2] = gen_int_arg(DT_BLOG, 2);
+    args[1] = gen_int_arg(DT_BLOG, 0);
+    args[0] = gen_int_arg(DT_BLOG, 1);
+  } else {
+    args[2] = gen_int_arg(DT_BLOG, 1);
+    args[1] = gen_int_arg(DT_BLOG, 1);
+    args[0] = gen_int_arg(DT_BLOG, 1);
+  }
   return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
 }
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 int
-ll_make_kmpc_target_deinit()
+ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
 {
   int args[3];
   DTYPE arg_types[3] = {ident_type_ptr, DT_BLOG, DT_BLOG};
   args[2] = gen_null_arg();
-  args[1] = gen_int_arg(DT_BLOG, 1);
-  args[0] = gen_int_arg(DT_BLOG, 1);
+  if (is_SPMD_mode(mode)) {
+    args[1] = gen_int_arg(DT_BLOG, 2);
+    args[0] = gen_int_arg(DT_BLOG, 1);
+  } else {
+    args[1] = gen_int_arg(DT_BLOG, 1);
+    args[0] = gen_int_arg(DT_BLOG, 1);
+  }
+
   return mk_kmpc_api_call(KMPC_API_TARGET_DEINIT, 3, arg_types, args);
 }
 #endif
