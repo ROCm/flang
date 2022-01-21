@@ -14410,8 +14410,7 @@ INLINE void static add_property_struct(char *func_name,
   print_token("@");
   print_token(func_name);
 
-  if (mode >= mode_target_teams_distribute_parallel_for
-      && mode <= mode_target_parallel_for_simd) {
+  if (is_SPMD_mode(mode)) {
     print_token("__exec_mode = weak constant i8 2\n");
   }
   else {

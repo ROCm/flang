@@ -3718,6 +3718,15 @@ void
 ompaccel_set_target_declare() {
   OMPACCFUNCDEVP(gbl.currsub, 1);
 }
+
+bool is_SPMD_mode(OMP_TARGET_MODE mode) {
+  if (mode >= mode_target_teams_distribute_parallel_for
+      && mode <= mode_target_parallel_for_simd) {
+    return true;
+  }
+  return false;
+}
+
 // AOCC End
 #endif
 /* Expander - OpenMP Accelerator Model */
