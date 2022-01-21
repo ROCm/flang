@@ -14401,7 +14401,12 @@ INLINE void static add_property_struct(char *func_name,
                                        int reductionsize,
                                        OMP_TARGET_MODE mode)
 {
-  print_token("%struct.struct_ident_t = type { i32, i32, i32, i32, i8*}\n");
+  static int printed_ident_t;
+  //print type declaration only once
+  if (!printed_ident_t) {
+    print_token("%struct.struct_ident_t = type { i32, i32, i32, i32, i8*}\n");
+    printed_ident_t++;
+  }
   print_token("@");
   print_token(func_name);
 
