@@ -88,6 +88,12 @@ int ll_make_tgt_register_lib(void);
 int ll_make_tgt_register_requires(void); // AOCC
 
 /**
+ \brief Create structure type
+ */
+DTYPE
+ll_make_struct(int count, char *name, TGT_ST_TYPE *meminfo, ISZ_T sz);
+
+/**
    \brief Register the file and load cubin file
  */
 int ll_make_tgt_register_lib2(void);

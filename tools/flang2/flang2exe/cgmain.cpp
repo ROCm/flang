@@ -14396,12 +14396,20 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
 }
 
 #ifdef OMP_OFFLOAD_LLVM
-INLINE void static add_property_struct(char *func_name, int nreductions,
-                                       int reductionsize)
+INLINE void static add_property_struct(char *func_name,
+                                       int n_reduction_symbols,
+                                       int reductionsize,
+                                       OMP_TARGET_MODE mode)
 {
   print_token("@");
   print_token(func_name);
-  print_token("__exec_mode = weak constant i8 2\n");
+
+  if (is_SPMD_mode(mode)) {
+    print_token("__exec_mode = weak constant i8 2\n");
+  }
+  else {
+    print_token("__exec_mode = weak constant i8 1\n");
+  }
 }
 #endif
 
@@ -14492,7 +14500,7 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
   if (OMPACCFUNCKERNELG(func_sptr)) {
     OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(func_sptr);
     if (tinfo->n_reduction_symbols == 0) {
-      add_property_struct(SYMNAME(func_sptr), 0, 0);
+      add_property_struct(SYMNAME(func_sptr), 0, 0, tinfo->mode);
     } else {
       for (int i = 0; i < tinfo->n_reduction_symbols; ++i) {
         reductionsize +=
@@ -14500,7 +14508,7 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
              BITS_IN_BYTE);
       }
       add_property_struct(SYMNAME(func_sptr), tinfo->n_reduction_symbols,
-                          reductionsize);
+                          reductionsize, tinfo->mode);
     }
   }
 #endif
