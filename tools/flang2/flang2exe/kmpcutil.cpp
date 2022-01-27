@@ -59,11 +59,6 @@
 
 #define MXIDLEN 250
 static DTYPE kmpc_ident_dtype;
-/* Structures which describes Ident Source location identification
- * used by new OpenMP runtime
- */
-static DTYPE ident_type;
-static DTYPE ident_type_ptr;
 
 /* Flags for use with the entry */
 #define DT_VOID_NONE DT_NONE
@@ -1728,18 +1723,6 @@ ll_make_kmpc_kernel_init_params(int ReductionScratchpadPtr)
   return mk_kmpc_api_call(KMPC_API_KERNEL_INIT_PARAMS, 1, arg_types, args);
 }
 
-DTYPE
-ll_make_ident_type(char *name)
-{
-  TGT_ST_TYPE meminfo[] = {{"reserved_1", DT_INT, 0, 0},
-  {"flags", DT_INT, 0, 0},
-  {"reserved_2", DT_INT, 0, 0},
-  {"reserved_3", DT_INT, 0, 0},
-  {"psource", DT_ADDR, 0, 0}};
-
-  return ll_make_struct(5, name, meminfo, 0);
-}
-
 static int
 gen_int_arg(DTYPE dt, int value)
 {
@@ -1757,9 +1740,7 @@ static int
 ll_make_kmpc_generic_target_init()
 {
   int args[4];
-  ident_type = ll_make_ident_type("struct_ident_t");
-  ident_type_ptr = get_type(2, TY_PTR, ident_type);
-  DTYPE arg_types[4] = {ident_type_ptr, DT_BLOG, DT_BLOG, DT_BLOG};
+  DTYPE arg_types[4] = {DT_CPTR, DT_BLOG, DT_BLOG, DT_BLOG};
   args[3] = gen_null_arg();
   args[2] = gen_int_arg(DT_BLOG, 1);
   args[1] = gen_int_arg(DT_BLOG, 1);
@@ -1802,7 +1783,7 @@ static int
 ll_make_kmpc_generic_target_deinit()
 {
   int args[3];
-  DTYPE arg_types[3] = {ident_type_ptr, DT_BLOG, DT_BLOG};
+  DTYPE arg_types[3] = {DT_CPTR, DT_BLOG, DT_BLOG};
   args[2] = gen_null_arg();
   args[1] = gen_int_arg(DT_BLOG, 1);
   args[0] = gen_int_arg(DT_BLOG, 1);
