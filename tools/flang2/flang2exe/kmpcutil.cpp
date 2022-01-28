@@ -1734,6 +1734,7 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
     args[2] = ad_icon(2); /* SPMD Mode */
     args[1] = ad_icon(0); /* UseGenericStateMachine */
     args[0] = ad_icon(0); /* RequiresFullRuntime */
+//    args[0] = ad_icon(1); /* RequiresFullRuntime */
   } else {
     args[2] = ad_icon(1); /* Generic mode */
     args[1] = ad_icon(1); /* UseGenericStateMachine */
@@ -1744,7 +1745,6 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-
 int
 ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
 {
