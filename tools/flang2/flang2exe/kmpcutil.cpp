@@ -1755,6 +1755,7 @@ ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
   if (is_SPMD_mode(mode)) {
     args[1] = ad_icon(2); /* SPMD Mode */
     args[0] = ad_icon(0); /* RequiresFullRuntime */
+//    args[0] = ad_icon(1); /* RequiresFullRuntime */
   } else {
     args[1] = ad_icon(1); /* Generic mode */
     args[0] = ad_icon(1); /* RequiresFullRuntime */

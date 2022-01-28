@@ -451,6 +451,10 @@ eval_ilm_argument1(int opr, ILM *ilmpx, int ilmx)
   }
 } /* eval_ilm_argument1 */
 
+static void add_instruction(int ilix)
+{
+}
+
 void
 eval_ilm(int ilmx)
 {
@@ -714,8 +718,11 @@ eval_ilm(int ilmx)
       exp_label(target_code_lab);
 
       if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
-        iltb.callfg = 1;
         ilix = ll_make_kmpc_global_thread_num();
+        iltb.callfg = 1;
+        chk_block(ilix);
+        ilix = ll_make_kmpc_target_deinit(ompaccel_tinfo_get(gbl.currsub)->mode);
+        iltb.callfg = 1;
         chk_block(ilix);
       }
 
