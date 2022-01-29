@@ -27,7 +27,9 @@
 #include "global.h"
 #include "symtab.h"
 #include "ili.h"
-
+//AOCC Begin
+#include "llmputil.h"
+//AOCC End
 /** \file
  * \brief Various definitions for the kmpc runtime
  */
@@ -170,9 +172,11 @@ enum {
   /* Begin - OpenMP Accelerator RT (libomptarget-nvptx) - non standard - */
   KMPC_API_PUSH_TARGET_TRIPCOUNT,
   KMPC_API_FOR_STATIC_INIT_SIMPLE_SPMD,
+  KMPC_API_TARGET_INIT,
   KMPC_API_SPMD_KERNEL_INIT,
   // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
+  KMPC_API_TARGET_DEINIT,
   KMPC_API_SPMD_KERNEL_DEINIT_V2,
 #endif
   // AOCC End
@@ -494,16 +498,16 @@ int ll_make_kmpc_shuffle_f32(int, int, int);
 int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 
 /**
-  \brief SPMD mode - kernel init.
+  \brief kernel init
 */
-int ll_make_kmpc_spmd_kernel_init(int);
+int ll_make_kmpc_target_init(int, OMP_TARGET_MODE);
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
 /**
-  \brief SPMD mode - kernel de_init_v2.
+  \brief kernel deinit
 */
-int ll_make_kmpc_spmd_kernel_deinit_v2();
+int ll_make_kmpc_target_deinit(OMP_TARGET_MODE);
 #endif
 // AOCC End
 

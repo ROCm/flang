@@ -2596,7 +2596,8 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
     // AOCC begin
     if (!flg.x86_64_omptarget) {
       ili = ompaccel_nvvm_get(threadIdX);
-      ili = ll_make_kmpc_spmd_kernel_init(ili);
+      ili = ll_make_kmpc_target_init(ili,
+                                     ompaccel_tinfo_get(gbl.currsub)->mode);
       iltb.callfg = 1;
       chk_block(ili);
     }
@@ -3267,7 +3268,8 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
       // AOCC begin
       if (!flg.x86_64_omptarget) {
         ili = ompaccel_nvvm_get(threadIdX);
-        ili = ll_make_kmpc_spmd_kernel_init(ili);
+        ili = ll_make_kmpc_target_init(ili,
+                                       ompaccel_tinfo_get(gbl.currsub)->mode);
         iltb.callfg = 1;
         chk_block(ili);
       }
@@ -3719,6 +3721,15 @@ ompaccel_set_target_declare() {
   OMPACCFUNCDEVP(gbl.currsub, 1);
   gbl.ompaccel_intarget = true;
 }
+
+bool is_SPMD_mode(OMP_TARGET_MODE mode) {
+  if (mode >= mode_target_teams_distribute_parallel_for
+      && mode <= mode_target_parallel_for_simd) {
+    return true;
+  }
+  return false;
+}
+
 // AOCC End
 #endif
 /* Expander - OpenMP Accelerator Model */
