@@ -2157,9 +2157,9 @@ exp_end(ILM *ilmp, int curilm, bool is_func)
 #ifdef OMP_OFFLOAD_AMD
   int ilix;
   if (flg.omptarget && !is_func) {
-    if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
+    if (XBIT(232, 0x40) && gbl.ompaccel_intarget && !OMPACCFUNCDEVG(gbl.currsub) /*is_gpu_output_file() */  ) {
       ilix = ll_make_kmpc_target_deinit(
-                ompaccel_tinfo_get(gbl.currsub)->mode);
+        ompaccel_tinfo_get(gbl.currsub)->mode);
       iltb.callfg = 1;
       chk_block(ilix);
     }

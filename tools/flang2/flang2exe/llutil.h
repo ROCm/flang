@@ -1620,6 +1620,7 @@ void use_cpu_output_file(void);
  */
 void use_gpu_output_file(void);
 
+
 // AOCC Begin
 /**
   \brief Return the current output file
