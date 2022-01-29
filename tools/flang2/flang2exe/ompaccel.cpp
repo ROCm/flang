@@ -2749,7 +2749,7 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
   case KMP_DISTRIBUTE_STATIC:
   case KMP_DISTRIBUTE_STATIC_CHUNKED_CHUNKONE: // AOCC
     // AOCC begin
-    if (flg.x86_64_omptarget || OMPACCFUNCDEVG(gbl.currsub)) {
+    if (flg.x86_64_omptarget) {
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end
     } else {
@@ -3719,7 +3719,6 @@ ompaccel_set_default_map(int maptype) {
 void
 ompaccel_set_target_declare() {
   OMPACCFUNCDEVP(gbl.currsub, 1);
-  gbl.ompaccel_intarget = true;
 }
 
 bool is_SPMD_mode(OMP_TARGET_MODE mode) {

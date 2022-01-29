@@ -174,20 +174,18 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   // Remember all the reduction symbols of func_sptr so that we can blacklist
   // them during the type update.
   std::set<SPTR> reduc_syms;
-  if (tinfo) {
-    for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
-      OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
-      OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
+  for (int i = 0; i < tinfo->n_reduction_symbols; i++) {
+    OMPACCEL_RED_SYM *reduction_sym = &(tinfo->reduction_symbols[i]);
+    OMPACCEL_SYM *ompaccel_sym = get_ompaccel_sym_for(reduction_sym, tinfo);
 
-      if (!ompaccel_sym)
-        continue;
-      SPTR device_sym = ompaccel_sym->device_sym;
+    if (!ompaccel_sym)
+      continue;
+    SPTR device_sym = ompaccel_sym->device_sym;
 
-      if (PASSBYVALG(device_sym))
-        continue;
+    if (PASSBYVALG(device_sym))
+      continue;
 
-      reduc_syms.insert(device_sym);
-    }
+    reduc_syms.insert(device_sym);
   }
 
   for (int i = 0; i < func_paramct; i++) {
