@@ -1,6 +1,6 @@
 !RUN: %flang -gdwarf-4 -S -emit-llvm %s -o - | FileCheck %s
 
-!CHECK-LABEL: distinct !DIGlobalVariable(name: "alc_arr"
+!CHECK-LABEL: distinct !DIGlobalVariable(name: "alc_arr", {{.*}}, line: 11
 !CHECK-SAME: type: [[TYPE:![0-9]+]]
 !CHECK: [[TYPE]] = !DICompositeType(tag: DW_TAG_array_type,
 !CHECK-SAME: elements: [[ELEMENTS:![0-9]+]], dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref), allocated: !DIExpression(DW_OP_push_object_address, DW_OP_deref)

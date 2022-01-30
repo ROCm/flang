@@ -373,6 +373,7 @@ static KWORD t5[] = {
     {"from", TK_FROM},
     {"grainsize", TK_GRAINSIZE},
     {"if", TK_IF},
+    {"in_reduction", TK_IN_REDUCTION}, // AOCC
     {"inbranch", TK_INBRANCH},
     {"is_device_ptr", TK_IS_DEVICE_PTR},
     {"lastlocal", TK_LASTPRIVATE},
@@ -408,6 +409,7 @@ static KWORD t5[] = {
     {"uniform", TK_UNIFORM},
     {"untied", TK_UNTIED},
     {"update", TK_UPDATE},
+    {"use_device_addr", TK_USE_DEVICE_ADDR}, // AOCC
     {"use_device_ptr", TK_USE_DEVICE_PTR}, // AOCC
     {"write", TK_WRITE},
 };
@@ -513,6 +515,7 @@ static KWORD t6[] = {
     {"teamsdistributesimd", TK_MP_TEAMSDISTSIMD},
     {"threadprivate", TK_MP_THREADPRIVATE},
     {"workshare", TK_MP_WORKSHARE},
+    {"requires", TK_MP_REQUIRES}, // AOCC
 };
 
 static KWORD t7[] = {

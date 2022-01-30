@@ -3851,6 +3851,8 @@ Task firstprivate
 sym - symbol table pointer to the shared variable.
 sym - symbol table pointer to the private copy.
 .AT spec trm
+.IL REQUIRES SMP stc
+.AT spec trm
 .IL BTASK SMP sym stc lnk lnk
 Begin task
 Always matches a ETASK ilm
@@ -4266,6 +4268,13 @@ stc - map type
 use the already mapped device pointer for symbol
 .nf
 lnk - symbol already on target
+stc - map type
+.fi
+.AT spec trm
+.IL MP_USE_DEVICE_ADDR SMP lnk stc
+use the device address for symbol
+.nf
+lnk - symbol whose address need to be mapped
 stc - map type
 .fi
 .AT spec trm

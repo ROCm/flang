@@ -5298,6 +5298,7 @@ ast_rewrite(int ast)
   case A_MP_DEFAULTMAP: // AOCC
   case A_MP_TARGETDECLARE: // AOCC
   case A_MP_USE_DEVICE_PTR: // AOCC
+  case A_MP_USE_DEVICE_ADDR: // AOCC
     break;
   case A_MP_ATOMICWRITE:
     rop = ast_rewrite(A_ROPG(ast));
@@ -5413,6 +5414,7 @@ ast_rewrite(int ast)
   case A_MP_EORDERED:
   case A_MP_ENDTASK:
   case A_MP_ETASKLOOP:
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
     break;
   case A_PREFETCH:
     lop = ast_rewrite(A_LOPG(ast));
@@ -6164,6 +6166,8 @@ ast_trav_recurse(int ast, int *extra_arg)
   case A_MP_TARGETDECLARE: // AOCC
   case A_MP_USE_DEVICE_PTR: // AOCC
   case A_MP_IS_DEVICE_PTR: // AOCC
+  case A_MP_USE_DEVICE_ADDR: //AOCC
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
     break;
   case A_MP_BMPSCOPE:
 #if DEBUG
@@ -6742,6 +6746,7 @@ _dump_one_ast(int i, FILE *file)
   case A_MP_BORDERED:
   case A_MP_EORDERED:
   case A_MP_FLUSH:
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
     break;
   case A_MP_PRE_TLS_COPY:
   case A_MP_COPYIN:
@@ -7181,6 +7186,7 @@ dump_ast_tree(int i)
   case A_MP_COPYPRIVATE:
   case A_MP_ECOPYPRIVATE:
   case A_MP_FLUSH:
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
     break;
   default:
     fprintf(gbl.dbgfil, "NO DUMP AVL");

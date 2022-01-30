@@ -114,6 +114,7 @@ BRF	ilm	sym
 BRT	ilm	sym
 BDISTRIBUTE
 BSECTIONS	sym
+REQUIRES num
 BTASK	sym	num	ilm	ilm
 BTASKDUP
 BTASKLOOP	sym	num	ilm	ilm	ilm 	ilm
@@ -815,6 +816,7 @@ MP_REDUCTIONITEM sym sym num
 MP_TARGETMODE num ilm ilm ilm
 MP_USE_DEVICE_PTR ilm num
 MP_IS_DEVICE_PTR ilm num
+MP_USE_DEVICE_ADDR ilm num
 HFLD	ilm
 HFST	ilm	ilm
 HFCON	sym

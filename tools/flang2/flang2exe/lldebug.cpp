@@ -3256,7 +3256,20 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
                 SPTR datasptr = MIDNUMG(sptr);
                 if (datasptr == NOSYM)
                   datasptr = SYMLKG(sptr);
-                if ((SCG(datasptr) == SC_DUMMY) && !db->cur_subprogram_mdnode) {
+                if ((SCG(sptr) == SC_DUMMY) || ((SCG(datasptr) == SC_DUMMY) &&
+                                                !db->cur_subprogram_mdnode)) {
+                  const unsigned zero =
+                      lldbg_encode_expression_arg(LL_DW_OP_int, 0);
+                  const unsigned constu =
+                      lldbg_encode_expression_arg(LL_DW_OP_constu, 0);
+                  dataloc = lldbg_emit_expression_mdnode(db, 2, constu, zero);
+                  if (ll_feature_debug_info_ver12(&db->module->ir)) {
+                    is_live = lldbg_emit_expression_mdnode(db, 2, constu, zero);
+                    if (ALLOCATTRG(sptr))
+                      allocated = is_live;
+                    else
+                      associated = is_live;
+                  }
                   // If cur_subprogram_md is not yet ready, we are interested
                   // only in type. datalocation is about value than type. So
                 } else {

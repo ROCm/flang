@@ -1,9 +1,10 @@
 !RUN: %flang %s -g -S -emit-llvm -o - | FileCheck %s
 
 !Ensure that for an associated variable, we're taking the type of
-!associated variable and DW_OP_deref expression is present in DwarfExpression.
-!CHECK: call void @llvm.dbg.declare(metadata i32** %{{.*}}, metadata ![[DILocalVariable:[0-9]+]], metadata !DIExpression(DW_OP_deref))
-!CHECK: ![[DILocalVariable]] = !DILocalVariable(name: "gama", {{.*}}, type: ![[TYPE:[0-9]+]]
+!associated variable as DW_TAG_pointer_type.
+!CHECK: call void @llvm.dbg.declare(metadata i32** %{{.*}}, metadata ![[DILocalVariable:[0-9]+]], metadata !DIExpression())
+!CHECK: ![[DILocalVariable]] = !DILocalVariable(name: "gama", {{.*}}, type: ![[PTRTYPE:[0-9]+]]
+!CHECK: ![[PTRTYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[TYPE:[0-9]+]]
 !CHECK: ![[TYPE]] = !DIBasicType(name: "integer",{{.*}}
 
 PROGRAM associate_simple

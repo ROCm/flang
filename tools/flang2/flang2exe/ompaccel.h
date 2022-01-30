@@ -522,6 +522,10 @@ void exp_ompaccel_use_device_ptr(ILM *, int, int);
  */
 void exp_ompaccel_is_device_ptr(ILM *, int);  // AOCC
 /**
+   \brief Expand ILM and emit code for use_device_addr
+ */
+void exp_ompaccel_use_device_addr(ILM *, int, int); // AOCC
+/**
    \brief Expand ILM and emit code for looptripcount
  */
 void exp_ompaccel_looptripcount(ILM *, int);
@@ -581,5 +585,9 @@ void ompaccel_set_default_map(int maptype);
   \brief Set symbol as target symbol
   */
 void ompaccel_set_target_declare();
+/**
+ \brief Checks if given target mode is SPMD
+ */
+bool is_SPMD_mode(OMP_TARGET_MODE mode);
 // AOCC End
 #endif

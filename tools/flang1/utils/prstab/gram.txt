@@ -1794,7 +1794,9 @@
 		<mp endtargteamsdistpardosimd> |
                 <mp taskgroup> |
                 <mp endtaskgroup> |
-                <mp cancellationpoint> <id name>
+                <mp cancellationpoint> <id name>  |
+                <mp requiresunifiedsharedmemory>
+
 
 <opt csident> ::= |
 		  ( <id name> )
@@ -1874,7 +1876,9 @@
                THREAD_LIMIT ( <expression> ) |
                NOGROUP |
                NOWAIT |
-               USE_DEVICE_PTR ( <accel data list> )
+			USE_DEVICE_PTR ( <accel data list> ) |
+			IN_REDUCTION ( <in_reduction> ) |
+			USE_DEVICE_ADDR ( <accel data list> )
 
 <opt expression> ::= |
 	             ( <expression> )
@@ -1919,6 +1923,10 @@
 
 <reduction> ::= <reduc op> : <pflsr list> |
 		<pflsr list>
+
+<in_reduction> ::= <reduc op> : <pflsr list> |
+		<pflsr list>
+
 
 <reduc op> ::= <addop> |
 	       *       |

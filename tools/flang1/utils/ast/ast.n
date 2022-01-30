@@ -3136,6 +3136,9 @@ AST pointer to the corresponding \f(CWA_MP_ENDTASK\fP.
 .SM MP_TASKLOOP
 .SI "taskloop"
 .lp
+.SM MP_REQUIRESUNIFIEDSHAREDMEMORY
+.SI "requiresunifiedsharedmemory"
+.lp
 OpenMP taskloop directive.
 .lp
 .ul
@@ -3645,6 +3648,11 @@ OpenMP target declare
 .SI "use_device_ptr"
 .lp
 OpenMP use device ptr
+.lp
+.SM MP_USE_DEVICE_ADDR
+.SI "use_device_addr"
+.lp
+OpenMP use device addr
 .lp
 .SM MP_IS_DEVICE_PTR
 .SI "is_device_ptr"

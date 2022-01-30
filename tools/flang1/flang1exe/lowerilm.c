@@ -2485,7 +2485,9 @@ lower_do_stmt(int std, int ast, int lineno, int label)
       schedtype = schedtype | (MP_SCH_ATTR_CHUNKED | MP_SCH_BLK_CYC);
     } else {
       // AOCC end
-      schedtype = 0x000;
+      schedtype = 0x000 ;
+      if (flg.amdgcn_target)
+        schedtype = schedtype | MP_SCH_ATTR_CHUNKED;
       if (A_SCHED_TYPEG(ast) == MP_SCH_DIST_STATIC) {
         schedtype = MP_SCH_DIST_STATIC;
       }
@@ -5146,6 +5148,14 @@ lower_stmt(int std, int ast, int lineno, int label)
     lower_end_stmt(std);
     break;
 
+  case A_MP_REQUIRESUNIFIEDSHAREDMEMORY:
+    lower_start_stmt(lineno, label, TRUE, std);
+    // requires with clause usm is dumped with value (8)
+    // for other require clauses, appt values need to be dumped
+    plower("on", "REQUIRES", OMP_REQ_UNIFIED_SHARED_MEMORY);
+    lower_end_stmt(std);
+    break;
+
   case A_MP_TASK:
   case A_MP_TASKLOOP:
     lowersym.task_depth++;
@@ -5452,6 +5462,24 @@ lower_stmt(int std, int ast, int lineno, int label)
       }
       lower_end_stmt(std);
     break;
+  // AOCC Begin
+  case A_MP_USE_DEVICE_ADDR:
+    lower_start_stmt(lineno, label, TRUE, std);
+    lop = A_LOPG(ast);
+    rop = A_ROPG(ast);
+    lower_expression(lop);
+    flag = A_PRAGMATYPEG(STD_AST(std));
+    if (rop) {
+       lower_expression(rop);
+       //todo ompaccel need to pass size and base
+       plower("oini", "MP_USE_DEVICE_ADDR", lower_base(lop), flag, lower_base(rop));
+    } else {
+      //todo ompaccel need to pass size and base
+      plower("oin", "MP_USE_DEVICE_ADDR", lower_base(lop), flag);
+    }
+    lower_end_stmt(std);
+    break;
+  // AOCC End
   case A_MP_BREDUCTION:
     lower_start_stmt(lineno, label, TRUE, std);
     ilm = plower("o", "MP_BREDUCTION");

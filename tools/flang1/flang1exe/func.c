@@ -4435,6 +4435,7 @@ rewrite_calls(void)
     case A_MP_TASKREG:
     case A_MP_TASKDUP:
     case A_MP_ETASKDUP:
+    case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
       break;
     case A_MP_TASKLOOPREG:
     case A_MP_ETASKLOOPREG:
@@ -4571,6 +4572,7 @@ rewrite_calls(void)
     case A_MP_TARGETDECLARE: // AOCC
     case A_MP_USE_DEVICE_PTR: // AOCC
     case A_MP_IS_DEVICE_PTR: // AOCC
+    case A_MP_USE_DEVICE_ADDR: // AOCC
       break;
     default:
       interr("rewrite_subroutine: unknown stmt found", ast, 4);
