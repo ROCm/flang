@@ -6187,10 +6187,12 @@ semant1(int rednum, SST *top)
     SST_IDP(RHS(1), S_STAR);
     //AOCC begin
     // For Assumed size arrays save the lhs and rhs sst
-     *asz_sst = *top;
-     *asz_rhssst = *RHS(1);
-     asz_arrdsc = aux.arrdsc_avl;
-     asz_status = 1;
+    if (seen_parameter || is_parameter_context()) {
+      *asz_sst = *top;
+      *asz_rhssst = *RHS(1);
+      asz_arrdsc = aux.arrdsc_avl;
+      asz_status = 1;
+    }
     //AOCC end
 
   dim_spec:
