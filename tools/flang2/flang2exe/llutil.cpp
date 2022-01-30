@@ -1783,6 +1783,7 @@ set_llasm_output_file(FILE *fd)
 FILE *get_llasm_output_file() {
   return LLVMFIL;
 }
+
 #endif // OMP_OFFLOAD_LLVM
 // AOCC End
 
