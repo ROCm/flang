@@ -188,10 +188,13 @@ public:
       break;
     case KMPC_API_SPMD_KERNEL_INIT:
       return {"__kmpc_spmd_kernel_init", IL_NONE, DT_VOID_NONE, 0};
+    // AOCC Begin
     case KMPC_API_TARGET_INIT:
       return {"__kmpc_target_init_v1", IL_NONE, DT_INT, 0};
       break;
-    // AOCC Begin
+    case KMPC_API_PARALLEL_51:
+      return {"__kmpc_parallel_51", IL_NONE, DT_INT, 0};
+      break;
 #ifdef OMP_OFFLOAD_AMD
     case KMPC_API_TARGET_DEINIT:
       return {"__kmpc_target_deinit_v1", IL_NONE, DT_VOID_NONE, 0};
@@ -313,9 +316,11 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
          KMPC_FLAG_STR_FMT},
     [KMPC_API_SPMD_KERNEL_INIT] = {"__kmpc_spmd_kernel_init", 0, DT_VOID_NONE,
                                    0},
+    // AOCC Begin
     [KMPC_API_TARGET_INIT] = {"__kmpc_target_init_v1", 0, DT_INT,
                                    0},
-    // AOCC Begin
+    [KMPC_API_PARALLEL_51] = {"__kmpc_parallel_51", 0, DT_INT,
+                                   0},
 #ifdef OMP_OFFLOAD_AMD
     [KMPC_API_TARGET_DEINIT] = {"__kmpc_target_deinit_v1", 0, DT_VOID_NONE,
                                    0},
@@ -1741,6 +1746,41 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
     args[0] = ad_icon(1); /* RequiresFullRuntime */
   }
   return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
+}
+
+int
+ll_make_kmpc_parallel_51(int global_tid_sptr, OMPACCEL_TINFO * symbols)
+{
+  static int id;
+  int n_symbols = symbols->n_symbols;
+  DTYPE arg_types[9];
+  DTYPE void_ptr_t = create_dtype_funcprototype();
+  DTYPE void_ptr_ptr_t = get_type(2, TY_PTR, void_ptr_t);
+  DTYPE arr_dtype;
+  int args[9];
+  SPTR array = make_array_sptr("captured_vars_addrs", void_ptr_t, n_symbols);
+
+  arg_types[0] = DT_CPTR;        /* ident */
+  arg_types[1] = DT_INT;         /* global_tid */
+  arg_types[2] = DT_INT;         /* if_expr */
+  arg_types[3] = DT_INT;         /* num_threads */
+  arg_types[4] = DT_INT;         /* proc_bind */
+  arg_types[5] = void_ptr_t;     /* fn */
+  arg_types[6] = void_ptr_t;     /* wrapper_fn */
+  arg_types[7] = void_ptr_ptr_t; /* args */
+  arg_types[8] = DT_INT;         /* n_args */
+
+  args[8] = gen_null_arg();      /* ident */
+  args[7] = global_tid_sptr;     /* global_tid */
+  args[6] = ad_icon(1);          /* if_expr */
+  args[5] = ad_icon(-1);         /* num_threads */
+  args[4] = ad_icon(-1);         /* proc_bind */
+  args[3] = gen_null_arg();      /* fn */
+  args[2] = gen_null_arg();      /* wrapper_fn */
+  args[1] = ad_acon(array, 0);   /* args */
+  args[0] = ad_icon(n_symbols);  /* n_args */
+
+  return mk_kmpc_api_call(KMPC_API_PARALLEL_51, 9, arg_types, args);
 }
 
 // AOCC Begin

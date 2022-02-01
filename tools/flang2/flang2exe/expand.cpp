@@ -719,6 +719,7 @@ eval_ilm(int ilmx)
 
       if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
         ilix = ll_make_kmpc_global_thread_num();
+        ilix = ll_make_kmpc_parallel_51(ilix, ompaccel_tinfo_get(gbl.currsub));
         iltb.callfg = 1;
         chk_block(ilix);
         ilix = ll_make_kmpc_target_deinit(ompaccel_tinfo_get(gbl.currsub)->mode);
