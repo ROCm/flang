@@ -28,6 +28,7 @@
 #include "symtab.h"
 #include "ili.h"
 //AOCC Begin
+typedef struct _OMPACCEL_TARGET OMPACCEL_TINFO;
 #include "llmputil.h"
 //AOCC End
 /** \file
@@ -175,6 +176,7 @@ enum {
   KMPC_API_TARGET_INIT,
   KMPC_API_SPMD_KERNEL_INIT,
   // AOCC Begin
+  KMPC_API_PARALLEL_51,
 #ifdef OMP_OFFLOAD_AMD
   KMPC_API_TARGET_DEINIT,
   KMPC_API_SPMD_KERNEL_DEINIT_V2,
@@ -503,6 +505,11 @@ int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 
 // AOCC Begin
+/**
+  \brief Generate kmpc_parallel_51 function call
+*/
+int ll_make_kmpc_parallel_51(int global_tid_sptr, OMPACCEL_TINFO * args);
+
 #ifdef OMP_OFFLOAD_AMD
 /**
   \brief kernel deinit

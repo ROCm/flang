@@ -145,4 +145,9 @@ DTYPE ll_make_tgt_offload_entry(char *);
 
 void init_tgtutil();
 
+/**
+   \brief Create array sptr
+ */
+SPTR
+make_array_sptr(char *name, DTYPE atype, int arraysize);
 #endif /* __TGT_RUNTIME_H__ */
