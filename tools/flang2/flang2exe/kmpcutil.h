@@ -30,6 +30,7 @@
 //AOCC Begin
 typedef struct _OMPACCEL_TARGET OMPACCEL_TINFO;
 #include "llmputil.h"
+#include <vector>
 //AOCC End
 /** \file
  * \brief Various definitions for the kmpc runtime
@@ -508,7 +509,7 @@ int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 /**
   \brief Generate kmpc_parallel_51 function call
 */
-int ll_make_kmpc_parallel_51(int global_tid_sptr, OMPACCEL_TINFO * args);
+int ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &);
 
 #ifdef OMP_OFFLOAD_AMD
 /**
