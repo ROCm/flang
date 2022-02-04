@@ -54,6 +54,7 @@
 #ifdef OMP_OFFLOAD_LLVM
 #include "tgtutil.h"
 #include "kmpcutil.h"
+#include <vector>
 #endif
 extern int in_extract_inline; /* Bottom-up auto-inlining */
 
@@ -451,8 +452,36 @@ eval_ilm_argument1(int opr, ILM *ilmpx, int ilmx)
   }
 } /* eval_ilm_argument1 */
 
-static void add_instruction(int ilix)
+static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
 {
+  int num_of_symbols = orig_symbols->n_symbols;
+  char allocated_symbol_name[128];
+  SPTR allocated_symbol;
+  std::vector<int> init_symbols(orig_symbols->n_symbols);
+  int store_instr;
+  int load_instr;
+  for (unsigned i = 0; i < num_of_symbols; ++i) {
+    snprintf(allocated_symbol_name, sizeof(allocated_symbol_name),
+            ".allocated_symbol_%d", i);
+    allocated_symbol = getsymbol(allocated_symbol_name);
+    STYPEP(allocated_symbol, ST_VAR);
+    DTYPEP(allocated_symbol,
+           get_type(2,TY_PTR,DTYPEG(orig_symbols->symbols[i].device_sym)));
+    SCP(allocated_symbol, SC_AUTO);
+    store_instr = ad4ili(IL_ST,
+                         ad_acon(orig_symbols->symbols[i].device_sym,0),
+                         ad_acon(allocated_symbol,0),
+                         addnme(NT_VAR, allocated_symbol, 0,0),
+                         MSZ_I8);
+    chk_block(store_instr);
+    load_instr = mk_ompaccel_ldsptr(allocated_symbol);
+    chk_block(load_instr);
+
+    init_symbols[i] = load_instr;
+
+  }
+  return init_symbols;
+
 }
 
 void
@@ -692,6 +721,10 @@ eval_ilm(int ilmx)
      * sharing model. It does extra work and allocates device on-chip memory.
      * */
     if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
+      std::vector<int> allocated_symbols;
+      if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
+	allocated_symbols = get_allocated_symbols(ompaccel_tinfo_get(gbl.currsub));
+      }
       ilix = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
 
       /* Generate new control flow for generic kernel */
@@ -719,7 +752,9 @@ eval_ilm(int ilmx)
 
       if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
         ilix = ll_make_kmpc_global_thread_num();
-        ilix = ll_make_kmpc_parallel_51(ilix, ompaccel_tinfo_get(gbl.currsub));
+        iltb.callfg = 1;
+        chk_block(ilix);
+        ilix = ll_make_kmpc_parallel_51(ilix, allocated_symbols);
         iltb.callfg = 1;
         chk_block(ilix);
         ilix = ll_make_kmpc_target_deinit(ompaccel_tinfo_get(gbl.currsub)->mode);
