@@ -306,8 +306,6 @@ static void rewrite_omp_target_construct() {
 	  outer_scope = 0;
       } else {
           new_stmt = ast_rewrite(ast);
-          if (A_TYPEG(ast) == A_MP_PARALLEL) 
-	    A_IFPARP(new_stmt, 0);
       }
       A_DESTP(new_stmt, A_DESTG(ast));
       A_SRCP(new_stmt, A_SRCG(ast));
