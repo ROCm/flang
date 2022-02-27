@@ -449,7 +449,8 @@ ll_process_routine_parameters(SPTR func_sptr)
         }
         /* For string, need to ut length */
         if (!PASSBYVALG(param_sptr) &&
-            (DTYG(param_dtype) == TY_CHAR || DTYG(param_dtype) == TY_NCHAR)) {
+            (DTYG(param_dtype) == TY_CHAR || DTYG(param_dtype) == TY_NCHAR) &&
+            !OMPACCDEVSYMG(param_sptr)) {
           SPTR len = CLENG(param_sptr);
           if ((len <= NOSYM) || (SCG(len) == SC_NONE) ||
               (SCG(len) == SC_LOCAL)) {

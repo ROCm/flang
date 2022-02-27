@@ -8752,7 +8752,9 @@ gen_llvm_expr(int ilix, LL_Type *expected_type)
       /* If no type found assume generic pointer */
       if (dtype == DT_NONE)
         dtype = DT_CPTR;
-
+      // for allocatable array's dont do double indirection
+      if (!strncmp(SYMNAME(sptr),"Arg_.Z",6))
+        break;
       if (operand->ll_type->sub_types[0]->data_type == LL_PTR ||
           ILI_OPC(ld_ili) != IL_ACON) {
         operand =
