@@ -347,7 +347,7 @@ _tgt_target_fill_size(SPTR sptr, int map_type, int base_ili)
           } else {
             ilix = ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
           }
-          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
+          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of(DTySeqTyElement(dtype))));
           return ilix;
         }
 #endif
@@ -365,7 +365,7 @@ _tgt_target_fill_size(SPTR sptr, int map_type, int base_ili)
           ilix = ad2ili(IL_KMUL, ilix, rilix);
         }
         if (DTY( (DTYPE) DTY((DTYPE) (dtype + 1))) != TY_STRUCT)  // AOCC
-          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of((DTYPE)(dtype + 1))));
+          ilix = ad2ili(IL_KMUL, ilix, ad_kconi(size_of(DTySeqTyElement(dtype))));
         // AOCC Begin
         else
           ilix = ad2ili(IL_KMUL, ilix,
