@@ -7845,10 +7845,17 @@ do_reduction(void)
         continue;
       reduc_symp->Private = decl_private_sym(reduc_symp->shared);
       // AOCC Begin
-      // FIXME: Remove when we support reduction of real*4 in GPUs
+      // FIXME: Remove when we support reduction of real*4, int, int*8 in GPUs
       if (DTYPEG(reduc_symp->Private) == DT_REAL && flg.amdgcn_target) {
         DTYPEP(reduc_symp->Private, DT_DBLE);
       }
+      if (DTYPEG(reduc_symp->Private) == DT_INT && flg.amdgcn_target) {
+        DTYPEP(reduc_symp->Private, DT_DBLE);
+      }
+      if (DTYPEG(reduc_symp->Private) == DT_INT8 && flg.amdgcn_target) {
+        DTYPEP(reduc_symp->Private, DT_DBLE);
+      }
+
       // AOCC End
       set_parref_flag(reduc_symp->shared, reduc_symp->shared,
                       BLK_UPLEVEL_SPTR(sem.scope_level));
