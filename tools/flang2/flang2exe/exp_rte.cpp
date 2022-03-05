@@ -1612,7 +1612,7 @@ scan_args:
         pf->mem_off += size_of(argdtype);
       else
         pf->mem_off += 4;
-      if (DTY(DTYPEG(argsym)) == TY_STRUCT) {
+      if (DTY(DTYPEG(argsym)) == TY_STRUCT  && !OMPACCDEVSYMG(argsym)  ) {
         int src_addr, n;
         int src_nme;
         int dest_addr;
