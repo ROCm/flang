@@ -1534,8 +1534,8 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
     }
   }
   // AOCC End
-  if ((MIDNUMG(host_symbol) && SCG(host_symbol) == SC_BASED)
-                            && STYPEG(host_symbol) != ST_MEMBER) { // AOCC
+  if (MIDNUMG(host_symbol) && (SCG(host_symbol) == SC_BASED)
+                           && STYPEG(host_symbol) != ST_MEMBER) { // AOCC
     NEED((current_tinfo->n_quiet_symbols + 1), current_tinfo->quiet_symbols,
          OMPACCEL_SYM, current_tinfo->sz_quiet_symbols,
          current_tinfo->sz_quiet_symbols * INC_EXP);
@@ -1559,9 +1559,16 @@ ompaccel_tinfo_current_add_sym(SPTR host_symbol, SPTR device_symbol,
   // AOCC Begin
   // For pointer arrays copy array descripor to device
 #ifdef OMP_OFFLOAD_AMD
-  if (SDSCG(host_symbol) && (MIDNUMG(host_symbol) > NOSYM)
-                                      && POINTERG(host_symbol)
+  if (SDSCG(host_symbol)   &&  ((MIDNUMG(host_symbol) > NOSYM) 
+                                      && POINTERG(host_symbol))
                                       && STYPEG(host_symbol) != ST_MEMBER) {
+    ompaccel_tinfo_current_add_sym(SDSCG(host_symbol), NOSYM,
+                                   OMP_TGT_MAPTYPE_TARGET_PARAM |
+                                   OMP_TGT_MAPTYPE_TO |
+                                   OMP_TGT_MAPTYPE_FROM);
+  }
+  else if (SDSCG(host_symbol) && ASSUMSHPG(host_symbol)
+                              && STYPEG(host_symbol) != ST_MEMBER) {
     ompaccel_tinfo_current_add_sym(SDSCG(host_symbol), NOSYM,
                                    OMP_TGT_MAPTYPE_TARGET_PARAM |
                                    OMP_TGT_MAPTYPE_TO |
