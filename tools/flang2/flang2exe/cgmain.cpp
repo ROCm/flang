@@ -4301,7 +4301,7 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
   int alignment;
   INSTR_LIST *Curr_Instr;
 
-  DBGTRACEIN2(" type: %s ilix: %d", stmt_names[stmt_type], ilix)
+  DBGTRACEIN2(" type: %s ilix: %d", stmt_names[stmt_type], ilix);
 
   curr_stmt_type = stmt_type;
   if (last_stmt_is_branch && stmt_type != STMT_LABEL) {
@@ -14063,7 +14063,6 @@ process_formal_arguments(LL_ABI_Info *abi)
       /* Other by-value kinds. */
       break;
     }
-
     /* This op represents the real LLVM argument, not the local variable. */
     arg_op = make_operand();
     arg_op->ot_type = OT_VAR;

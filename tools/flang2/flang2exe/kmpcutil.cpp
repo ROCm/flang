@@ -1750,10 +1750,10 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
 }
 
 int
-ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols)
+ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR helper_func)
 {
   static int id;
-  int n_symbols = symbols.size();
+  int n_symbols = ompaccel_tinfo_get(gbl.currsub)->n_symbols;//2;//symbols.size();
   DTYPE arg_types[9];
   DTYPE void_ptr_t = DT_ADDR;//create_dtype_funcprototype();
   DTYPE void_ptr_ptr_t = get_type(2, TY_PTR, void_ptr_t);
@@ -1769,15 +1769,25 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols)
                             0,
                             ad_icon(0),
                             FALSE);
-  for (unsigned i = 0; i < symbols.size(); ++i) {
-    ilix = mk_ompaccel_store(symbols[i],
-                             DT_INT8,
-                             nme_args,
-                             ad_acon(captured_vars, i * TARGET_PTRSIZE));
+  int j = 0;
+  for (unsigned i = 0; i < n_symbols; ++i) {
+    if (DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym) == DT_INT8) {
+      ilix = mk_ompaccel_store(symbols[j++],
+                               DT_INT8,
+                               nme_args,
+                               ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    }
+    else {
+      ilix = mk_ompaccel_ldsptr(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym);
+      ilix = mk_ompaccel_store(ilix,
+                               DT_INT8,
+                               nme_args,
+                               ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    }
     chk_block(ilix);
   }
+  
 
-//  chk_block(ilix);
   arg_types[0] = DT_CPTR;        /* ident */
   arg_types[1] = DT_INT;         /* global_tid */
   arg_types[2] = DT_INT;         /* if_expr */
@@ -1786,14 +1796,14 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols)
   arg_types[5] = void_ptr_t;     /* fn */
   arg_types[6] = void_ptr_t;     /* wrapper_fn */
   arg_types[7] = void_ptr_ptr_t; /* args */
-  arg_types[8] = DT_INT;         /* n_args */
+  arg_types[8] = DT_INT8;        /* n_args */
 
   args[8] = gen_null_arg();            /* ident */
   args[7] = global_tid_sptr;           /* global_tid */
   args[6] = ad_icon(1);                /* if_expr */
   args[5] = ad_icon(-1);               /* num_threads */
   args[4] = ad_icon(-1);               /* proc_bind */
-  args[3] = gen_null_arg();            /* fn */
+  args[3] = ad_acon(helper_func, 0);
   args[2] = gen_null_arg();            /* wrapper_fn */
   args[1] = ad_acon(captured_vars, 0); /* args */
   args[0] = ad_icon(n_symbols);        /* n_args */
