@@ -509,7 +509,7 @@ int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 /**
   \brief Generate kmpc_parallel_51 function call
 */
-int ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &);
+int ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &, SPTR);
 
 #ifdef OMP_OFFLOAD_AMD
 /**

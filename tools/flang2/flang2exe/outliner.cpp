@@ -477,12 +477,13 @@ ll_get_shared_arg(SPTR func_sptr)
 }
 
 void
-ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype)
+ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL_TINFO *current_tinfo)
 {
   int count = 0;
   int sym, dtype;
   char name[MXIDLEN + 2];
   int dpdscp = aux.dpdsc_avl;
+  int cnt = 0;
 
   PARAMCTP(func_sptr, paramct);
   DPDSCP(func_sptr, dpdscp);
@@ -500,9 +501,23 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype)
       DTYPEP(sym, *argtype);
       PASSBYVALP(sym, 1);
     }
+
     argtype++;
     STYPEP(sym, ST_VAR);
     aux.dpdsc_base[dpdscp++] = sym;
+    if (current_tinfo)
+    {
+      NEED((current_tinfo->n_symbols + 1), current_tinfo->symbols, OMPACCEL_SYM,
+         current_tinfo->sz_symbols, current_tinfo->sz_symbols * 2);
+      if (cnt >= 2)
+        current_tinfo->symbols[current_tinfo->n_symbols].host_sym = 
+          ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
+        current_tinfo->symbols[current_tinfo->n_symbols].device_sym = static_cast<SPTR>(sym);
+        current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
+        current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0; // AOCC
+        current_tinfo->n_symbols++;
+        cnt++;
+    }
   }
 }
 
@@ -1155,6 +1170,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             /* replace host sptr with device sptrs, PLD keeps sptr in 2nd index
              */
             op1Pld = ILM_OPND(ilmpx, 1);
+	    //replace host sym to device sym 
             ILM_OPND(ilmpx, 2) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 2));
           // AOCC begin
@@ -2416,7 +2432,6 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
 
   for (i = 0; i < current_tinfo->n_symbols; ++i) {
     SPTR sptr = current_tinfo->symbols[i].host_sym;
-
     // AOCC begin
     if (XBIT(232, 0x1)) {
       if (orig_sptr_map.find(sptr) != orig_sptr_map.end()) {
@@ -2428,6 +2443,13 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
     sym = ompaccel_create_device_symbol(sptr, count);
     count++;
     current_tinfo->symbols[i].device_sym = sym;
+    if (is_SPMD_mode(current_tinfo->mode) && DTYPEG(sym) != DT_INT8)
+    {
+      PASSBYVALP(sym, 1);
+      DTYPEP(sym, get_type(2, TY_PTR, DTYPEG(sym)));
+    } else {
+      PASSBYVALP(sym, 0);
+    }
     OMPACCDEVSYMP(sym, TRUE);
     aux.dpdsc_base[dpdscp++] = sym;
   }
@@ -2645,6 +2667,50 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
   VARDSCP(dev_midnum, VARDSCG(org_midnum));
 
   return device_symbol;
+}
+
+SPTR
+ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *orig_tinfo)
+{
+  OMPACCEL_TINFO *current_tinfo;
+  SPTR func_sptr;
+  
+  int max_nargs = orig_tinfo->n_symbols + 
+                  orig_tinfo->n_quiet_symbols +
+		  orig_tinfo->n_reduction_symbols;
+  int func_args_cnt = orig_tinfo->n_symbols + 2; // global_tid, bound_tid + target_info args
+  std::vector<DTYPE> func_args(func_args_cnt);
+  auto *symbols = orig_tinfo->symbols;
+  func_args[0] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // global_tid
+  func_args[1] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // bound_tid
+  
+  for (int k = 2; k < func_args_cnt; k++) {
+    if (DTYPEG(symbols->device_sym) == DT_INT8 ) {
+      func_args[k] = get_type(2, TY_PTR, DT_INT8);
+    }
+    else {
+       func_args[k] = DTYPEG(symbols->device_sym);}
+       symbols++;
+  }
+
+  func_sptr = create_target_outlined_func_sptr(scope_sptr, false);
+  CCSYMP(func_sptr,
+         1); /* currently we make all CCSYM func varargs in Fortran. */
+  CFUNCP(func_sptr, 1);
+  TASKFNP(func_sptr, FALSE);
+  ISTASKDUPP(func_sptr, FALSE);
+  OUTLINEDP(func_sptr, gbl.currsub);
+  FUNCLINEP(func_sptr, gbl.lineno);
+  STYPEP(func_sptr, ST_ENTRY);
+  DTYPEP(func_sptr, DT_VOID_NONE);
+  DEFDP(func_sptr, 1);
+  SCP(func_sptr, SC_STATIC);
+  ADDRTKNP(func_sptr, 1);
+  OMPACCFUNCDEVP(func_sptr, 1);
+  current_tinfo = ompaccel_tinfo_create(func_sptr, max_nargs);
+  ll_make_ftn_outlined_params(func_sptr, func_args_cnt, func_args.data(), current_tinfo);
+  ll_process_routine_parameters(func_sptr); 
+  return func_sptr;
 }
 
 SPTR
