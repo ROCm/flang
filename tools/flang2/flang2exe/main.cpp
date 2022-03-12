@@ -499,11 +499,10 @@ main(int argc, char *argv[])
 
   } while (!gbl.eof_flag);
 
-
+  cg_llvm_end();
   if (flg.march) {
     ompaccel_create_globalctor();
   }
-  cg_llvm_end();
 
   if (flg.smp) {
     ll_unlink_parfiles();
