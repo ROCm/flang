@@ -505,19 +505,24 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL
     argtype++;
     STYPEP(sym, ST_VAR);
     aux.dpdsc_base[dpdscp++] = sym;
+    //AOC begin
     if (current_tinfo)
     {
       NEED((current_tinfo->n_symbols + 1), current_tinfo->symbols, OMPACCEL_SYM,
          current_tinfo->sz_symbols, current_tinfo->sz_symbols * 2);
-      if (cnt >= 2)
+      current_tinfo->symbols[current_tinfo->n_symbols].device_sym = static_cast<SPTR>(sym);
+      if (cnt >= 2) {
+        PASSBYVALP(sym, false);
+        PASSBYREFP(sym, true);
         current_tinfo->symbols[current_tinfo->n_symbols].host_sym = 
           ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
-        current_tinfo->symbols[current_tinfo->n_symbols].device_sym = static_cast<SPTR>(sym);
-        current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
-        current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0; // AOCC
-        current_tinfo->n_symbols++;
-        cnt++;
+      }
+      current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
+      current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0;
+      current_tinfo->n_symbols++;
+      cnt++;
     }
+    //AOCC end
   }
 }
 
@@ -2443,13 +2448,6 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
     sym = ompaccel_create_device_symbol(sptr, count);
     count++;
     current_tinfo->symbols[i].device_sym = sym;
-    if (is_SPMD_mode(current_tinfo->mode) && DTYPEG(sym) != DT_INT8)
-    {
-      PASSBYVALP(sym, 1);
-      DTYPEP(sym, get_type(2, TY_PTR, DTYPEG(sym)));
-    } else {
-      PASSBYVALP(sym, 0);
-    }
     OMPACCDEVSYMP(sym, TRUE);
     aux.dpdsc_base[dpdscp++] = sym;
   }
@@ -2685,11 +2683,8 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   func_args[1] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // bound_tid
   
   for (int k = 2; k < func_args_cnt; k++) {
-    if (DTYPEG(symbols->device_sym) == DT_INT8 ) {
-      func_args[k] = get_type(2, TY_PTR, DT_INT8);
-    }
-    else {
-       func_args[k] = DTYPEG(symbols->device_sym);}
+       func_args[k] = DTYPEG(symbols->device_sym);
+       PASSBYVALP(symbols->device_sym, false);
        symbols++;
   }
 
@@ -2709,7 +2704,7 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   OMPACCFUNCDEVP(func_sptr, 1);
   current_tinfo = ompaccel_tinfo_create(func_sptr, max_nargs);
   ll_make_ftn_outlined_params(func_sptr, func_args_cnt, func_args.data(), current_tinfo);
-  ll_process_routine_parameters(func_sptr); 
+  ll_process_routine_parameters(func_sptr);
   return func_sptr;
 }
 
