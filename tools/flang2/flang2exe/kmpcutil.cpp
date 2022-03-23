@@ -1783,16 +1783,6 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
                                DT_INT8,
                                nme_args,
                                ad_acon(captured_vars, i * TARGET_PTRSIZE));
-      // Hack for correct generation of *.ll code ( perform load operation instead of raw bitcast)
-      if (i == n_symbols - 1) {
-        chk_block(ilix);
-        ilix = mk_ompaccel_ldsptr(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym);
-        ilix = mk_ompaccel_store(ilix,
-                                 DT_INT8,
-                                 nme_args,
-                                 ad_acon(captured_vars, i * TARGET_PTRSIZE));
-
-      }
     }
     chk_block(ilix);
   }
