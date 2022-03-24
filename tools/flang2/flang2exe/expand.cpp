@@ -502,7 +502,7 @@ static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
   int store_instr;
   int load_instr;
   for (unsigned i = 0; i < num_of_symbols; ++i) {
-    if (DTYPEG(orig_symbols->symbols[i].device_sym) != DT_INT8)
+    if (!DT_ISSCALAR(DTYPEG(orig_symbols->symbols[i].device_sym)))
       continue;
     snprintf(allocated_symbol_name, sizeof(allocated_symbol_name),
             ".allocated_symbol_%d", i);
