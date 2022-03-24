@@ -1771,7 +1771,7 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
                             FALSE);
   int j = 0;
   for (unsigned i = 0; i < n_symbols; ++i) {
-    if (DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym) == DT_INT8) {
+    if (DT_ISSCALAR(DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym))) {
       ilix = mk_ompaccel_store(symbols[j++],
                                DT_INT8,
                                nme_args,

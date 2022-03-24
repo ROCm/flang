@@ -492,7 +492,10 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL
        aux.dpdsc_size + paramct + 100);
 
   while (paramct--) {
-    sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
+    if (current_tinfo && cnt >= 2)
+      sprintf(name, "%s", SYMNAME(ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym));
+    else
+      sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
     sym = getsymbol(name);
     SCP(sym, SC_DUMMY);
     if (*argtype == DT_CPTR) { /* either i8* or actual type( pass by value). */
@@ -510,12 +513,13 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL
     {
       NEED((current_tinfo->n_symbols + 1), current_tinfo->symbols, OMPACCEL_SYM,
          current_tinfo->sz_symbols, current_tinfo->sz_symbols * 2);
-      current_tinfo->symbols[current_tinfo->n_symbols].device_sym = static_cast<SPTR>(sym);
       if (cnt >= 2) {
         PASSBYVALP(sym, false);
         PASSBYREFP(sym, true);
         current_tinfo->symbols[current_tinfo->n_symbols].host_sym = 
           ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
+        current_tinfo->symbols[current_tinfo->n_symbols].device_sym =
+	  ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
       }
       current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
       current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0;
@@ -2683,7 +2687,10 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   func_args[1] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // bound_tid
   
   for (int k = 2; k < func_args_cnt; k++) {
-       func_args[k] = DTYPEG(symbols->device_sym);
+       if(DT_ISSCALAR( DTYPEG(symbols->device_sym)))
+	 func_args[k] = DT_CPTR;
+       else
+         func_args[k] = DTYPEG(symbols->device_sym);
        PASSBYVALP(symbols->device_sym, false);
        symbols++;
   }
