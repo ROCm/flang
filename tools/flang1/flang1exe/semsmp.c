@@ -9362,7 +9362,10 @@ do_bteams(int doif)
   }
   if (CL_PRESENT(CL_THREAD_LIMIT)) {
     thread_limit = CL_VAL(CL_THREAD_LIMIT);
+  } else if (CL_PRESENT(CL_NUM_THREADS)) {
+    thread_limit = CL_VAL(CL_NUM_THREADS);
   }
+
   A_NTEAMSP(ast, num_teams);
   A_THRLIMITP(ast, thread_limit);
   add_stmt(ast);
@@ -9496,6 +9499,11 @@ restore_clauses(void)
     if (CL_PRESENT(CL_THREAD_LIMIT)) {
       sptr = CL_VAL(CL_THREAD_LIMIT);
       CL_VAL(CL_THREAD_LIMIT) = mk_id(sptr);
+      set_parref_flag(sptr, sptr, BLK_UPLEVEL_SPTR(sem.scope_level));
+    }
+    if (CL_PRESENT(CL_NUM_THREADS)) {
+      sptr = CL_VAL(CL_NUM_THREADS);
+      CL_VAL(CL_NUM_THREADS) = mk_id(sptr);
       set_parref_flag(sptr, sptr, BLK_UPLEVEL_SPTR(sem.scope_level));
     }
     break;
