@@ -11661,8 +11661,8 @@ addDebugForGlobalVar(SPTR sptr, ISZ_T off)
   if (need_debug_info(sptr)) {
     LL_Module *mod = cpu_llvm_module;
 #ifdef OMP_OFFLOAD_LLVM
-    if (flg.omptarget)
-      mod = gpu_llvm_module;
+    if (flg.omptarget && (current_module != NULL))
+      mod = current_module;
 #endif
 
     /* TODO: defeat unwanted side-effects. make_lltype_from_sptr() will update
@@ -11674,6 +11674,7 @@ addDebugForGlobalVar(SPTR sptr, ISZ_T off)
     LL_Type *sty = make_lltype_from_sptr(sptr);
     LL_Type *dty = ll_get_pointer_type(make_lltype_from_dtype(DTYPEG(sptr)));
     const char *glob = SNAME(sptr);
+
     LL_Type *vty = mergeDebugTypesForGlobal(&glob, sty, dty);
     LL_Value *val = ll_create_value_from_type(mod, vty, glob);
     lldbg_emit_global_variable(mod->debug_info, sptr, off, 1, val);
