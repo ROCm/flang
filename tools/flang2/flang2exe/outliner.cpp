@@ -2687,7 +2687,8 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   func_args[1] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // bound_tid
   
   for (int k = 2; k < func_args_cnt; k++) {
-       if(DT_ISSCALAR( DTYPEG(symbols->device_sym)))
+       if(DT_ISSCALAR( DTYPEG(symbols->device_sym))
+          && DTYPEG(symbols->device_sym) != DT_CMPLX)
 	 func_args[k] = DT_CPTR;
        else
          func_args[k] = DTYPEG(symbols->device_sym);
