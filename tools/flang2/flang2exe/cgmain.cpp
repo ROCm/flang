@@ -12267,7 +12267,7 @@ process_sptr_offset(SPTR sptr, ISZ_T off)
     }
     if ((flg.smp || (XBIT(34, 0x200) || gbl.usekmpc)) &&
         (gbl.outlined || ISTASKDUPG(GBL_CURRFUNC))) {
-      if (sptr == ll_get_shared_arg(gbl.currsub)) {
+      if (sptr == ll_get_shared_arg(gbl.currsub) && !gbl.is_init_spmd_kernel) {
         LLTYPE(sptr) = make_ptr_lltype(make_lltype_from_dtype(DT_INT8));
       }
     }

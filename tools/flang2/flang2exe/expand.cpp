@@ -237,6 +237,11 @@ expand(void)
   static std::map<int, int> process_expanded_map = std::map<int,int>();
   auto it = process_expanded_map.find(gbl.currsub);
   int process_expanded = 0;
+  // we reset flag because we do not know if we generate initialization
+  // function for SPMD kernel (the function with kmpc_parallel_51 call)
+  // or the proper kernel code (the function which is passed as an argument
+  // to kmpc_parallel_51 call or generic kernel
+  gbl.is_init_spmd_kernel = false;
   if (it != process_expanded_map.end())
   {
 	  process_expanded = it->second;
@@ -806,7 +811,8 @@ eval_ilm_check_if_skip(int ilmx, int *skip_expand, int *process_expanded)
         ilix = ll_make_kmpc_global_thread_num();
         iltb.callfg = 1;
         chk_block(ilix);
-       sptr1	= ll_make_helper_function_for_kmpc_parallel_51((SPTR)0, ompaccel_tinfo_get(gbl.currsub));
+        gbl.is_init_spmd_kernel = true;
+        sptr1 = ll_make_helper_function_for_kmpc_parallel_51((SPTR)0, ompaccel_tinfo_get(gbl.currsub));
         ilix = ll_make_kmpc_parallel_51(ilix, allocated_symbols, sptr1);
         iltb.callfg = 1;
         chk_block(ilix);
