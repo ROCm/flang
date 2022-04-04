@@ -6820,7 +6820,7 @@ emit_bpar(void)
       A_IFPARP(ast, CL_VAL(CL_IF));
   }
   if (CL_PRESENT(CL_NUM_THREADS))
-    A_NPARP(ast, CL_VAL(CL_NUM_THREADS));
+    A_THRLIMITP(ast, CL_VAL(CL_NUM_THREADS));
 
   /* PROC_BIND ast should be constant value */
   if (CL_PRESENT(CL_PROC_BIND)) {
