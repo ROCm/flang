@@ -2690,6 +2690,9 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
        if(DT_ISSCALAR( DTYPEG(symbols->device_sym))
           && DTYPEG(symbols->device_sym) != DT_CMPLX)
 	 func_args[k] = DT_CPTR;
+       else if (STYPEG(symbols->host_sym) == ST_STRUCT) {
+         func_args[k] = DT_CPTR;
+       }
        else
          func_args[k] = DTYPEG(symbols->device_sym);
        PASSBYVALP(symbols->device_sym, false);

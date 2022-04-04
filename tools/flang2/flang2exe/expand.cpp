@@ -507,13 +507,18 @@ static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
   int store_instr;
   int load_instr;
   for (unsigned i = 0; i < num_of_symbols; ++i) {
-    if (!DT_ISSCALAR(DTYPEG(orig_symbols->symbols[i].device_sym)))
-      continue;
+    if (!DT_ISSCALAR(DTYPEG(orig_symbols->symbols[i].device_sym))
+         && STYPEG(orig_symbols->symbols[i].host_sym) != ST_STRUCT) {
+	    continue;
+    }
     snprintf(allocated_symbol_name, sizeof(allocated_symbol_name),
             ".allocated_symbol_%d", i);
     allocated_symbol = getsymbol(allocated_symbol_name);
     STYPEP(allocated_symbol, ST_VAR);
-    DTYPEP(allocated_symbol,
+    if (STYPEG(orig_symbols->symbols[i].host_sym) == ST_STRUCT)
+      DTYPEP(allocated_symbol,DT_CPTR);
+    else
+      DTYPEP(allocated_symbol,
            get_type(2,TY_PTR,DTYPEG(orig_symbols->symbols[i].device_sym)));
     SCP(allocated_symbol, SC_AUTO);
     store_instr = ad4ili(IL_ST,
