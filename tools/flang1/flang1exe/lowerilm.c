@@ -4910,12 +4910,14 @@ lower_stmt(int std, int ast, int lineno, int label)
       flag = flag | 0x04;
     }
 
-    if (A_NPARG(ast) == 0) {
+    if (A_THRLIMITG(ast) == 0) {
       lilm = plower("oS", "ICON", lowersym.intzero);
     } else {
-      lower_expression(A_NPARG(ast));
-      lilm = lower_conv(A_NPARG(ast), DT_LOG4);
-      flag = flag | 0x02;
+        lower_expression(A_THRLIMITG(ast));
+        lilm = lower_conv(A_THRLIMITG(ast), DT_INT);
+        if (A_TYPEG(A_THRLIMITG(ast)) == A_ID)
+          plower("oS", "MP_NUMTHREADS", A_SPTRG(A_THRLIMITG(ast)));
+        flag = flag | 0x02;
     }
     proc_bind = 0;
     if (A_PROCBINDG(ast)) {
