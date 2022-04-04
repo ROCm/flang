@@ -2671,6 +2671,17 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
   return device_symbol;
 }
 
+static bool is_complex_type(DTYPE dt)
+{
+  if (dt == DT_DCMPLX){
+    return true;
+  }
+  else if (dt == DT_CMPLX){
+    return true;
+  }
+  return false;
+}
+
 SPTR
 ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *orig_tinfo)
 {
@@ -2688,13 +2699,15 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   
   for (int k = 2; k < func_args_cnt; k++) {
        if(DT_ISSCALAR( DTYPEG(symbols->device_sym))
-          && DTYPEG(symbols->device_sym) != DT_CMPLX)
+          && !is_complex_type(DTYPEG(symbols->device_sym))) {
 	 func_args[k] = DT_CPTR;
+       }
        else if (STYPEG(symbols->host_sym) == ST_STRUCT) {
          func_args[k] = DT_CPTR;
        }
-       else
+       else {
          func_args[k] = DTYPEG(symbols->device_sym);
+       }
        PASSBYVALP(symbols->device_sym, false);
        symbols++;
   }
