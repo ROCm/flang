@@ -1770,8 +1770,10 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
                             ad_icon(0),
                             FALSE);
   int j = 0;
+  
   for (unsigned i = 0; i < n_symbols; ++i) {
-    if (DT_ISSCALAR(DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym))) {
+    if (DT_ISSCALAR(DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym)) ||
+        STYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].host_sym) == ST_STRUCT) {
       ilix = mk_ompaccel_store(symbols[j++],
                                DT_INT8,
                                nme_args,
