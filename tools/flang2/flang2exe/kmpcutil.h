@@ -534,6 +534,18 @@ int ll_make_kmpc_nvptx_parallel_reduce_nowait_simple_spmd(int, int, int, SPTR, S
 */
 int ll_make_kmpc_nvptx_end_reduce_nowait();
 
+/**
+ \brief Get number of correctly initialized number of symbols.
+*/
+int get_n_symbols(OMPACCEL_TINFO *tinfo);
+
+/**
+ \brief Check if given symbol should be skipped
+ If DTYPE of symbol is 0 then the symbol should not be passed
+ as an argument to kmpc_parallel_51 function
+*/
+bool check_if_skip_symbol(SPTR sym);
+
 /* End OpenMP Accelerator RT - non standard */
 #endif
 #endif /* KMPC_RUNTIME_H_ */

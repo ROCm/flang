@@ -1749,11 +1749,31 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
   return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
 }
 
+int get_n_symbols(OMPACCEL_TINFO *tinfo)
+{
+  int orig_n_symbols = tinfo->n_symbols;
+  int n_symbols = orig_n_symbols;
+  for (int i = 0; i < orig_n_symbols; ++i) {
+    //skip uninitialized symbols
+    if (DTYPEG(tinfo->symbols[i].device_sym) == 0) {
+      n_symbols--;
+    }
+  }
+  return n_symbols;
+}
+
+bool check_if_skip_symbol(SPTR sym)
+{
+  if (DTYPEG(sym) == 0)
+    return true;
+  return false;
+}
+
 int
 ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR helper_func)
 {
   static int id;
-  int n_symbols = ompaccel_tinfo_get(gbl.currsub)->n_symbols;//2;//symbols.size();
+  int n_symbols = get_n_symbols(ompaccel_tinfo_get(gbl.currsub));
   DTYPE arg_types[9];
   DTYPE void_ptr_t = DT_ADDR;//create_dtype_funcprototype();
   DTYPE void_ptr_ptr_t = get_type(2, TY_PTR, void_ptr_t);
@@ -1770,8 +1790,9 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
                             ad_icon(0),
                             FALSE);
   int j = 0;
-  
-  for (unsigned i = 0; i < n_symbols; ++i) {
+  for (int i = 0; i < n_symbols; ++i) {
+    if (check_if_skip_symbol(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym))
+      continue;
     if (DT_ISSCALAR(DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym)) ||
         STYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].host_sym) == ST_STRUCT) {
       ilix = mk_ompaccel_store(symbols[j++],
