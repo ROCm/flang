@@ -2691,7 +2691,8 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   int max_nargs = orig_tinfo->n_symbols + 
                   orig_tinfo->n_quiet_symbols +
 		  orig_tinfo->n_reduction_symbols;
-  int func_args_cnt = orig_tinfo->n_symbols + 2; // global_tid, bound_tid + target_info args
+  int func_args_cnt = get_n_symbols(orig_tinfo);
+  func_args_cnt += 2; // global_tid, bound_tid + target_info args
   std::vector<DTYPE> func_args(func_args_cnt);
   auto *symbols = orig_tinfo->symbols;
   func_args[0] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // global_tid
