@@ -514,12 +514,14 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL
       NEED((current_tinfo->n_symbols + 1), current_tinfo->symbols, OMPACCEL_SYM,
          current_tinfo->sz_symbols, current_tinfo->sz_symbols * 2);
       if (cnt >= 2) {
-        PASSBYVALP(sym, false);
-        PASSBYREFP(sym, true);
+        if (!(PASSBYVALG(sym) && !PASSBYREFG(sym) && DTYPEG(sym) == DT_INT8)) {
+          PASSBYVALP(sym, false);
+          PASSBYREFP(sym, true);
+	}
         current_tinfo->symbols[current_tinfo->n_symbols].host_sym = 
           ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
         current_tinfo->symbols[current_tinfo->n_symbols].device_sym =
-	  ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
+          ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
       }
       current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
       current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0;
@@ -2709,7 +2711,6 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
        else {
          func_args[k] = DTYPEG(symbols->device_sym);
        }
-       PASSBYVALP(symbols->device_sym, false);
        symbols++;
   }
 
