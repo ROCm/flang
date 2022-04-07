@@ -237,6 +237,7 @@ expand(void)
   static std::map<int, int> process_expanded_map = std::map<int,int>();
   auto it = process_expanded_map.find(gbl.currsub);
   int process_expanded = 0;
+
   // we reset flag because we do not know if we generate initialization
   // function for SPMD kernel (the function with kmpc_parallel_51 call)
   // or the proper kernel code (the function which is passed as an argument
@@ -507,6 +508,9 @@ static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
   int store_instr;
   int load_instr;
   for (unsigned i = 0; i < num_of_symbols; ++i) {
+    if (PASSBYVALG(orig_symbols->symbols[i].device_sym) &&
+              !PASSBYREFG(orig_symbols->symbols[i].device_sym))
+	    continue;
     if (!DT_ISSCALAR(DTYPEG(orig_symbols->symbols[i].device_sym))
          && STYPEG(orig_symbols->symbols[i].host_sym) != ST_STRUCT) {
 	    continue;
@@ -531,7 +535,6 @@ static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
     chk_block(load_instr);
 
     init_symbols.push_back(load_instr);
-
   }
   return init_symbols;
 
