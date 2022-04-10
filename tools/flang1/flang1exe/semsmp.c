@@ -8487,6 +8487,7 @@ do_map()
       // This is used when obj%p is mapped using map clause
       if(A_TYPEG(item->ast) == A_MEM &&
               POINTERG(A_SPTRG(A_MEMG(item->ast))) &&
+              !POINTERG(A_SPTRG(A_PARENTG(item->ast))) &&
               SCG(A_SPTRG(A_MEMG(item->ast))) == SC_BASED) {
         past = get_cc_pointer(A_SPTRG(A_PARENTG(item->ast)),
                                     A_SPTRG(A_MEMG(item->ast)));
