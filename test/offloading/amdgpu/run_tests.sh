@@ -18,7 +18,7 @@ FC=flang
 TARGET_FLAGS="-target x86_64-pc-linux-gnu"
 DEVICE_FLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa"
 MARCH="-march=gfx900"
-VERSION="-mllvm -amdhsa-code-object-version=3"
+VERSION="-mllvm -amdhsa-code-object-version=4"
 #XFLAGS="-Mx,232,0x40"
 XFLAGS=""
 FFLAGS="$TARGET_FLAGS $DEVICE_FLAGS $MARCH $XFLAGS $VERSION -fuse-ld=ld -nogpulib"
