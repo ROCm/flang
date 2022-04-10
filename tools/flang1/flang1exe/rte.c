@@ -340,7 +340,11 @@ sym_get_sdescr(int sptr, int rank)
   DTYPEP(sdsc, dtype);
   STYPEP(sdsc, ST_DESCRIPTOR);
   DCLDP(sdsc, 1);
-  SCP(sdsc, rte_sc);
+  if (flg.omptarget && rte_sc == SC_LOCAL) {
+    SCP(sdsc, SC_STATIC);
+  } else {
+    SCP(sdsc, rte_sc);
+  }
   NODESCP(sdsc, 1);
   DESCARRAYP(sdsc, 1); /* used in detect.c */
   if (DTY(DTYPEG(sptr)) == TY_PTR || IS_PROC_DUMMYG(sptr)) {
