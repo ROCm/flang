@@ -2602,9 +2602,7 @@ exp_ompaccel_bpar(ILM *ilmp, int curilm, SPTR uplevel_sptr, SPTR scopeSptr,
 
     // AOCC begin
     if (!flg.x86_64_omptarget) {
-      ili = ompaccel_nvvm_get(threadIdX);
-      ili = ll_make_kmpc_target_init(ili,
-                                     ompaccel_tinfo_get(gbl.currsub)->mode);
+      ili = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
       iltb.callfg = 1;
       chk_block(ili);
     }
@@ -3274,9 +3272,7 @@ exp_ompaccel_bteams(ILM *ilmp, int curilm, int outlinedCnt, SPTR uplevel_sptr,
     if (flg.omptarget) {
       // AOCC begin
       if (!flg.x86_64_omptarget) {
-        ili = ompaccel_nvvm_get(threadIdX);
-        ili = ll_make_kmpc_target_init(ili,
-                                       ompaccel_tinfo_get(gbl.currsub)->mode);
+        ili = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
         iltb.callfg = 1;
         chk_block(ili);
       }
