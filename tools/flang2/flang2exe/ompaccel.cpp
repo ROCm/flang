@@ -3726,8 +3726,7 @@ ompaccel_set_target_declare() {
 }
 
 bool is_SPMD_mode(OMP_TARGET_MODE mode) {
-  if (mode >= mode_target_teams_distribute_parallel_for
-      && mode <= mode_target_parallel_for_simd) {
+  if (mode == mode_target_parallel) {
     return true;
   }
   return false;
