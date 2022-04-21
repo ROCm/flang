@@ -1736,11 +1736,19 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
   int args[4];
 
   args[3] = gen_null_arg(); /* ident */
-  if (is_SPMD_mode(mode)) {
+  if (mode >= mode_target_teams_distribute_parallel_for &&
+      mode <= mode_target_parallel_for_simd) {
     args[2] = ad_icon(2); /* SPMD Mode */
     args[1] = ad_icon(0); /* UseGenericStateMachine */
-    args[0] = ad_icon(0); /* RequiresFullRuntime */
-//    args[0] = ad_icon(1); /* RequiresFullRuntime */
+    if (mode == mode_target_parallel) {
+     /* RequiresFullRuntime - kmpc_parallel_51 requires full runtime */
+     args[0] = ad_icon(1);
+    }
+    else {
+     /* RequiresFullRuntime - Old Fortran OpenMP API does not require
+      * full runtime */
+       args[0] = ad_icon(0);
+    }
   } else {
     args[2] = ad_icon(1); /* Generic mode */
     args[1] = ad_icon(1); /* UseGenericStateMachine */
@@ -1851,10 +1859,18 @@ ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
   int args[3];
 
   args[2] = gen_null_arg(); /* ident */
-  if (is_SPMD_mode(mode)) {
+  if (mode >= mode_target_teams_distribute_parallel_for &&
+      mode <= mode_target_parallel_for_simd) {
     args[1] = ad_icon(2); /* SPMD Mode */
-    args[0] = ad_icon(0); /* RequiresFullRuntime */
-//    args[0] = ad_icon(1); /* RequiresFullRuntime */
+    if (mode == mode_target_parallel) {
+     /* RequiresFullRuntime - kmpc_parallel_51 requires full runtime */
+     args[0] = ad_icon(1);
+    }
+    else {
+     /* RequiresFullRuntime - Old Fortran OpenMP API does not require
+      * full runtime */
+       args[0] = ad_icon(0);
+    }
   } else {
     args[1] = ad_icon(1); /* Generic mode */
     args[0] = ad_icon(1); /* RequiresFullRuntime */
