@@ -1778,7 +1778,11 @@ bool check_if_skip_symbol(SPTR sym)
 }
 
 int
-ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR helper_func)
+ll_make_kmpc_parallel_51(int global_tid_sptr,
+                         std::vector<int> &symbols,
+                         SPTR helper_func,
+                         SPTR lower,
+                         SPTR upper)
 {
   static int id;
   int n_symbols = get_n_symbols(ompaccel_tinfo_get(gbl.currsub));
@@ -1787,6 +1791,10 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
   DTYPE void_ptr_ptr_t = get_type(2, TY_PTR, void_ptr_t);
   DTYPE arr_dtype;
   int args[9];
+
+  if (lower && upper)
+    n_symbols += 2;
+
   SPTR captured_vars = make_array_sptr(const_cast<char*>("captured_vars_addrs"),
                                                          void_ptr_t,
                                                          n_symbols);
@@ -1798,7 +1806,25 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
                             ad_icon(0),
                             FALSE);
   int j = 0;
-  for (int i = 0; i < n_symbols; ++i) {
+  int i = 0;
+  /* Store lower and upper bounds for loop distribution */
+  if (lower && upper) {
+    ilix = mk_ompaccel_ldsptr(lower);
+    ilix = mk_ompaccel_store(ilix,
+                             DT_INT8,
+                             nme_args,
+                             ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    chk_block(ilix);
+    i++;
+    ilix = mk_ompaccel_ldsptr(upper);
+    ilix = mk_ompaccel_store(ilix,
+                             DT_INT8,
+                             nme_args,
+                             ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    chk_block(ilix);
+    i++;
+  }
+  for (; i < n_symbols; ++i) {
     if (check_if_skip_symbol(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym))
       continue;
     else if (PASSBYVALG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym) &&
@@ -1825,7 +1851,6 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
     }
     chk_block(ilix);
   }
-  
 
   arg_types[0] = DT_CPTR;        /* ident */
   arg_types[1] = DT_INT;         /* global_tid */
@@ -1842,7 +1867,10 @@ ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &symbols, SPTR he
   args[6] = ad_icon(1);                /* if_expr */
   args[5] = ad_icon(-1);               /* num_threads */
   args[4] = ad_icon(-1);               /* proc_bind */
-  args[3] = ad_acon(helper_func, 0);
+  if (helper_func)
+    args[3] = ad_acon(helper_func, 0);
+  else
+    args[3] = gen_null_arg();
   args[2] = gen_null_arg();            /* wrapper_fn */
   args[1] = ad_acon(captured_vars, 0); /* args */
   args[0] = ad_icon(n_symbols);        /* n_args */

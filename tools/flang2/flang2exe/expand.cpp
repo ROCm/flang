@@ -238,6 +238,9 @@ expand(void)
   auto it = process_expanded_map.find(gbl.currsub);
   int process_expanded = 0;
 
+  //we are at the beginning of pragma expansion
+  //make sure that mploop_counter equals to zero
+  reset_mploop_counter();
   // we reset flag because we do not know if we generate initialization
   // function for SPMD kernel (the function with kmpc_parallel_51 call)
   // or the proper kernel code (the function which is passed as an argument
