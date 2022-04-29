@@ -275,7 +275,7 @@ add_class_arg_descr_arg(int func_sptr, int arg_sptr, int new_arg_position)
       int descr_sptr = sym_get_arg_sec(arg_sptr);
       SDSCP(arg_sptr, descr_sptr);
       CCSYMP(descr_sptr, TRUE);
-    }
+    }	
   }
   return FALSE;
 }
@@ -1036,6 +1036,24 @@ fix_class_args(int func_sptr)
       int arg_sptr = aux.dpdsc_base[DPDSCG(func_sptr) + j];
       if (add_class_arg_descr_arg(func_sptr, arg_sptr, new_arg_position))
         ++new_arg_position;
+    }
+  }
+}
+
+void
+fix_class_ptr_args(int func_sptr)
+{
+  if (!have_class_args_been_fixed_already(func_sptr)) {
+    /* type descriptors have not yet been added, so now we add them */
+    int orig_count = PARAMCTG(func_sptr);
+    int new_arg_position = orig_count;
+    int j;
+    for (j = 0; j < orig_count; ++j) {
+      int arg_sptr = aux.dpdsc_base[DPDSCG(func_sptr) + j];
+      if (POINTERG(arg_sptr) && SDSCG(arg_sptr)) {
+       inject_arg(func_sptr, SDSCG(arg_sptr), new_arg_position);
+        ++new_arg_position;
+      }
     }
   }
 }

@@ -2759,6 +2759,7 @@ cmp_interfaces_strict(SPTR sym1, SPTR sym2, cmp_interface_flags flag)
     }
   }
   paramct -= j;
+  if (PDNUMG(sym1)) paramct-=PDNUMG(sym1);
 
   for (j = i = 0; i < paramct2; ++i) {
     psptr2 = aux.dpdsc_base[dpdsc2 + i];
@@ -2767,6 +2768,7 @@ cmp_interfaces_strict(SPTR sym1, SPTR sym2, cmp_interface_flags flag)
     }
   }
   paramct2 -= j;
+  if (PDNUMG(sym2)) paramct2-=PDNUMG(sym2);
 
   if (flg.std != F2008 &&  // AOCC. For f2008, pure attrbute is not considered
       PUREG(sym1) != PUREG(sym2) || IMPUREG(sym1) != IMPUREG(sym2)) {
