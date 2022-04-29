@@ -1481,8 +1481,19 @@ semant1(int rednum, SST *top)
         }
         add_overload(gnr, gbl.currsub);
       }
-      if (gbl.currsub)
+      if (gbl.currsub) {
+        gbl.entries = gbl.currsub;
+	if (!sem.which_pass && sem.interface) {
+	 // fix the arguments here..
+	 int old_p_count = PARAMCTG(gbl.currsub);
+         fix_class_ptr_args(gbl.currsub);
+	 int new_p_count = PARAMCTG(gbl.currsub);
+	 if (old_p_count != new_p_count) {
+	     PDNUMP(gbl.currsub, new_p_count - old_p_count);
+	 }
+	}
         pop_subprogram();
+      }
       break;
     }
 
@@ -14698,7 +14709,7 @@ _do_iface(int iface_state, int i)
   }
   if (proc) {
     DTYPEP(proc, DTYPEG(iface));
-    PARAMCTP(proc, paramct);
+    PARAMCTP(proc, paramct-PDNUMG(iface));
     DPDSCP(proc, dpdsc);
     FVALP(proc, fval);
     PUREP(proc, PUREG(iface));

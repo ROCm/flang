@@ -75,6 +75,7 @@ int dataregion = 0;
 
 static DTYPE tgt_offload_entry_type = DT_NONE;
 extern int HasRequiresUnifiedSharedMemory;
+int mk_ompaccel_load(int ili, DTYPE dtype, int nme);
 
 /* Flags for use with the entry */
 #define DT_VOID_NONE DT_NONE
@@ -565,6 +566,11 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
       if (TY_ISSCALAR(DTY(param_dtype)) && (targetinfo->symbols[i].map_type & OMP_TGT_MAPTYPE_IMPLICIT) || isMidnum) {
         iliy = mk_ompaccel_ldsptr(param_sptr);
         load_dtype = param_dtype;
+        if (isMidnum && 
+            SDSCG(midnum_sym.host_sym) && ALLOCATTRG(param_sptr) && 
+            SCG(param_sptr) == SC_DUMMY) {
+           iliy = mk_ompaccel_load(iliy, DT_ADDR, addnme(NT_VAR, param_sptr, 0, 0));
+        }
       // AOCC Begin
       } else if (targetinfo->symbols[i].ili_sptr && AD_SDSC(ad)
                                                  && AD_ZBASE(ad)) {
@@ -603,10 +609,18 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
           if (numdim == 0 ) useMidnum = false;
         }
       }
-      if(isMidnum && useMidnum )
-        ilix = _tgt_target_fill_size(midnum_sym.host_sym,
+      if(isMidnum && useMidnum ) {
+        if (SDSCG(midnum_sym.host_sym) && ALLOCATTRG(param_sptr) && SCG(param_sptr) == SC_DUMMY) {
+            SPTR sptr = midnum_sym.host_sym;
+            int nme = addnme(NT_VAR, sptr, 0, 0);
+            SPTR sdsc = SDSCG(sptr);
+            ilix=ad3ili(IL_LD, ad_acon(sdsc, 48), nme, MSZ_WORD);
+            ilix = mk_ompaccel_mul(ilix, DT_INT8, ad_kconi(size_of(param_dtype)), DT_INT8);
+        } else
+         ilix = _tgt_target_fill_size(midnum_sym.host_sym,
                                      targetinfo->symbols[i].map_type,
                                      targetinfo->symbols[i].ili_base); // AOCC
+      }
       else
         ilix = _tgt_target_fill_size(param_sptr,
                                      targetinfo->symbols[i].map_type,
