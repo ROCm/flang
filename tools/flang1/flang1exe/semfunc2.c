@@ -2140,7 +2140,7 @@ compat_arg_lists(int formal, int actual)
   if (fdscptr == 0 || adscptr == 0 || (flags & DEFER_IFACE_CHK)) {
     return TRUE; /* No dummy parameter descriptor; can't check. */
   }
-  paramct = PARAMCTG(formal);
+  paramct = PARAMCTG(formal) - PDNUMG(formal);
   if (PARAMCTG(actual) != paramct)
     return FALSE;
   for (i = 0; i < paramct; i++, fdscptr++, adscptr++) {

@@ -1590,6 +1590,7 @@ void semfin(void);
 void ipa_semfin(void);
 void semfin_free_memory(void);
 void fix_class_args(int sptr);
+void fix_class_ptr_args(int sptr);
 void llvm_fix_args(int sptr, LOGICAL is_func);
 void do_equiv(void);
 void init_derived_type(SPTR, int, int);
