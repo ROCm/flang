@@ -558,6 +558,9 @@ eval_ilm_check_if_skip(int ilmx, int *skip_expand, int *process_expanded)
       tmp,     /* temporary				 */
       op1;     /* operand 1				 */
   ILM_OP opcx; /**< ILM opcode of the ILM */
+  static int mp_loop_nest_level;
+  const int mp_loop_second_nest_level = 2;
+  static bool omit_loop_nesting;
 
   int first_op = 0;
 
@@ -582,6 +585,24 @@ eval_ilm_check_if_skip(int ilmx, int *skip_expand, int *process_expanded)
   if (EXPDBG(8, 2))
     fprintf(gbl.dbgfil, "---------- eval ilm  %d\n", ilmx);
 
+  if (flg.omptarget && gbl.ompaccel_intarget && !ll_ilm_is_rewriting()) {
+    if (opcx == IM_MPLOOP) {
+      if (++mp_loop_nest_level == mp_loop_second_nest_level) {
+        omit_loop_nesting = true;
+      }
+    }
+  else if ((opcx == IM_MPLOOPFINI) &&
+           (mp_loop_nest_level == mp_loop_second_nest_level)) {
+    if (omit_loop_nesting) {
+      omit_loop_nesting = false;
+    }
+  }
+  else if (omit_loop_nesting)
+  {
+    //Do not expand ilm instructions for 2nd level of parallelism
+    return sptr1;
+  }
+ }
   if (!ll_ilm_is_rewriting())
   {
 #ifdef OMP_OFFLOAD_LLVM
