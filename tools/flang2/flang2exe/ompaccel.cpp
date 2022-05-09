@@ -2765,11 +2765,16 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
       if (mploop_counter != 2)
         ili = ll_make_kmpc_for_static_init_simple_spmd(&loop_args, sched);
       else {
-	std::vector<int> allocated_symbols;
+        std::vector<int> allocated_symbols;
+        SPTR func_ptr = ll_make_helper_function_for_kmpc_parallel_51
+                          ((SPTR)0,
+                           ompaccel_tinfo_get(gbl.currsub),
+                           loop_args.lower,
+                           loop_args.upper);
         int ilix = ll_make_kmpc_global_thread_num();
         ilix = ll_make_kmpc_parallel_51(ilix,
 			                allocated_symbols,
-                                        (SPTR)0, /*TODO: replace with wrapper fn ptr */
+                                        func_ptr,
                                         loop_args.lower,
                                         loop_args.upper);
         iltb.callfg = 1;

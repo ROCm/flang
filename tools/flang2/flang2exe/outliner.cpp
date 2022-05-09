@@ -477,13 +477,16 @@ ll_get_shared_arg(SPTR func_sptr)
 }
 
 void
-ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL_TINFO *current_tinfo)
+ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL_TINFO *current_tinfo, bool has_bounds_args)
 {
   int count = 0;
   int sym, dtype;
   char name[MXIDLEN + 2];
   int dpdscp = aux.dpdsc_avl;
   int cnt = 0;
+  int number_of_prologue_args = 2;
+  if (has_bounds_args)
+    number_of_prologue_args += 2; //lower and upper bounds
 
   PARAMCTP(func_sptr, paramct);
   DPDSCP(func_sptr, dpdscp);
@@ -492,8 +495,9 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL
        aux.dpdsc_size + paramct + 100);
 
   while (paramct--) {
-    if (current_tinfo && cnt >= 2)
-      sprintf(name, "%s", SYMNAME(ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym));
+    if (current_tinfo && cnt >= number_of_prologue_args)
+      sprintf(name, "%s",
+              SYMNAME(ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-number_of_prologue_args].device_sym));
     else
       sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
     sym = getsymbol(name);
@@ -2685,7 +2689,10 @@ static bool is_complex_type(DTYPE dt)
 }
 
 SPTR
-ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *orig_tinfo)
+ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr,
+                                             OMPACCEL_TINFO *orig_tinfo,
+                                             SPTR lower_bound,
+                                             SPTR upper_bound)
 {
   OMPACCEL_TINFO *current_tinfo;
   SPTR func_sptr;
@@ -2695,21 +2702,29 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
 		  orig_tinfo->n_reduction_symbols;
   int func_args_cnt = get_n_symbols(orig_tinfo);
   func_args_cnt += 2; // global_tid, bound_tid + target_info args
+  if (lower_bound && upper_bound)
+    func_args_cnt += 2; // + lower_bound + upper_bound
   std::vector<DTYPE> func_args(func_args_cnt);
   auto *symbols = orig_tinfo->symbols;
-  func_args[0] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // global_tid
-  func_args[1] = get_type(2, TY_PTR, DT_INT8);//DT_CPTR; // bound_tid
-  
-  for (int k = 2; k < func_args_cnt; k++) {
+  bool has_bounds_args = lower_bound && upper_bound;
+  int i = 2;
+  func_args[0] = get_type(2, TY_PTR, DT_INT8);// global_tid
+  func_args[1] = get_type(2, TY_PTR, DT_INT8);// bound_tid
+  if (has_bounds_args) {
+    func_args[2] = DT_INT8;                   //lower_bound
+    func_args[3] = DT_INT8;                   //upper_bound
+    i += 2;
+  }
+  for (; i < func_args_cnt; i++) {
        if(DT_ISSCALAR( DTYPEG(symbols->device_sym))
           && !is_complex_type(DTYPEG(symbols->device_sym))) {
-	 func_args[k] = DT_CPTR;
+	 func_args[i] = DT_CPTR;
        }
        else if (STYPEG(symbols->host_sym) == ST_STRUCT) {
-         func_args[k] = DT_CPTR;
+         func_args[i] = DT_CPTR;
        }
        else {
-         func_args[k] = DTYPEG(symbols->device_sym);
+         func_args[i] = DTYPEG(symbols->device_sym);
        }
        symbols++;
   }
@@ -2729,7 +2744,7 @@ ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr, OMPACCEL_TINFO *or
   ADDRTKNP(func_sptr, 1);
   OMPACCFUNCDEVP(func_sptr, 1);
   current_tinfo = ompaccel_tinfo_create(func_sptr, max_nargs);
-  ll_make_ftn_outlined_params(func_sptr, func_args_cnt, func_args.data(), current_tinfo);
+  ll_make_ftn_outlined_params(func_sptr, func_args_cnt, func_args.data(), current_tinfo, has_bounds_args);
   ll_process_routine_parameters(func_sptr);
   return func_sptr;
 }
