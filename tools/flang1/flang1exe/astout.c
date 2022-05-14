@@ -59,7 +59,7 @@ static int indent; /* number of indentation levels */
 #define CARDB_SIZE 300 /* make it large enough */
 static char lbuff[CARDB_SIZE];
 
-#define MAX_FNAME_LEN 258
+#define MAX_FNAME_LEN 4096
 static LOGICAL ast_is_comment = FALSE;
 static LOGICAL op_space = TRUE;
 
