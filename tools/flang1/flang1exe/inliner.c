@@ -64,7 +64,7 @@
 #define INLINER_VERSION 14
 
 #define MAX_INLINE_NAME 42
-#define MAX_FNAME_LEN 256
+#define MAX_FNAME_LEN 4096
 #define TOC_HEADER_FMT "Inliner TOC V.%d"
 #define TOC_ENTRY_FMT "%s %s %s %s"
 #define MODNAME_FMT "i%d.e"
