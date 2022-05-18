@@ -1797,6 +1797,17 @@ init_output_file(void)
   ll_write_module_header(gbl.asmfil, llvm_get_current_module());
 }
 
+//AOCC Begin
+static void init_openmp_constants()
+{
+  //Define OpenMP constants
+  fprintf(gbl.ompaccfile, "@__omp_rtl_debug_kind = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_teams_oversubscription = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0\n");
+}
+//AOCC End
+
 void
 init_gpu_output_file(void)
 {
@@ -1804,8 +1815,10 @@ init_gpu_output_file(void)
     return;
   FTN_GPU_INIT() = 1;
 #ifdef OMP_OFFLOAD_LLVM
-  if(flg.omptarget)
+  if(flg.omptarget) {
     ll_write_module_header(gbl.ompaccfile, gpu_llvm_module);
+    init_openmp_constants();
+  }
 #endif
 }
 
