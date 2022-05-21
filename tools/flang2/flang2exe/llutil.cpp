@@ -54,6 +54,54 @@ typedef struct LLDEF {
   struct LLDEF *next;
 } LLDEF;
 
+static const char *openmp_functions[] = {
+  "omp_set_dynamic",
+  "omp_get_dynamic",
+  "omp_set_num_threads",
+  "omp_get_max_threads",
+  "omp_get_level",
+  "omp_get_active_level",
+  "omp_in_parallel",
+  "omp_get_schedule",
+  "omp_set_schedule",
+  "omp_get_ancestor_thread_num",
+  "omp_get_thread_num",
+  "omp_get_team_size",
+  "omp_get_num_threads",
+  "omp_get_thread_limit",
+  "omp_get_num_procs",
+  "omp_set_nested",
+  "omp_get_nested",
+  "omp_set_max_active_levels",
+  "omp_get_max_active_levels",
+  "omp_get_proc_bind",
+  "omp_get_num_places",
+  "omp_get_place_num_procs",
+  "omp_get_place_proc_ids",
+  "omp_get_place_num",
+  "omp_get_partition_num_places",
+  "omp_get_partition_place_nums",
+  "omp_get_cancellation",
+  "omp_set_default_device",
+  "omp_get_default_device",
+  "omp_get_num_devices",
+  "omp_get_device_num",
+  "omp_get_num_teams",
+  "omp_get_team_num",
+  "omp_get_initial_device",
+  "omp_is_initial_device",
+  "omp_get_num_threads"
+};
+
+static bool is_openmp_function(const char *name) {
+  const int num_items = sizeof(openmp_functions)/sizeof(char *);
+  for (int i = 0; i < num_items; ++i) {
+    if (!strcmp(name, openmp_functions[i])) {
+      return true;
+    }
+  }
+  return false;
+}
 #if DEBUG
 static const char *ot_names[OT_LAST] = {
     "OT_NONE",   "OT_CONSTSPTR", "OT_VAR",  "OT_TMP",        "OT_LABEL",
@@ -1797,6 +1845,17 @@ init_output_file(void)
   ll_write_module_header(gbl.asmfil, llvm_get_current_module());
 }
 
+//AOCC Begin
+static void init_openmp_constants()
+{
+  //Define OpenMP constants
+  fprintf(gbl.ompaccfile, "@__omp_rtl_debug_kind = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_teams_oversubscription = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0\n");
+  fprintf(gbl.ompaccfile, "@__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0\n");
+}
+//AOCC End
+
 void
 init_gpu_output_file(void)
 {
@@ -1804,8 +1863,10 @@ init_gpu_output_file(void)
     return;
   FTN_GPU_INIT() = 1;
 #ifdef OMP_OFFLOAD_LLVM
-  if(flg.omptarget)
+  if(flg.omptarget) {
     ll_write_module_header(gbl.ompaccfile, gpu_llvm_module);
+    init_openmp_constants();
+  }
 #endif
 }
 
@@ -4040,7 +4101,18 @@ ll_abi_for_missing_prototype(LL_Module *module, DTYPE return_dtype,
 LL_ABI_Info *
 ll_abi_for_func_sptr(LL_Module *module, SPTR func_sptr, DTYPE dtype)
 {
-  return process_ll_abi_func_ftn_mod(module, func_sptr, false);
+  LL_ABI_Info *abi;
+  abi = process_ll_abi_func_ftn_mod(module, func_sptr, false);
+  // AOCC Begin
+  // Do not mark OpenMP API functions as variadic
+  // If we mark them as variadic we will have
+  // undefined references if we want to build the code with -O0 flag
+  if (is_openmp_function(SYMNAME(func_sptr))) {
+    abi->missing_prototype = false;
+    abi->call_as_varargs = false;
+  }
+  // AOCC End
+  return abi;
 }
 
 LL_ABI_Info *
