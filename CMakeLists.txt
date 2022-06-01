@@ -13,6 +13,13 @@
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0057 NEW)
 
+if(${ENABLE_DEVEL_PACKAGE})
+  set(DEVEL_PACKAGE "devel/")
+endif()
+if(${ENABLE_RUN_PACKAGE})
+  set(RUN_PACKAGE "runtime/")
+endif()
+
 # In order to bootstrap the runtime library we need to skip
 # CMake's Fortran tests
 SET(CMAKE_Fortran_COMPILER_WORKS 1)
@@ -324,9 +331,9 @@ macro(add_flang_library name)
 #  link_system_libs( ${name} )  # getd of cmake warning messages
 
   install(TARGETS ${name}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION bin)
+    LIBRARY DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
+    ARCHIVE DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
+    RUNTIME DESTINATION ${DEVEL_PACKAGE}bin)
   set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
 endmacro(add_flang_library)
 
@@ -346,7 +353,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 if (FLANG_BUILD_RUNTIME)
 # Install Fortran module files
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
-  DESTINATION include
+  DESTINATION ${DEVEL_PACKAGE}include
   )
 endif()
 
@@ -354,7 +361,7 @@ endif()
 # Copy omp_lib.h file, not the symlink
 get_filename_component(OMP_LIB_H_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/omp_lib.h REALPATH)
 install(FILES ${OMP_LIB_H_PATH}
-  DESTINATION include
+  DESTINATION ${DEVEL_PACKAGE}include
   )
 
 add_definitions( -D_GNU_SOURCE )
