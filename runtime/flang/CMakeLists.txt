@@ -23,6 +23,10 @@
 
 enable_language(C ASM Fortran) # Enable assembly and Fortran
 
+if(${ENABLE_DEVEL_PACKAGE})
+  set(DEVEL_PACKAGE "/devel/")
+endif()
+
 SET(ASM_OPTIONS "-DLINUX_ELF")
 SET(CMAKE_ASM_FLAGS "${CFLAGS} ${ASM_OPTIONS}" )
 SET(CMAKE_SHARED_LINKER_FLAGS "-no-flang-libs")
@@ -461,8 +465,8 @@ if(EXISTS bin/flang1)
   set(FLANG2_DEP bin/flang2)
 else()
   # when just building runtime, flang1 flang2 binaries should have been installed
-  set(FLANG1_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang1)
-  set(FLANG2_DEP ${CMAKE_INSTALL_PREFIX}/bin/flang2)
+  set(FLANG1_DEP ${CMAKE_INSTALL_PREFIX}${DEVEL_PACKAGE}/bin/flang1)
+  set(FLANG2_DEP ${CMAKE_INSTALL_PREFIX}${DEVEL_PACKAGE}/bin/flang2)
 endif()
 
 # Fortran files with macros as module names need to be preprocessed.
