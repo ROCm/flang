@@ -333,8 +333,8 @@ macro(add_flang_library name)
 #  link_system_libs( ${name} )  # getd of cmake warning messages
 
   install(TARGETS ${name}
-    LIBRARY DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
+    LIBRARY DESTINATION ${RUN_PACKAGE}${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${RUN_PACKAGE}${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR})
   set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
 endmacro(add_flang_library)
