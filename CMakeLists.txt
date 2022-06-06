@@ -67,7 +67,9 @@ set(CMAKE_HOST_SYSTEM_PROCESSOR ${TARGET_ARCHITECTURE})
 # standalone project, using LLVM as an external library:
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   project(Flang)
-
+  # Set default libdir to be "lib" for ROCm, distros will override this anyway:
+  set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
+  include(GNUInstallDirs)
   # Rely on llvm-config.
   set(CONFIG_OUTPUT)
 
@@ -333,7 +335,7 @@ macro(add_flang_library name)
   install(TARGETS ${name}
     LIBRARY DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
     ARCHIVE DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION ${DEVEL_PACKAGE}bin)
+    RUNTIME DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR})
   set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
 endmacro(add_flang_library)
 
@@ -353,7 +355,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 if (FLANG_BUILD_RUNTIME)
 # Install Fortran module files
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
-  DESTINATION ${DEVEL_PACKAGE}include
+  DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_INCLUDEDIR}
   )
 endif()
 
@@ -361,7 +363,7 @@ endif()
 # Copy omp_lib.h file, not the symlink
 get_filename_component(OMP_LIB_H_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/omp_lib.h REALPATH)
 install(FILES ${OMP_LIB_H_PATH}
-  DESTINATION ${DEVEL_PACKAGE}include
+  DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_INCLUDEDIR}
   )
 
 add_definitions( -D_GNU_SOURCE )
