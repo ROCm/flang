@@ -1,7 +1,5 @@
-#
-# Copyright (c) 2021, Advanced Micro Devices, Inc. All rights reserved.
-#
-#
+# Copyright(C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
 ########## Make rule for test procedure pointer assignment ########
 ppm1: run
 

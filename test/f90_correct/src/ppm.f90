@@ -1,6 +1,4 @@
-! Copyright (c) 2021, Advanced Micro Devices, Inc. All rights reserved.
-!
-! Date of Modification: April 2021
+! Copyright(C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
 Module a
 contains
