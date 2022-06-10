@@ -1,7 +1,4 @@
-# Copyright (c) 2021, Advanced Micro Devices, Inc. All rights reserved.
-#
-# Date of Modification: May 2021
-#
+# Copyright(C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
 ########## Make rule to test Big array initialization ########
 
