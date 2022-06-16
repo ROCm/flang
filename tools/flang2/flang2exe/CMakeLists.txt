@@ -166,7 +166,7 @@ target_include_directories(flang2
 
 # Install flang2 executable
 install(TARGETS flang2
-  RUNTIME DESTINATION ${DEVEL_PACKAGE}bin)
+  RUNTIME DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR})
 
 # Local Variables:
 # mode: cmake
