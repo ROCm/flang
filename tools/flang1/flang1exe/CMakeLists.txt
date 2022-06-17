@@ -161,7 +161,7 @@ target_link_libraries(flang1
 
 # Install flang1 executable
 install(TARGETS flang1
-  RUNTIME DESTINATION bin)
+  RUNTIME DESTINATION ${DEVEL_PACKAGE}bin)
 
 # Local Variables:
 # mode: cmake
