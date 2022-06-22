@@ -1317,7 +1317,7 @@ semant2(int rednum, SST *top)
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     if(flg.omptarget)
-      if (sem.parallel || sem.task || sem.target || sem.teams || sem.orph) {
+      if (sem.target || sem.teams) {
         // replace obj%p(i) with ptr(i) to map and access the pointer member
         // where, p is a pointer member of obj a structure type variable
         //        ptr is a compiler created pointer
