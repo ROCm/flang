@@ -503,8 +503,8 @@ eval_ilm(int ilmx)
             OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
             if (tinfo) {
               ompaccel_tinfo_current_set(tinfo);
+              exp_ompaccel_reduction(ilmpx, ilmx);
             }
-            exp_ompaccel_reduction(ilmpx, ilmx);
             ompaccel_tinfo_current_set(temp_tinfo);
             // AOCC End
           }

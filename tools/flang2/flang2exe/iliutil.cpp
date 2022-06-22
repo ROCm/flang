@@ -2594,6 +2594,14 @@ lowered_to_device_libm(ILI_OP opc,int op1,int op2)
         (void)mk_prototype("cdexp", "f pure", DT_DCMPLX, 1, DT_DCMPLX);
         ilix = ad_func(IL_DFRDP, IL_QJSR, "cdexp", 1, op1);
         return ad1altili(opc, op1, ilix);
+      case IL_SCMPLXABS:
+        (void)mk_prototype("cabs", "f pure", DT_FLOAT, 1, DT_CMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cabs", 1, op1);
+        return ad1altili(opc, op1, ilix);
+      case IL_DCMPLXABS:
+        (void)mk_prototype("cdabs", "f pure", DT_DBLE, 1, DT_DCMPLX);
+        ilix = ad_func(IL_DFRDP, IL_QJSR, "cdabs", 1, op1);
+        return ad1altili(opc, op1, ilix);
       case IL_SCMPLXLOG:
         (void)mk_prototype("clog", "f pure", DT_CMPLX, 1, DT_CMPLX);
         ilix = ad_func(IL_DFRDP, IL_QJSR, "clog", 1, op1);
@@ -12870,6 +12878,16 @@ prilitree(int i)
   case IL_DCMPLXEXP:
     n = 1;
     opval = "cdexp";
+    goto intrinsic;
+    break;
+  case IL_SCMPLXABS:
+    n = 1;
+    opval = "cabs";
+    goto intrinsic;
+    break;
+  case IL_DCMPLXABS:
+    n = 1;
+    opval = "cdabs";
     goto intrinsic;
     break;
   case IL_SCMPLXCOS:
