@@ -789,13 +789,13 @@ ll_write_local_objects(FILE *out, LL_Function *function)
       fprintf(out, ", addrspace(%d)",final_addrspace);
     fputc('\n', out);
     if (final_addrspace != 0) {
-      fprintf(out, "\t%s = addrspacecast %s addrspace(%d)* %s.tmp to %s*",
+      fprintf(out, "\t%s = addrspacecast ptr addrspace(%d) %s.tmp to ptr",
                             object->address.data, object->type->str, final_addrspace,
                             object->address.data, object->type->str);
       fputc('\n', out);
     }
     if (object->type->data_type == LL_I32 || object->type->data_type == LL_I64) {
-      fprintf(out, "\tstore %s 0, %s* %s",object->type->str, object->type->str, object->address.data);
+      fprintf(out, "\tstore %s 0, ptr %s",object->type->str, object->type->str, object->address.data);
       if (object->align_bytes)
         fprintf(out, ", align %u", object->align_bytes);
       fputc('\n', out);
