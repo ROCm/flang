@@ -67,7 +67,9 @@ set(CMAKE_HOST_SYSTEM_PROCESSOR ${TARGET_ARCHITECTURE})
 # standalone project, using LLVM as an external library:
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   project(Flang)
-
+  # Set default libdir to be "lib" for ROCm, distros will override this anyway:
+  set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
+  include(GNUInstallDirs)
   # Rely on llvm-config.
   set(CONFIG_OUTPUT)
 
@@ -296,11 +298,11 @@ else()
   set(FLANG_HAS_VERSION_PATCHLEVEL 0)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon -Wno-implicit-function-declaration -Wno-implicit-int")
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM -Wno-implicit-function-declaration -Wno-implicit-int")
   option(WITH_WERROR "Compile with '-Werror' C compiler flag" ON)
   if (WITH_WERROR)
 	  # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
@@ -331,9 +333,9 @@ macro(add_flang_library name)
 #  link_system_libs( ${name} )  # getd of cmake warning messages
 
   install(TARGETS ${name}
-    LIBRARY DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION ${RUN_PACKAGE}lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION ${DEVEL_PACKAGE}bin)
+    LIBRARY DESTINATION ${RUN_PACKAGE}${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${RUN_PACKAGE}${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR})
   set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
 endmacro(add_flang_library)
 
@@ -353,7 +355,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 if (FLANG_BUILD_RUNTIME)
 # Install Fortran module files
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
-  DESTINATION ${DEVEL_PACKAGE}include
+  DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_INCLUDEDIR}
   )
 endif()
 
@@ -361,7 +363,7 @@ endif()
 # Copy omp_lib.h file, not the symlink
 get_filename_component(OMP_LIB_H_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/omp_lib.h REALPATH)
 install(FILES ${OMP_LIB_H_PATH}
-  DESTINATION ${DEVEL_PACKAGE}include
+  DESTINATION ${DEVEL_PACKAGE}${CMAKE_INSTALL_INCLUDEDIR}
   )
 
 add_definitions( -D_GNU_SOURCE )

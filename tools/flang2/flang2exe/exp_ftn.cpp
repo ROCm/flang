@@ -187,6 +187,9 @@ verify_supported_device_mathfn(ILM_OP opc)
       case IM_CEXP:      return IL_SCMPLXEXP;
       case IM_CDEXP:     return IL_DCMPLXEXP;
 
+      case IM_CABS:      return IL_SCMPLXABS;
+      case IM_CDABS:     return IL_DCMPLXABS;
+
       case IM_CLOG:      return IL_SCMPLXLOG;
       case IM_CDLOG:     return IL_DCMPLXLOG;
 

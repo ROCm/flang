@@ -2426,6 +2426,41 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
     // AOCC end
 
     sym = ompaccel_create_device_symbol(sptr, count);
+
+    // AOCC Begin
+    if (flg.x86_64_omptarget || flg.amdgcn_target) {
+      /* Workaround for 6750 compilation error
+      *  A conflict of dtype is there when mapping character pointer defined in a struct
+      *  type of the target of pointer should be TY_KIND
+      */
+      for (int j = 0; j < current_tinfo->n_quiet_symbols; ++j) {
+        if (MIDNUMG(current_tinfo->quiet_symbols[j].host_sym) == sptr)
+          if (POINTERG(current_tinfo->quiet_symbols[j].host_sym)) {
+            // type of target, must be an array
+            DTYPE dtype = DTYPEG(current_tinfo->quiet_symbols[j].host_sym);
+            if (DTY(dtype) == TY_ARRAY) {
+              // type for pointer
+              DTYPE dtype1 = DTYPE(dtype + 1);
+              // type of element in the array, must be character
+              dtype = DTySeqTyElement(dtype);
+              if (DTY(dtype) == TY_CHAR || DTY(dtype) == TY_NCHAR) {
+                // type of target of the pointer, must be TY_KIND
+                dtype1 = DTySeqTyElement(dtype1);
+                // TODO: add more TY_KIND checks if needed
+                if (DTY(dtype1) != TY_WORD
+                    && DTY(dtype1) != TY_DWORD
+                    && DTY(dtype1) != TY_PTR
+                    && DTY(dtype1) != TY_ANY) {
+                  // setting to TY_WORD is fine.
+                  DTySet(dtype1,TY_WORD);
+                }
+              }
+            }
+          }
+      }
+    }
+    // AOCC End
+
     count++;
     current_tinfo->symbols[i].device_sym = sym;
     OMPACCDEVSYMP(sym, TRUE);

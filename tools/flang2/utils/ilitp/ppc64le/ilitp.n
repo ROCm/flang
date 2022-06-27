@@ -807,6 +807,15 @@ Double-precision complex exponential.
 .AT arth null cd cse
 .CG notCG
 
+.IL SCMPLXABS cslnk
+Single-precision complex abs.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXABS cdlnk
+Double-precision complex abs.
+.AT arth null cd cse
+.CG notCG
 .IL SCMPLXCOS cslnk
 Single-precision complex cosine.
 .AT arth null cs cse

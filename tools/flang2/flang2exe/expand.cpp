@@ -503,8 +503,8 @@ eval_ilm(int ilmx)
             OMPACCEL_TINFO *temp_tinfo = ompaccel_tinfo_current_get();
             if (tinfo) {
               ompaccel_tinfo_current_set(tinfo);
+              exp_ompaccel_reduction(ilmpx, ilmx);
             }
-            exp_ompaccel_reduction(ilmpx, ilmx);
             ompaccel_tinfo_current_set(temp_tinfo);
             // AOCC End
           }
@@ -688,40 +688,40 @@ eval_ilm(int ilmx)
      * sharing model. It does extra work and allocates device on-chip memory.
      * */
     if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
-      ilix = ompaccel_nvvm_get(threadIdX);
-      ilix = ll_make_kmpc_target_init(ilix,
-                                      ompaccel_tinfo_get(gbl.currsub)->mode);
-      iltb.callfg = 1;
+      ilix = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
+
       /* Generate new control flow for generic kernel */
+      target_code_lab = getlab();
+      exit_code_lab = getlab();
+      ilix = ad4ili(IL_ICJMP, ilix, ad_icon(-1), CC_EQ, target_code_lab);
+
+      /* Write block which contains OpenMP initialization call */
+      chk_block(ilix);
+      wr_block();
+      cr_block();
+
+      /* Create and write block which contains return instruction. */
+      RFCNTI(exit_code_lab);
+      exp_label(exit_code_lab);
+      expb.curilt = addilt(expb.curilt, ad1ili(IL_EXIT, gbl.currsub));
+      BIH_XT(expb.curbih) = 1;
+      BIH_LAST(expb.curbih) = 1;
+      wr_block();
+
+      /* Create and set as active block where target pragma code
+       * will be located  */
+      RFCNTI(target_code_lab);
+      exp_label(target_code_lab);
+
       if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
-        chk_block(ilix);
-      } else {
-        target_code_lab = getlab();
-        exit_code_lab = getlab();
-        ilix = ad4ili(IL_ICJMP, ilix, ad_icon(-1), CC_EQ, target_code_lab);
-
-        /* Write block which contains OpenMP initialization call */
-        chk_block(ilix);
-        wr_block();
-        cr_block();
-
-        /* Create and write block which contains return instruction. */
-        RFCNTI(exit_code_lab);
-        exp_label(exit_code_lab);
-        expb.curilt = addilt(expb.curilt, ad1ili(IL_EXIT, gbl.currsub));
-        BIH_XT(expb.curbih) = 1;
-        BIH_LAST(expb.curbih) = 1;
-        wr_block();
-
-        /* Create and set as active block where target pragma code
-         * will be located  */
-        RFCNTI(target_code_lab);
-        exp_label(target_code_lab);
-
         iltb.callfg = 1;
-        wr_block();
-        cr_block();
+        ilix = ll_make_kmpc_global_thread_num();
+        chk_block(ilix);
       }
+
+      iltb.callfg = 1;
+      wr_block();
+      cr_block();
     }
   }
 #endif

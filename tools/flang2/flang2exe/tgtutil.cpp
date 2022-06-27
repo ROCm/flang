@@ -471,7 +471,7 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     if(isPointer) {
       for (j = 0; j < targetinfo->n_quiet_symbols; ++j) {
         SPTR midnum_sptr = MIDNUMG(targetinfo->quiet_symbols[j].host_sym);
-        if (midnum_sptr == param_sptr || HASHLKG(midnum_sptr) == param_sptr) {
+        if (midnum_sptr == param_sptr /*|| HASHLKG(midnum_sptr) == param_sptr */) {
           midnum_sym = targetinfo->quiet_symbols[j];
           // AOCC Begin
           // No need to put `TO` in map type for 'target update from'

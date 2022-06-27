@@ -500,7 +500,7 @@ int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 /**
   \brief kernel init
 */
-int ll_make_kmpc_target_init(int, OMP_TARGET_MODE);
+int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD

@@ -1152,6 +1152,16 @@ Double-precision complex exponential.
 .AT arth null cd cse
 .CG notCG
 
+.IL SCMPLXABS cslnk
+Single-precision complex abs.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXABS cdlnk
+Double-precision complex abs.
+.AT arth null cd cse
+.CG notCG
+
 .\" AOCC begin
 .IL QCMPLXEXP cqlnk
 Quad-precision complex exponential.
