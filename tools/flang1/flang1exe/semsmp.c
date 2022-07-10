@@ -161,6 +161,7 @@ int distribute_pdo_ast = 0; /* AOCC */
 int distribute_doif = 0; /* AOCC */
 int tgt_distribute_ast = 0; /* AOCC */
 struct collapse_loop collapse_loop = {0, 0, 0, 0};
+static int map_exit_data = 0;
 
 /*-------- define data structures and macros local to this file: --------*/
 
@@ -1712,7 +1713,9 @@ semsmp(int rednum, SST *top)
     (void)leave_dir(DI_TARGETEXITDATA, TRUE, 0);
   }
     SST_ASTP(LHS, 0);
+    map_exit_data = 1;
     do_map();
+    map_exit_data = 0;
     break;
   /*
    *	<mp stmt> ::= <targetupdate begin> <opt par list> |
@@ -8485,9 +8488,8 @@ do_map()
       //        ptr is a compiler created pointer
       //
       // This is used when obj%p is mapped using map clause
-      if(A_TYPEG(item->ast) == A_MEM &&
+      if(!map_exit_data && A_TYPEG(item->ast) == A_MEM &&
               POINTERG(A_SPTRG(A_MEMG(item->ast))) &&
-              !POINTERG(A_SPTRG(A_PARENTG(item->ast))) &&
               SCG(A_SPTRG(A_MEMG(item->ast))) == SC_BASED) {
         past = get_cc_pointer(A_SPTRG(A_PARENTG(item->ast)),
                                     A_SPTRG(A_MEMG(item->ast)));
