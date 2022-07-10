@@ -4008,14 +4008,7 @@ ptrsubr_call(SST *stktop, ITEM *list)
     /* sptr is a function */
     error(84, 3, gbl.lineno, SYMNAME(sptr), "- attempt to CALL a FUNCTION");
   dtype = DTYPEG(sptr);
-#if DEBUG
-  assert(DTY(dtype) == TY_PTR, "ptrsubr_call, expected TY_PTR dtype", sptr, 4);
-#endif
   dtproc = DTY(dtype + 1);
-#if DEBUG
-  assert(DTY(dtproc) == TY_PROC, "ptrsubr_call, expected TY_PROC dtype", sptr,
-         4);
-#endif
   dtype = DTY(dtproc + 1);
   iface = DTY(dtproc + 2);
   paramct = DTY(dtproc + 3);
