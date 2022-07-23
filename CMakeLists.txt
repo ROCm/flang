@@ -298,7 +298,7 @@ else()
   set(FLANG_HAS_VERSION_PATCHLEVEL 0)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon -Wno-implicit-function-declaration -Wno-implicit-int")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion")
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
