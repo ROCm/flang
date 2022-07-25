@@ -1625,12 +1625,12 @@ lldbg_create_local_variable_mdnode(LL_DebugInfo *db, int dw_tag,
        * unique metadata node. Avoiding "Overlapping fragments".
        *
        * Incorrect case: Overlapping fragments:
-       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
-       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
+       * call void @llvm.dbg.declare(metadata ptr %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata ptr %tmp.sroa.5, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
        *
        * Corected case: No-Overlapping fragments:
-       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
-       * call void @llvm.dbg.declare(metadata i64* %tmp.sroa.5, metadata !20, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
+       * call void @llvm.dbg.declare(metadata ptr %tmp.sroa.0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))..
+       * call void @llvm.dbg.declare(metadata ptr %tmp.sroa.5, metadata !20, metadata !DIExpression(DW_OP_LLVM_fragment, 0 64))..
        * */
       llmd_set_distinct(mdb);
   }

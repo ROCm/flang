@@ -593,7 +593,7 @@ findBihForGtid()
  *    where 'this' is gbl.curr_func.
  *
  * * If this is a task, the 1st formal param represents the gtid: i32 gtid.
- * * If this is an outlined func, the 1st formal represents gtid: i32* gtid.
+ * * If this is an outlined func, the 1st formal represents gtid: ptr gtid.
  */
 int
 ll_get_gtid_val_ili(void)
@@ -717,13 +717,13 @@ ll_make_sections_args(SPTR lbSym, SPTR ubSym, SPTR stSym, SPTR lastSym)
 {
   static int args[9];
 
-  args[8] = genNullArg();            /* i32* ident     */
+  args[8] = genNullArg();            /* ptr ident     */
   args[7] = ll_get_gtid_val_ili();   /* i32 tid        */
   args[6] = ad_icon(KMP_SCH_STATIC); /* i32 schedule   */
-  args[5] = ad_acon(lastSym, 0);     /* i32* plastiter */
-  args[4] = ad_acon(lbSym, 0);       /* i32* plower    */
-  args[3] = ad_acon(ubSym, 0);       /* i32* pupper    */
-  args[2] = ad_acon(stSym, 0);       /* i32* pstridr   */
+  args[5] = ad_acon(lastSym, 0);     /* ptr plastiter */
+  args[4] = ad_acon(lbSym, 0);       /* ptr plower    */
+  args[3] = ad_acon(ubSym, 0);       /* ptr pupper    */
+  args[2] = ad_acon(stSym, 0);       /* ptr pstridr   */
   args[1] = ad_icon(1);              /* i32 incr       */
   args[0] = ad_icon(0);              /* i32 chunk      */
   ADDRTKNP(lbSym, 1);
