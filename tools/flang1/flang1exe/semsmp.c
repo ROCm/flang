@@ -8221,6 +8221,10 @@ do_tofrom()
       (void)add_stmt(ast);
       A_LOPP(ast, item->ast);
       A_PRAGMATYPEP(ast, item->t.cltype);
+      // AOCC Begin
+      if (A_TYPEG(item->ast) == A_MEM)
+        A_ROPP(ast, A_PARENTG(item->ast));
+      // AOCC End
     }
   }
   if (CL_PRESENT(CL_FROM)) {
@@ -8230,6 +8234,10 @@ do_tofrom()
       (void)add_stmt(ast);
       A_LOPP(ast, item->ast);
       A_PRAGMATYPEP(ast, item->t.cltype);
+      // AOCC Begin
+      if (A_TYPEG(item->ast) == A_MEM)
+        A_ROPP(ast, A_PARENTG(item->ast));
+      // AOCC End
     }
   }
   ast = mk_stmt(A_MP_EMAP, 0);
