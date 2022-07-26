@@ -14924,7 +14924,7 @@ store_return_value_for_entry(OPERAND *p, int i_name)
     print_token(", align 4\n");
   } else {
     TMPS *loadtmp;
-    /*  %10 = bitcast ptr %__master_entry_rslt323 to <{float, float}>*  */
+    /*  %10 = bitcast i64* %__master_entry_rslt323 to <{float, float}>*  */
     print_token("\t");
     print_tmp_name(tmp);
     print_token(" = bitcast ");

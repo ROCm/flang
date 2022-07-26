@@ -994,7 +994,7 @@ generic_dummy_dtype(void)
 }
 
 /* This was originally just i8*, but to avoid only loading 1 byte,
- * we now represent dummys as ptr or ptr in fortran.
+ * we now represent dummys as i32* or i64* in fortran.
  */
 LL_Type *
 make_generic_dummy_lltype(void)
@@ -1404,7 +1404,7 @@ make_lltype_from_sptr(SPTR sptr)
       if (llis_integral_kind(sdtype)) {
     /* do nothing */
   } else if (llis_pointer_kind(sdtype)) {
-    /* make it i8* - use ptr or ptr  */
+    /* make it i8* - use i32* or i64*  */
     if (sc == SC_DUMMY)
       return make_generic_dummy_lltype();
     if (DTY(sdtype) == TY_PTR && sdtype != DT_ADDR)
@@ -1417,7 +1417,7 @@ make_lltype_from_sptr(SPTR sptr)
       llt = ll_get_pointer_type(ll_create_int_type(llvm_get_current_module(), 8));
     }
   } else if (llis_array_kind(sdtype)) {
-    /* all dummy argument are ptr or ptr */
+    /* all dummy argument are i32* or i64* */
     if (SCG(sptr) == SC_DUMMY) {
       llt = make_generic_dummy_lltype();
       goto return_llt;
