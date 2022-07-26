@@ -331,7 +331,7 @@ ll_process_routine_parameters(SPTR func_sptr)
   param_num = 0;
 
   /* Create a dummy LL_Type for use when passing by ref.
-   * This will either be a ptr or ptr.
+   * This will either be a i32* or i64*.
    */
   ref_dtype = generic_dummy_dtype();
   ref_dummy = make_generic_dummy_lltype();
@@ -1398,7 +1398,7 @@ print_entry_subroutine(LL_Module *module)
       if (!DT_ISCMPLX(rettype) || !CMPLXFUNC_C) {
         return_ll_type = make_lltype_from_dtype(rettype);
 
-        /* %1 = load i32, ptr %cp1_300, align 4 */
+        /* %1 = load i32, i32* %cp1_300, align 4 */
         tmp = make_tmps();
         print_tmp_name(tmp);
         print_token(" = load ");
