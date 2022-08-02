@@ -313,6 +313,8 @@ if (APPLE)
   set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
 endif ()
 
+find_library(LIBQUADMATH_LOC quadmath NAMES libquadmath.so libquadmath.so.0 REQUIRED)
+
 macro(add_flang_library name)
   llvm_process_sources(srcs ${ARGN})
   if (MODULE)
@@ -329,7 +331,7 @@ macro(add_flang_library name)
   endif( LLVM_COMMON_DEPENDS )
 
   llvm_config( ${name} ${LLVM_LINK_COMPONENTS} )
-  target_link_libraries( ${name} ${LLVM_COMMON_LIBS} -lquadmath)
+  target_link_libraries( ${name} ${LLVM_COMMON_LIBS} ${LIBQUADMATH_LOC})
 #  link_system_libs( ${name} )  # getd of cmake warning messages
 
   install(TARGETS ${name}
