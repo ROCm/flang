@@ -298,11 +298,11 @@ else()
   set(FLANG_HAS_VERSION_PATCHLEVEL 0)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion -Wno-enum-constexpr-conversion")
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM -Wno-implicit-function-declaration -Wno-implicit-int")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings -g -DOMP_OFFLOAD_LLVM -Wno-implicit-function-declaration -Wno-implicit-int -Wno-enum-constexpr-conversion")
   option(WITH_WERROR "Compile with '-Werror' C compiler flag" ON)
   if (WITH_WERROR)
 	  # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
