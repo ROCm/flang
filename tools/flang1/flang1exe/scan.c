@@ -292,6 +292,9 @@ static LOGICAL long_pragma_candidate; /* current statement may be a
                                        * long directive/pragma */
 static int scmode;        /* scan mode - used to interpret alpha tokens
                            * Possible states and values are: */
+static LOGICAL metadir_colon;
+static LOGICAL inside_metadir;
+
 #define SCM_FIRST 1
 #define SCM_IDENT 2
 #define SCM_FORMAT 3
@@ -320,6 +323,7 @@ static int scmode;        /* scan mode - used to interpret alpha tokens
 #define SCM_TYPEIS 25
 #define SCM_DEFINED_IO 26
 #define SCM_CHEVRON 27
+#define SCM_METADIR 28
 
 static int par_depth;            /* current parentheses nesting depth */
 static LOGICAL past_equal;       /* set if past the equal sign */
@@ -412,6 +416,7 @@ scan_init(FILE *fd)
   init_ktable(&ppragma_kw);
   init_ktable(&kernel_kw);
   init_ktable(&pgi_kw);
+  init_ktable(&meta_kw);
 
   if (XBIT(49, 0x1040000)) {
     /* T3D/T3E or C90 Cray targets */
@@ -560,6 +565,15 @@ _get_token(INT *tknv)
   static int lparen;
   tknval = 0;
 
+  if (metadir_colon) {
+    scmode = SCM_PAR;
+    if (classify_smp() == 0) {
+      currc = NULL;
+      goto retry;
+    }
+    metadir_colon = FALSE;
+    goto ret_token;
+  }
 retry:
   if (currc == NULL) {
     scnerrfg = FALSE;
@@ -582,6 +596,8 @@ retry:
       scn.id.avl = 0;
       currc = stmtb;
       scmode = SCM_FIRST;
+      metadir_colon = FALSE;
+      inside_metadir = FALSE;
       integer_only = FALSE;
       par_depth = 0;
       past_equal = FALSE;
@@ -769,7 +785,7 @@ again:
         /* (/.../) can only occur inside () or on RHS */
         /* scmode = SCM_OPERATOR; */
       } else if (scmode != SCM_FORMAT && scmode != SCM_OPERATOR &&
-                 scmode != SCM_PAR) {
+                 scmode != SCM_PAR && scmode != SCM_METADIR) {
         par_depth++;
         acb_depth++;
         currc++;
@@ -790,9 +806,18 @@ again:
       }
       lparen = 1;
     }
+    if (scmode == SCM_METADIR && tkntyp == TK_DEFAULT) {
+      metadir_colon = TRUE;
+    }
     check_ccon();
     break;
 
+  case '{':
+    tkntyp = TK_LBRACE;
+    break;
+  case '}':
+    tkntyp = TK_RBRACE;
+    break;
   case '[':
     tkntyp = TK_ACB;
     if (classify_ac_type()) {
@@ -807,7 +832,8 @@ again:
     goto ret_token;
 
   case ')': /* return right paren */
-    par_depth--;
+    if (scmode != SCM_METADIR)
+      par_depth--;
     if (par_depth == 0) {
       if (scmode == SCM_IO)
         scmode = SCM_IDENT;
@@ -918,6 +944,9 @@ again:
         par1_attr = false;
         goto ret_token;
       }
+    }
+    if(scmode == SCM_METADIR) {
+      metadir_colon = TRUE;
     }
     tkntyp = TK_COLON;
     if (scn.stmtyp == TK_USE) {
@@ -2604,6 +2633,11 @@ classify_smp(void)
           scn.stmtyp = tkntyp = TK_MP_ENDDOSIMD;
           goto end_shared_nowait;
         }
+        if (k == 4 && strncmp(cp, "loop", 4) == 0) {
+          cp += 4;
+          scn.stmtyp = tkntyp = TK_MP_LOOP;
+          goto end_shared_nowait;
+        }
         if (strncmp(cp, "distribute", 10) == 0) {
           cp += 10;
           scn.stmtyp = tkntyp = TK_MP_ENDDISTRIBUTE;
@@ -3585,6 +3619,11 @@ taskloop:
     scmode = SCM_PAR;
     break;
 
+  case TK_MP_LOOP:
+    scn.stmtyp = tkntyp = TK_MP_LOOP;
+    scmode = SCM_PAR;
+    break;
+
   case TK_MP_TARGTEAMS:
     if ((*cp == ' ' && (is_ident(cp + 1)) &&
          strncmp(cp + 1, "distribute", 10) == 0) ||
@@ -3643,6 +3682,15 @@ taskloop:
         }
       } else {
         scn.stmtyp = tkntyp = TK_MP_TARGTEAMSDIST;
+      }
+    } else {
+      if ((*cp == ' ' && (is_ident(cp + 1)) &&
+           strncmp(cp + 1, "loop", 4) == 0) ||
+          (is_ident(cp) && strncmp(cp, "loop", 4) == 0)) {
+            scn.stmtyp = tkntyp = TK_MP_TARGTEAMSDISTPARDO;
+            if (*cp == ' ')
+              ++cp;
+            cp += 4;
       }
     }
     scmode = SCM_PAR;
@@ -3972,6 +4020,13 @@ taskloop:
                 break;
               }
             }
+          } else if ((*cp == ' ' && (is_ident(cp + 1)) &&
+             strncmp(cp + 1, "loop", 4) == 0) ||
+              (is_ident(cp) && strncmp(cp, "loop", 4) == 0)) {
+            scn.stmtyp = tkntyp = TK_MP_TARGTEAMSDISTPARDO;
+            if (*cp == ' ')
+              ++cp;
+            cp += 4;
           }
         }
         break;
@@ -4009,6 +4064,10 @@ taskloop:
     scmode = SCM_PAR;
     break;
 
+  case TK_MP_METADIR:
+    scn.stmtyp = tkntyp = TK_MP_METADIR;
+    scmode = SCM_METADIR;
+    break;
 
   case TKF_TARGETENTER:
     if (is_freeform && *cp == ' ' && (k = is_ident(cp + 1)) == 4 &&
@@ -4451,6 +4510,12 @@ alpha(void)
   --cp; /* point to first char after identifier
          * string */
   o_idlen = idlen = cp - currc;
+
+  if (idlen >= 4 && scmode != SCM_METADIR && inside_metadir &&
+      (!strncmp(id, "when", 4) || !strncmp(id, "default", 7))) {
+    scmode = SCM_METADIR;
+    par_depth = 0;
+  }
 
   /* step 2 - check scan mode to determine further processing */
 
@@ -4918,6 +4983,13 @@ alpha(void)
       goto return_identifier;
     }
     break;
+  case SCM_METADIR:
+    tkntyp = keyword(id, &meta_kw, &idlen, sig_blanks);
+    if (tkntyp == 0) {
+      goto return_identifier;
+    }
+    inside_metadir = TRUE;
+    goto alpha_exit;
 
   default:
     interr("alpha: bad scan mode", scmode, 4);
@@ -7073,6 +7145,8 @@ check_ccon(void)
   case SCM_CHEVRON:
     scmode = SCM_IDENT;
     goto return_paren;
+  case SCM_METADIR:
+    goto return_paren;
   default:
     goto return_paren;
   }
@@ -7257,7 +7331,8 @@ check_ccon(void)
 return_paren:
   currc = save_currc;
   tkntyp = TK_LPAREN; /* add as case in _rd_token() */
-  par_depth++;
+  if (scmode != SCM_METADIR)
+    par_depth++;
 }
 
 /*  A dot (.) has been reached.  The token is either a keyword
@@ -9463,12 +9538,16 @@ _rd_token(INT *tknv)
     par_depth++;
     break;
   case TK_RPAREN:
-    par_depth--;
+    if (scmode != SCM_METADIR)
+      par_depth--;
     if (bind_state == B_FUNC_FOUND) {
       bind_state = B_RPAREN_FOUND;
     }
     if (par_depth == 0 && scmode == SCM_IF)
       scmode = SCM_FIRST;
+    break;
+  case TK_LBRACE:
+  case TK_RBRACE:
     break;
   default:
     if (scmode == SCM_FIRST) {

@@ -367,6 +367,8 @@ insert_comm_before(int std, int ast, LOGICAL *rhs_is_dist, LOGICAL is_subscript)
   case A_MP_IS_DEVICE_PTR: // AOCC
   case A_MP_USE_DEVICE_ADDR: // AOCC
   case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
+  case A_MP_LOOP: // AOCC
+  case A_MP_ELOOP: // AOCC
     return a;
   default:
     interr("insert_comm_before: unknown expression", std, 2);
@@ -4339,6 +4341,8 @@ transform_all_call(int std, int ast)
   case A_MP_IS_DEVICE_PTR: // AOCC
   case A_MP_USE_DEVICE_ADDR: // AOCC
   case A_MP_REQUIRESUNIFIEDSHAREDMEMORY: // AOCC
+  case A_MP_LOOP: // AOCC
+  case A_MP_ELOOP: // AOCC
     return a;
   case A_PRAGMA:
     return a;

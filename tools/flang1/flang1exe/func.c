@@ -4573,6 +4573,11 @@ rewrite_calls(void)
     case A_MP_USE_DEVICE_PTR: // AOCC
     case A_MP_IS_DEVICE_PTR: // AOCC
     case A_MP_USE_DEVICE_ADDR: // AOCC
+    case A_MP_LOOP: // AOCC
+    case A_MP_ELOOP: // AOCC
+    case A_ID: // AOCC
+    case A_SUBSCR: // AOCC
+    case A_BINOP: // AOCC
       break;
     default:
       interr("rewrite_subroutine: unknown stmt found", ast, 4);

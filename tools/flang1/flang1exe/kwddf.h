@@ -444,6 +444,7 @@ static KWORD t6[] = {
     {"enddo", TK_MP_ENDPDO},
     {"enddosimd", TK_MP_ENDDOSIMD},
     {"endmaster", TK_MP_ENDMASTER},
+    {"endmetadirective", TK_MP_ENDMETADIR}, // AOCC
     {"endordered", TK_MP_ENDORDERED},
     {"endparallel", TK_MP_ENDPARALLEL},
     {"endparalleldo", TK_MP_ENDPARDO},
@@ -476,9 +477,11 @@ static KWORD t6[] = {
     {"endworkshare", TK_MP_ENDWORKSHARE},
     {"flush", TK_MP_FLUSH},
     {"master", TK_MP_MASTER},
+    {"metadirective", TK_MP_METADIR}, // AOCC
     {"ordered", TK_MP_ORDERED},
     {"parallel", TK_MP_PARALLEL},
     {"paralleldo", TK_MP_PARDO},
+    {"loop", TK_MP_LOOP},
     {"paralleldosimd", TK_MP_PARDOSIMD},
     {"parallelsections", TK_MP_PARSECTIONS},
     {"parallelworkshare", TK_MP_PARWORKSHR},
@@ -556,6 +559,13 @@ static KWORD t12[] = {
     {"", 0}, /* a keyword index must be nonzero */
     {"compare", TK_PGICOMPARE},
 };
+static KWORD t13[] = {
+    {"", 0}, /* a keyword index must be nonzero */
+    {"condition", TK_CONDITION},
+    {"default", TK_DEFAULT},
+    {"user", TK_USER},
+    {"when", TK_WHEN},
+};
 
 /* ****  NOTE -- each of these must appear in a call to init_ktable() in
  *               scan_init().
@@ -571,6 +581,7 @@ static KTABLE pragma_kw = {sizeof(t8) / sizeof(KWORD), &t8[0]};
 static KTABLE ppragma_kw = {sizeof(t9) / sizeof(KWORD), &t9[0]};
 static KTABLE kernel_kw = {sizeof(t11) / sizeof(KWORD), &t11[0]};
 static KTABLE pgi_kw = {sizeof(t12) / sizeof(KWORD), &t12[0]};
+static KTABLE meta_kw = {sizeof(t13) / sizeof(KWORD), &t13[0]};
 
 /* char classification macros */
 

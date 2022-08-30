@@ -453,7 +453,7 @@ typedef struct {               // construct (DO, IF, etc.) stack entries
 
 #define NEED_DOIF(df, typ)                                               \
   {                                                                      \
-    df = ++sem.doif_depth;                                               \
+    df =  ++sem.doif_depth;                                               \
     NEED(df + 1, sem.doif_base, DOIF, sem.doif_size, sem.doif_size + 8); \
     BZERO(sem.doif_base+df, DOIF, 1);                                    \
     DI_LINENO(df) = gbl.lineno;                                          \
@@ -1440,6 +1440,12 @@ typedef struct {
     int allocs;
     int nodes;
   } stats;
+  struct {
+    LOGICAL whencondition;
+    LOGICAL whenexpanded;
+    LOGICAL defaultcondition;
+    LOGICAL whenconditionvalue;
+  }metadirective;
   LOGICAL seen_import;        /* import stmt in an interface seen */
   void *save_aconst;          /* saves SST of array constructor */
   ITEM *alloc_mem_initialize; /* list of allocatable members to initialize */

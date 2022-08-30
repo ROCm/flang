@@ -100,7 +100,7 @@ static void private_check();
 static void deallocate_no_scope_sptr();
 static int get_stblk_uplevel_sptr();
 static int add_firstprivate_assn(int, int, int);
-static void begin_combine_constructs(BIGINT64);
+static bool  begin_combine_constructs(BIGINT64);
 static void end_targteams();
 static LOGICAL is_last_private(int);
 static void mp_add_shared_var(int, int);
@@ -705,6 +705,10 @@ semsmp(int rednum, SST *top)
    *	<mp begin> ::=
    */
   case MP_BEGIN1:
+    parstuff_init();
+    break;
+ 
+  case LOOP_BEGIN1:
     parstuff_init();
     break;
 
@@ -1587,6 +1591,11 @@ semsmp(int rednum, SST *top)
    *	<mp stmt> ::= <simd begin> <opt par list> |
    */
   case MP_STMT41:
+    if (sem.metadirective.whencondition) {
+      if (sem.metadirective.whenexpanded) { break; }
+      if (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue) { break; }
+      sem.metadirective.whenexpanded = true;
+    }
     clause_errchk(BT_SIMD, "OMP SIMD");
     sem.collapse = 0;
     if (CL_PRESENT(CL_COLLAPSE)) {
@@ -1868,7 +1877,8 @@ semsmp(int rednum, SST *top)
   case MP_STMT56:
     ast = 0;
     clause_errchk((BT_DISTRIBUTE | BT_PARDO), "OMP DISTRIBUTE PARALLE DO");
-    begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO));
+    if (!begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO)))
+	break;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
@@ -1903,7 +1913,7 @@ semsmp(int rednum, SST *top)
     ast = 0;
     clause_errchk((BT_DISTRIBUTE | BT_PARDO | BT_SIMD),
                   "OMP DISTRIBUTE PARALLE DO SIMD");
-    begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    if (!begin_combine_constructs((BT_DISTRIBUTE | BT_PARDO | BT_SIMD))) break;
     DI_ISSIMD(sem.doif_depth) = TRUE;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
@@ -1953,7 +1963,7 @@ semsmp(int rednum, SST *top)
   case MP_STMT62:
     ast = 0;
     clause_errchk((BT_TARGET | BT_PAR), "OMP TARGET PARALLEL");
-    begin_combine_constructs((BT_TARGET | BT_PAR));
+    if (!begin_combine_constructs((BT_TARGET | BT_PAR))) break;
     SST_ASTP(LHS, ast);
     break;
   /*
@@ -1990,7 +2000,7 @@ semsmp(int rednum, SST *top)
   case MP_STMT64:
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TARGET | BT_PARDO), "OMP TARGET PARALLEL DO");
-    begin_combine_constructs((BT_TARGET | BT_PARDO));
+    if (!begin_combine_constructs((BT_TARGET | BT_PARDO))) break;
     sem.expect_do = TRUE;
     break;
   /*
@@ -2032,7 +2042,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TARGET | BT_PARDO | BT_SIMD),
                   "OMP TARGET PARALLEL DO SIMD");
-    begin_combine_constructs((BT_TARGET | BT_PARDO | BT_SIMD));
+    if (!begin_combine_constructs((BT_TARGET | BT_PARDO | BT_SIMD))) break;
     sem.expect_do = TRUE;
     DI_ISSIMD(sem.doif_depth) = TRUE;
     break;
@@ -2105,7 +2115,7 @@ semsmp(int rednum, SST *top)
    */
   case MP_STMT72:
     clause_errchk((BT_TARGET | BT_TEAMS), "OMP TARGET TEAMS");
-    begin_combine_constructs((BT_TARGET | BT_TEAMS));
+    if (!begin_combine_constructs((BT_TARGET | BT_TEAMS))) break;
     SST_ASTP(LHS, 0);
     break;
   /*
@@ -2121,7 +2131,7 @@ semsmp(int rednum, SST *top)
   case MP_STMT74:
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE), "OMP TEAMS DISTRIBUTE");
-    begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE));
+    if (!begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE))) break;
     sem.expect_do = TRUE;
     break;
   /*
@@ -2139,7 +2149,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_SIMD),
                   "OMP TEAMS DISTRIBUTE SIMD");
-    begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_SIMD));
+    if (!begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_SIMD))) break;
     sem.expect_do = TRUE;
     break;
   /*
@@ -2157,7 +2167,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE),
                   "OMP TARGET TEAMS DISTRIBUTE");
-    begin_combine_constructs((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE));
+    if (!begin_combine_constructs((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE))) break;
     sem.expect_do = TRUE;
     break;
   /*
@@ -2175,7 +2185,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_SIMD),
                   "OMP TARGET TEAMS DISTRIBUTE SIMD");
-    begin_combine_constructs((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_SIMD));
+    if (!begin_combine_constructs((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_SIMD))) break;
     sem.expect_do = TRUE;
     break;
   /*
@@ -2193,7 +2203,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO),
                   "OMP TEAMS DISTRIBUTE PARALLEL Do");
-    begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO));
+    if (!begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO))) break;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
@@ -2238,7 +2248,7 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD),
                   "OMP TEAMS DISTRIBUTE PARALLEL DO SIMD");
-    begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    if (!begin_combine_constructs((BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD))) break;
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     // If we have seen a target pragma already, change the mode to
@@ -2267,8 +2277,8 @@ semsmp(int rednum, SST *top)
     SST_ASTP(LHS, 0);
     clause_errchk((BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD),
                   "OMP TARGET TEAMS DISTRIBUTE PARDO SIMD");
-    begin_combine_constructs(
-        (BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD));
+    if (!begin_combine_constructs(
+        (BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD))) break;
     doif = SST_CVALG(RHS(1));
     DI_ISSIMD(doif) = TRUE;
     break;
@@ -2323,6 +2333,108 @@ semsmp(int rednum, SST *top)
   case MP_STMT93:
     ast = mk_stmt(A_MP_REQUIRESUNIFIEDSHAREDMEMORY, 0);
     SST_ASTP(LHS, ast);
+    break;
+
+  case MP_STMT94:
+    break;
+
+  case MP_STMT95:
+  case MP_STMT96:
+    ast = mk_stmt(A_MP_LOOP, 0);
+    SST_ASTP(LHS, ast);
+    break;
+
+  case  MP_METADIR_DEFAULT_STMT1:
+    sem.metadirective.defaultcondition = true;
+    break;
+  case MP_METADIR1:
+    // TODO:
+    sem.metadirective.whencondition = false;
+    sem.metadirective.whenexpanded = false;
+    sem.metadirective.defaultcondition = false;
+    // some cleanup stuff: TODO:
+    SST_ASTP(RHS(0),0);
+    SST_ASTP(RHS(1),0);
+    SST_ASTP(RHS(2),0);
+    SST_ASTP(RHS(3),0);
+    break;
+
+  /* AOCC
+   * <mp metadir clause> ::= <mp metadir clause> <mp metadir when clause>
+   */
+  case MP_METADIR_CLAUSE1:
+    // TODO:
+    sem.metadirective.whencondition = true;
+    sem.metadirective.whenexpanded = false;
+    sem.metadirective.defaultcondition = false;
+    SST_IDP(LHS, 0);
+    break;
+
+  /* AOCC
+   * <mp metadir clause> ::= <mp metadir clause> <mp metadir default clause>
+   */
+  case MP_METADIR_CLAUSE2:
+    // TODO:
+//    fprintf(stderr, " <mp metadir clause> <mp metadir default clause> \n");
+    break;
+
+  case MP_METADIR_CLAUSE3:
+    // TODO:
+//    fprintf(stderr, " <mp metadir clause3> <mp metadir default clause> \n");
+    sem.metadirective.defaultcondition = true;
+    break;
+
+  case MP_METADIR_DEFAULT_CLAUSE1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir default  clause> \n");
+    sem.metadirective.defaultcondition = true;
+    break;
+
+  case MP_METADIR_CONDITION1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition  1> \n");
+    break;
+
+  case MP_METADIR_CONDITION2:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition  2> \n");
+    break;
+
+  /* AOCC
+   * <mp metadir condition> ::= <mp metadir conditon base>
+   */
+  case MP_METADIR_CONDITION_BASE1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition  base> \n");
+    break;
+
+  case MP_METADIR_WHEN_CLAUSE1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir when  clause> \n");
+    break;
+
+  case MP_METADIR_CONDITION_BASE2:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition> , <mp metadir condition  base> \n");
+    break;
+
+  case MP_METADIR_CONDITION_BASE_USER1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition> , <mp metadir condition  base user> %d\n", rhstop);
+    sem.metadirective.whenconditionvalue = SST_CVALG(RHS(6));
+    break;
+
+  /* AOCC
+   * <mp metadir condition base impl> ::= IMPLEMENTATION = { VENDOR ( <ident> ) }
+   */
+  case MP_METADIR_CONDITION_BASE_IMPL1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition> , <mp metadir condition  base impl> \n");
+    break;
+
+  case MP_METADIR_CONDITION_BASE_DEVICE1:
+    // TODO:
+//    fprintf(stderr, "  <mp metadir condition> , <mp metadir condition  base device> \n");
     break;
 
   /* ------------------------------------------------------------------ */
@@ -2846,6 +2958,12 @@ semsmp(int rednum, SST *top)
     CL_LAST(clause) = itemend;
     break;
   }
+  /*
+   *    <par attr> ::= BIND ( <id name> PARALLEL/TEAMS )
+   */
+   case PAR_ATTR42:  
+    // TODO:
+     break;
      // AOCC END
      /* ------------------------------------------------------------------ */
   /*
@@ -3859,6 +3977,12 @@ semsmp(int rednum, SST *top)
    *	<simd begin> ::= <mp simd>
    */
   case SIMD_BEGIN1:
+    // KVF point
+    if (sem.metadirective.whencondition) {
+      if (sem.metadirective.whenexpanded) { break; }
+      if (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue) { break; }
+      sem.metadirective.whenexpanded = true;
+    }
     parstuff_init();
     doif = enter_dir(DI_SIMD, FALSE, 0, DI_B(DI_ATOMIC_CAPTURE));
     SST_CVALP(LHS, sem.doif_depth); /* always pass up do's DOIF index */
@@ -6753,6 +6877,13 @@ emit_btarget(int atype)
   int ast, shast;
   int sptr, stblk;
 
+  if (sem.metadirective.whencondition) {
+//      if (sem.metadirective.whenexpanded) { --sem.doif_depth; return 0; }
+//      if (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue) { --sem.doif_depth; return 0; }
+      if (sem.metadirective.whenexpanded) { return 0; }
+      if (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue) {  return 0; }
+      sem.metadirective.whenexpanded = true;
+  }
   ast = mk_stmt(atype, 0);
   sem.target++;
   if (CL_PRESENT(CL_IF)) {
@@ -9571,7 +9702,7 @@ restore_clauses(void)
 
 /* handle begin combine constructs for target/teams/distribute/parallel/do
  */
-static void
+static bool
 begin_combine_constructs(BIGINT64 construct)
 {
   int doif = sem.doif_depth;
@@ -9583,6 +9714,13 @@ begin_combine_constructs(BIGINT64 construct)
 #if defined(OMP_OFFLOAD_LLVM) || defined(OMP_OFFLOAD_PGI)
   combinedMode = get_omp_combined_mode(construct);
   if (flg.omptarget) {
+    if (sem.metadirective.whencondition) {
+      if (sem.metadirective.whenexpanded || 
+          (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue)) { 
+	       --sem.doif_depth; 
+           return false; 
+      }
+    }
     if (!CL_PRESENT(CL_SCHEDULE)) {
       if (combinedMode == mode_target_teams_distribute_parallel_for_simd ||
           combinedMode == mode_target_teams_distribute_parallel_for)
@@ -9682,7 +9820,7 @@ begin_combine_constructs(BIGINT64 construct)
     if ((BT_PARDO & construct)) {
       par_push_scope(TRUE);
     }
-    return;
+    return true;
   }
   if ((BT_PARDO & construct)) {
     if (do_enter) {
@@ -9710,8 +9848,9 @@ begin_combine_constructs(BIGINT64 construct)
     DI_BPAR(doif) = emit_bpar();
     par_push_scope(FALSE);
     begin_parallel_clause(sem.doif_depth);
-    return;
+    return true;
   }
+  return true;
 }
 
 void
@@ -10060,7 +10199,7 @@ return_it:
   return cur;
 }
 
-static int
+int
 leave_dir(int typ,               /* end of which structured directive */
           LOGICAL ignore_nested, /* ignore directive if nested within itself */
           LOGICAL ignore_sev /* error severity if nested directive ignored */

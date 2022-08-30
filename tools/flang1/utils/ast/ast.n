@@ -2801,6 +2801,8 @@ If set,  it is distribute loop
 If set, it is distribute parallel loop
 .FL TASKLOOP f3
 If set, it is taskloop
+.FL LOOP f3
+If set, it is loop
 .FL CALLFG
 May be referenced
 .lp
@@ -3136,6 +3138,9 @@ AST pointer to the corresponding \f(CWA_MP_ENDTASK\fP.
 .SM MP_TASKLOOP
 .SI "taskloop"
 .lp
+.SM MP_LOOP
+.SI "loop"
+.lp
 .SM MP_REQUIRESUNIFIEDSHAREDMEMORY
 .SI "requiresunifiedsharedmemory"
 .lp
@@ -3275,6 +3280,18 @@ AST pointer to the corresponding \f(CWA_MP_TASK\fP.
 .SI "endtaskloop"
 .lp
 OpenMP endtaskloop directive.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ELOOP
+.SI "endloop"
+.lp
+OpenMP endloop directive.
 .lp
 .ul
 Flags
