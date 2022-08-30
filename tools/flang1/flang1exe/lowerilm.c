@@ -5523,6 +5523,12 @@ lower_stmt(int std, int ast, int lineno, int label)
   case A_MP_ENDDISTRIBUTE:
     break;
 
+  case A_MP_LOOP:
+    break;
+
+  case A_MP_ELOOP:
+    break;
+
   case A_MP_ETASKLOOP:
     --lowersym.task_depth;
     if (lowersym.parallel_depth == 0 && lowersym.task_depth == 0)
@@ -5728,6 +5734,10 @@ lower_stmt(int std, int ast, int lineno, int label)
   case A_TRIPLE:
   case A_WHERE:
     ast_error("unsupported ast optype in statement", ast);
+    break;
+  case A_ID: // TODO:
+  case A_SUBSCR: // TODO:
+  case A_BINOP: // TODO:
     break;
   default:
     ast_error("unknown ast optype in statement", ast);

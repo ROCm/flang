@@ -1792,11 +1792,39 @@
 		<mp endteamsdistpardosimd> |
 		<targteamsdistpardosimd begin> <opt par list> |
 		<mp endtargteamsdistpardosimd> |
-                <mp taskgroup> |
-                <mp endtaskgroup> |
-                <mp cancellationpoint> <id name>  |
-                <mp requiresunifiedsharedmemory>
+        <mp taskgroup> |
+        <mp endtaskgroup> |
+        <mp cancellationpoint> <id name>  |
+        <mp requiresunifiedsharedmemory> |
+		<mp metadir> |
+		<mp endmetadir> |
+		<loop begin> <opt par list>
 
+<mp metadir> ::= METADIRECTIVE <mp metadir clause>
+
+<mp metadir clause> ::= |
+		<mp metadir clause> <mp metadir when clause> |
+		<mp metadir clause> <mp metadir default clause>
+
+<mp metadir when clause> ::= WHEN ( <mp metadir condition> : <mp stmt> )
+
+<mp metadir default clause> ::= <mp metadir default stmt> ( <mp stmt> )
+<mp metadir default stmt> ::= DEFAULT
+
+<mp metadir condition> ::= |
+		<mp metadir condition base> |
+		<mp metadir condition> , <mp metadir condition base>
+
+<mp metadir condition base> ::= <mp metadir condition base user> |
+		<mp metadir condition base impl> |
+		<mp metadir condition base device>
+
+<mp metadir condition base user> ::= USER = { CONDITION ( <expression> ) }
+
+<mp metadir condition base impl> ::= IMPLEMENTATION = { VENDOR ( <ident> ) }
+
+<mp metadir condition base device> ::= DEVICE = { ARCH ( <quoted string> ) }
+ 
 
 <opt csident> ::= |
 		  ( <id name> )
@@ -1878,7 +1906,8 @@
                NOWAIT |
 			USE_DEVICE_PTR ( <accel data list> ) |
 			IN_REDUCTION ( <in_reduction> ) |
-			USE_DEVICE_ADDR ( <accel data list> )
+			USE_DEVICE_ADDR ( <accel data list> ) |
+            BIND ( <expression> )
 
 <opt expression> ::= |
 	             ( <expression> )
@@ -1985,6 +2014,8 @@
 <single begin> ::= <mp single>
 
 <pdo begin> ::= <mp pdo>
+
+<loop begin> ::= <mp loop>
 
 <mp atomic begin> ::= <mp atomic>
 

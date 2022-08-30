@@ -1108,7 +1108,7 @@ semant1(int rednum, SST *top)
       stt = sem.tkntyp;
       if (stt == TK_NAMED_CONSTRUCT)
         stt = get_named_stmtyp();
-      if (stt != TK_DO) {
+      if (stt != TK_DO && stt != TK_MP_METADIR) {
         /*
          * The collapse value is larger than the number of loops;
          * this needs to be a fatal error since the DOIF stack

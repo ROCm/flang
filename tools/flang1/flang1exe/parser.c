@@ -703,6 +703,12 @@ prettytoken(int tkntyp, INT tknval)
   case TK_MP_REQUIRESUNIFIEDSHAREDMEMORY:
     sprintf(symbuf, "%s", "REQUIRES UNIFIED_SHARED_MEMORY");
     break;
+  case TK_MP_METADIR:
+    sprintf(symbuf, "%s", "METADIRECTIVE");
+    break;
+  case TK_MP_ENDMETADIR:
+    sprintf(symbuf, "%s", "ENDMETADIRECTIVE");
+    break;
   // AOCC End
   case TK_MP_SECTION:
     sprintf(symbuf, "SECTION");

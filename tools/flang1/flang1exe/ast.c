@@ -6223,6 +6223,8 @@ ast_trav_recurse(int ast, int *extra_arg)
   case A_MP_EPDO:
   case A_MP_BORDERED:
   case A_MP_EORDERED:
+  case A_MP_LOOP:
+  case A_MP_ELOOP:
     break;
   case A_PREFETCH:
 #if DEBUG

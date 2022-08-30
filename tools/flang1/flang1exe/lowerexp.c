@@ -5096,7 +5096,7 @@ lower_intrinsic(int ast)
   return ilm;
 } /* lower_intrinsic */
 
-#if AST_MAX != 171 // AOCC - 169 + 1 + 1
+#if AST_MAX != 173 // AOCC - 169 + 1 + 1
 #error "Need to edit lowerexp.c to add or delete A_... AST types"
 #endif
 
