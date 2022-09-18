@@ -1700,23 +1700,20 @@ transform_call(int std, int ast)
              * if the passed object argument (denoted with tbp_inv) is a
              * derived type component and the declared type is abstract.
              */
-            if ((A_TYPEG(ele) == A_SUBSCR) ||
-                (i == (tbp_inv-1) && (STYPEG(sptrsdsc) == ST_MEMBER || 
+            if (A_TYPEG(ele) == A_SUBSCR ||
+                (i == (tbp_inv-1) && (STYPEG(sptrsdsc) == ST_MEMBER ||
                                       ABSTRACTG(VTABLEG(entry))))) {
               /* Create temporary descriptor argument for the
                * the element.
                */
+
               int dest_ast;
               int dtype = A_DTYPEG(ele);
               int tmpv = get_tmp_descr(dtype);
               int src_ast = check_member(ele, mk_id(sptrsdsc));
-	      int sptrsdsc1 = sptrsdsc;
+
               sptrsdsc = SDSCG(tmpv);
               dest_ast = mk_id(sptrsdsc);
-	      if (STYPEG(sptrsdsc1) == ST_MEMBER ) {
-		SCG(sptrsdsc) = SC_PRIVATE;
-	      }
-
               if (i == (tbp_inv-1)) {
                 A_INVOKING_DESCP(ast, dest_ast);
               }

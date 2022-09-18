@@ -1025,7 +1025,7 @@ handle_arguments(int ast, int symfunc, int via_ptr)
 #endif
 
   if (CLASSG(tbp_bind) && VTOFFG(tbp_bind) &&
-      (INVOBJG(tbp_bind) /* || NOPASSG(tbp_mem) */)) { /* NOPASS needs fixing */
+      (INVOBJG(tbp_bind) || NOPASSG(tbp_mem))) { /* NOPASS needs fixing */
     via_tbp = 1;
     if (NOPASSG(tbp_mem)) {
       tbp_nopass_arg = pass_sym_of_ast(A_LOPG(ast));
@@ -1039,9 +1039,6 @@ handle_arguments(int ast, int symfunc, int via_ptr)
       tbp_nopass_arg = tbp_nopass_sdsc = 0;
     }
   } else {
-    via_tbp = 0;
-  }
-  if (A_INVOKING_DESCG(ast) && (SCG(sym_of_ast(A_INVOKING_DESCG(ast))) == SC_PRIVATE)) {
     via_tbp = 0;
   }
 
