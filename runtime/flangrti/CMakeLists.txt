@@ -9,6 +9,8 @@ enable_language(C ASM) # Enable assembly
 SET(ASM_OPTIONS "-DLINUX_ELF")
 SET(CMAKE_ASM_FLAGS "${CFLAGS} ${ASM_OPTIONS}" )
 
+SET(CFLAGS, "${CFLAGS} -w")
+
 if( ${TARGET_ARCHITECTURE} STREQUAL "x86_64" )
   set(ARCH_DEP_FILES 
     x86_64-Linux/x86_daz.c

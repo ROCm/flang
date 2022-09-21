@@ -25,13 +25,13 @@ if(${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES "x86_64" AND NOT ${LIBPGMATH_WITH_GENER
       HOST_LINUX LINUX LINUX86 LINUX8664 MAXCPUS=256 MAXCPUSL=8 MAXCPUSR=8
       TARGET_LINUX TARGET_LINUX_X86 TARGET_LINUX_X8664 TARGET_X86 TARGET_X8664
       __gnu_linux__ PG_PIC)
-    set(FLAGS_L1 "-m64 -O3 ")
+    set(FLAGS_L1 "-m64 -O3 -w ")
 
     set(DEFINITIONS_L2
       LINUX LINUX86 LINUX8664 MAXCPUS=256 MAXCPUSL=8 MAXCPUSR=8 __gnu_linux__
       TARGET_LINUX TARGET_LINUX_X86 TARGET_LINUX_X8664 TARGET_X86 TARGET_X8664
       PG_PIC)
-    set(FLAGS_L2 "-m64 -O3 -mtune=core-avx2 -march=core-avx2 ")
+    set(FLAGS_L2 "-m64 -O3 -mtune=core-avx2 -march=core-avx2 -w ")
 
     # common
     # Definitions and compiler flags for level 1 directories
