@@ -102,6 +102,8 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND ${LIBPGMATH_SYSTEM_PROCESSOR} MATCHES 
   string(REPLACE "-std=c++11" "-std=gnu++11" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 
+SET(CMAKE_CFLAGS, "${CMAKE_C_CFLAGS} -w")
+
 # Needs to be changed to support cross-compilation
 include(GetHostTriple)
 get_host_triple(LIBPGMATH_HOST_TRIPLE)
