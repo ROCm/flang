@@ -14203,7 +14203,7 @@ process_formal_arguments(LL_ABI_Info *abi)
    \param arg  an argument's info record
  */
 static void
-print_arg_attributes(LL_ABI_ArgInfo *arg)
+print_arg_attributes(LL_ABI_ArgInfo *arg, bool noalias_prop)
 {
 
   // AOCC:Functions arguments are by default assumed to be not aliased
@@ -14211,7 +14211,7 @@ print_arg_attributes(LL_ABI_ArgInfo *arg)
   // document (NOTE 12.29 and NOTE 12.30 version: J3/04-007 May 10, 2004 11:07),
   // the values in the overlapping region of arguments is unpredictable.
   // Use option -func-args_alias to disable the same.
-  if (!flg.func_args_alias && arg->type->data_type == LL_PTR) {
+  if (!flg.func_args_alias && arg->type->data_type == LL_PTR && noalias_prop) {
     print_token(" noalias");
   }
 
@@ -14281,7 +14281,10 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
   if (LL_ABI_HAS_SRET(abi)) {
     print_token(" void");
   } else {
-    print_arg_attributes(&abi->arg[0]);
+    bool noalias_prop = false;
+    if (strstr(fn_name, "f90_alloc") != 0)
+       noalias_prop = true;
+    print_arg_attributes(&abi->arg[0], noalias_prop);
     print_space(1);
     print_token(abi->extend_abi_return ? make_lltype_from_dtype(DT_INT)->str
                                        : abi->arg[0].type->str);
@@ -14310,7 +14313,7 @@ print_function_signature(int func_sptr, const char *fn_name, LL_ABI_Info *abi,
       print_token(", ");
 
     print_token(arg->type->str);
-    print_arg_attributes(arg);
+    print_arg_attributes(arg,true);
 
     if (print_arg_names && arg->sptr) {
       int key;
