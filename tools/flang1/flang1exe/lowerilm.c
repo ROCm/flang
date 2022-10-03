@@ -1025,7 +1025,7 @@ handle_arguments(int ast, int symfunc, int via_ptr)
 #endif
 
   if (CLASSG(tbp_bind) && VTOFFG(tbp_bind) &&
-      (INVOBJG(tbp_bind) /* || NOPASSG(tbp_mem) */)) { /* NOPASS needs fixing */
+      (INVOBJG(tbp_bind) || NOPASSG(tbp_mem))) { /* NOPASS needs fixing */
     via_tbp = 1;
     if (NOPASSG(tbp_mem)) {
       tbp_nopass_arg = pass_sym_of_ast(A_LOPG(ast));
@@ -1039,9 +1039,6 @@ handle_arguments(int ast, int symfunc, int via_ptr)
       tbp_nopass_arg = tbp_nopass_sdsc = 0;
     }
   } else {
-    via_tbp = 0;
-  }
-  if (A_INVOKING_DESCG(ast) && (SCG(sym_of_ast(A_INVOKING_DESCG(ast))) == SC_PRIVATE)) {
     via_tbp = 0;
   }
 
@@ -5523,6 +5520,12 @@ lower_stmt(int std, int ast, int lineno, int label)
   case A_MP_ENDDISTRIBUTE:
     break;
 
+  case A_MP_LOOP:
+    break;
+
+  case A_MP_ELOOP:
+    break;
+
   case A_MP_ETASKLOOP:
     --lowersym.task_depth;
     if (lowersym.parallel_depth == 0 && lowersym.task_depth == 0)
@@ -5728,6 +5731,10 @@ lower_stmt(int std, int ast, int lineno, int label)
   case A_TRIPLE:
   case A_WHERE:
     ast_error("unsupported ast optype in statement", ast);
+    break;
+  case A_ID: // TODO:
+  case A_SUBSCR: // TODO:
+  case A_BINOP: // TODO:
     break;
   default:
     ast_error("unknown ast optype in statement", ast);
