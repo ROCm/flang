@@ -8024,10 +8024,23 @@ addarth(ILI *ilip)
     }
     // AOCC End
     if (XBIT_NEW_MATH_NAMES) {
-      fname = make_math(MTH_powi, &funcsptr, 1, false, DT_FLOAT, 2, DT_FLOAT,
-                        DT_INT);
-      ilix = ad_func(IL_spfunc, IL_QJSR, fname, 2, op1, op2);
-      ilix = ad2altili(opc, op1, op2, ilix);
+#ifdef OMP_OFFLOAD_AMD
+      // Do not generate call to pgmath x86 function
+      // Use function which is available on the device
+      if (flg.amdgcn_target && gbl.ompaccel_intarget) {
+        fname = "powif";
+        funcsptr = mk_prototype(fname, "f pure", DT_FLOAT, 2, DT_FLOAT, DT_INT);
+        ilix = ad_func(IL_spfunc, IL_QJSR, fname, 2, op1, op2);
+        ilix = ad2altili(opc, op1, op2, ilix);
+      }
+      else
+#endif
+      {
+        fname = make_math(MTH_powi, &funcsptr, 1, false, DT_FLOAT, 2, DT_FLOAT,
+                          DT_INT);
+        ilix = ad_func(IL_spfunc, IL_QJSR, fname, 2, op1, op2);
+        ilix = ad2altili(opc, op1, op2, ilix);
+      }
       return ilix;
     }
     (void)mk_prototype(MTH_I_RPOWI, "f pure", DT_FLOAT, 2, DT_FLOAT, DT_INT);
