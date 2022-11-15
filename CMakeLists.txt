@@ -84,8 +84,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
       "--bindir"
       "--libdir"
       "--includedir"
-      "--prefix"
-      "--src-root")
+      "--prefix")
     execute_process(
       COMMAND ${CONFIG_COMMAND}
       RESULT_VARIABLE HAD_ERROR
