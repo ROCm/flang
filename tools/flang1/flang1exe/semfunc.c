@@ -5451,6 +5451,7 @@ no_const_fold:
    */
 
   func_type = A_INTR;
+  char* rtlFn;
   switch (intast) {
   case I_ICHAR:
     if (count == 2) {
@@ -5461,25 +5462,42 @@ no_const_fold:
   case I_MODULO:
     switch ((int)INTTYPG(sptr)) {
     case DT_SINT:
-      rtlRtn = RTE_imodulov;
+      rtlFn = mkRteRtnNm(RTE_imodulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_imodulov";
+#endif
       break;
     case DT_INT4:
-      rtlRtn = RTE_modulov;
+      rtlFn = mkRteRtnNm(RTE_modulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_modulov";
+#endif
       break;
     case DT_INT8:
-      rtlRtn = RTE_i8modulov;
+      rtlFn = mkRteRtnNm(RTE_i8modulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_i8modulov_i8";
+#endif
       break;
     case DT_REAL4:
-      rtlRtn = RTE_amodulov;
+      rtlFn = mkRteRtnNm(RTE_amodulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_amodulov";
+#endif
       break;
     case DT_REAL8:
-      rtlRtn = RTE_dmodulov;
+      rtlRtn = mkRteRtnNm(RTE_dmodulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_dmodulov";
+#endif
       break;
     case DT_QUAD:
-      rtlRtn = RTE_qmodulov;
-      break;
+      rtlRtn = mkRteRtnNm(RTE_qmodulov);
+#if defined(OMP_OFFLOAD_LLVM)
+      if (flg.amdgcn_target) rtlFn ="__f90_qmodulov";
+#endif
     }
-    fsptr = sym_mkfunc_nodesc(mkRteRtnNm(rtlRtn), (int)INTTYPG(sptr));
+    fsptr = sym_mkfunc_nodesc(rtlFn, (int)INTTYPG(sptr));
     EXTSYMP(sptr, fsptr);
     ELEMENTALP(sptr, 1);
     func_ast = mk_id(fsptr);
