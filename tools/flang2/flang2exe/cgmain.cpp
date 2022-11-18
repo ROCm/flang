@@ -7800,6 +7800,31 @@ gen_call_expr(int ilix, DTYPE ret_dtype, INSTR_LIST *call_instr, int call_sptr)
         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
         abi->is_pure = 0;
       }
+      if (strcmp(SYMNAME(call_sptr),"__f90_imodulov") == 0) {
+         SPTR sptr = mk_prototype_llvm("__f90_imodulov", "", DT_INT, 2, DT_INT, DT_INT);
+         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+         abi->is_pure = 0;
+      }
+      if (strcmp(SYMNAME(call_sptr),"__f90_modulov") == 0) {
+         SPTR sptr = mk_prototype_llvm("__f90_modulov", "", DT_INT, 2, DT_INT, DT_INT);
+         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+         abi->is_pure = 0;
+      }
+      if (strcmp(SYMNAME(call_sptr),"__f90_i8modulov_i8") == 0) {
+         SPTR sptr = mk_prototype_llvm("__f90_i8modulov_i8", "", DT_INT8, 2, DT_INT8, DT_INT8);
+         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+         abi->is_pure = 0;
+      }
+      if (strcmp(SYMNAME(call_sptr),"__f90_amodulov") == 0) {
+         SPTR sptr = mk_prototype_llvm("__f90_amodulov", "", DT_REAL, 2, DT_REAL, DT_REAL);
+         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+         abi->is_pure = 0;
+      }
+      if (strcmp(SYMNAME(call_sptr),"__f90_dmodulov") == 0) {
+         SPTR sptr = mk_prototype_llvm("__f90_dmodulov", "", DT_DBLE, 2, DT_DBLE, DT_DBLE);
+         LL_ABI_Info *abi = ll_proto_get_abi(ll_proto_key(sptr));
+         abi->is_pure = 0;
+      }
   }
   // AOCC End
   if (call_instr == NULL)
