@@ -14,8 +14,7 @@ macro(find_llvm_parts)
     set(LIBCXX_USING_INSTALLED_LLVM 1)
     set(CONFIG_COMMAND ${LLVM_CONFIG_PATH}
       "--includedir"
-      "--prefix"
-      "--src-root")
+      "--prefix")
     execute_process(
       COMMAND ${CONFIG_COMMAND}
       RESULT_VARIABLE HAD_ERROR

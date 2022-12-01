@@ -4018,6 +4018,12 @@ ENTF90(MODULOv, modulov)(__INT4_T a, __INT4_T p)
   return r;
 }
 
+__INT4_T
+__ENTF90(MODULOv, modulov)(__INT4_T a, __INT4_T p)
+{
+  return ENTF90(MODULOv, modulov)(a, p);
+}
+
 __INT8_T
 ENTF90(I8MODULOv, i8modulov)(__INT8_T a, __INT8_T p)
 {
@@ -4029,6 +4035,12 @@ ENTF90(I8MODULOv, i8modulov)(__INT8_T a, __INT8_T p)
     r += (p);
   }
   return r;
+}
+
+__INT8_T
+__ENTF90(I8MODULOv, i8modulov)(__INT8_T a, __INT8_T p)
+{
+  return ENTF90(I8MODULOv, i8modulov)(a, p);
 }
 
 __INT2_T
@@ -4044,6 +4056,12 @@ ENTF90(IMODULOv, imodulov)(__INT2_T a, __INT2_T p)
   return r;
 }
 
+__INT2_T
+__ENTF90(IMODULOv, imodulov)(__INT2_T a, __INT2_T p)
+{
+  return ENTF90(IMODULOv, imodulov)(a, p);
+}
+
 __REAL_T
 ENTF90(AMODULOv, amodulov)(__REAL_T x, __REAL_T y)
 {
@@ -4052,6 +4070,12 @@ ENTF90(AMODULOv, amodulov)(__REAL_T x, __REAL_T y)
   if (d != 0 && ((x < 0 && y > 0) || (x > 0 && y < 0)))
     d += y;
   return d;
+}
+
+__REAL_T
+__ENTF90(AMODULOv, amodulov)(__REAL_T x, __REAL_T y)
+{
+  return ENTF90(AMODULOv, amodulov)(x, y);
 }
 
 __DBLE_T
@@ -4064,6 +4088,12 @@ ENTF90(DMODULOv, dmodulov)(__DBLE_T x, __DBLE_T y)
   return d;
 }
 
+__DBLE_T
+__ENTF90(DMODULOv, dmodulov)(__DBLE_T x, __DBLE_T y)
+{
+  return ENTF90(DMODULOv, dmodulov)(x, y);
+}
+
 // AOCC Begin
 __REAL16_T
 ENTF90(QMODULOv, qmodulov)(__REAL16_T x, __REAL16_T y)
@@ -4073,6 +4103,12 @@ ENTF90(QMODULOv, qmodulov)(__REAL16_T x, __REAL16_T y)
   if (d != 0 && ((x < 0 && y > 0) || (x > 0 && y < 0)))
     d += y;
   return d;
+}
+
+__REAL16_T
+__ENTF90(QMODULOv, qmodulov)(__REAL16_T x, __REAL16_T y)
+{
+  return ENTF90(QMODULOv, qmodulov)(x, y);
 }
 // AOCC End
 
