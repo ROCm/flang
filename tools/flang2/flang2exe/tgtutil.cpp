@@ -758,7 +758,11 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
                             mem_size(DTY(DTYPEG(targetinfo->num_teams))));
   } else {
   // AOCC End
-    locargs[1] = ad_icon(num_teams);
+    if (num_teams == 0 &&  targetinfo->n_reduction_symbols) {
+      int NTeams = XBIT(234,0x01ffff);
+      locargs[1] = ad_icon(NTeams ? NTeams : 32);
+    } else
+      locargs[1] = ad_icon(num_teams);
   }
 
   // AOCC Begin
