@@ -76,6 +76,7 @@
 #if defined(DESC_I8)
 #define ENTF90IO(UC, LC) f90io_##LC##_i8
 #define ENTF90(UC, LC) f90_##LC##_i8
+#define __ENTF90(UC, LC) __f90_##LC##_i8
 #define ENTFTN(UC, LC) fort_##LC##_i8
 #define ENTRY(UC, LC) LC##_i8
 #define ENTCRF90IO(UC, LC) crf90io_##LC##_i8 /* FIXME: HPF, delete all with this prefix*/
@@ -86,6 +87,7 @@
 #else /* !defined(DESC_I8) */
 #define ENTF90IO(UC, LC) f90io_##LC
 #define ENTF90(UC, LC) f90_##LC
+#define __ENTF90(UC, LC) __f90_##LC
 #define ENTFTN(UC, LC) fort_##LC
 #define ENTRY(UC, LC) LC
 #define ENTCRF90IO(UC, LC) crf90io_##LC	/* FIXME: HPF, delete all with this prefix*/
