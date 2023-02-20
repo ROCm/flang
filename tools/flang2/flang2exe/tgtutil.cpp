@@ -528,6 +528,13 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
 #endif
     // AOCC End
 
+    // Flang and Clang can generate OpenMP kernels where number of device
+    // kernel arguments is not equal to number of passed host arguments.
+    // That's why, if given host symbol is not mapped in the target kernel
+    // then we should not mark it as valid param.
+    if (targetinfo->symbols[i].device_sym == NOSYM) {
+        targetinfo->symbols[i].map_type  &= ~(OMP_TGT_MAPTYPE_TARGET_PARAM);
+    }
     ilix = ad4ili(IL_ST, ad_icon(targetinfo->symbols[i].map_type),
                   ad_acon(args_maptypes_sptr, i * TARGET_PTRSIZE), nme_types, MSZ_I8);
     chk_block(ilix);
