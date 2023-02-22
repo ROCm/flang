@@ -1592,7 +1592,6 @@ semsmp(int rednum, SST *top)
    */
   case MP_STMT41:
     if (sem.metadirective.whencondition) {
-      if (sem.metadirective.whenexpanded) { break; }
       if (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue) { break; }
       sem.metadirective.whenexpanded = true;
     }
@@ -1602,7 +1601,7 @@ semsmp(int rednum, SST *top)
       sem.collapse = CL_VAL(CL_COLLAPSE);
     } else if (CL_PRESENT(CL_SAFELEN) || CL_PRESENT(CL_LINEAR) ||
         CL_PRESENT(CL_ALIGNED) || CL_PRESENT(CL_PRIVATE) ||
-        CL_PRESENT(CL_LASTPRIVATE) || CL_PRESENT(CL_REDUCTION)){
+        CL_PRESENT(CL_LASTPRIVATE)){
       errwarn((error_code_t)604);
       sem.expect_simd_do = FALSE;
       par_push_scope(TRUE);
@@ -9706,7 +9705,16 @@ static bool
 begin_combine_constructs(BIGINT64 construct)
 {
   int doif = sem.doif_depth;
-  int ast, combinedMode;
+  int ast;
+  int combinedMode = get_omp_combined_mode(construct);
+  if (sem.metadirective.whencondition) {
+    if (sem.metadirective.whenexpanded ||
+         (!sem.metadirective.defaultcondition && !sem.metadirective.whenconditionvalue)) {
+          --sem.doif_depth;
+        return false;
+    }
+  }
+
   LOGICAL do_enter = FALSE;
 
   has_team = FALSE;
