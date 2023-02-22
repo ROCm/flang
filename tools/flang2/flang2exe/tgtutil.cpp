@@ -56,11 +56,13 @@
 #ifdef OMP_OFFLOAD_AMD
 #include <vector>
 #include <algorithm>
+
 // Vector to keep track all array accesses with constant offset within device.
 extern std::vector<SPTR> constArraySymbolList;
 #endif
 static int updateregion = 0;
 // AOCC End
+
 #ifdef OMP_OFFLOAD_LLVM
 static void change_target_func_smbols(int outlined_func_sptr, int stblk_sptr);
 // AOCC additional argument
@@ -423,9 +425,23 @@ _tgt_target_fill_maptype(SPTR sptr, int maptype, int isMidnum, int midnum_maptyp
   return final_maptype;
 }
 
+static bool isOpenMPKernelCall(int api_id)
+{
+  switch (api_id){
+   case TGT_API_TARGET:
+   case TGT_API_TARGET_TEAMS:
+   case TGT_API_TARGET_TEAMS_PARALLEL:
+     return true;
+   default:
+     return false;
+   }
+   return false;
+}
+
 void
 tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
-                       SPTR args_maptypes_sptr, OMPACCEL_TINFO *targetinfo)
+                       SPTR args_maptypes_sptr, OMPACCEL_TINFO *targetinfo,
+                       int api_id)
 {
   int i, j, ilix, iliy;
   char *name_base="", *name_length="";
@@ -532,8 +548,9 @@ tgt_target_fill_params(SPTR arg_base_sptr, SPTR arg_size_sptr, SPTR args_sptr,
     // kernel arguments is not equal to number of passed host arguments.
     // That's why, if given host symbol is not mapped in the target kernel
     // then we should not mark it as valid param.
-    if (targetinfo->symbols[i].device_sym == NOSYM) {
-        targetinfo->symbols[i].map_type  &= ~(OMP_TGT_MAPTYPE_TARGET_PARAM);
+    if (isOpenMPKernelCall(api_id) &&
+        targetinfo->symbols[i].device_sym == NOSYM) {
+      targetinfo->symbols[i].map_type  &= ~(OMP_TGT_MAPTYPE_TARGET_PARAM);
     }
     ilix = ad4ili(IL_ST, ad_icon(targetinfo->symbols[i].map_type),
                   ad_acon(args_maptypes_sptr, i * TARGET_PTRSIZE), nme_types, MSZ_I8);
@@ -689,7 +706,7 @@ ll_make_tgt_target(SPTR outlined_func_sptr, int64_t device_id, SPTR stblk_sptr)
     args_maptypes_sptr = make_array_sptr(name, DT_INT8, targetinfo->n_symbols);
 
     tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
-                           args_maptypes_sptr, targetinfo);
+                           args_maptypes_sptr, targetinfo, TGT_API_TARGET);
 
     // prepare argument for tgt target
     int locargs[7];
@@ -744,7 +761,7 @@ ll_make_tgt_target_teams(SPTR outlined_func_sptr, int64_t device_id,
   args_maptypes_sptr = make_array_sptr(name, DT_INT8, nargs);
 
   tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
-                         args_maptypes_sptr, targetinfo);
+                         args_maptypes_sptr, targetinfo, TGT_API_TARGET_TEAMS);
 
   // prepare argument for tgt target
   int locargs[9];
@@ -816,7 +833,8 @@ ll_make_tgt_target_teams_parallel(SPTR outlined_func_sptr, int64_t device_id,
   args_maptypes_sptr = make_array_sptr(name, DT_INT8, nargs);
 
   tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
-                         args_maptypes_sptr, targetinfo);
+                         args_maptypes_sptr, targetinfo,
+                         TGT_API_TARGET_TEAMS_PARALLEL);
 
   // prepare argument for tgt target
   int locargs[11];
@@ -867,7 +885,8 @@ ll_make_tgt_target_data_begin(int device_id, OMPACCEL_TINFO *targetinfo)
   dataregion++;
 
   tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
-                         args_maptypes_sptr, targetinfo);
+                         args_maptypes_sptr, targetinfo,
+                         TGT_API_TARGET_DATA_BEGIN);
 
   locargs[5] = ad_icon(device_id);
   locargs[4] = ad_icon(nargs);
@@ -911,7 +930,7 @@ _tgt_target_fill_targetdata(int device_id, OMPACCEL_TINFO *targetinfo, int tgt_a
   dataregion++;
 
   tgt_target_fill_params(arg_base_sptr, arg_size_sptr, args_sptr,
-                         args_maptypes_sptr, targetinfo);
+                         args_maptypes_sptr, targetinfo, tgt_api);
 
   locargs[5] = ad_icon(device_id);
   locargs[4] = ad_icon(nargs);
@@ -1404,7 +1423,7 @@ ll_make_tgt_target_update(int device_id, OMPACCEL_TINFO *targetinfo)
   updateregion++;
 
   tgt_target_fill_params(arg_base_sptr, arg_size_sptr, arg_sptr,
-                         arg_map_sptr, targetinfo);
+                         arg_map_sptr, targetinfo, TGT_API_TARGETUPDATE);
 
   local_args[5] = ad_icon(device_id);
   local_args[4] = ad_icon(nargs);
