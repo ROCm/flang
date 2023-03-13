@@ -14536,7 +14536,7 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     if (flg.amdgcn_target)
-      linkage = " amdgpu_kernel";
+      linkage = " weak_odr amdgpu_kernel";
     else if (flg.x86_64_omptarget)
       linkage = " ";
     else
