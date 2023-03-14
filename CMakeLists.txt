@@ -388,12 +388,12 @@ endif()
 execute_process(COMMAND git log -1 --format=format:%H WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE FLANG_SHA RESULT_VARIABLE rc)
 
 if(NOT rc EQUAL "0")
-  add_definitions( -DFLANG_SHA="Flang Sha NULL ")
-  message("Warning: Unable to get Flang Sha. Return Code: ${rc} Flang Sha: NULL!!!")
+  add_definitions( -DFLANG_SHA="Classic-Flang Sha NULL ")
+  message("Warning: Unable to get Classic-Flang Sha. Return Code: ${rc} Classic-Flang Sha: NULL!!!")
 else()
   string(STRIP ${FLANG_SHA} FLANG_SHA)
   message(STATUS "MY_VAR=${FLANG_SHA}")
-  add_definitions( -DFLANG_SHA="Flang Sha ${FLANG_SHA} ")
+  add_definitions( -DFLANG_SHA="Classic-Flang Sha ${FLANG_SHA} ")
 endif()
 
 option(FLANG_INCLUDE_TESTS
