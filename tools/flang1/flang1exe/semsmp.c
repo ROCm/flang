@@ -11429,6 +11429,47 @@ mp_handle_map_clause(SST *top, int clause, char *maptype, int op, int construct,
 static int
 get_omp_combined_mode(BIGINT64 type)
 {
+#if TYPEDEBUG
+fprintf(stderr, "type %lx \n", type);
+if(type & BT_PAR) fprintf(stderr, "BT_PAR ");
+if(type & BT_SINGLE) fprintf(stderr, "BT_SINGLE ");
+if(type & BT_PDO) fprintf(stderr, "BT_PDO ");
+if(type & BT_PARDO) fprintf(stderr, "BT_PARDO ");
+if(type & BT_DOACROSS) fprintf(stderr, "BT_DOACROSS ");
+if(type & BT_SECTS) fprintf(stderr, "BT_SECTS ");
+if(type & BT_PARSECTS) fprintf(stderr, "BT_PARSECTS ");
+if(type & BT_PARWORKS) fprintf(stderr, "BT_PARWORKS ");
+if(type & BT_TASK) fprintf(stderr, "BT_TASK ");
+if(type & BT_ACCREG) fprintf(stderr, "BT_ACCREG ");
+if(type & BT_ACCKERNELS ) fprintf(stderr, "BT_ACCKERNELS ");
+if(type & BT_ACCPARALLEL) fprintf(stderr, "BT_ACCPARALLEL ");
+if(type & BT_ACCKDO) fprintf(stderr, "BT_ACCKDO ");
+if(type & BT_ACCPDO) fprintf(stderr, "BT_ACCPDO ");
+if(type & BT_ACCKLOOP) fprintf(stderr, "BT_ACCKLOOP ");
+if(type & BT_ACCPLOOP) fprintf(stderr, "BT_ACCPLOOP ");
+if(type & BT_ACCDATAREG) fprintf(stderr, "BT_ACCDATAREG ");
+if(type & BT_ACCDECL) fprintf(stderr, "BT_ACCDECL ");
+if(type & BT_ACCUPDATE) fprintf(stderr, "BT_ACCUPDATE ");
+if(type & BT_ACCENDREG) fprintf(stderr, "BT_ACCENDREG ");
+if(type & BT_ACCSCALARREG) fprintf(stderr, "BT_ACCSCALARREG ");
+if(type & BT_CUFKERNEL) fprintf(stderr, "BT_CUFKERNEL ");
+if(type & BT_ACCHOSTDATA) fprintf(stderr, "BT_ACCHOSTDATA ");
+if(type & BT_ACCENTERDATA) fprintf(stderr, "BT_ACCENTERDATA ");
+if(type & BT_ACCEXITDATA) fprintf(stderr, "BT_ACCEXITDATA ");
+if(type & BT_SIMD) fprintf(stderr, "BT_SIMD ");
+if(type & BT_TASKGROUP) fprintf(stderr, "BT_TASKGROUP ");
+if(type & BT_TASKLOOP) fprintf(stderr, "BT_TASKLOOP ");
+if(type & BT_TARGET) fprintf(stderr, "BT_TARGET ");
+if(type & BT_DISTRIBUTE) fprintf(stderr, "BT_DISTRIBUTE ");
+if(type & BT_TEAMS) fprintf(stderr, "BT_TEAMS ");
+if(type & BT_DECLTARGET) fprintf(stderr, "BT_DECLTARGET ");
+if(type & BT_DECLSIMD) fprintf(stderr, "BT_DECLSIMD ");
+if(type & BT_ACCINITSHUTDOWN) fprintf(stderr, "BT_ACCINITSHUTDOWN ");
+if(type & BT_ACCSET) fprintf(stderr, "BT_ACCSET ");
+if(type & BT_ACCSERIAL) fprintf(stderr, "BT_ACCSERIAL ");
+if(type & BT_ACCSLOOP) fprintf(stderr, "BT_ACCSLOOP ");
+fprintf(stderr, "\n");
+#endif
   BIGINT64 combined_type;
   combined_type = BT_TARGET | BT_TEAMS | BT_DISTRIBUTE | BT_PARDO | BT_SIMD;
   if ((type & combined_type) == combined_type)
