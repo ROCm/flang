@@ -14,16 +14,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 endif()
 
-# FIXME: get cmake from installed LLVM such as AOMP
-#if(FLANG_LEGACY_STANDALONE)
-#set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/llvm-project/clang/cmake/modules)
-#message("====== CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}" )
-#  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
-#list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
-#endif()
-
-set(LLVM_DIR "/opt/rocm-5.4.3/llvm")
-
 add_executable(flang-legacy
     flang-legacy.cpp
 )

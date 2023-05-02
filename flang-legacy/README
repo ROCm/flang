@@ -2,27 +2,45 @@
 
 The elimination of flang-legacy driver support will start
 in amd-stg-open branch beginning in June 2023 to support the new
-upstream flang-new driver. 
+upstream flang-new driver.
 
-The source flang-legacy.cpp was taken from llvm-project/clang/tools/driver/driver.cpp
-with branch "release/rocm-rel-5.4.3.1."
-The file driver.cpp.orig is a copy of the source before modifications to flang-legacy.cpp.
-This is kept to show the differences.  Most of the changes were 
-to remove driver features like cc1. 
+The flang-legacy component creates a flang-only driver that
+builds commands to support compilation with legacy flang.
+With flang-legacy driver, we can remove flang command generation
+logic from the clang driver that conflicts with flang-new.
+flang-legacy is for COMMAND GENERATION ONLY. While it GENERATES
+frontend commands (like flang1, flang2, and clang -cc1),
+flang-legacy is not used to directly execute the frontend.
 
-LAST FROZEN LLVM (LFL): This is the released version of LLVM that
-supports the legacy FORTRAN driver. LFL s currently rocm-rel-5.4.3.1. 
-This is not the last version to support legacy flang, only just the 
-legacy flang driver.  The building of flang-legacy requires LFL installed.
-It uses the static archive libs from LFL. So, LFL is NOT needed to use 
+flang-legacy.cpp was created from llvm-project/clang/tools/driver/driver.cpp
+with branch "release/rocm-rel-5.5".  The driver.cpp.orig file is a copy of
+driver.cpp before modifications to create flang-legacy.cpp. This is kept to
+show the differences. Most of the changes were to remove cc1 driver features.
+
+LAST FROZEN LLVM (LFL): This is the last released version of LLVM that
+supports the legacy FORTRAN driver. LFL is currently rocm-rel-5.5
+This is not the last version to support legacy flang. It is the last version
+to support legacy flang COMMAND GENERATION.
+The building of flang-legacy requires the compiler static archive libraries
+and the includes from the sources for LFL. LFL is NOT needed to use
 the flang-legacy driver in the target installation. 
+
+The LFL library archives and include files are obtained from a ROCM 5.5
+package file and installed as a prerequisite component called flang-legacy-LFL.
+This flang-legacy-LFL component is automatically created from build_prereq.sh .
+The prerequisit component flang-legacy-LFL is stored with other locally built
+prerequisite components, typically $HOME/local.
+Furthermore, there is an aomp component build script called build_flang-legacy.sh
+that will use the flang-legacy-LFL component. It will install the flang-legacy
+binary in the bin directory of the installation and create a symbolic link
+from flang to flang-legacy.  All of this is automated from the build_aomp.sh.
 
 You can see from flang-legacy.cpp that flang-legacy does not support any 
 frontends (-cc1 or -fc1). That is, the flang-legacy driver is only a command
 generator for the current LLVM, either in development or released. 
 When flang-legacy needs a clang frontend (clang -cc1) it gets it from
-the current LLVM.  Likewise, flang-legacy gets the fortran 
-frontend pair flang1 and flang2 from the current development version. 
+the current LLVM.  Likewise, flang-legacy gets the fortran legacy
+frontend pair flang1/flang2 from the current development version not LFL.
 
 PROBLEM1: Some old clang frontend options are no longer supported or cause
           problems. The flang-legacy driver will remove these options. 

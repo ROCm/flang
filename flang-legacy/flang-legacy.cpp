@@ -327,8 +327,6 @@ int main(int Argc, char **Argv) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
 
-  // FIXME: Remove ClangCLMode from flang-legacy and MarkEOLs
-
   // Parse response files using the GNU syntax, unless we're in CL mode. There
   // are two ways to put clang in CL compatibility mode: Args[0] is either
   // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
@@ -359,7 +357,8 @@ int main(int Argc, char **Argv) {
 
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
     MarkEOLs = false;
-  llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Args, MarkEOLs);
+  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
+  ECtx.setMarkEOLs(MarkEOLs).expandResponseFiles(Args);
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
