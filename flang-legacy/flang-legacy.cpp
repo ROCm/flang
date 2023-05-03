@@ -522,6 +522,13 @@ int main(int Argc, char **Argv) {
             strncpy((char *)arg + where_new, "-old-", 5);
         } // end foreach arg
       }   // end if isllvmlink
+      for (const char *arg : Job.getArguments()) {
+        std::string argstr(arg);
+	// References to 16.0.0 from LFL need to be changed to 17.0.0
+        size_t where_16 = argstr.rfind("16.0.0");
+        if (where_16 != -1)
+          strncpy((char *)arg + where_16, "17.0.0", 6);
+      }
     }
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
