@@ -29,7 +29,12 @@ endif()
 
 SET(ASM_OPTIONS "-DLINUX_ELF")
 SET(CMAKE_ASM_FLAGS "${CFLAGS} ${ASM_OPTIONS}" )
-SET(CMAKE_SHARED_LINKER_FLAGS "-no-flang-libs")
+# Add address sanitizer linker options if ASAN is enabled
+if(${SANITIZER})
+  set(CMAKE_SHARED_LINKER_FLAGS " -Wl,--enable-new-dtags -fuse-ld=lld  -fsanitize=address -shared-libasan -g -Wl,--build-id=sha1 -no-flang-libs ")
+else()
+  set(CMAKE_SHARED_LINKER_FLAGS " -no-flang-libs ")
+endif()
 
 # We are using Fortran driver to build this library with fresh compiler
 # components, so point its binary directory to the build directory to pick up
