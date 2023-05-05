@@ -369,6 +369,17 @@ int main(int Argc, char **Argv) {
     return 1;
   }
 
+  // If code object version not explictly set, default to 4.
+  // This can go away once ASO defaults to cov5.
+  bool CodeObjectVersion = false;
+  const char* MCOV = "-mcode-object-version=";
+  for (const char *F : Args) {
+    if (strncmp(F, MCOV, strlen(MCOV)) == 0)
+      CodeObjectVersion = true;
+  }
+  if (!CodeObjectVersion)
+    Args.push_back("-mcode-object-version=4");
+
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
   bool CanonicalPrefixes = true;
