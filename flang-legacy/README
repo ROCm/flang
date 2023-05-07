@@ -1,0 +1,73 @@
+
+
+The elimination of flang-legacy driver support will start
+in amd-stg-open branch beginning in June 2023 to support the new
+upstream flang-new driver.
+
+The flang-legacy component creates a flang-only driver that
+builds commands to support compilation with legacy flang.
+With flang-legacy driver, we can remove flang command generation
+logic from the clang driver that conflicts with flang-new.
+flang-legacy is for COMMAND GENERATION ONLY. While it GENERATES
+frontend commands (like flang1, flang2, and clang -cc1),
+flang-legacy is not used to directly execute the frontend.
+
+flang-legacy.cpp was created from llvm-project/clang/tools/driver/driver.cpp
+with branch "release/rocm-rel-5.5".  The driver.cpp.orig file is a copy of
+driver.cpp before modifications to create flang-legacy.cpp. This is kept to
+show the differences. Most of the changes were to remove cc1 driver features.
+
+LAST FROZEN LLVM (LFL): This is the last released version of LLVM that
+supports the legacy FORTRAN driver. LFL is currently rocm-rel-5.5
+This is not the last version to support legacy flang. It is the last version
+to support legacy flang COMMAND GENERATION.
+The building of flang-legacy requires the compiler static archive libraries
+and the includes from the sources for LFL. LFL is NOT needed to use
+the flang-legacy driver in the target installation. 
+
+The LFL library archives and include files are obtained from a ROCM 5.5
+package file and installed as a prerequisite component called flang-legacy-LFL.
+This flang-legacy-LFL component is automatically created from build_prereq.sh .
+The prerequisit component flang-legacy-LFL is stored with other locally built
+prerequisite components, typically $HOME/local.
+Furthermore, there is an aomp component build script called build_flang-legacy.sh
+that will use the flang-legacy-LFL component. It will install the flang-legacy
+binary in the bin directory of the installation and create a symbolic link
+from flang to flang-legacy.  All of this is automated from the build_aomp.sh.
+
+You can see from flang-legacy.cpp that flang-legacy does not support any 
+frontends (-cc1 or -fc1). That is, the flang-legacy driver is only a command
+generator for the current LLVM, either in development or released. 
+When flang-legacy needs a clang frontend (clang -cc1) it gets it from
+the current LLVM.  Likewise, flang-legacy gets the fortran legacy
+frontend pair flang1/flang2 from the current development version not LFL.
+
+PROBLEM1: Some old clang frontend options are no longer supported or cause
+          problems. The flang-legacy driver will remove these options. 
+          See flang-legacy.cpp.
+          As more options are deprecated, flang-legacy.cpp must be updated
+          to remove options that fail in the current release. 
+
+PROBLEM2: The names for the architecture specific libomptarget bitcode libraries 
+          have changed from 5.4.3.1 to the current release.  
+          The old names get generated for the llvm-link step and have names like
+          ===>   libomptarget-new-amdgpu-gfx908.bc 
+          OK, NOW THIS IS GOING TO BE CONFUSING! The new names, as a result 
+          of eventual migration to a new upstream driver, are:
+          ===>   libomptarget-old-amdgpu-gfx908.bc
+          There is code in flang-legacy.cpp to detect and change the names. 
+
+PROBLEM3: Suppose we need a NEW option for subcommands flang1, flang2, clang, 
+          or any other generated commands to support updates to legacy flang.  
+          Currently there are none. If one arises, it will be necessary 
+          to provide logic in flang-legacy.cpp to make the corrections.   
+          If it requires changes in clang or llvm, then life gets 
+          VERY difficult.  One must resurrect the sources to build the LFL
+          release, make changes, then rebuild a set of archive libraries 
+          and includes to build flang-legacy with. Future builds of flang-legacy
+          will require the updated LFL. 
+
+The CMakeLists.txt file to build flang-legacy does not depend on any 
+LLVM cmake support.  It just depends on the includes and static libs 
+built from the last release to support legacy flang. 
+
