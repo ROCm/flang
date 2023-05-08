@@ -13906,12 +13906,18 @@ build_unused_global_define_from_params(void)
 INLINE static bool
 cg_fetch_clen_parent(SPTR length)
 {
-  int i;
   SPTR parent;
-  for (i = 1; i <= llvm_info.abi_info->nargs; ++i) {
+  for (unsigned i = 1; i <= llvm_info.abi_info->nargs; ++i) {
+    /* Check whether any of the argument from argument list is of type
+     * assumed length string and its a scalar or array variable. Also check
+     * whether its CLEN field matches the formal parameter length.
+     */
     parent = llvm_info.abi_info->arg[i].sptr;
-    if ((DTY(DTYPEG(parent)) == TY_CHAR) && (DTYPEG(parent) == DT_ASSCHAR) &&
-        (CLENG(parent) == length)) return true;
+    if ((((DTY(DTYPEG(parent)) == TY_CHAR) && (DTYPEG(parent) == DT_ASSCHAR))
+         || ((DTY(DTYPEG(parent)) == TY_ARRAY) &&
+             (DDTG(DTYPEG(parent)) == DT_ASSCHAR)))
+        && (CLENG(parent) == length))
+      return true;
   }
   return false;
 }
@@ -14536,7 +14542,7 @@ build_routine_and_parameter_entries(SPTR func_sptr, LL_ABI_Info *abi,
     // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
     if (flg.amdgcn_target)
-      linkage = " amdgpu_kernel";
+      linkage = " weak_odr amdgpu_kernel";
     else if (flg.x86_64_omptarget)
       linkage = " ";
     else
@@ -15097,9 +15103,22 @@ void
 cg_fetch_clen_parampos(SPTR *len, int *param, SPTR sptr)
 {
   if (llvm_info.abi_info) {
-    int i;
+    /* Check whether the sptr passed is array descriptor, if yes, extract the
+     * original array variable and make it as sptr. Because array variable
+     * has the length variable information of assumed length string and array
+     * descriptor does not have this length information. i.e. CLEN field is
+     * associated with array variable and not with array descriptor.
+     */
+    for (unsigned i = 1; i <= llvm_info.abi_info->nargs; ++i)
+      if ((llvm_info.abi_info->arg[i].kind == LL_ARG_INDIRECT) &&
+          (STYPEG(llvm_info.abi_info->arg[i].sptr) == ST_ARRAY) &&
+          (SDSCG(llvm_info.abi_info->arg[i].sptr) == sptr)) {
+        sptr = llvm_info.abi_info->arg[i].sptr;
+        break;
+      }
+
     *len = CLENG(sptr);
-    for (i = 1; i <= llvm_info.abi_info->nargs; ++i)
+    for (unsigned i = 1; i <= llvm_info.abi_info->nargs; ++i)
       if (llvm_info.abi_info->arg[i].sptr == *len) {
         *param = i;
         return;

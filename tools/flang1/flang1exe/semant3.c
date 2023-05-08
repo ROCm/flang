@@ -1886,7 +1886,7 @@ errorstop_shared:
     // AOCC Begin
     // if there's an if_construct inside non-reduction kernel fallback to
     // tgt_target mode.
-#ifdef OMP_OFFLOAD_AMD
+#ifdef OMP_OFFLOAD_AMD_DISABLE
     if (flg.amdgcn_target &&
         target_ast && DI_IN_NEST(sem.doif_depth, DI_DISTPARDO) && !reduction_kernel) {
       A_COMBINEDTYPEP(target_ast, mode_target);
