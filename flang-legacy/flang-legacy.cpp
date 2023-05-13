@@ -369,16 +369,34 @@ int main(int Argc, char **Argv) {
     return 1;
   }
 
-  // If code object version not explictly set, default to 4.
-  // This can go away once ASO defaults to cov5.
-  bool CodeObjectVersion = false;
+  // If code object version not explictly set, default to 4. When ready to
+  // switch to 5, leave this in case anyone wants to switch back to 4 testing
+  bool CodeObjectVersionIsSet = false;
   const char* MCOV = "-mcode-object-version=";
   for (const char *F : Args) {
     if (strncmp(F, MCOV, strlen(MCOV)) == 0)
-      CodeObjectVersion = true;
+      CodeObjectVersionIsSet = true;
   }
-  if (!CodeObjectVersion)
+  unsigned int co_version ;
+  if (CodeObjectVersionIsSet) {
+    // When cov is set, see if it was set to 4.
+    const char* MCOV4 = "-mcode-object-version=4";
+    bool Set_to_4 = false;
+    for (const char *F : Args) {
+      if (strncmp(F, MCOV, strlen(MCOV4)) == 0)
+        Set_to_4 = true;
+    }
+    // Set co_version so the code below will change the LFL-generated
+    // libomptarget bc file to use the code-object-versioned version.
+    if (Set_to_4)
+      co_version = 4;
+    else
+      co_version = 5;
+  } else {
+    // #### Set the default code object version on next 2 lines ####
+    co_version = 4;
     Args.push_back("-mcode-object-version=4");
+  }
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -488,6 +506,9 @@ int main(int Argc, char **Argv) {
   if (!C->getJobs().empty())
     FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
+    /// -------------------------------------------------------------
+    /// ------   Argument correction for each command starts here ---
+    /// -------------------------------------------------------------
     auto *joblist = &C->getJobs();
     for (auto &Job : C->getJobs()) {
       std::string exec(Job.getExecutable());
@@ -529,8 +550,22 @@ int main(int Argc, char **Argv) {
         for (const char *arg : Job.getArguments()) {
           std::string argstr(arg);
           size_t where_new = argstr.rfind("-new-");
-          if (where_new != -1)
+          if (where_new != -1) {
+	    // The LFL libomptarget-new- bc file needs to be replaced with
+	    // either libomptarget-400- or libomptarget-500-. However, the
+            // -old- bc file should not exist, but just in case old test systems
+	    // systems have it, then use it because they will not have
+	    // the code-object-versioned versions of the libomptarget bc lib.
             strncpy((char *)arg + where_new, "-old-", 5);
+            if(!llvm::sys::fs::exists(arg)) {
+	      // Since -old- does not exist here, replace -new- with the
+	      // correct code-object-versioned libomptarget bc file.
+              if (co_version == 4)
+                strncpy((char *)arg + where_new, "-400-", 5);
+	      else
+                strncpy((char *)arg + where_new, "-500-", 5);
+	    }
+	  }
         } // end foreach arg
       }   // end if isllvmlink
       for (const char *arg : Job.getArguments()) {
@@ -541,6 +576,10 @@ int main(int Argc, char **Argv) {
           strncpy((char *)arg + where_16, "17.0.0", 6);
       }
     }
+    /// ----------------------------------------------------------------
+    /// --------   Argument correction for each command ends here  -----
+    /// ----------------------------------------------------------------
+
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
