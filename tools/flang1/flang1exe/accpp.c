@@ -4210,12 +4210,16 @@ again:
     for (;;) {
       if (*p == 'E' || *p == 'e') {
         ++p;
-        if (*p == '+' || *p == '-')
+        if (*p == '+' || *p == '-') {
           ++p;
+	  if (isident(*p)) { --p; break;}
+	}
       } else if (*p == 'P' || *p == 'p') {
         ++p;
-        if (*p == '+' || *p == '-')
+        if (*p == '+' || *p == '-') {
           ++p;
+	  if (isident(*p)) { --p; break;}
+	}
       } else if (*p == '.' || isident(*p))
         ++p;
       else
