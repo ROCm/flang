@@ -465,7 +465,6 @@ int main(int Argc, char **Argv) {
     Diags.setClient(new ChainedDiagnosticConsumer(
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
-
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
@@ -478,7 +477,16 @@ int main(int Argc, char **Argv) {
 
   SetBackdoorDriverOutputsFromEnvVars(TheDriver);
 
-  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+  // Remove upstream args not used by old flang driver
+  SmallVector<const char *, 256> SupportedArgs;
+  for (const char *F : Args) {
+    if (strcmp(F, "--opaque-offload-driver") == 0)
+      continue;
+    if (strcmp(F, "--no-opaque-offload-driver") == 0)
+      continue;
+    SupportedArgs.push_back(F);
+  }
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(SupportedArgs));
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
