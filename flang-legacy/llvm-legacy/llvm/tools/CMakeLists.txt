@@ -7,7 +7,7 @@
 
 # Iterates all the subdirectories to create CMake options to enable/disable
 # traversing each directory.
-create_llvm_tool_options()
+#create_llvm_tool_options()
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
