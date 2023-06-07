@@ -24,6 +24,7 @@ target_include_directories(flang-legacy
    ${CMAKE_SOURCE_DIR}/llvm-legacy/llvm/include
    ${CMAKE_SOURCE_DIR}/llvm-legacy/clang/include
    ${CMAKE_BINARY_DIR}/llvm-legacy/tools/clang/include
+   ${CMAKE_BINARY_DIR}/llvm-legacy/include
 )
 
 target_link_libraries(flang-legacy
