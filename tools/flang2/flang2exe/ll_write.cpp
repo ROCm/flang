@@ -1787,7 +1787,12 @@ write_mdfield(FILE *out, LL_Module *module, int needs_comma, LL_MDRef mdref,
   case MDRef_SmallInt1:
   case MDRef_SmallInt32:
   case MDRef_SmallInt64:
-    if (!value && !mandatory)
+    // if the value of array lower_bound attribute is zero, then do not return
+    if (!value && !mandatory
+        // AOCC Begin
+        && (strcmp(tmpl->name,"lowerBound"))
+        // AOCC End
+       )
       return false;
     switch (tmpl->type) {
     case UnsignedField:
