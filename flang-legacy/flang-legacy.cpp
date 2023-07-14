@@ -484,6 +484,8 @@ int main(int Argc, char **Argv) {
       continue;
     if (strcmp(F, "--no-opaque-offload-driver") == 0)
       continue;
+    if (strcmp(F, "-opaque-pointers") == 0)
+      continue;
     SupportedArgs.push_back(F);
   }
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(SupportedArgs));
