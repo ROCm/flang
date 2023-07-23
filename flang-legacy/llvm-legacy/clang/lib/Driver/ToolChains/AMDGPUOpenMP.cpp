@@ -160,6 +160,17 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   // marked linkonce_odr so that they can be removed if not used.
   const char *CbslExec =
     Args.MakeArgString(getToolChain().GetProgramPath("clang-build-select-link"));
+
+  // Get the environment variable ROCM_CBSL_ARGS
+  // and add to invocation of clang-build-select-link
+  Optional<std::string> CblEnv = llvm::sys::Process::GetEnv("ROCM_CBSL_ARGS");
+  if (CblEnv.hasValue()) {
+    SmallVector<StringRef, 8> Envs;
+    SplitString(CblEnv.getValue(), Envs);
+    for (StringRef Env : Envs)
+      CmdArgs.push_back(Args.MakeArgString(Env.trim()));
+  }
+
   // ArgStringList CmdArgs;
   for (const auto &II : Inputs)
     if (II.isFilename())
