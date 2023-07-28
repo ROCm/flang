@@ -267,9 +267,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
 
   BCLibs.push_back(Args.MakeArgString(
-      libpath + "/libomptarget-" +
-      Twine(tools::getAMDGPUCodeObjectVersion(C.getDriver(), Args) * 100) +
-      "-amdgpu-" + GPUArch + ".bc"));
+      libpath + "/libomptarget-amdgpu-" + GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
   BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
@@ -556,8 +554,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-fcuda-is-device");
 
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
+  if (DriverArgs.hasFlag(options::OPT_fgpu_approx_transcendentals,
+                         options::OPT_fno_gpu_approx_transcendentals, false))
     CC1Args.push_back("-fcuda-approx-transcendentals");
 
   if (DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,

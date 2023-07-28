@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "Clang.h"
 #include "AMDGPU.h"
 #include "AMDGPUOpenMP.h"
@@ -58,6 +57,7 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -1888,10 +1888,25 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
+  const llvm::Triple &Triple = getToolChain().getTriple();
+
   CmdArgs.push_back("-target-abi");
-  CmdArgs.push_back(loongarch::getLoongArchABI(getToolChain().getDriver(), Args,
-                                               getToolChain().getTriple())
-                        .data());
+  CmdArgs.push_back(
+      loongarch::getLoongArchABI(getToolChain().getDriver(), Args, Triple)
+          .data());
+
+  // Handle -mtune.
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    StringRef TuneCPU = A->getValue();
+    if (TuneCPU == "native") {
+      TuneCPU = llvm::sys::getHostCPUName();
+      if (TuneCPU == "generic")
+        TuneCPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
+    }
+    CmdArgs.push_back("-tune-cpu");
+    CmdArgs.push_back(Args.MakeArgString(TuneCPU));
+    llvm::LoongArch::setTuneCPU(TuneCPU);
+  }
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,
@@ -7362,12 +7377,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     auto CUID = cast<InputAction>(SourceAction)->getId();
     if (!CUID.empty())
       CmdArgs.push_back(Args.MakeArgString(Twine("-cuid=") + Twine(CUID)));
+
+    // -ffast-math turns on -fgpu-approx-transcendentals implicitly, but will
+    // be overriden by -fno-gpu-approx-transcendentals.
+    bool UseApproxTranscendentals = Args.hasFlag(
+        options::OPT_ffast_math, options::OPT_fno_fast_math, false);
+    if (Args.hasFlag(options::OPT_fgpu_approx_transcendentals,
+                     options::OPT_fno_gpu_approx_transcendentals,
+                     UseApproxTranscendentals))
+      CmdArgs.push_back("-fgpu-approx-transcendentals");
+  } else {
+    Args.claimAllArgs(options::OPT_fgpu_approx_transcendentals,
+                      options::OPT_fno_gpu_approx_transcendentals);
   }
 
   if (IsHIP) {
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
+
+  Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
+                  options::OPT_fno_offload_uniform_block);
 
   if (IsCudaDevice || IsHIPDevice) {
     StringRef InlineThresh =
@@ -8857,7 +8887,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
         ArgStringList Features;
         SmallVector<StringRef> FeatureArgs;
-        getTargetFeatures(TC.getDriver(), TC.getTriple(), Args, Features,
+        getTargetFeatures(TC.getDriver(), TheTriple, Args, Features,
                           false);
         llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                       [](StringRef Arg) { return !Arg.startswith("-target"); });
@@ -8924,7 +8954,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 4 opt  -----------
     ArgStringList OptArgs;
     auto OptOutputFileName = amdgpu::dlr::getOptCommandArgs(
-        C, Args, OptArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, OptArgs, TheTriple, TargetID, OutputFilePrefix,
         LinkOutputFileName);
 
     const char *OptExec =
@@ -8936,7 +8966,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 5 llc  -----------
     ArgStringList LlcArgs;
     auto LlcOutputFileName = amdgpu::dlr::getLlcCommandArgs(
-        C, Args, LlcArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, LlcArgs, TheTriple, TargetID, OutputFilePrefix,
         OptOutputFileName);
 
     const char *LlcExec =
@@ -8948,7 +8978,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 6 lld  -----------
     ArgStringList LldArgs;
     auto LldOutputFileName = amdgpu::dlr::getLldCommandArgs(
-        C, Output, Args, LldArgs, TC.getTriple(), TargetID, LlcOutputFileName,
+        C, Output, Args, LldArgs, TheTriple, TargetID, LlcOutputFileName,
         OutputFilePrefix);
 
     // create vector of pairs of TargetID,lldname for step 7 inputs.

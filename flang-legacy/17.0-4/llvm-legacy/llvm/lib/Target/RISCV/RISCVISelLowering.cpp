@@ -145,6 +145,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   static const MVT::SimpleValueType F16VecVTs[] = {
       MVT::nxv1f16, MVT::nxv2f16,  MVT::nxv4f16,
       MVT::nxv8f16, MVT::nxv16f16, MVT::nxv32f16};
+  static const MVT::SimpleValueType BF16VecVTs[] = {
+      MVT::nxv1bf16, MVT::nxv2bf16,  MVT::nxv4bf16,
+      MVT::nxv8bf16, MVT::nxv16bf16, MVT::nxv32bf16};
   static const MVT::SimpleValueType F32VecVTs[] = {
       MVT::nxv1f32, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv8f32, MVT::nxv16f32};
   static const MVT::SimpleValueType F64VecVTs[] = {
@@ -185,6 +188,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (Subtarget.hasVInstructionsF16())
       for (MVT VT : F16VecVTs)
+        addRegClassForRVV(VT);
+
+    if (Subtarget.hasVInstructionsBF16())
+      for (MVT VT : BF16VecVTs)
         addRegClassForRVV(VT);
 
     if (Subtarget.hasVInstructionsF32())
@@ -4664,10 +4671,13 @@ static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
   case ISD::NODE:                                                              \
     return RISCVISD::NODE##_VL;
+#define VP_CASE(NODE)                                                          \
+  case ISD::VP_##NODE:                                                         \
+    return RISCVISD::NODE##_VL;
+  // clang-format off
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("don't have RISC-V specified VL op for this SDNode");
-    // clang-format off
   OP_CASE(ADD)
   OP_CASE(SUB)
   OP_CASE(MUL)
@@ -4702,39 +4712,100 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(STRICT_FMUL)
   OP_CASE(STRICT_FDIV)
   OP_CASE(STRICT_FSQRT)
-    // clang-format on
-#undef OP_CASE
+  VP_CASE(ADD)        // VP_ADD
+  VP_CASE(SUB)        // VP_SUB
+  VP_CASE(MUL)        // VP_MUL
+  VP_CASE(SDIV)       // VP_SDIV
+  VP_CASE(SREM)       // VP_SREM
+  VP_CASE(UDIV)       // VP_UDIV
+  VP_CASE(UREM)       // VP_UREM
+  VP_CASE(SHL)        // VP_SHL
+  VP_CASE(FADD)       // VP_FADD
+  VP_CASE(FSUB)       // VP_FSUB
+  VP_CASE(FMUL)       // VP_FMUL
+  VP_CASE(FDIV)       // VP_FDIV
+  VP_CASE(FNEG)       // VP_FNEG
+  VP_CASE(FABS)       // VP_FABS
+  VP_CASE(SMIN)       // VP_SMIN
+  VP_CASE(SMAX)       // VP_SMAX
+  VP_CASE(UMIN)       // VP_UMIN
+  VP_CASE(UMAX)       // VP_UMAX
+  VP_CASE(FMINNUM)    // VP_FMINNUM
+  VP_CASE(FMAXNUM)    // VP_FMAXNUM
+  VP_CASE(FCOPYSIGN)  // VP_FCOPYSIGN
+  VP_CASE(SETCC)      // VP_SETCC
+  VP_CASE(SINT_TO_FP) // VP_SINT_TO_FP
+  VP_CASE(UINT_TO_FP) // VP_UINT_TO_FP
+  VP_CASE(BITREVERSE) // VP_BITREVERSE
+  VP_CASE(BSWAP)      // VP_BSWAP
+  VP_CASE(CTLZ)       // VP_CTLZ
+  VP_CASE(CTTZ)       // VP_CTTZ
+  VP_CASE(CTPOP)      // VP_CTPOP
+  case ISD::VP_CTLZ_ZERO_UNDEF:
+    return RISCVISD::CTLZ_VL;
+  case ISD::VP_CTTZ_ZERO_UNDEF:
+    return RISCVISD::CTTZ_VL;
   case ISD::FMA:
+  case ISD::VP_FMA:
     return RISCVISD::VFMADD_VL;
   case ISD::STRICT_FMA:
     return RISCVISD::STRICT_VFMADD_VL;
   case ISD::AND:
+  case ISD::VP_AND:
     if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
       return RISCVISD::VMAND_VL;
     return RISCVISD::AND_VL;
   case ISD::OR:
+  case ISD::VP_OR:
     if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
       return RISCVISD::VMOR_VL;
     return RISCVISD::OR_VL;
   case ISD::XOR:
+  case ISD::VP_XOR:
     if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
       return RISCVISD::VMXOR_VL;
     return RISCVISD::XOR_VL;
+  case ISD::VP_SELECT:
+    return RISCVISD::VSELECT_VL;
+  case ISD::VP_MERGE:
+    return RISCVISD::VP_MERGE_VL;
+  case ISD::VP_ASHR:
+    return RISCVISD::SRA_VL;
+  case ISD::VP_LSHR:
+    return RISCVISD::SRL_VL;
+  case ISD::VP_SQRT:
+    return RISCVISD::FSQRT_VL;
+  case ISD::VP_SIGN_EXTEND:
+    return RISCVISD::VSEXT_VL;
+  case ISD::VP_ZERO_EXTEND:
+    return RISCVISD::VZEXT_VL;
+  case ISD::VP_FP_TO_SINT:
+    return RISCVISD::VFCVT_RTZ_X_F_VL;
+  case ISD::VP_FP_TO_UINT:
+    return RISCVISD::VFCVT_RTZ_XU_F_VL;
   }
+  // clang-format on
+#undef OP_CASE
+#undef VP_CASE
 }
 
 /// Return true if a RISC-V target specified op has a merge operand.
 static bool hasMergeOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+  assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 122 &&
+         RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
+                 ISD::FIRST_TARGET_STRICTFP_OPCODE ==
+             21 &&
          "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::FMAXNUM_VL)
     return true;
   if (Opcode == RISCVISD::FCOPYSIGN_VL)
     return true;
   if (Opcode >= RISCVISD::VWMUL_VL && Opcode <= RISCVISD::VFWSUB_W_VL)
+    return true;
+  if (Opcode == RISCVISD::SETCC_VL)
     return true;
   if (Opcode >= RISCVISD::STRICT_FADD_VL && Opcode <= RISCVISD::STRICT_FDIV_VL)
     return true;
@@ -4744,9 +4815,12 @@ static bool hasMergeOp(unsigned Opcode) {
 /// Return true if a RISC-V target specified op has a mask operand.
 static bool hasMaskOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+  assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 122 &&
+         RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
+                 ISD::FIRST_TARGET_STRICTFP_OPCODE ==
+             21 &&
          "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
     return true;
@@ -5470,106 +5544,72 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::VP_SELECT:
-    return lowerVPOp(Op, DAG, RISCVISD::VSELECT_VL);
   case ISD::VP_MERGE:
-    return lowerVPOp(Op, DAG, RISCVISD::VP_MERGE_VL);
   case ISD::VP_ADD:
-    return lowerVPOp(Op, DAG, RISCVISD::ADD_VL, /*HasMergeOp*/ true);
   case ISD::VP_SUB:
-    return lowerVPOp(Op, DAG, RISCVISD::SUB_VL, /*HasMergeOp*/ true);
   case ISD::VP_MUL:
-    return lowerVPOp(Op, DAG, RISCVISD::MUL_VL, /*HasMergeOp*/ true);
   case ISD::VP_SDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::SDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_UDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::UDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_SREM:
-    return lowerVPOp(Op, DAG, RISCVISD::SREM_VL, /*HasMergeOp*/ true);
   case ISD::VP_UREM:
-    return lowerVPOp(Op, DAG, RISCVISD::UREM_VL, /*HasMergeOp*/ true);
+    return lowerVPOp(Op, DAG);
   case ISD::VP_AND:
-    return lowerLogicVPOp(Op, DAG, RISCVISD::VMAND_VL, RISCVISD::AND_VL);
   case ISD::VP_OR:
-    return lowerLogicVPOp(Op, DAG, RISCVISD::VMOR_VL, RISCVISD::OR_VL);
   case ISD::VP_XOR:
-    return lowerLogicVPOp(Op, DAG, RISCVISD::VMXOR_VL, RISCVISD::XOR_VL);
+    return lowerLogicVPOp(Op, DAG);
   case ISD::VP_ASHR:
-    return lowerVPOp(Op, DAG, RISCVISD::SRA_VL, /*HasMergeOp*/ true);
   case ISD::VP_LSHR:
-    return lowerVPOp(Op, DAG, RISCVISD::SRL_VL, /*HasMergeOp*/ true);
   case ISD::VP_SHL:
-    return lowerVPOp(Op, DAG, RISCVISD::SHL_VL, /*HasMergeOp*/ true);
   case ISD::VP_FADD:
-    return lowerVPOp(Op, DAG, RISCVISD::FADD_VL, /*HasMergeOp*/ true);
   case ISD::VP_FSUB:
-    return lowerVPOp(Op, DAG, RISCVISD::FSUB_VL, /*HasMergeOp*/ true);
   case ISD::VP_FMUL:
-    return lowerVPOp(Op, DAG, RISCVISD::FMUL_VL, /*HasMergeOp*/ true);
   case ISD::VP_FDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::FDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_FNEG:
-    return lowerVPOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::VP_FABS:
-    return lowerVPOp(Op, DAG, RISCVISD::FABS_VL);
   case ISD::VP_SQRT:
-    return lowerVPOp(Op, DAG, RISCVISD::FSQRT_VL);
   case ISD::VP_FMA:
-    return lowerVPOp(Op, DAG, RISCVISD::VFMADD_VL);
   case ISD::VP_FMINNUM:
-    return lowerVPOp(Op, DAG, RISCVISD::FMINNUM_VL, /*HasMergeOp*/ true);
   case ISD::VP_FMAXNUM:
-    return lowerVPOp(Op, DAG, RISCVISD::FMAXNUM_VL, /*HasMergeOp*/ true);
   case ISD::VP_FCOPYSIGN:
-    return lowerVPOp(Op, DAG, RISCVISD::FCOPYSIGN_VL, /*HasMergeOp*/ true);
+    return lowerVPOp(Op, DAG);
   case ISD::VP_SIGN_EXTEND:
   case ISD::VP_ZERO_EXTEND:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPExtMaskOp(Op, DAG);
-    return lowerVPOp(Op, DAG,
-                     Op.getOpcode() == ISD::VP_SIGN_EXTEND
-                         ? RISCVISD::VSEXT_VL
-                         : RISCVISD::VZEXT_VL);
+    return lowerVPOp(Op, DAG);
   case ISD::VP_TRUNCATE:
     return lowerVectorTruncLike(Op, DAG);
   case ISD::VP_FP_EXTEND:
   case ISD::VP_FP_ROUND:
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
   case ISD::VP_FP_TO_SINT:
-    return lowerVPFPIntConvOp(Op, DAG, RISCVISD::VFCVT_RTZ_X_F_VL);
   case ISD::VP_FP_TO_UINT:
-    return lowerVPFPIntConvOp(Op, DAG, RISCVISD::VFCVT_RTZ_XU_F_VL);
   case ISD::VP_SINT_TO_FP:
-    return lowerVPFPIntConvOp(Op, DAG, RISCVISD::SINT_TO_FP_VL);
   case ISD::VP_UINT_TO_FP:
-    return lowerVPFPIntConvOp(Op, DAG, RISCVISD::UINT_TO_FP_VL);
+    return lowerVPFPIntConvOp(Op, DAG);
   case ISD::VP_SETCC:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
-    return lowerVPOp(Op, DAG, RISCVISD::SETCC_VL, /*HasMergeOp*/ true);
+    [[fallthrough]];
   case ISD::VP_SMIN:
-    return lowerVPOp(Op, DAG, RISCVISD::SMIN_VL, /*HasMergeOp*/ true);
   case ISD::VP_SMAX:
-    return lowerVPOp(Op, DAG, RISCVISD::SMAX_VL, /*HasMergeOp*/ true);
   case ISD::VP_UMIN:
-    return lowerVPOp(Op, DAG, RISCVISD::UMIN_VL, /*HasMergeOp*/ true);
   case ISD::VP_UMAX:
-    return lowerVPOp(Op, DAG, RISCVISD::UMAX_VL, /*HasMergeOp*/ true);
   case ISD::VP_BITREVERSE:
-    return lowerVPOp(Op, DAG, RISCVISD::BITREVERSE_VL, /*HasMergeOp*/ true);
   case ISD::VP_BSWAP:
-    return lowerVPOp(Op, DAG, RISCVISD::BSWAP_VL, /*HasMergeOp*/ true);
+    return lowerVPOp(Op, DAG);
   case ISD::VP_CTLZ:
   case ISD::VP_CTLZ_ZERO_UNDEF:
     if (Subtarget.hasStdExtZvbb())
-      return lowerVPOp(Op, DAG, RISCVISD::CTLZ_VL, /*HasMergeOp*/ true);
+      return lowerVPOp(Op, DAG);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VP_CTTZ:
   case ISD::VP_CTTZ_ZERO_UNDEF:
     if (Subtarget.hasStdExtZvbb())
-      return lowerVPOp(Op, DAG, RISCVISD::CTTZ_VL, /*HasMergeOp*/ true);
+      return lowerVPOp(Op, DAG);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VP_CTPOP:
-    return lowerVPOp(Op, DAG, RISCVISD::CTPOP_VL, /*HasMergeOp*/ true);
+    return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
@@ -5902,56 +5942,6 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// RISC-V doesn't have general instructions for integer setne/seteq, but we can
-/// check for equality with 0. This function emits nodes that convert the
-/// seteq/setne into something that can be compared with 0.
-/// Based on RISCVDAGToDAGISel::selectSETCC but modified to produce
-/// target-independent SelectionDAG nodes rather than machine nodes.
-static SDValue selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                           SelectionDAG &DAG) {
-  assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
-         "Unexpected condition code!");
-
-  // We're looking for a setcc.
-  if (N->getOpcode() != ISD::SETCC)
-    return SDValue();
-
-  // Must be an equality comparison.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (CCVal != ExpectedCCVal)
-    return SDValue();
-
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  if (!LHS.getValueType().isScalarInteger())
-    return SDValue();
-
-  // If the RHS side is 0, we don't need any extra instructions, return the LHS.
-  if (isNullConstant(RHS))
-    return LHS;
-
-  SDLoc DL(N);
-
-  if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
-    int64_t CVal = C->getSExtValue();
-    // If the RHS is -2048, we can use xori to produce 0 if the LHS is -2048 and
-    // non-zero otherwise.
-    if (CVal == -2048)
-      return DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS,
-                         DAG.getConstant(CVal, DL, N->getValueType(0)));
-    // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
-    // LHS is equal to the RHS and non-zero otherwise.
-    if (isInt<12>(CVal) || CVal == 2048)
-      return DAG.getNode(ISD::ADD, DL, N->getValueType(0), LHS,
-                         DAG.getConstant(-CVal, DL, N->getValueType(0)));
-  }
-
-  // If nothing else we can XOR the LHS and RHS to produce zero if they are
-  // equal and a non-zero value if they aren't.
-  return DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS, RHS);
-}
-
 // Transform `binOp (select cond, x, c0), c1` where `c0` and `c1` are constants
 // into `select cond, binOp(x, c1), binOp(c0, c1)` if profitable.
 // For now we only consider transformation profitable if `binOp(c0, c1)` ends up
@@ -6039,35 +6029,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
-    if (SDValue NewCondV = selectSETCC(CondV, ISD::SETNE, DAG)) {
-      // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
-      if (isNullConstant(FalseV))
-        return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
-      // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
-      if (isNullConstant(TrueV))
-        return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV);
-      // (select (riscv_setne c), t, f) -> (or (czero_eqz t, c), (czero_nez f,
-      // c)
-      return DAG.getNode(
-          ISD::OR, DL, VT,
-          DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV),
-          DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV));
-    }
-    if (SDValue NewCondV =  selectSETCC(CondV, ISD::SETEQ, DAG)) {
-      // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
-      if (isNullConstant(FalseV))
-        return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
-      // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
-      if (isNullConstant(TrueV))
-        return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV);
-      // (select (riscv_seteq c), t, f) -> (or (czero_eqz f, c), (czero_nez t,
-      // c)
-      return DAG.getNode(
-          ISD::OR, DL, VT,
-          DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV),
-          DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV));
-    }
-
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
@@ -8900,9 +8861,10 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
 // * The EVL operand is promoted from i32 to i64 on RV64.
 // * Fixed-length vectors are converted to their scalable-vector container
 //   types.
-SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG,
-                                       unsigned RISCVISDOpc,
-                                       bool HasMergeOp) const {
+SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
+  unsigned RISCVISDOpc = getRISCVVLOp(Op);
+  bool HasMergeOp = hasMergeOp(RISCVISDOpc);
+
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SmallVector<SDValue, 4> Ops;
@@ -9051,13 +9013,14 @@ SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
 }
 
 // Lower Floating-Point/Integer Type-Convert VP SDNodes
-SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
-                                                unsigned RISCVISDOpc) const {
+SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue Src = Op.getOperand(0);
   SDValue Mask = Op.getOperand(1);
   SDValue VL = Op.getOperand(2);
+  unsigned RISCVISDOpc = getRISCVVLOp(Op);
 
   MVT DstVT = Op.getSimpleValueType();
   MVT SrcVT = Src.getSimpleValueType();
@@ -9183,12 +9146,11 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
-SDValue RISCVTargetLowering::lowerLogicVPOp(SDValue Op, SelectionDAG &DAG,
-                                            unsigned MaskOpc,
-                                            unsigned VecOpc) const {
+SDValue RISCVTargetLowering::lowerLogicVPOp(SDValue Op,
+                                            SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   if (VT.getVectorElementType() != MVT::i1)
-    return lowerVPOp(Op, DAG, VecOpc, true);
+    return lowerVPOp(Op, DAG);
 
   // It is safe to drop mask parameter as masked-off elements are undef.
   SDValue Op1 = Op->getOperand(0);
@@ -9204,7 +9166,7 @@ SDValue RISCVTargetLowering::lowerLogicVPOp(SDValue Op, SelectionDAG &DAG,
   }
 
   SDLoc DL(Op);
-  SDValue Val = DAG.getNode(MaskOpc, DL, ContainerVT, Op1, Op2, VL);
+  SDValue Val = DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT, Op1, Op2, VL);
   if (!IsFixed)
     return Val;
   return convertFromScalableVector(VT, Val, DAG, Subtarget);
@@ -10571,7 +10533,7 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getConstant(CB, DL, VT));
 }
 
-// Try to turn (add (xor (setcc X, Y), 1) -1) into (neg (setcc X, Y)).
+// Try to turn (add (xor bool, 1) -1) into (neg bool).
 static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -10582,9 +10544,13 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
   if (!isAllOnesConstant(N1))
     return SDValue();
 
-  // Look for an (xor (setcc X, Y), 1).
-  if (N0.getOpcode() != ISD::XOR || !isOneConstant(N0.getOperand(1)) ||
-      N0.getOperand(0).getOpcode() != ISD::SETCC)
+  // Look for (xor X, 1).
+  if (N0.getOpcode() != ISD::XOR || !isOneConstant(N0.getOperand(1)))
+    return SDValue();
+
+  // First xor input should be 0 or 1.
+  APInt Mask = APInt::getBitsSetFrom(VT.getSizeInBits(), 1);
+  if (!DAG.MaskedValueIsZero(N0.getOperand(0), Mask))
     return SDValue();
 
   // Emit a negate of the setcc.
@@ -10782,6 +10748,42 @@ static SDValue performANDCombine(SDNode *N,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true, Subtarget);
 }
 
+// Try to pull an xor with 1 through a select idiom that uses czero_eqz/nez.
+// FIXME: Generalize to other binary operators with same operand.
+static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
+                                SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::OR && "Unexpected opcode");
+
+  if (N0.getOpcode() != RISCVISD::CZERO_EQZ ||
+      N1.getOpcode() != RISCVISD::CZERO_NEZ ||
+      !N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  // Should have the same condition.
+  SDValue Cond = N0.getOperand(1);
+  if (Cond != N1.getOperand(1))
+    return SDValue();
+
+  SDValue TrueV = N0.getOperand(0);
+  SDValue FalseV = N1.getOperand(0);
+
+  if (TrueV.getOpcode() != ISD::XOR || FalseV.getOpcode() != ISD::XOR ||
+      TrueV.getOperand(1) != FalseV.getOperand(1) ||
+      !isOneConstant(TrueV.getOperand(1)) ||
+      !TrueV.hasOneUse() || !FalseV.hasOneUse())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  SDValue NewN0 = DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV.getOperand(0),
+                              Cond);
+  SDValue NewN1 = DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV.getOperand(0),
+                              Cond);
+  SDValue NewOr = DAG.getNode(ISD::OR, DL, VT, NewN0, NewN1);
+  return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -10792,6 +10794,15 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
       return V;
+
+  // Look for Or of CZERO_EQZ/NEZ with same condition which is the select idiom.
+  // We may be able to pull a common operation out of the true and false value.
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (SDValue V = combineOrOfCZERO(N, N0, N1, DAG))
+    return V;
+  if (SDValue V = combineOrOfCZERO(N, N1, N0, DAG))
+    return V;
 
   // fold (or (select cond, 0, y), x) ->
   //      (select cond, x, (or x, y))
@@ -12931,6 +12942,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, ISD::CondCode::SETEQ);
         return DAG.getNode(ISD::ADD, DL, VT, LHS, C);
       }
+    }
+
+    // If both true/false are an xor with 1, pull through the select.
+    // This can occur after op legalization if both operands are setccs that
+    // require an xor to invert.
+    // FIXME: Generalize to other binary ops with identical operand?
+    if (TrueV.getOpcode() == ISD::XOR && FalseV.getOpcode() == ISD::XOR &&
+        TrueV.getOperand(1) == FalseV.getOperand(1) &&
+        isOneConstant(TrueV.getOperand(1)) &&
+        TrueV.hasOneUse() && FalseV.hasOneUse()) {
+      SDValue NewSel = DAG.getNode(RISCVISD::SELECT_CC, DL, VT, LHS, RHS, CC,
+                                   TrueV.getOperand(0), FalseV.getOperand(0));
+      return DAG.getNode(ISD::XOR, DL, VT, NewSel, TrueV.getOperand(1));
     }
 
     return SDValue();

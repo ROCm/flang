@@ -66,6 +66,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"v", RISCVExtensionVersion{1, 0}},
 
     // vendor-defined ('X') extensions
+    {"xcvalu", RISCVExtensionVersion{1, 0}},
     {"xcvbitmanip", RISCVExtensionVersion{1, 0}},
     {"xcvmac", RISCVExtensionVersion{1, 0}},
     {"xsfcie", RISCVExtensionVersion{1, 0}},
@@ -942,10 +943,6 @@ Error RISCVISAInfo::checkDependency() {
   if (XLen != 32 && Exts.count("zcf"))
     return createStringError(errc::invalid_argument,
                              "'zcf' is only supported for 'rv32'");
-
-  // Additional dependency checks.
-  // TODO: The 'q' extension requires rv64.
-  // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
 
   return Error::success();
 }
