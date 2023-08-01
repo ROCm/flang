@@ -7,6 +7,8 @@ if(${ENABLE_RUN_PACKAGE})
   set(RUN_PACKAGE "runtime/")
 endif()
 
+include(GNUInstallDirs)
+
 # If we are not building as a part of LLVM, which is usual for flang-legacy,
 # build flang-legacy as a standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
