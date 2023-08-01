@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(${ENABLE_DEVEL_PACKAGE})
+  set(DEVEL_PACKAGE "devel/")
+endif()
+if(${ENABLE_RUN_PACKAGE})
+  set(RUN_PACKAGE "runtime/")
+endif()
+
 # If we are not building as a part of LLVM, which is usual for flang-legacy,
 # build flang-legacy as a standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -95,4 +102,4 @@ target_link_libraries(flang-legacy
   tinfo
   z
 )
-install(TARGETS flang-legacy DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS flang-legacy DESTINATION "${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR}")
