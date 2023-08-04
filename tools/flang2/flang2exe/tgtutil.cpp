@@ -1260,6 +1260,8 @@ ll_make_tgt_register_requires()
 
   int args[1];
   DTYPE arg_types[1] = {DT_INT8};
+  if (XBIT(235,1)) //USM flag
+    HasRequiresUnifiedSharedMemory = true;
   if (HasRequiresUnifiedSharedMemory) {
     args[0] = ad_kconi(OMP_REQ_UNIFIED_SHARED_MEMORY);
   }
