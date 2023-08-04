@@ -493,7 +493,7 @@ rdline(FILE *fp, INT *buffer, INT count)
   char *fgets_status;             /* status returned by call to fgets */
   INT num_char;                   /* number of characters in temp_buffer */
   INT status;                     /* status returned by call to fseek */
-  char temp_buffer[MAX_LINE_LEN]; /* temporary buffer, hold buffer in
+  char temp_buffer[MAX_LINE_LEN+1]; /* temporary buffer, hold buffer in
                                      A4 format */
 
 #ifdef TRACE
@@ -531,7 +531,7 @@ void
 wtline(FILE *fp, INT *buffer, INT count)
 {
   INT status;                     /* status returned by a system call */
-  char temp_buffer[MAX_LINE_LEN]; /* temporary buffer */
+  char temp_buffer[MAX_LINE_LEN+1]; /* temporary buffer */
   INT n;
 
 #ifdef TRACE
