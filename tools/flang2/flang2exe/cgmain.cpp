@@ -13635,7 +13635,7 @@ gen_constant(SPTR sptr, DTYPE tdtype, INT conval0, INT conval1, int flags)
       xx.ww = conval0;
     xdble(xx.ww, dtmp2.tmp);
     xdtomd(dtmp2.tmp, &dtmp.d);
-    snprintf(d, 200, "%.8e", dtmp.d);
+    snprintf(d, MAXIDLEN, "%.8e", dtmp.d);
     size += 19;
     constant = (char *)getitem(
         LLVM_LONGTERM_AREA,
