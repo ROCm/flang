@@ -950,7 +950,7 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     LookupResult Members(S, NotEqOp, OpLoc,
                          Sema::LookupNameKind::LookupMemberName);
     S.LookupQualifiedName(Members, RHSRec->getDecl());
-    Members.suppressDiagnostics();
+    Members.suppressAccessDiagnostics();
     for (NamedDecl *Op : Members)
       if (FunctionsCorrespond(S.Context, EqFD, Op->getAsFunction()))
         return false;
@@ -961,7 +961,7 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
                           Sema::LookupNameKind::LookupOperatorName);
   S.LookupName(NonMembers,
                S.getScopeForContext(EqFD->getEnclosingNamespaceContext()));
-  NonMembers.suppressDiagnostics();
+  NonMembers.suppressAccessDiagnostics();
   for (NamedDecl *Op : NonMembers) {
     auto *FD = Op->getAsFunction();
     if(auto* UD = dyn_cast<UsingShadowDecl>(Op))
@@ -7953,7 +7953,7 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
 
     LookupResult Operators(*this, OpName, OpLoc, LookupOrdinaryName);
     LookupQualifiedName(Operators, T1Rec->getDecl());
-    Operators.suppressDiagnostics();
+    Operators.suppressAccessDiagnostics();
 
     for (LookupResult::iterator Oper = Operators.begin(),
                                 OperEnd = Operators.end();
@@ -9816,7 +9816,7 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
 }
 
 static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2, unsigned NumParams) {
+                                   const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
 
@@ -9829,8 +9829,14 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
     return F->getParamDecl(I++)->getType();
   };
 
+  unsigned F1NumParams = F1->getNumParams() + isa<CXXMethodDecl>(F1);
+  unsigned F2NumParams = F2->getNumParams() + isa<CXXMethodDecl>(F2);
+
+  if (F1NumParams != F2NumParams)
+    return false;
+
   unsigned I1 = 0, I2 = 0;
-  for (unsigned I = 0; I != NumParams; ++I) {
+  for (unsigned I = 0; I != F1NumParams; ++I) {
     QualType T1 = NextParam(F1, I1, I == 0);
     QualType T2 = NextParam(F2, I2, I == 0);
     assert(!T1.isNull() && !T2.isNull() && "Unexpected null param types");
@@ -9998,8 +10004,7 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function,
-                                 NumArgs)) {
+          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
@@ -13963,6 +13968,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         std::swap(Args[0], Args[1]);
 
       if (FnDecl) {
+
+        if (FnDecl->isInvalidDecl())
+          return ExprError();
+
         Expr *Base = nullptr;
         // We matched an overloaded operator. Build a call to that
         // operator.
@@ -13995,7 +14004,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl, 2)) {
+                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
@@ -14949,7 +14958,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   const auto *Record = Object.get()->getType()->castAs<RecordType>();
   LookupResult R(*this, OpName, LParenLoc, LookupOrdinaryName);
   LookupQualifiedName(R, Record->getDecl());
-  R.suppressDiagnostics();
+  R.suppressAccessDiagnostics();
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
@@ -15046,12 +15055,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     break;
   }
   case OR_Ambiguous:
-    CandidateSet.NoteCandidates(
-        PartialDiagnosticAt(Object.get()->getBeginLoc(),
-                            PDiag(diag::err_ovl_ambiguous_object_call)
-                                << Object.get()->getType()
-                                << Object.get()->getSourceRange()),
-        *this, OCD_AmbiguousCandidates, Args);
+    if (!R.isAmbiguous())
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(Object.get()->getBeginLoc(),
+                              PDiag(diag::err_ovl_ambiguous_object_call)
+                                  << Object.get()->getType()
+                                  << Object.get()->getSourceRange()),
+          *this, OCD_AmbiguousCandidates, Args);
     break;
 
   case OR_Deleted:
@@ -15214,7 +15224,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
 
   LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
   LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
-  R.suppressDiagnostics();
+  R.suppressAccessDiagnostics();
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
@@ -15255,11 +15265,12 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     return ExprError();
   }
   case OR_Ambiguous:
-    CandidateSet.NoteCandidates(
-        PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_ambiguous_oper_unary)
-                                       << "->" << Base->getType()
-                                       << Base->getSourceRange()),
-        *this, OCD_AmbiguousCandidates, Base);
+    if (!R.isAmbiguous())
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_ambiguous_oper_unary)
+                                         << "->" << Base->getType()
+                                         << Base->getSourceRange()),
+          *this, OCD_AmbiguousCandidates, Base);
     return ExprError();
 
   case OR_Deleted:

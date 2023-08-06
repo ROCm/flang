@@ -267,7 +267,9 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
 
   BCLibs.push_back(Args.MakeArgString(
-      libpath + "/libomptarget-amdgpu-" + GPUArch + ".bc"));
+      libpath + "/libomptarget-" +
+      Twine(tools::getAMDGPUCodeObjectVersion(C.getDriver(), Args) * 100) +
+      "-amdgpu-" + GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
   BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(

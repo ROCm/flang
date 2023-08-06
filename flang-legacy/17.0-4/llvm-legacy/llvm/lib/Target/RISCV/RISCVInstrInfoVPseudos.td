@@ -192,7 +192,7 @@ defvar MxListFWRed = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 // Use for zext/sext.vf2
 defvar MxListVF2 = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 
-// Use for zext/sext.vf4
+// Use for zext/sext.vf4 and vector crypto instructions
 defvar MxListVF4 = [V_MF2, V_M1, V_M2, V_M4, V_M8];
 
 // Use for zext/sext.vf8
@@ -2015,6 +2015,19 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
+multiclass VPseudoBinaryNoMask<VReg RetClass,
+                               VReg Op1Class,
+                               DAGOperand Op2Class,
+                               LMULInfo MInfo,
+                               string Constraint = "",
+                               int sew = 0> {
+  let VLMul = MInfo.value, SEW=sew in {
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
+                                       Constraint>;
+  }
+}
+
 multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      VReg Op1Class,
                                      DAGOperand Op2Class,
@@ -3125,8 +3138,8 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
               SchedTernary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV",
                            "ReadVIMulAddV", mx>;
     defm "" : VPseudoTernaryV_VX_AAXA<m, Constraint>,
-              SchedTernary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddV",
-                           "ReadVIMulAddX", mx>;
+              SchedTernary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX",
+                           "ReadVIMulAddV", mx>;
   }
 }
 
@@ -3140,8 +3153,8 @@ multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "" : VPseudoTernaryV_VF_AAXA<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddV",
-                             "ReadVFMulAddF", m.MX>;
+                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
+                             "ReadVFMulAddV", m.MX>;
     }
   }
 }
@@ -3156,8 +3169,8 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "" : VPseudoTernaryV_VF_AAXA_RM<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddV",
-                             "ReadVFMulAddF", m.MX>;
+                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
+                             "ReadVFMulAddV", m.MX>;
     }
   }
 }
@@ -3180,16 +3193,16 @@ multiclass VPseudoVWMAC_VV_VX {
               SchedTernary<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                            "ReadVIWMulAddV", mx>;
     defm "" : VPseudoTernaryW_VX<m>,
-              SchedTernary<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddV",
-                           "ReadVIWMulAddX", mx>;
+              SchedTernary<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddX",
+                           "ReadVIWMulAddV", mx>;
   }
 }
 
 multiclass VPseudoVWMAC_VX {
   foreach m = MxListW in {
     defm "" : VPseudoTernaryW_VX<m>,
-              SchedTernary<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddV",
-                           "ReadVIWMulAddX", m.MX>;
+              SchedTernary<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddX",
+                           "ReadVIWMulAddV", m.MX>;
   }
 }
 
@@ -3204,7 +3217,7 @@ multiclass VPseudoVWMAC_VV_VF_RM {
     foreach m = f.MxListFW in {
       defm "" : VPseudoTernaryW_VF_RM<m, f>,
                 SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
-                             "ReadVFWMulAddV", "ReadVFWMulAddF", m.MX>;
+                             "ReadVFWMulAddF", "ReadVFWMulAddV", m.MX>;
     }
   }
 }
@@ -3229,7 +3242,7 @@ multiclass VPseudoVWMAC_VV_VF_BF_RM {
  
       defm "" : VPseudoTernaryW_VF_BF_RM<m, f>,
                 Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
-                       ReadVFWMulAddV_MX, ReadVFWMulAddF_MX, ReadVMask]>;
+                       ReadVFWMulAddF_MX, ReadVFWMulAddV_MX, ReadVMask]>;
     }
   }
 }
