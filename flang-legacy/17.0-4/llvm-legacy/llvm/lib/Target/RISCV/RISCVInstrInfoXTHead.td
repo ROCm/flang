@@ -488,6 +488,7 @@ defset list<VTypeInfoToWide> AllQuadWidenableInt8NoVLMulVectors = {
 
 multiclass VPseudoVMAQA_VV_VX {
   foreach m = MxListTHVdot in {
+    // TODO: Add Sched
     defm "" : VPseudoTernaryW_VV<m>;
     defm "" : VPseudoTernaryW_VX<m>;
   }
@@ -495,6 +496,7 @@ multiclass VPseudoVMAQA_VV_VX {
 
 multiclass VPseudoVMAQA_VX {
   foreach m = MxListTHVdot in {
+    // TODO: Add Sched
     defm "" : VPseudoTernaryW_VX<m>;
   }
 }
