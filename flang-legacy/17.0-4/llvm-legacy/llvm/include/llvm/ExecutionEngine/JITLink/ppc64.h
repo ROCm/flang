@@ -24,6 +24,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   Pointer64 = Edge::FirstRelocation,
   Pointer32,
   Delta64,
+  Delta34,
   Delta32,
   NegDelta32,
   Delta16,
@@ -36,17 +37,20 @@ enum EdgeKind_ppc64 : Edge::Kind {
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
   CallBranchDeltaRestoreTOC,
-  // Need PLT call stub using TOC, TOC pointer is not saved before branching.
-  RequestPLTCallStub,
-  // Need PLT call stub using TOC, TOC pointer is saved before branching.
-  RequestPLTCallStubSaveTOC,
-  // Need PLT call stub without using TOC.
-  RequestPLTCallStubNoTOC,
+  // Request calling function with TOC.
+  RequestCall,
+  // Request calling function without TOC.
+  RequestCallNoTOC,
+  RequestTLSDescInGOTAndTransformToTOCDelta16HA,
+  RequestTLSDescInGOTAndTransformToTOCDelta16LO,
 };
 
 enum PLTCallStubKind {
+  // Setup function entry(r12) and long branch to target using TOC.
   LongBranch,
+  // Save TOC pointer, setup function entry and long branch to target using TOC.
   LongBranchSaveR2,
+  // Setup function entry(r12) and long branch to target without using TOC.
   LongBranchNoTOC,
 };
 
@@ -141,8 +145,7 @@ public:
     case TOCDelta16DS:
     case TOCDelta16LODS:
     case CallBranchDeltaRestoreTOC:
-    case RequestPLTCallStub:
-    case RequestPLTCallStubSaveTOC:
+    case RequestCall:
       // Create TOC section if TOC relocation, PLT or GOT is used.
       getOrCreateTOCSection(G);
       return false;
@@ -174,14 +177,25 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();
-    if (K == ppc64::RequestPLTCallStubSaveTOC && E.getTarget().isExternal()) {
-      E.setKind(ppc64::CallBranchDeltaRestoreTOC);
-      this->StubKind = LongBranchSaveR2;
-      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+    if (K == ppc64::RequestCall) {
+      if (isExternal) {
+        E.setKind(ppc64::CallBranchDeltaRestoreTOC);
+        this->StubKind = LongBranchSaveR2;
+        E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+        // We previously set branching to local entry. Now reverse that
+        // operation.
+        E.setAddend(0);
+      } else
+        // TODO: There are cases a local function call need a call stub.
+        // 1. Caller uses TOC, the callee doesn't, need a r2 save stub.
+        // 2. Caller doesn't use TOC, the callee does, need a r12 setup stub.
+        // 3. Branching target is out of range.
+        E.setKind(ppc64::CallBranchDelta);
       return true;
     }
-    if (K == ppc64::RequestPLTCallStubNoTOC && E.getTarget().isExternal()) {
+    if (K == ppc64::RequestCallNoTOC) {
       E.setKind(ppc64::CallBranchDelta);
       this->StubKind = LongBranchNoTOC;
       E.setTarget(this->getEntryForTarget(G, E.getTarget()));
@@ -217,6 +231,26 @@ const char *getEdgeKindName(Edge::Kind K);
 inline static uint16_t ha16(uint64_t x) { return (x + 0x8000) >> 16; }
 
 inline static uint16_t lo16(uint64_t x) { return x & 0xffff; }
+
+// Prefixed instruction introduced in ISAv3.1 consists of two 32-bit words,
+// prefix word and suffix word, i.e., prefixed_instruction = concat(prefix_word,
+// suffix_word). That's to say, for a prefixed instruction encoded in uint64_t,
+// the most significant 32 bits belong to the prefix word. The prefix word is at
+// low address for both big/little endian. Byte order in each word still follows
+// its endian.
+template <support::endianness Endianness>
+inline static uint64_t readPrefixedInstruction(const char *Loc) {
+  constexpr bool isLE = Endianness == support::endianness::little;
+  uint64_t Inst = support::endian::read64<Endianness>(Loc);
+  return isLE ? (Inst << 32) | (Inst >> 32) : Inst;
+}
+
+template <support::endianness Endianness>
+inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
+  constexpr bool isLE = Endianness == support::endianness::little;
+  Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
+  support::endian::write64<Endianness>(Loc, Inst);
+}
 
 /// Apply fixup expression for edge to block content.
 template <support::endianness Endianness>
@@ -302,6 +336,18 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case Delta64: {
     int64_t Value = S + A - P;
     support::endian::write64<Endianness>(FixupPtr, Value);
+    break;
+  }
+  case Delta34: {
+    int64_t Value = S + A - P;
+    if (!LLVM_UNLIKELY(isInt<34>(Value)))
+      return makeTargetOutOfRangeError(G, B, E);
+    static const uint64_t SI0Mask = 0x00000003ffff0000;
+    static const uint64_t SI1Mask = 0x000000000000ffff;
+    static const uint64_t FullMask = 0x0003ffff0000ffff;
+    uint64_t Inst = readPrefixedInstruction<Endianness>(FixupPtr) & ~FullMask;
+    writePrefixedInstruction<Endianness>(
+        FixupPtr, Inst | ((Value & SI0Mask) << 16) | (Value & SI1Mask));
     break;
   }
   case Delta32: {

@@ -38,18 +38,6 @@
 namespace clang {
 namespace dataflow {
 
-/// Indicates what kind of indirections should be skipped past when retrieving
-/// storage locations or values.
-///
-/// FIXME: Consider renaming this or replacing it with a more appropriate model.
-/// See the discussion in https://reviews.llvm.org/D116596 for context.
-enum class SkipPast {
-  /// No indirections should be skipped past.
-  None,
-  /// An optional reference should be skipped past.
-  Reference,
-};
-
 /// Indicates the result of a tentative comparison.
 enum class ComparisonResult {
   Same,
@@ -88,7 +76,7 @@ public:
     virtual ComparisonResult compare(QualType Type, const Value &Val1,
                                      const Environment &Env1, const Value &Val2,
                                      const Environment &Env2) {
-      // FIXME: Consider adding QualType to StructValue and removing the Type
+      // FIXME: Consider adding QualType to RecordValue and removing the Type
       // argument here.
       return ComparisonResult::Unknown;
     }
@@ -279,38 +267,14 @@ public:
   /// refers directly to the referenced object, not a `ReferenceValue`.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
-  /// Assigns `Loc` as the storage location of `E` in the environment.
-  ///
-  /// This function is deprecated; prefer `setStorageLocationStrict()`.
-  /// For details, see https://discourse.llvm.org/t/70086.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be assigned a storage location in the environment.
-  void setStorageLocation(const Expr &E, StorageLocation &Loc);
-
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
   /// environment.
-  ///
-  /// This function is the preferred alternative to
-  /// `setStorageLocation(const Expr &, StorageLocation &)`. Once the migration
-  /// to strict handling of value categories is complete (see
-  /// https://discourse.llvm.org/t/70086), `setStorageLocation()` will be
-  /// removed and this function will be renamed to `setStorageLocation()`.
   ///
   /// Requirements:
   ///
   ///  `E` must not be assigned a storage location in the environment.
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
-  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
-
-  /// Returns the storage location assigned to `E` in the environment, applying
-  /// the `SP` policy for skipping past indirections, or null if `E` isn't
-  /// assigned a storage location in the environment.
-  ///
-  /// This function is deprecated; prefer `getStorageLocationStrict()`.
-  /// For details, see https://discourse.llvm.org/t/70086.
-  StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
+  void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
   /// Returns the storage location assigned to the glvalue `E` in the
   /// environment, or null if `E` isn't assigned a storage location in the
@@ -319,20 +283,14 @@ public:
   /// If the storage location for `E` is associated with a
   /// `ReferenceValue RefVal`, returns `RefVal.getReferentLoc()` instead.
   ///
-  /// This function is the preferred alternative to
-  /// `getStorageLocation(const Expr &, SkipPast)`. Once the migration
-  /// to strict handling of value categories is complete (see
-  /// https://discourse.llvm.org/t/70086), `getStorageLocation()` will be
-  /// removed and this function will be renamed to `getStorageLocation()`.
-  ///
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
-  StorageLocation *getStorageLocationStrict(const Expr &E) const;
+  StorageLocation *getStorageLocation(const Expr &E) const;
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  AggregateStorageLocation *getThisPointeeStorageLocation() const;
+  RecordStorageLocation *getThisPointeeStorageLocation() const;
 
   /// Returns the location of the result object for a record-type prvalue.
   ///
@@ -357,7 +315,7 @@ public:
   ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
-  AggregateStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
+  RecordStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -417,8 +375,8 @@ public:
   /// non-pointer/non-reference type.
   ///
   /// If `Type` is a class, struct, or union type, calls `setValue()` to
-  /// associate the `StructValue` with its storage location
-  /// (`StructValue::getAggregateLoc()`).
+  /// associate the `RecordValue` with its storage location
+  /// (`RecordValue::getLoc()`).
   ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
@@ -480,40 +438,23 @@ public:
   ///
   ///  `E` must be a prvalue
   ///  `Val` must not be a `ReferenceValue`
-  ///  If `Val` is a `StructValue`, its `AggregateStorageLocation` must be the
-  ///  same as that of any `StructValue` that has already been associated with
+  ///  If `Val` is a `RecordValue`, its `RecordStorageLocation` must be the
+  ///  same as that of any `RecordValue` that has already been associated with
   ///  `E`. This is to guarantee that the result object initialized by a prvalue
-  ///  `StructValue` has a durable storage location.
-  void setValueStrict(const Expr &E, Value &Val);
+  ///  `RecordValue` has a durable storage location.
+  void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
   Value *getValue(const StorageLocation &Loc) const;
 
-  /// Equivalent to `getValue(getStorageLocation(D, SP), SkipPast::None)` if `D`
-  /// is assigned a storage location in the environment, otherwise returns null.
+  /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
+  /// storage location in the environment, otherwise returns null.
   Value *getValue(const ValueDecl &D) const;
 
-  /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
-  /// is assigned a storage location in the environment, otherwise returns null.
-  ///
-  /// This function is deprecated; prefer `getValueStrict()`. For details, see
-  /// https://discourse.llvm.org/t/70086.
-  Value *getValue(const Expr &E, SkipPast SP) const;
-
-  /// Returns the `Value` assigned to the prvalue `E` in the environment, or
-  /// null if `E` isn't assigned a value in the environment.
-  ///
-  /// This function is the preferred alternative to
-  /// `getValue(const Expr &, SkipPast)`. Once the migration to strict handling
-  /// of value categories is complete (see https://discourse.llvm.org/t/70086),
-  /// `getValue()` will be removed and this function will be renamed to
-  /// `getValue()`.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must be a prvalue
-  Value *getValueStrict(const Expr &E) const;
+  /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
+  /// storage location in the environment, otherwise returns null.
+  Value *getValue(const Expr &E) const;
 
   // FIXME: should we deprecate the following & call arena().create() directly?
 
@@ -644,6 +585,14 @@ private:
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
 
+  /// Internal version of `setStorageLocation()` that doesn't check if the
+  /// expression is a prvalue.
+  void setStorageLocationInternal(const Expr &E, StorageLocation &Loc);
+
+  /// Internal version of `getStorageLocation()` that doesn't check if the
+  /// expression is a prvalue.
+  StorageLocation *getStorageLocationInternal(const Expr &E) const;
+
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
   ///
@@ -671,9 +620,6 @@ private:
   /// `D` and `InitExpr` may be null.
   StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
                                         const Expr *InitExpr);
-
-  StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
-  const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
 
   /// Shared implementation of `pushCall` overloads. Note that unlike
   /// `pushCall`, this member is invoked on the environment of the callee, not
@@ -703,7 +649,7 @@ private:
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
-  AggregateStorageLocation *ThisPointeeLoc = nullptr;
+  RecordStorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
@@ -722,36 +668,44 @@ private:
 /// `CXXMemberCallExpr`, or null if none is defined in the environment.
 /// Dereferences the pointer if the member call expression was written using
 /// `->`.
-AggregateStorageLocation *
-getImplicitObjectLocation(const CXXMemberCallExpr &MCE, const Environment &Env);
+RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
+                                                 const Environment &Env);
 
 /// Returns the storage location for the base object of a `MemberExpr`, or null
 /// if none is defined in the environment. Dereferences the pointer if the
 /// member expression was written using `->`.
-AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
-                                                const Environment &Env);
+RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                             const Environment &Env);
 
 /// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
 /// order in which they appear in `InitListExpr::inits()`.
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
-/// Associates a new `StructValue` with `Loc` and returns the new value.
+/// Associates a new `RecordValue` with `Loc` and returns the new value.
 /// It is not defined whether the field values remain the same or not.
 ///
 /// This function is primarily intended for use by checks that set custom
-/// properties on `StructValue`s to model the state of these values. Such checks
-/// should avoid modifying the properties of an existing `StructValue` because
+/// properties on `RecordValue`s to model the state of these values. Such checks
+/// should avoid modifying the properties of an existing `RecordValue` because
 /// these changes would be visible to other `Environment`s that share the same
-/// `StructValue`. Instead, call `refreshStructValue()`, then set the properties
-/// on the new `StructValue` that it returns. Typical usage:
+/// `RecordValue`. Instead, call `refreshRecordValue()`, then set the properties
+/// on the new `RecordValue` that it returns. Typical usage:
 ///
-///   refreshStructValue(Loc, Env).setProperty("my_prop", MyPropValue);
-StructValue &refreshStructValue(AggregateStorageLocation &Loc,
-                                Environment &Env);
+///   refreshRecordValue(Loc, Env).setProperty("my_prop", MyPropValue);
+RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 
-/// Associates a new `StructValue` with `Expr` and returns the new value.
+/// Associates a new `RecordValue` with `Expr` and returns the new value.
 /// See also documentation for the overload above.
-StructValue &refreshStructValue(const Expr &Expr, Environment &Env);
+RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
+
+/// Deprecated synonym for `refreshRecordValue()`.
+inline RecordValue &refreshStructValue(RecordStorageLocation &Loc,
+                                       Environment &Env) {
+  return refreshRecordValue(Loc, Env);
+}
+inline RecordValue &refreshStructValue(const Expr &Expr, Environment &Env) {
+  return refreshRecordValue(Expr, Env);
+}
 
 } // namespace dataflow
 } // namespace clang

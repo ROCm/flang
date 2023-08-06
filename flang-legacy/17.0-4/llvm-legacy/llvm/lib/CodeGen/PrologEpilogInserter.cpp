@@ -134,8 +134,8 @@ private:
   bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
                                    unsigned OpIdx, int SPAdj = 0);
   // Does same as replaceFrameIndices but using the backward MIR walk and
-  // backward register scavenger walk. Does not yet support call sequence
-  // processing.
+  // backward register scavenger walk.
+  void replaceFrameIndicesBackward(MachineFunction &MF);
   void replaceFrameIndicesBackward(MachineBasicBlock *BB, MachineFunction &MF,
                                    int &SPAdj);
 
@@ -272,8 +272,17 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
 
   // Replace all MO_FrameIndex operands with physical register references
   // and actual offsets.
-  //
-  replaceFrameIndices(MF);
+  if (TFI->needsFrameIndexResolution(MF)) {
+    // Allow the target to determine this after knowing the frame size.
+    FrameIndexEliminationScavenging =
+        (RS && !FrameIndexVirtualScavenging) ||
+        TRI->requiresFrameIndexReplacementScavenging(MF);
+
+    if (TRI->eliminateFrameIndicesBackwards())
+      replaceFrameIndicesBackward(MF);
+    else
+      replaceFrameIndices(MF);
+  }
 
   // If register scavenging is needed, as we've enabled doing it as a
   // post-pass, scavenge the virtual registers that frame index elimination
@@ -1285,6 +1294,8 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
           continue;
 
         MCRegister Reg = MO.getReg();
+        if (!Reg)
+          continue;
 
         // This picks up sibling registers (e.q. %al -> %ah).
         for (MCRegUnit Unit : TRI.regunits(Reg))
@@ -1308,8 +1319,11 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
         if (!MO.isReg())
           continue;
 
-        for (const MCPhysReg &Reg :
-             TRI.sub_and_superregs_inclusive(MO.getReg()))
+        MCRegister Reg = MO.getReg();
+        if (!Reg)
+          continue;
+
+        for (const MCPhysReg Reg : TRI.sub_and_superregs_inclusive(Reg))
           RegsToZero.reset(Reg);
       }
     }
@@ -1327,19 +1341,38 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
       TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
 }
 
+/// Replace all FrameIndex operands with physical register references and actual
+/// offsets.
+void PEI::replaceFrameIndicesBackward(MachineFunction &MF) {
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+
+  for (auto &MBB : MF) {
+    int SPAdj = 0;
+    if (!MBB.succ_empty()) {
+      // Get the SP adjustment for the end of MBB from the start of any of its
+      // successors. They should all be the same.
+      assert(all_of(MBB.successors(), [&MBB](const MachineBasicBlock *Succ) {
+        return Succ->getCallFrameSize() ==
+               (*MBB.succ_begin())->getCallFrameSize();
+      }));
+      const MachineBasicBlock &FirstSucc = **MBB.succ_begin();
+      SPAdj = TFI.alignSPAdjust(FirstSucc.getCallFrameSize());
+      if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp)
+        SPAdj = -SPAdj;
+    }
+
+    replaceFrameIndicesBackward(&MBB, MF, SPAdj);
+
+    // We can't track the call frame size after call frame pseudos have been
+    // eliminated. Set it to zero everywhere to keep MachineVerifier happy.
+    MBB.setCallFrameSize(0);
+  }
+}
+
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical
 /// register references and actual offsets.
 void PEI::replaceFrameIndices(MachineFunction &MF) {
-  const auto &ST = MF.getSubtarget();
-  const TargetFrameLowering &TFI = *ST.getFrameLowering();
-  if (!TFI.needsFrameIndexResolution(MF))
-    return;
-
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
-
-  // Allow the target to determine this after knowing the frame size.
-  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
-    TRI->requiresFrameIndexReplacementScavenging(MF);
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   // Store SPAdj at exit of a basic block.
   SmallVector<int, 8> SPState;
@@ -1509,8 +1542,11 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   if (LocalRS)
     LocalRS->enterBasicBlockEnd(*BB);
 
-  for (MachineInstr &MI : make_early_inc_range(reverse(*BB))) {
+  for (MachineBasicBlock::iterator I = BB->end(); I != BB->begin();) {
+    MachineInstr &MI = *std::prev(I);
+
     if (TII.isFrameInstr(MI)) {
+      SPAdj -= TII.getSPAdjust(MI);
       TFI.eliminateCallFramePseudoInstr(MF, *BB, &MI);
       continue;
     }
@@ -1519,27 +1555,27 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
     if (LocalRS)
       LocalRS->backward(MI);
 
-    for (unsigned i = 0; i != MI.getNumOperands(); ++i) {
-      if (!MI.getOperand(i).isFI())
+    bool RemovedMI = false;
+    for (const auto &[Idx, Op] : enumerate(MI.operands())) {
+      if (!Op.isFI())
         continue;
 
-      if (replaceFrameIndexDebugInstr(MF, MI, i, SPAdj))
+      if (replaceFrameIndexDebugInstr(MF, MI, Idx, SPAdj))
         continue;
 
       // Eliminate this FrameIndex operand.
-      //
-      // Save and restore the scavenger's position around the call to
-      // eliminateFrameIndex in case it erases MI and invalidates the iterator.
-      MachineBasicBlock::iterator Save;
-      if (LocalRS)
-	Save = std::next(LocalRS->getCurrentPosition());
-      bool Removed = TRI.eliminateFrameIndex(MI, SPAdj, i, RS);
-      if (LocalRS)
-	LocalRS->skipTo(std::prev(Save));
-
-      if (Removed)
+      RemovedMI = TRI.eliminateFrameIndex(MI, SPAdj, Idx, LocalRS);
+      if (RemovedMI)
         break;
     }
+
+    // Refresh the scavenger's internal iterator in case MI was removed or more
+    // instructions were inserted after it.
+    if (LocalRS)
+      LocalRS->skipTo(std::prev(I));
+
+    if (!RemovedMI)
+      --I;
   }
 }
 
@@ -1550,12 +1586,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-
-  if (TRI.supportsBackwardScavenger())
-    return replaceFrameIndicesBackward(BB, MF, SPAdj);
-
-  if (RS && FrameIndexEliminationScavenging)
-    RS->enterBasicBlock(*BB);
 
   bool InsideCallSequence = false;
 
@@ -1590,8 +1620,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       // If this instruction has a FrameIndex operand, we need to
       // use that target machine register info object to eliminate
       // it.
-      TRI.eliminateFrameIndex(MI, SPAdj, i,
-                              FrameIndexEliminationScavenging ?  RS : nullptr);
+      TRI.eliminateFrameIndex(MI, SPAdj, i);
 
       // Reset the iterator if we were at the beginning of the BB.
       if (AtBeginning) {
@@ -1613,10 +1642,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
     if (DidFinishLoop && InsideCallSequence)
       SPAdj += TII.getSPAdjust(MI);
 
-    if (DoIncr && I != BB->end()) ++I;
-
-    // Update register states.
-    if (RS && FrameIndexEliminationScavenging && DidFinishLoop)
-      RS->forward(MI);
+    if (DoIncr && I != BB->end())
+      ++I;
   }
 }

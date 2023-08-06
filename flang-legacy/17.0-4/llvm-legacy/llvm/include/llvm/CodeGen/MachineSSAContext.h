@@ -19,7 +19,6 @@
 #include "llvm/Support/Printable.h"
 
 namespace llvm {
-class MachineRegisterInfo;
 class MachineInstr;
 class MachineFunction;
 class Register;

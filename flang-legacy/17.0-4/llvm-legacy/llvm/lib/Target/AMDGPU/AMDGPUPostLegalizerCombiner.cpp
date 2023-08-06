@@ -287,7 +287,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
   // rcp(sqrt(x))
   if ((RcpSrcMI = getRcpSrc(MI)) && (SqrtSrcMI = getSqrtSrc(*RcpSrcMI))) {
     MatchInfo = [SqrtSrcMI, &MI](MachineIRBuilder &B) {
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)}, false)
+      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)})
           .addUse(SqrtSrcMI->getOperand(0).getReg())
           .setMIFlags(MI.getFlags());
     };
@@ -297,7 +297,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
   // sqrt(rcp(x))
   if ((SqrtSrcMI = getSqrtSrc(MI)) && (RcpSrcMI = getRcpSrc(*SqrtSrcMI))) {
     MatchInfo = [RcpSrcMI, &MI](MachineIRBuilder &B) {
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)}, false)
+      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)})
           .addUse(RcpSrcMI->getOperand(0).getReg())
           .setMIFlags(MI.getFlags());
     };

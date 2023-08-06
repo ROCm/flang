@@ -82,12 +82,9 @@ struct SpecSig {
   SmallVector<ArgInfo, 4> Args;
 
   bool operator==(const SpecSig &Other) const {
-    if (Key != Other.Key || Args.size() != Other.Args.size())
+    if (Key != Other.Key)
       return false;
-    for (size_t I = 0; I < Args.size(); ++I)
-      if (Args[I] != Other.Args[I])
-        return false;
-    return true;
+    return Args == Other.Args;
   }
 
   friend hash_code hash_value(const SpecSig &S) {
@@ -108,15 +105,47 @@ struct Spec {
   SpecSig Sig;
 
   // Profitability of the specialization.
-  Cost Score;
+  unsigned Score;
 
   // List of call sites, matching this specialization.
   SmallVector<CallBase *> CallSites;
 
-  Spec(Function *F, const SpecSig &S, Cost Score)
+  Spec(Function *F, const SpecSig &S, unsigned Score)
       : F(F), Sig(S), Score(Score) {}
-  Spec(Function *F, const SpecSig &&S, Cost Score)
+  Spec(Function *F, const SpecSig &&S, unsigned Score)
       : F(F), Sig(S), Score(Score) {}
+};
+
+struct Bonus {
+  unsigned CodeSize = 0;
+  unsigned Latency = 0;
+
+  Bonus() = default;
+
+  Bonus(Cost CodeSize, Cost Latency) {
+    int64_t Sz = *CodeSize.getValue();
+    int64_t Ltc = *Latency.getValue();
+
+    assert(Sz >= 0 && Ltc >= 0 && "CodeSize and Latency cannot be negative");
+    // It is safe to down cast since we know the arguments
+    // cannot be negative and Cost is of type int64_t.
+    this->CodeSize = static_cast<unsigned>(Sz);
+    this->Latency = static_cast<unsigned>(Ltc);
+  }
+
+  Bonus &operator+=(const Bonus RHS) {
+    CodeSize += RHS.CodeSize;
+    Latency += RHS.Latency;
+    return *this;
+  }
+
+  Bonus operator+(const Bonus RHS) const {
+    return Bonus(CodeSize + RHS.CodeSize, Latency + RHS.Latency);
+  }
+
+  bool operator==(const Bonus RHS) const {
+    return CodeSize == RHS.CodeSize && Latency == RHS.Latency;
+  }
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
@@ -143,10 +172,14 @@ public:
                   TargetTransformInfo &TTI, SCCPSolver &Solver)
       : DL(DL), BFI(BFI), TTI(TTI), Solver(Solver) {}
 
-  Cost getUserBonus(Instruction *User, Value *Use = nullptr,
-                    Constant *C = nullptr);
+  bool isBlockExecutable(BasicBlock *BB) {
+    return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
+  }
 
-  Cost getBonusFromPendingPHIs();
+  Bonus getUserBonus(Instruction *User, Value *Use = nullptr,
+                     Constant *C = nullptr);
+
+  Bonus getBonusFromPendingPHIs();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
@@ -208,8 +241,8 @@ public:
   }
 
   /// Compute a bonus for replacing argument \p A with constant \p C.
-  Cost getSpecializationBonus(Argument *A, Constant *C,
-                              InstCostVisitor &Visitor);
+  Bonus getSpecializationBonus(Argument *A, Constant *C,
+                               InstCostVisitor &Visitor);
 
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);
@@ -236,7 +269,7 @@ private:
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
   /// @return True, if any potential specializations were found
-  bool findSpecializations(Function *F, Cost SpecCost,
+  bool findSpecializations(Function *F, unsigned SpecCost,
                            SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
 
   bool isCandidateFunction(Function *F);
