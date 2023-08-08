@@ -112,6 +112,7 @@ static KWORD t1[] = {         /* normal keyword table */
                      {"deallocate", TK_DEALLOCATE},
                      {"decode", TK_DECODE},
                      {"default", TK_DEFAULT},
+		     {"device", TK_DEVICE, 0},
                      {"dimension", TK_DIMENSION},
                      {"do", TK_DO},
                      {"doconcurrent", TKF_DOCONCURRENT},

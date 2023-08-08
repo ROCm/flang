@@ -8129,7 +8129,7 @@ semant1(int rednum, SST *top)
    *	<attr> ::= DEVICE        |
    */
   case ATTR17:
-    if (cuda_enabled("device"))
+    if (flg.omptarget || cuda_enabled("device"))
       et_type = ET_DEVICE;
     else
       et_type = 0;
@@ -9036,6 +9036,9 @@ semant1(int rednum, SST *top)
           get_all_descriptors(sptr);
         }
         break;
+      case ET_DEVICE:
+        DEVICEP(sptr, 1);
+	break;
       case ET_SAVE:
 /* <ident> must be a variable or an array; it cannot be a dummy
  * argument or common block member.
