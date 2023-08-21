@@ -101,8 +101,8 @@ static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
 
 static void addOptLevelArg(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLlc) {
+  StringRef OOpt = "0";
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    StringRef OOpt = "0";
     if (A->getOption().matches(options::OPT_O4) ||
         A->getOption().matches(options::OPT_Ofast))
       OOpt = "3";
@@ -122,12 +122,16 @@ static void addOptLevelArg(const llvm::opt::ArgList &Args,
                  .Case("g", "1")
                  .Default("0");
     }
-    CmdArgs.push_back(Args.MakeArgString("-O" + OOpt));
   }
+  // To remove unreferenced internalized functions, add globaldce pass to O0
+  if (OOpt.equals("0") && !IsLlc)
+    CmdArgs.push_back(Args.MakeArgString("-passes=default<O0>,globaldce"));
+  else
+    CmdArgs.push_back(Args.MakeArgString("-O" + OOpt));
 }
 
 static void addAMDTargetArgs(Compilation &C, const llvm::opt::ArgList &Args,
-                             llvm::opt::ArgStringList &CmdArgs) {
+                             llvm::opt::ArgStringList &CmdArgs, bool IsLlc) {
   unsigned CodeObjVer =
       getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), C.getArgs(), true);
   if (CodeObjVer)
@@ -135,7 +139,7 @@ static void addAMDTargetArgs(Compilation &C, const llvm::opt::ArgList &Args,
         Twine("--amdhsa-code-object-version=") + Twine(CodeObjVer)));
 
   // Pass optimization arg to llc.
-  addOptLevelArg(Args, CmdArgs, /*IsLlc=*/true);
+  addOptLevelArg(Args, CmdArgs, /*IsLlc=*/IsLlc);
   CmdArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
 }
 
@@ -298,7 +302,7 @@ const char *amdgpu::dlr::getOptCommandArgs(Compilation &C,
                                            const char *InputFileName) {
   addCommonArgs(C, Args, OptArgs, Triple, TargetID, InputFileName,
                 "ROCM_OPT_ARGS");
-  addAMDTargetArgs(C, Args, OptArgs);
+  addAMDTargetArgs(C, Args, OptArgs, /*IsLlc*/ false);
   // OptArgs.push_back(Args.MakeArgString("-openmp-opt-disable=1"));
 
   OptArgs.push_back("-o");
@@ -316,7 +320,7 @@ const char *amdgpu::dlr::getLlcCommandArgs(
     const char *InputFileName, bool OutputIsAsm) {
   addCommonArgs(C, Args, LlcArgs, Triple, TargetID, InputFileName,
                 "ROCM_LLC_ARGS");
-  addAMDTargetArgs(C, Args, LlcArgs);
+  addAMDTargetArgs(C, Args, LlcArgs, /*IsLLc*/ true);
 
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
     if (!A->getOption().matches(options::OPT_g0) &&
