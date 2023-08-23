@@ -33,7 +33,7 @@ SET(CMAKE_ASM_FLAGS "${CFLAGS} ${ASM_OPTIONS}" )
 if(${SANITIZER})
   set(CMAKE_SHARED_LINKER_FLAGS " -Wl,--enable-new-dtags -fuse-ld=lld  -fsanitize=address -shared-libasan -g -Wl,--build-id=sha1 -no-flang-libs ")
 else()
-  set(CMAKE_SHARED_LINKER_FLAGS " -no-flang-libs -Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/../../")
+  set(CMAKE_SHARED_LINKER_FLAGS " -no-flang-libs -Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/../../lib")
 endif()
 
 # We are using Fortran driver to build this library with fresh compiler
