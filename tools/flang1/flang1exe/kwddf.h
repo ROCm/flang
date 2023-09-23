@@ -358,6 +358,7 @@ static KWORD t5[] = {
     /* keywords appearing within PARALLEL directives */
     {"", 0}, /* a keyword index must be nonzero */
     {"aligned", TK_ALIGNED},
+    {"always", TK_ALWAYS},
     {"capture", TK_CAPTURE},
     {"chunk", TK_CHUNK},
     {"collapse", TK_COLLAPSE},

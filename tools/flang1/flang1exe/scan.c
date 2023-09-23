@@ -4955,7 +4955,8 @@ alpha(void)
     goto return_identifier;
 
   case SCM_PAR:
-    if (par_depth)
+    // at present we only support always map modifier.
+    if (par_depth && strcmp(id,"always"))
       goto return_identifier;
     tkntyp = keyword(id, &parallelkw, &idlen, sig_blanks);
     if (tkntyp == 0)
