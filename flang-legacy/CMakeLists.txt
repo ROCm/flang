@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(${ENABLE_DEVEL_PACKAGE})
+  set(DEVEL_PACKAGE "devel/")
+endif()
+if(${ENABLE_RUN_PACKAGE})
+  set(RUN_PACKAGE "runtime/")
+endif()
+
+include(GNUInstallDirs)
+
 # If we are not building as a part of LLVM, which is usual for flang-legacy,
 # build flang-legacy as a standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -18,193 +27,78 @@ add_executable(flang-legacy
     flang-legacy.cpp
 )
 
+
 target_include_directories(flang-legacy
    PUBLIC
-    ${LLVM_DIR}/include
+   ${CMAKE_SOURCE_DIR}/llvm-legacy/llvm/include
+   ${CMAKE_SOURCE_DIR}/llvm-legacy/clang/include
+   ${CMAKE_BINARY_DIR}/llvm-legacy/tools/clang/include
+   ${CMAKE_BINARY_DIR}/llvm-legacy/include
 )
 
 target_link_libraries(flang-legacy
   PRIVATE 
-      ${LLVM_DIR}/lib/libLLVMAggressiveInstCombine.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUAsmParser.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUCodeGen.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUDesc.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUDisassembler.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUInfo.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUTargetMCA.a
-      ${LLVM_DIR}/lib/libLLVMAMDGPUUtils.a
-      ${LLVM_DIR}/lib/libLLVMAnalysis.a
-      ${LLVM_DIR}/lib/libLLVMAsmParser.a
-      ${LLVM_DIR}/lib/libLLVMAsmPrinter.a
-      ${LLVM_DIR}/lib/libLLVMBinaryFormat.a
-      ${LLVM_DIR}/lib/libLLVMBitReader.a
-      ${LLVM_DIR}/lib/libLLVMBitstreamReader.a
-      ${LLVM_DIR}/lib/libLLVMBitWriter.a
-      ${LLVM_DIR}/lib/libLLVMCFGuard.a
-      ${LLVM_DIR}/lib/libLLVMCFIVerify.a
-      ${LLVM_DIR}/lib/libLLVMCodeGen.a
-      ${LLVM_DIR}/lib/libLLVMCore.a
-      ${LLVM_DIR}/lib/libLLVMCoroutines.a
-      ${LLVM_DIR}/lib/libLLVMCoverage.a
-      ${LLVM_DIR}/lib/libLLVMDebugInfoCodeView.a
-      ${LLVM_DIR}/lib/libLLVMDebuginfod.a
-      ${LLVM_DIR}/lib/libLLVMDebugInfoDWARF.a
-      ${LLVM_DIR}/lib/libLLVMDebugInfoGSYM.a
-      ${LLVM_DIR}/lib/libLLVMDebugInfoMSF.a
-      ${LLVM_DIR}/lib/libLLVMDebugInfoPDB.a
-      ${LLVM_DIR}/lib/libLLVMDemangle.a
-      ${LLVM_DIR}/lib/libLLVMDiff.a
-      ${LLVM_DIR}/lib/libLLVMDlltoolDriver.a
-      ${LLVM_DIR}/lib/libLLVMDWARFLinker.a
-      ${LLVM_DIR}/lib/libLLVMDWP.a
-      ${LLVM_DIR}/lib/libLLVMExecutionEngine.a
-      ${LLVM_DIR}/lib/libLLVMExegesis.a
-      ${LLVM_DIR}/lib/libLLVMExegesisX86.a
-      ${LLVM_DIR}/lib/libLLVMExtensions.a
-      ${LLVM_DIR}/lib/libLLVMFileCheck.a
-      ${LLVM_DIR}/lib/libLLVMFrontendOpenACC.a
-      ${LLVM_DIR}/lib/libLLVMFrontendOpenMP.a
-      ${LLVM_DIR}/lib/libLLVMFuzzerCLI.a
-      ${LLVM_DIR}/lib/libLLVMFuzzMutate.a
-      ${LLVM_DIR}/lib/libLLVMGlobalISel.a
-      ${LLVM_DIR}/lib/libLLVMInstCombine.a
-      ${LLVM_DIR}/lib/libLLVMInstrumentation.a
-      ${LLVM_DIR}/lib/libLLVMInterfaceStub.a
-      ${LLVM_DIR}/lib/libLLVMInterpreter.a
-      ${LLVM_DIR}/lib/libLLVMipo.a
-      ${LLVM_DIR}/lib/libLLVMIRReader.a
-      ${LLVM_DIR}/lib/libLLVMJITLink.a
-      ${LLVM_DIR}/lib/libLLVMLibDriver.a
-      ${LLVM_DIR}/lib/libLLVMLineEditor.a
-      ${LLVM_DIR}/lib/libLLVMLinker.a
-      ${LLVM_DIR}/lib/libLLVMLTO.a
-      ${LLVM_DIR}/lib/libLLVMMC.a
-      ${LLVM_DIR}/lib/libLLVMMCA.a
-      ${LLVM_DIR}/lib/libLLVMMCDisassembler.a
-      ${LLVM_DIR}/lib/libLLVMMCJIT.a
-      ${LLVM_DIR}/lib/libLLVMMCParser.a
-      ${LLVM_DIR}/lib/libLLVMMIRParser.a
-      ${LLVM_DIR}/lib/libLLVMObjCARCOpts.a
-      ${LLVM_DIR}/lib/libLLVMObjCopy.a
-      ${LLVM_DIR}/lib/libLLVMObject.a
-      ${LLVM_DIR}/lib/libLLVMObjectYAML.a
-      ${LLVM_DIR}/lib/libLLVMOffloadArch.a
-      ${LLVM_DIR}/lib/libLLVMOption.a
-      ${LLVM_DIR}/lib/libLLVMOrcJIT.a
-      ${LLVM_DIR}/lib/libLLVMOrcShared.a
-      ${LLVM_DIR}/lib/libLLVMOrcTargetProcess.a
-      ${LLVM_DIR}/lib/libLLVMPasses.a
-      ${LLVM_DIR}/lib/libLLVMProfileData.a
-      ${LLVM_DIR}/lib/libLLVMRemarks.a
-      ${LLVM_DIR}/lib/libLLVMRuntimeDyld.a
-      ${LLVM_DIR}/lib/libLLVMScalarOpts.a
-      ${LLVM_DIR}/lib/libLLVMSelectionDAG.a
-      ${LLVM_DIR}/lib/libLLVMSupport.a
-      ${LLVM_DIR}/lib/libLLVMSymbolize.a
-      ${LLVM_DIR}/lib/libLLVMTableGen.a
-      ${LLVM_DIR}/lib/libLLVMTableGenGlobalISel.a
-      ${LLVM_DIR}/lib/libLLVMTarget.a
-      ${LLVM_DIR}/lib/libLLVMTextAPI.a
-      ${LLVM_DIR}/lib/libLLVMTransformUtils.a
-      ${LLVM_DIR}/lib/libLLVMVectorize.a
-      ${LLVM_DIR}/lib/libLLVMWindowsDriver.a
-      ${LLVM_DIR}/lib/libLLVMWindowsManifest.a
-      ${LLVM_DIR}/lib/libLLVMX86AsmParser.a
-      ${LLVM_DIR}/lib/libLLVMX86CodeGen.a
-      ${LLVM_DIR}/lib/libLLVMX86Desc.a
-      ${LLVM_DIR}/lib/libLLVMX86Disassembler.a
-      ${LLVM_DIR}/lib/libLLVMX86Info.a
-      ${LLVM_DIR}/lib/libLLVMX86TargetMCA.a
-      ${LLVM_DIR}/lib/libLLVMXRay.a
-      ${LLVM_DIR}/lib/libclangAnalysis.a
-      ${LLVM_DIR}/lib/libclangAnalysisFlowSensitive.a
-      ${LLVM_DIR}/lib/libclangAnalysisFlowSensitiveModels.a
-      ${LLVM_DIR}/lib/libclangAPINotes.a
-      ${LLVM_DIR}/lib/libclangApplyReplacements.a
-      ${LLVM_DIR}/lib/libclangARCMigrate.a
-      ${LLVM_DIR}/lib/libclangAST.a
-      ${LLVM_DIR}/lib/libclangASTMatchers.a
-      ${LLVM_DIR}/lib/libclangBasic.a
-      ${LLVM_DIR}/lib/libclangChangeNamespace.a
-      ${LLVM_DIR}/lib/libclangCodeGen.a
-      ${LLVM_DIR}/lib/libclangCrossTU.a
-      ${LLVM_DIR}/lib/libclangDaemon.a
-      ${LLVM_DIR}/lib/libclangDaemonTweaks.a
-      ${LLVM_DIR}/lib/libclangDependencyScanning.a
-      ${LLVM_DIR}/lib/libclangDirectoryWatcher.a
-      ${LLVM_DIR}/lib/libclangDoc.a
-      ${LLVM_DIR}/lib/libclangdRemoteIndex.a
-      ${LLVM_DIR}/lib/libclangDriver.a
-      ${LLVM_DIR}/lib/libclangdSupport.a
-      ${LLVM_DIR}/lib/libclangDynamicASTMatchers.a
-      ${LLVM_DIR}/lib/libclangEdit.a
-      ${LLVM_DIR}/lib/libclangExtractAPI.a
-      ${LLVM_DIR}/lib/libclangFormat.a
-      ${LLVM_DIR}/lib/libclangFrontend.a
-      ${LLVM_DIR}/lib/libclangFrontendTool.a
-      ${LLVM_DIR}/lib/libclangHandleCXX.a
-      ${LLVM_DIR}/lib/libclangHandleLLVM.a
-      ${LLVM_DIR}/lib/libclangIncludeCleaner.a
-      ${LLVM_DIR}/lib/libclangIncludeFixer.a
-      ${LLVM_DIR}/lib/libclangIncludeFixerPlugin.a
-      ${LLVM_DIR}/lib/libclangIndex.a
-      ${LLVM_DIR}/lib/libclangIndexSerialization.a
-      ${LLVM_DIR}/lib/libclangInterpreter.a
-      ${LLVM_DIR}/lib/libclangLex.a
-      ${LLVM_DIR}/lib/libclangMove.a
-      ${LLVM_DIR}/lib/libclangParse.a
-      ${LLVM_DIR}/lib/libclangPseudo.a
-      ${LLVM_DIR}/lib/libclangPseudoCLI.a
-      ${LLVM_DIR}/lib/libclangPseudoCXX.a
-      ${LLVM_DIR}/lib/libclangPseudoGrammar.a
-      ${LLVM_DIR}/lib/libclangQuery.a
-      ${LLVM_DIR}/lib/libclangReorderFields.a
-      ${LLVM_DIR}/lib/libclangRewrite.a
-      ${LLVM_DIR}/lib/libclangRewriteFrontend.a
-      ${LLVM_DIR}/lib/libclangSema.a
-      ${LLVM_DIR}/lib/libclangSerialization.a
-      ${LLVM_DIR}/lib/libclangStaticAnalyzerCheckers.a
-      ${LLVM_DIR}/lib/libclangStaticAnalyzerCore.a
-      ${LLVM_DIR}/lib/libclangStaticAnalyzerFrontend.a
-      ${LLVM_DIR}/lib/libclangSupport.a
-      ${LLVM_DIR}/lib/libclangTidy.a
-      ${LLVM_DIR}/lib/libclangTidyAbseilModule.a
-      ${LLVM_DIR}/lib/libclangTidyAlteraModule.a
-      ${LLVM_DIR}/lib/libclangTidyAndroidModule.a
-      ${LLVM_DIR}/lib/libclangTidyBoostModule.a
-      ${LLVM_DIR}/lib/libclangTidyBugproneModule.a
-      ${LLVM_DIR}/lib/libclangTidyCERTModule.a
-      ${LLVM_DIR}/lib/libclangTidyConcurrencyModule.a
-      ${LLVM_DIR}/lib/libclangTidyCppCoreGuidelinesModule.a
-      ${LLVM_DIR}/lib/libclangTidyDarwinModule.a
-      ${LLVM_DIR}/lib/libclangTidyFuchsiaModule.a
-      ${LLVM_DIR}/lib/libclangTidyGoogleModule.a
-      ${LLVM_DIR}/lib/libclangTidyHICPPModule.a
-      ${LLVM_DIR}/lib/libclangTidyLinuxKernelModule.a
-      ${LLVM_DIR}/lib/libclangTidyLLVMLibcModule.a
-      ${LLVM_DIR}/lib/libclangTidyLLVMModule.a
-      ${LLVM_DIR}/lib/libclangTidyMain.a
-      ${LLVM_DIR}/lib/libclangTidyMiscModule.a
-      ${LLVM_DIR}/lib/libclangTidyModernizeModule.a
-      ${LLVM_DIR}/lib/libclangTidyMPIModule.a
-      ${LLVM_DIR}/lib/libclangTidyObjCModule.a
-      ${LLVM_DIR}/lib/libclangTidyOpenMPModule.a
-      ${LLVM_DIR}/lib/libclangTidyPerformanceModule.a
-      ${LLVM_DIR}/lib/libclangTidyPlugin.a
-      ${LLVM_DIR}/lib/libclangTidyPortabilityModule.a
-      ${LLVM_DIR}/lib/libclangTidyReadabilityModule.a
-      ${LLVM_DIR}/lib/libclangTidyUtils.a
-      ${LLVM_DIR}/lib/libclangTidyZirconModule.a
-      ${LLVM_DIR}/lib/libclangTooling.a
-      ${LLVM_DIR}/lib/libclangToolingASTDiff.a
-      ${LLVM_DIR}/lib/libclangToolingCore.a
-      ${LLVM_DIR}/lib/libclangToolingInclusions.a
-      ${LLVM_DIR}/lib/libclangToolingRefactoring.a
-      ${LLVM_DIR}/lib/libclangToolingSyntax.a
-      ${LLVM_DIR}/lib/libclangTransformer.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAggressiveInstCombine.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUAsmParser.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUCodeGen.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUDesc.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUDisassembler.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUInfo.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUTargetMCA.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUUtils.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAnalysis.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAsmParser.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMBinaryFormat.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMBitReader.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMBitstreamReader.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMCFGuard.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMCodeGen.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMCore.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebugInfoCodeView.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebuginfod.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebugInfoDWARF.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebugInfoGSYM.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebugInfoMSF.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDebugInfoPDB.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMDemangle.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMFrontendOpenACC.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMFrontendOpenMP.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMGlobalISel.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMInstCombine.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMipo.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMIRReader.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMMC.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMMCDisassembler.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMMCParser.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMMIRParser.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMObjCARCOpts.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMObject.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMOption.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMPasses.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMProfileData.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMRemarks.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMScalarOpts.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMSelectionDAG.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMSupport.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMTarget.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMTextAPI.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMTransformUtils.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMVectorize.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMWindowsDriver.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMWindowsManifest.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMX86AsmParser.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMX86CodeGen.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMX86Desc.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMX86Info.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangBasic.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangDriver.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangEdit.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangFrontend.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangLex.a
+      ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libclangSerialization.a
   pthread
   dl
   tinfo
   z
 )
-install(TARGETS flang-legacy DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS flang-legacy DESTINATION "${DEVEL_PACKAGE}${CMAKE_INSTALL_BINDIR}")
