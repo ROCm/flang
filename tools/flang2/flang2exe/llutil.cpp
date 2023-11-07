@@ -1876,10 +1876,12 @@ use_gpu_output_file(void)
 {
   set_llasm_output_file(gbl.ompaccfile);
 }
+void reset_write_ftn_typedefs(void);
 void
 use_cpu_output_file(void)
 {
   set_llasm_output_file(gbl.asmfil);
+  reset_write_ftn_typedefs();
 }
 #endif
 /**
@@ -3267,6 +3269,21 @@ write_struct_defs(void)
 }
 
 void
+set_defs_printed(char *name)
+{
+  LLDEF *cur_def;
+  int gblsym;
+
+  cur_def = struct_def_list;
+  while (cur_def) {
+    if (cur_def->printed == 0 && cur_def->name && !strcmp(name, cur_def->name)) {
+      cur_def->printed = 2;
+    }
+    cur_def = cur_def->next;
+  }
+}
+
+void
 write_ftn_typedefs(void)
 {
   LLDEF *cur_def;
@@ -3274,13 +3291,28 @@ write_ftn_typedefs(void)
 
   cur_def = struct_def_list;
   while (cur_def) {
-    if (!cur_def->printed && cur_def->name && cur_def->dtype) {
+    if (cur_def->name && cur_def->dtype) {
       gblsym = get_typedef_ag(cur_def->name,
                               process_dtype_struct(cur_def->dtype));
-      if (gblsym == 0) {
+      if (cur_def->printed == 0) {
         write_def(cur_def, 0);
       }
-      cur_def->printed = 1;
+      set_defs_printed(cur_def->name);
+    }
+    cur_def = cur_def->next;
+  }
+}
+
+void
+reset_write_ftn_typedefs(void)
+{
+  LLDEF *cur_def;
+  int gblsym;
+
+  cur_def = struct_def_list;
+  while (cur_def) {
+    if (cur_def->name && cur_def->dtype && cur_def->printed == 2) {
+      cur_def->printed = 0;
     }
     cur_def = cur_def->next;
   }
