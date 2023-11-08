@@ -1877,11 +1877,17 @@ use_gpu_output_file(void)
   set_llasm_output_file(gbl.ompaccfile);
 }
 void reset_write_ftn_typedefs(void);
+
+static bool first_time = true;
+
 void
 use_cpu_output_file(void)
 {
   set_llasm_output_file(gbl.asmfil);
-  reset_write_ftn_typedefs();
+  if (first_time) {
+    reset_write_ftn_typedefs();
+    first_time = false;
+  }
 }
 #endif
 /**
