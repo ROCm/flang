@@ -1167,7 +1167,7 @@ static const MDTemplate Tmpl_DISubprogram[] = {
 };
 
 static const MDTemplate Tmpl_DISubprogram_90[] = {
-  { "DISubprogram", TF, 18 },
+  { "DISubprogram", TF, 19 },
   { "tag",                      DWTagField, FlgHidden },
   { "file",                     NodeField },
   { "scope",                    NodeField },
@@ -1185,7 +1185,8 @@ static const MDTemplate Tmpl_DISubprogram_90[] = {
   { "templateParams",           NodeField },
   { "declaration",              NodeField },
   { "unit",                     NodeField },
-  { "scopeLine",                UnsignedField }
+  { "scopeLine",                UnsignedField },
+  { "retainedNodes",            NodeField }
 };
 
 static const MDTemplate Tmpl_DISubprogram_70[] = {

@@ -162,6 +162,10 @@ typedef enum LL_IRVersion {
   LL_Version_11_0 = 110,
   LL_Version_12_0 = 120,
   LL_Version_13_0 = 130,
+  LL_Version_14_0 = 140,
+  LL_Version_15_0 = 150,
+  LL_Version_16_0 = 160,
+  LL_Version_17_0 = 170,
   LL_Version_trunk = 1023
 } LL_IRVersion;
 
@@ -488,6 +492,12 @@ INLINE static bool
 ll_feature_no_file_in_namespace(const LL_IRFeatures *feature)
 {
   return feature->version >= LL_Version_5_0;
+}
+
+INLINE static bool
+ll_feature_subprogram_imported_entities(const LL_IRFeatures *feature)
+{
+  return feature->version > LL_Version_17_0;
 }
 
 #else /* !HAVE_INLINE */
