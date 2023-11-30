@@ -188,7 +188,8 @@ static LL_MDRef lldbg_emit_type(LL_DebugInfo *db, DTYPE dtype, SPTR sptr,
 static LL_MDRef lldbg_fwd_local_variable(LL_DebugInfo *db, int sptr, int findex,
                                          int emit_dummy_as_local);
 static void lldbg_emit_imported_entity(LL_DebugInfo *db, SPTR entity_sptr,
-                                       SPTR func_sptr, IMPORT_TYPE entity_type);
+                                       SPTR func_sptr, IMPORT_TYPE entity_type,
+				       LL_MDRef imported_entity_mdnode);
 static LL_MDRef lldbg_create_subrange_mdnode(LL_DebugInfo *db, LL_MDRef count,
                                              LL_MDRef lb, LL_MDRef ub,
                                              LL_MDRef st);
@@ -474,7 +475,7 @@ lldbg_create_subprogram_mdnode(
     LL_MDRef type_mdnode, int is_local, int is_definition, int virtuality,
     int vindex, int spFlags, int flags, bool is_optimized,
     LL_MDRef template_param_mdnode, LL_MDRef decl_desc_mdnode,
-    LL_MDRef lv_list_mdnode, int scope)
+    LL_MDRef lv_list_mdnode, int scope, LL_MDRef imported_entities_mdnode)
 {
   LLMD_Builder mdb = llmd_init(db->module);
 
@@ -526,6 +527,10 @@ lldbg_create_subprogram_mdnode(
       llmd_add_md(mdb, lv_list_mdnode);
   }
   llmd_add_i32(mdb, scope);
+
+  if (ll_feature_subprogram_imported_entities(&db->module->ir)) {
+    llmd_add_md(mdb, imported_entities_mdnode);
+  }
 
   /* Request a distinct mdnode so that it can be updated with a function pointer
    * later. */
@@ -2404,19 +2409,21 @@ lldbg_emit_outlined_subprogram(LL_DebugInfo *db, int sptr, int findex,
         db, file_mdnode, func_name, mips_linkage_name, file_mdnode, lineno,
         type_mdnode, is_local, is_def, virtuality, vindex, spFlags,
         flags, is_optimized, ll_get_md_null(), ll_get_md_null(), lv_list_mdnode,
-        lineno);
+        lineno, ll_get_md_null());
   else if (ll_feature_debug_info_ver38(&(db)->module->ir))
     lldbg_create_subprogram_mdnode(
         db, lldbg_emit_compile_unit(db), func_name, mips_linkage_name,
         get_filedesc_mdnode(db, findex), lineno, type_mdnode, is_local,
         is_def, virtuality, vindex, spFlags, flags, is_optimized,
-        ll_get_md_null(), ll_get_md_null(), lv_list_mdnode, lineno);
+        ll_get_md_null(), ll_get_md_null(), lv_list_mdnode, lineno,
+	ll_get_md_null());
   else
     lldbg_create_subprogram_mdnode(
         db, file_mdnode, func_name, mips_linkage_name,
         get_filedesc_mdnode(db, findex), lineno, type_mdnode, is_local,
         is_def, virtuality, vindex, spFlags, flags, is_optimized,
-        ll_get_md_null(), ll_get_md_null(), lv_list_mdnode, lineno);
+        ll_get_md_null(), ll_get_md_null(), lv_list_mdnode, lineno,
+	ll_get_md_null());
   db->cur_subprogram_null_loc =
       lldbg_create_location_mdnode(db, lineno, 1, db->cur_subprogram_mdnode);
   db->cur_subprogram_lineno = lineno;
@@ -2450,6 +2457,7 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
   LL_MDRef lv_list_mdnode;
   LL_MDRef context_mdnode;
   LL_MDRef scope;
+  LL_MDRef imported_entities_mdnode;
   char *mips_linkage_name = "";
   const char *func_name;
   int virtuality = 0;
@@ -2472,6 +2480,7 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
       lldbg_emit_subroutine_type(db, sptr, ret_dtype, findex, file_mdnode);
   db->cur_line_mdnode = ll_get_md_null();
   lv_list_mdnode = ll_create_flexible_md_node(db->module);
+  imported_entities_mdnode = ll_create_flexible_md_node(db->module);
   if (db->routine_idx >= db->routine_count)
     db->routine_count = db->routine_idx + 1;
   db->llvm_dbg_lv_array = (LL_MDRef *)realloc(
@@ -2508,7 +2517,8 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
                                  mips_linkage_name, scope, lineno, type_mdnode,
                                  is_local, is_def, virtuality, vindex,
                                  spFlags, flags, is_optimized, ll_get_md_null(),
-                                 ll_get_md_null(), lv_list_mdnode, lineno);
+                                 ll_get_md_null(), lv_list_mdnode, lineno,
+				 imported_entities_mdnode);
   if (!db->subroutine_mdnodes)
     db->subroutine_mdnodes = hashmap_alloc(hash_functions_direct);
   scopeData = (hash_data_t)(unsigned long)db->cur_subprogram_mdnode;
@@ -2516,7 +2526,8 @@ lldbg_emit_subprogram(LL_DebugInfo *db, SPTR sptr, DTYPE ret_dtype, int findex,
   while (db->import_entity_list) {
     /* There are pending entities to be imported into this func */
     lldbg_emit_imported_entity(db, db->import_entity_list->entity, sptr,
-                               db->import_entity_list->entity_type);
+                               db->import_entity_list->entity_type,
+			       imported_entities_mdnode);
     db->import_entity_list = db->import_entity_list->next;
   }
 // AOCC Begin
@@ -4066,7 +4077,7 @@ lldbg_function_end(LL_DebugInfo *db, int func)
 
 static LL_MDRef
 lldbg_create_imported_entity(LL_DebugInfo *db, SPTR entity_sptr, SPTR func_sptr,
-                             IMPORT_TYPE entity_type)
+                             IMPORT_TYPE entity_type, LL_MDRef imported_entities_mdnode)
 {
   LLMD_Builder mdb;
   LL_MDRef entity_mdnode, scope_mdnode, file_mdnode, cur_mdnode;
@@ -4096,7 +4107,7 @@ lldbg_create_imported_entity(LL_DebugInfo *db, SPTR entity_sptr, SPTR func_sptr,
     return ll_get_md_null();
   }
   mdb = llmd_init(db->module);
-  scope_mdnode = (func_sptr == gbl.currsub) ? db->cur_subprogram_mdnode : scope_mdnode;
+  scope_mdnode = (func_sptr == gbl.currsub) ? db->cur_subprogram_mdnode : 0;
   if (!entity_mdnode || !scope_mdnode)
     return ll_get_md_null();
 
@@ -4117,13 +4128,17 @@ lldbg_create_imported_entity(LL_DebugInfo *db, SPTR entity_sptr, SPTR func_sptr,
   }
 
   cur_mdnode = llmd_finish(mdb);
-  ll_extend_md_node(db->module, db->llvm_dbg_imported, cur_mdnode);
+  if (ll_feature_subprogram_imported_entities(&db->module->ir)) {
+    ll_extend_md_node(db->module, imported_entities_mdnode, cur_mdnode);
+  } else {
+    ll_extend_md_node(db->module, db->llvm_dbg_imported, cur_mdnode);
+  }
   return cur_mdnode;
 }
 
 static void
 lldbg_emit_imported_entity(LL_DebugInfo *db, SPTR entity_sptr, SPTR func_sptr,
-                           IMPORT_TYPE entity_type)
+                           IMPORT_TYPE entity_type, LL_MDRef imported_entities_mdnode)
 {
   static hashset_t entity_func_added;
   const char *entity_func;
@@ -4136,7 +4151,8 @@ lldbg_emit_imported_entity(LL_DebugInfo *db, SPTR entity_sptr, SPTR func_sptr,
   if (hashset_lookup(entity_func_added, entity_func))
     return;
   hashset_insert(entity_func_added, entity_func);
-  lldbg_create_imported_entity(db, entity_sptr, func_sptr, entity_type);
+  lldbg_create_imported_entity(db, entity_sptr, func_sptr, entity_type,
+			       imported_entities_mdnode);
 }
 
 void
