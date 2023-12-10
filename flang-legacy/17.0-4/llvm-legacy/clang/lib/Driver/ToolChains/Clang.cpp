@@ -8730,6 +8730,13 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.startswith("-target"); });
 
+    if (TC->getTriple().isAMDGPU()) {
+      for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
+        FeatureArgs.emplace_back(
+            Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
+      }
+    }
+
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
     SmallVector<std::string> Parts{
@@ -8768,13 +8775,13 @@ static const char *getOutputFileName(Compilation &C, StringRef Base,
   return OutputFileName;
 }
 
-static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
-                                    const llvm::Triple &Triple,
-                                    SmallVectorImpl<std::string> &subarchs) {
+static void addSubArchs(Compilation &C, const ArgList &Args,
+                        const llvm::Triple &Triple,
+                        SmallVectorImpl<StringRef> &subarchs) {
   // process OPT_offload_arch_EQ subarch specification
   for (auto itr : C.getDriver().getOffloadArchs(
            C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
-    subarchs.push_back(itr.str());
+    subarchs.push_back(itr);
 
   // process OPT_Xopenmp_target_EQ subarch specification with march
   for (auto itr : Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)) {
@@ -8782,8 +8789,8 @@ static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
     StringRef vstr = StringRef(itr);
     if (vstr.startswith("-march=") || vstr.startswith("--march=")) {
       vstr.split('=').second.split(marchs, ',');
-      for (auto &march : marchs)
-        subarchs.push_back(march.str());
+      for (auto march : marchs)
+        subarchs.push_back(getProcessorFromTargetID(Triple, march));
     }
   }
 }
@@ -8822,13 +8829,12 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
   RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true, true);
   std::string OutputFilePrefix, OutputFile;
 
-  SmallVector<std::string> subarchs;
+  SmallVector<StringRef> subarchs;
   llvm::SmallVector<std::pair<StringRef, const char *>, 4> TargetIDLLDMap;
 
-  addSubArchsWithTargetID(C, Args, TheTriple, subarchs);
+  addSubArchs(C, Args, TheTriple, subarchs);
 
-  for (auto &subArchWithTargetID : subarchs) {
-    StringRef TargetID(subArchWithTargetID);
+  for (StringRef TargetID : subarchs) {
     // ---------- Step 1 unpackage each input -----------
     const char *UnpackageExec = Args.MakeArgString(
         getToolChain().GetProgramPath("clang-offload-packager"));
@@ -8851,11 +8857,18 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
         ArgStringList Features;
         SmallVector<StringRef> FeatureArgs;
-        getTargetFeatures(TC.getDriver(), TheTriple, Args, Features, false,
-                          false, TargetID);
-
+        getTargetFeatures(TC.getDriver(), TC.getTriple(), Args, Features,
+                          false);
         llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                       [](StringRef Arg) { return !Arg.startswith("-target"); });
+
+        if (TheTriple.isAMDGPU()) {
+          for (StringRef Feature :
+               llvm::split(TargetID.split(':').second, ':')) {
+            FeatureArgs.emplace_back(
+                Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
+          }
+        }
 
         SmallVector<std::string> Parts{
             "file=" + std::string(UnpackagedFileName),
@@ -9065,13 +9078,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             amdgpu::dlr::getCommonDeviceLibNames(
                 Args, D, GPUArch, /* isOpenMP */ true, RocmInstallation);
 
-        SmallVector<std::string> subarchs;
-        addSubArchsWithTargetID(C, Args, triple, subarchs);
+        SmallVector<StringRef> subarchs;
+        addSubArchs(C, Args, triple, subarchs);
 
         std::set<std::string> bitcodeTarget;
         for (const auto &sa : subarchs) {
-          bitcodeTarget.insert("openmp-" + triple.str() + "-" +
-                               getProcessorFromTargetID(triple, sa).str());
+          bitcodeTarget.insert("openmp-" + triple.str() + "-" + sa.str());
         }
 
         for (StringRef prefix : bitcodeTarget)
