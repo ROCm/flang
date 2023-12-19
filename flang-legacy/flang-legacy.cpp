@@ -582,9 +582,11 @@ int main(int Argc, char **Argv) {
         std::string argstr(arg);
 	// References to 16.0.0 from LFL need to be changed to 17.0.0
         size_t where_16 = argstr.rfind("16.0.0");
-        if (where_16 != -1)
-          strncpy((char *)arg + where_16, "17.0.0", 6);
-      }
+        if (where_16 != -1) {
+          argstr.replace(where_16, 6, "17");
+          strcpy((char *)arg, argstr.c_str());
+        }
+    }
     }
     /// ----------------------------------------------------------------
     /// --------   Argument correction for each command ends here  -----
