@@ -406,7 +406,7 @@ private:
   /// The data for the single globalized variable.
   struct MappedVarData {
     /// Corresponding field in the global record.
-    llvm::Value *GlobalizedVal = nullptr;
+    llvm::Value *GlobalizedVal;// = nullptr;
     /// Corresponding address.
     Address PrivateAddr = Address::invalid();
   };
