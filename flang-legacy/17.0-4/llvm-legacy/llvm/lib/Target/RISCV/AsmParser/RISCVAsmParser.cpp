@@ -1546,15 +1546,6 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
-  case Match_InvalidRnumArg_0_7: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 7);
-  }
-  case Match_InvalidRnumArg_1_10: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, 10);
-  }
-  case Match_InvalidRnumArg_2_14: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 2, 14);
-  }
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -3361,16 +3352,21 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   unsigned DestReg = Inst.getOperand(0).getReg();
+  unsigned Offset = 0;
+  int TiedOp = MCID.getOperandConstraint(1, MCOI::TIED_TO);
+  if (TiedOp == 0)
+    Offset = 1;
+
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
-    unsigned CheckReg = Inst.getOperand(1).getReg();
+    unsigned CheckReg = Inst.getOperand(Offset + 1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((MCID.TSFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
-    unsigned CheckReg = Inst.getOperand(2).getReg();
+  if ((MCID.TSFlags & RISCVII::VS1Constraint) && Inst.getOperand(Offset + 2).isReg()) {
+    unsigned CheckReg = Inst.getOperand(Offset + 2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
