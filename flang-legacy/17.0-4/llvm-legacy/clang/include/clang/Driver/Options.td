@@ -2928,6 +2928,7 @@ def fno_openmp_target_xteam_reduction : Flag<["-"], "fno-openmp-target-xteam-red
   HelpText<"Do not use the cross-team reduction code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+def fopenmp_no_host_exec_io : Flag<["-"], "fopenmp-no-host-exec-io">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options
