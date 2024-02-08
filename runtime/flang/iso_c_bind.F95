@@ -56,6 +56,9 @@
         integer C_SIGNED_CHAR
         parameter ( C_SIGNED_CHAR = 1 )
 
+        integer C_PTRDIFF_T
+        parameter ( C_PTRDIFF_T = C_INTPTR_T )
+
 ! stdint.h
         integer C_INT8_T
         parameter ( C_INT8_T = 1 )

@@ -30,20 +30,29 @@ void ENTCRF90(EXIT, exit)(__INT_T *exit_status)
 static void
 _f90io_f2003_stop_with_ieee_warnings(int exc)
 {
-  if ((exc & FE_INVALID) == FE_INVALID)
-    fprintf(__io_stderr(), "Warning: ieee_invalid is signaling\n");
+  // AOCC Begin
+  const char *ieee_suppress = __fort_getenv("AOCC_SUPPRESS_IEEE_WARNINGS");
+  int suppress = 0;
+  if (ieee_suppress != NULL) {
+    suppress = strcmp(ieee_suppress, "0");
+  }
+  // AOCC End
+  if (!suppress) { // AOCC
+    if ((exc & FE_INVALID) == FE_INVALID)
+      fprintf(__io_stderr(), "Warning: ieee_invalid is signaling\n");
 #ifdef FE_DENORM
-  if ((exc & FE_DENORM) == FE_DENORM)
-    fprintf(__io_stderr(), "Warning: ieee_denorm is signaling\n");
+    if ((exc & FE_DENORM) == FE_DENORM)
+      fprintf(__io_stderr(), "Warning: ieee_denorm is signaling\n");
 #endif
-  if ((exc & FE_DIVBYZERO) == FE_DIVBYZERO)
-    fprintf(__io_stderr(), "Warning: ieee_divide_by_zero is signaling\n");
-  if ((exc & FE_OVERFLOW) == FE_OVERFLOW)
-    fprintf(__io_stderr(), "Warning: ieee_overflow is signaling\n");
-  if ((exc & FE_UNDERFLOW) == FE_UNDERFLOW)
-    fprintf(__io_stderr(), "Warning: ieee_underflow is signaling\n");
-  if ((exc & FE_INEXACT) == FE_INEXACT)
-    fprintf(__io_stderr(), "Warning: ieee_inexact is signaling\n");
+    if ((exc & FE_DIVBYZERO) == FE_DIVBYZERO)
+      fprintf(__io_stderr(), "Warning: ieee_divide_by_zero is signaling\n");
+    if ((exc & FE_OVERFLOW) == FE_OVERFLOW)
+      fprintf(__io_stderr(), "Warning: ieee_overflow is signaling\n");
+    if ((exc & FE_UNDERFLOW) == FE_UNDERFLOW)
+      fprintf(__io_stderr(), "Warning: ieee_underflow is signaling\n");
+    if ((exc & FE_INEXACT) == FE_INEXACT)
+      fprintf(__io_stderr(), "Warning: ieee_inexact is signaling\n");
+  } // AOCC
 }
 
 static void

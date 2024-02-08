@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "Clang.h"
 #include "AMDGPU.h"
 #include "AMDGPUOpenMP.h"
@@ -2086,6 +2085,12 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
       A->claim();
     } else if (V == "vec-extabi") {
       VecExtabi = true;
+      A->claim();
+    } else if (V == "elfv1") {
+      ABIName = "elfv1";
+      A->claim();
+    } else if (V == "elfv2") {
+      ABIName = "elfv2";
       A->claim();
     } else if (V != "altivec")
       // The ppc64 linux abis are all "altivec" abis by default. Accept and ignore
@@ -5610,8 +5615,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Enable -mconstructor-aliases except on darwin, where we have to work around
-  // a linker bug (see <rdar://problem/7651567>), and CUDA device code, where
-  // aliases aren't supported.
+  // a linker bug (see https://openradar.appspot.com/7198997), and CUDA device
+  // code, where aliases aren't supported.
   if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX())
     CmdArgs.push_back("-mconstructor-aliases");
 
@@ -7362,12 +7367,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     auto CUID = cast<InputAction>(SourceAction)->getId();
     if (!CUID.empty())
       CmdArgs.push_back(Args.MakeArgString(Twine("-cuid=") + Twine(CUID)));
+
+    // -ffast-math turns on -fgpu-approx-transcendentals implicitly, but will
+    // be overriden by -fno-gpu-approx-transcendentals.
+    bool UseApproxTranscendentals = Args.hasFlag(
+        options::OPT_ffast_math, options::OPT_fno_fast_math, false);
+    if (Args.hasFlag(options::OPT_fgpu_approx_transcendentals,
+                     options::OPT_fno_gpu_approx_transcendentals,
+                     UseApproxTranscendentals))
+      CmdArgs.push_back("-fgpu-approx-transcendentals");
+  } else {
+    Args.claimAllArgs(options::OPT_fgpu_approx_transcendentals,
+                      options::OPT_fno_gpu_approx_transcendentals);
   }
 
   if (IsHIP) {
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
+
+  Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
+                  options::OPT_fno_offload_uniform_block);
 
   if (IsCudaDevice || IsHIPDevice) {
     StringRef InlineThresh =
@@ -8052,6 +8072,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       CmdArgs.push_back("-fms-memptr-rep=virtual");
   }
 
+  if (Args.hasArg(options::OPT_regcall4))
+    CmdArgs.push_back("-regcall4");
+
   // Parse the default calling convention options.
   if (Arg *CCArg =
           Args.getLastArg(options::OPT__SLASH_Gd, options::OPT__SLASH_Gr,
@@ -8087,6 +8110,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     if (ArchSupported && DCCFlag)
       CmdArgs.push_back(DCCFlag);
   }
+
+  if (Args.hasArg(options::OPT__SLASH_Gregcall4))
+    CmdArgs.push_back("-regcall4");
 
   Args.AddLastArg(CmdArgs, options::OPT_vtordisp_mode_EQ);
 
@@ -8730,13 +8756,6 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.startswith("-target"); });
 
-    if (TC->getTriple().isAMDGPU()) {
-      for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
-        FeatureArgs.emplace_back(
-            Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
-      }
-    }
-
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
     SmallVector<std::string> Parts{
@@ -8775,13 +8794,13 @@ static const char *getOutputFileName(Compilation &C, StringRef Base,
   return OutputFileName;
 }
 
-static void addSubArchs(Compilation &C, const ArgList &Args,
-                        const llvm::Triple &Triple,
-                        SmallVectorImpl<StringRef> &subarchs) {
+static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
+                                    const llvm::Triple &Triple,
+                                    SmallVectorImpl<std::string> &subarchs) {
   // process OPT_offload_arch_EQ subarch specification
   for (auto itr : C.getDriver().getOffloadArchs(
            C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
-    subarchs.push_back(itr);
+    subarchs.push_back(itr.str());
 
   // process OPT_Xopenmp_target_EQ subarch specification with march
   for (auto itr : Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)) {
@@ -8789,8 +8808,8 @@ static void addSubArchs(Compilation &C, const ArgList &Args,
     StringRef vstr = StringRef(itr);
     if (vstr.startswith("-march=") || vstr.startswith("--march=")) {
       vstr.split('=').second.split(marchs, ',');
-      for (auto march : marchs)
-        subarchs.push_back(getProcessorFromTargetID(Triple, march));
+      for (auto &march : marchs)
+        subarchs.push_back(march.str());
     }
   }
 }
@@ -8829,12 +8848,13 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
   RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true, true);
   std::string OutputFilePrefix, OutputFile;
 
-  SmallVector<StringRef> subarchs;
+  SmallVector<std::string> subarchs;
   llvm::SmallVector<std::pair<StringRef, const char *>, 4> TargetIDLLDMap;
 
-  addSubArchs(C, Args, TheTriple, subarchs);
+  addSubArchsWithTargetID(C, Args, TheTriple, subarchs);
 
-  for (StringRef TargetID : subarchs) {
+  for (auto &subArchWithTargetID : subarchs) {
+    StringRef TargetID(subArchWithTargetID);
     // ---------- Step 1 unpackage each input -----------
     const char *UnpackageExec = Args.MakeArgString(
         getToolChain().GetProgramPath("clang-offload-packager"));
@@ -8857,18 +8877,11 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
         ArgStringList Features;
         SmallVector<StringRef> FeatureArgs;
-        getTargetFeatures(TC.getDriver(), TC.getTriple(), Args, Features,
-                          false);
+        getTargetFeatures(TC.getDriver(), TheTriple, Args, Features, false,
+                          false, TargetID);
+
         llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                       [](StringRef Arg) { return !Arg.startswith("-target"); });
-
-        if (TheTriple.isAMDGPU()) {
-          for (StringRef Feature :
-               llvm::split(TargetID.split(':').second, ':')) {
-            FeatureArgs.emplace_back(
-                Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
-          }
-        }
 
         SmallVector<std::string> Parts{
             "file=" + std::string(UnpackagedFileName),
@@ -8882,6 +8895,8 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
         UnpackageCmdArgs.push_back(
             Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
+
+        UnpackageCmdArgs.push_back("--allow-missing-packages");
 
         C.addCommand(std::make_unique<Command>(
             JA, *this, ResponseFileSupport::AtFileCurCP(), UnpackageExec,
@@ -8924,7 +8939,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 4 opt  -----------
     ArgStringList OptArgs;
     auto OptOutputFileName = amdgpu::dlr::getOptCommandArgs(
-        C, Args, OptArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, OptArgs, TheTriple, TargetID, OutputFilePrefix,
         LinkOutputFileName);
 
     const char *OptExec =
@@ -8936,7 +8951,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 5 llc  -----------
     ArgStringList LlcArgs;
     auto LlcOutputFileName = amdgpu::dlr::getLlcCommandArgs(
-        C, Args, LlcArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, LlcArgs, TheTriple, TargetID, OutputFilePrefix,
         OptOutputFileName);
 
     const char *LlcExec =
@@ -8961,7 +8976,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 6 lld  -----------
     ArgStringList LldArgs;
     auto LldOutputFileName = amdgpu::dlr::getLldCommandArgs(
-        C, Output, Args, LldArgs, TC.getTriple(), TargetID, LlcOutputFileName,
+        C, Output, Args, LldArgs, TheTriple, TargetID, LlcOutputFileName,
         OutputFilePrefix);
 
     // create vector of pairs of TargetID,lldname for step 7 inputs.
@@ -9091,12 +9106,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             amdgpu::dlr::getCommonDeviceLibNames(
                 Args, D, GPUArch, /* isOpenMP */ true, RocmInstallation);
 
-        SmallVector<StringRef> subarchs;
-        addSubArchs(C, Args, triple, subarchs);
+        SmallVector<std::string> subarchs;
+        addSubArchsWithTargetID(C, Args, triple, subarchs);
 
         std::set<std::string> bitcodeTarget;
         for (const auto &sa : subarchs) {
-          bitcodeTarget.insert("openmp-" + triple.str() + "-" + sa.str());
+          bitcodeTarget.insert("openmp-" + triple.str() + "-" +
+                               getProcessorFromTargetID(triple, sa).str());
         }
 
         for (StringRef prefix : bitcodeTarget)

@@ -14,28 +14,36 @@
 
 #define DEBUG_TYPE "dataflow"
 
-void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
-                                 AggregateStorageLocation &Dst,
-                                 Environment &Env) {
+void clang::dataflow::copyRecord(RecordStorageLocation &Src,
+                                 RecordStorageLocation &Dst, Environment &Env) {
+  auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType();
+  auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType();
+
+  auto SrcDecl = SrcType->getAsCXXRecordDecl();
+  auto DstDecl = DstType->getAsCXXRecordDecl();
+
+  bool compatibleTypes =
+      SrcType == DstType ||
+      (SrcDecl && DstDecl && SrcDecl->isDerivedFrom(DstDecl));
+  (void)compatibleTypes;
+
   LLVM_DEBUG({
-    if (Dst.getType().getCanonicalType().getUnqualifiedType() !=
-        Src.getType().getCanonicalType().getUnqualifiedType()) {
+    if (!compatibleTypes) {
       llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
-  assert(Dst.getType().getCanonicalType().getUnqualifiedType() ==
-         Src.getType().getCanonicalType().getUnqualifiedType());
+  assert(compatibleTypes);
 
-  for (auto [Field, SrcFieldLoc] : Src.children()) {
-    StorageLocation *DstFieldLoc = Dst.getChild(*Field);
+  for (auto [Field, DstFieldLoc] : Dst.children()) {
+    StorageLocation *SrcFieldLoc = Src.getChild(*Field);
 
     assert(Field->getType()->isReferenceType() ||
            (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));
 
     if (Field->getType()->isRecordType()) {
-      copyRecord(cast<AggregateStorageLocation>(*SrcFieldLoc),
-                 cast<AggregateStorageLocation>(*DstFieldLoc), Env);
+      copyRecord(cast<RecordStorageLocation>(*SrcFieldLoc),
+                 cast<RecordStorageLocation>(*DstFieldLoc), Env);
     } else if (Field->getType()->isReferenceType()) {
       Dst.setChild(*Field, SrcFieldLoc);
     } else {
@@ -46,10 +54,10 @@ void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
     }
   }
 
-  StructValue *SrcVal = cast_or_null<StructValue>(Env.getValue(Src));
-  StructValue *DstVal = cast_or_null<StructValue>(Env.getValue(Dst));
+  RecordValue *SrcVal = cast_or_null<RecordValue>(Env.getValue(Src));
+  RecordValue *DstVal = cast_or_null<RecordValue>(Env.getValue(Dst));
 
-  DstVal = &Env.create<StructValue>(Dst);
+  DstVal = &Env.create<RecordValue>(Dst);
   Env.setValue(Dst, *DstVal);
 
   if (SrcVal == nullptr)
@@ -61,9 +69,9 @@ void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
   }
 }
 
-bool clang::dataflow::recordsEqual(const AggregateStorageLocation &Loc1,
+bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
                                    const Environment &Env1,
-                                   const AggregateStorageLocation &Loc2,
+                                   const RecordStorageLocation &Loc2,
                                    const Environment &Env2) {
   LLVM_DEBUG({
     if (Loc2.getType().getCanonicalType().getUnqualifiedType() !=
@@ -82,8 +90,8 @@ bool clang::dataflow::recordsEqual(const AggregateStorageLocation &Loc1,
            (FieldLoc1 != nullptr && FieldLoc2 != nullptr));
 
     if (Field->getType()->isRecordType()) {
-      if (!recordsEqual(cast<AggregateStorageLocation>(*FieldLoc1), Env1,
-                        cast<AggregateStorageLocation>(*FieldLoc2), Env2))
+      if (!recordsEqual(cast<RecordStorageLocation>(*FieldLoc1), Env1,
+                        cast<RecordStorageLocation>(*FieldLoc2), Env2))
         return false;
     } else if (Field->getType()->isReferenceType()) {
       if (FieldLoc1 != FieldLoc2)
@@ -95,10 +103,10 @@ bool clang::dataflow::recordsEqual(const AggregateStorageLocation &Loc1,
 
   llvm::StringMap<Value *> Props1, Props2;
 
-  if (StructValue *Val1 = cast_or_null<StructValue>(Env1.getValue(Loc1)))
+  if (RecordValue *Val1 = cast_or_null<RecordValue>(Env1.getValue(Loc1)))
     for (const auto &[Name, Value] : Val1->properties())
       Props1[Name] = Value;
-  if (StructValue *Val2 = cast_or_null<StructValue>(Env2.getValue(Loc2)))
+  if (RecordValue *Val2 = cast_or_null<RecordValue>(Env2.getValue(Loc2)))
     for (const auto &[Name, Value] : Val2->properties())
       Props2[Name] = Value;
 
