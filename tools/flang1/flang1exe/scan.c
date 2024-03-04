@@ -5368,6 +5368,13 @@ get_keyword:
       scmode = SCM_IDENT;
     break;
 
+  case TK_DEVICE:
+    if (exp_attr)
+      scmode = SCM_ID_ATTR;
+    else
+      scmode = SCM_IDENT;
+    break;
+
   case TK_TYPE:
     if (sem.pgphase != PHASE_EXEC)
       goto begins_with_type;

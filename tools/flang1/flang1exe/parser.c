@@ -838,6 +838,7 @@ is_declaration(int tkntyp)
 #ifdef TK_DECLARE
   case TK_DECLARE:
 #endif
+  case TK_DEVICE:
   case TK_ELEMENTAL:
   case TK_ENDBLOCKDATA:
   case TK_ENDENUM:

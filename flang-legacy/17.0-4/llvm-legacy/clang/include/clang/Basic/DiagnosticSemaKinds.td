@@ -6596,6 +6596,16 @@ def warn_atomic_member_access : Warning<
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
 
 // Expressions.
+def err_using_placeholder_variable : Error<
+  "ambiguous reference to placeholder '_', which is defined multiple times">;
+def note_reference_placeholder : Note<
+  "placeholder declared here">;
+def ext_placeholder_var_definition : ExtWarn<
+  "placeholder variables are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_placeholder_var_definition : Warning<
+  "placeholder variables are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def ext_sizeof_alignof_function_type : Extension<
   "invalid application of '%0' to a function type">, InGroup<PointerArith>;
 def ext_sizeof_alignof_void_type : Extension<
@@ -11857,6 +11867,12 @@ def note_unsafe_buffer_variable_fixit_group : Note<
   "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
+#ifndef NDEBUG
+// Not a user-facing diagnostic. Useful for debugging false negatives in
+// -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
+def note_safe_buffer_debug_mode : Note<"safe buffers debug: %0">;
+#endif
+
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 
