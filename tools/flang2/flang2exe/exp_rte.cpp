@@ -2139,7 +2139,7 @@ exp_alloca(ILM *ilmp)
 static void gen_funcret(finfo_t *);
 
 void
-exp_end(ILM *ilmp, int curilm, bool is_func)
+exp_end(ILM *ilmp, int curilm, bool is_func, bool process_expanded)
 {
   int tmp;
   int op1;
@@ -2158,10 +2158,12 @@ exp_end(ILM *ilmp, int curilm, bool is_func)
   int ilix;
   if (flg.omptarget && !is_func) {
     if (XBIT(232, 0x40) && gbl.ompaccel_intarget && !OMPACCFUNCDEVG(gbl.currsub) /*is_gpu_output_file() */  ) {
-      ilix = ll_make_kmpc_target_deinit(
-        ompaccel_tinfo_get(gbl.currsub)->mode);
-      iltb.callfg = 1;
-      chk_block(ilix);
+      OMP_TARGET_MODE mode = ompaccel_tinfo_get(gbl.currsub)->mode;
+      if (!is_SPMD_mode(mode) && !process_expanded) {
+        ilix = ll_make_kmpc_target_deinit(mode);
+        iltb.callfg = 1;
+        chk_block(ilix);
+      }
     }
   }
 #endif

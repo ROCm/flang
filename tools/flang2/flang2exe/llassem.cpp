@@ -406,8 +406,9 @@ find_ag(const char *ag_name)
   int hashval = name_to_hash(ag_name, strlen(ag_name));
 
   for (gblsym = agb.hashtb[hashval]; gblsym; gblsym = AG_HASHLK(gblsym))
-    if (!strcmp(ag_name, AG_NAME(gblsym)))
+    if (!strcmp(ag_name, AG_NAME(gblsym))){
       return gblsym;
+    }
   return SPTR_NULL;
 }
 

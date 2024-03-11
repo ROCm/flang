@@ -28,7 +28,9 @@
 #include "symtab.h"
 #include "ili.h"
 //AOCC Begin
+typedef struct _OMPACCEL_TARGET OMPACCEL_TINFO;
 #include "llmputil.h"
+#include <vector>
 //AOCC End
 /** \file
  * \brief Various definitions for the kmpc runtime
@@ -175,6 +177,7 @@ enum {
   KMPC_API_TARGET_INIT,
   KMPC_API_SPMD_KERNEL_INIT,
   // AOCC Begin
+  KMPC_API_PARALLEL_51,
 #ifdef OMP_OFFLOAD_AMD
   KMPC_API_TARGET_DEINIT,
   KMPC_API_SPMD_KERNEL_DEINIT_V2,
@@ -503,6 +506,11 @@ int ll_make_kmpc_for_static_init_simple_spmd(const loop_args_t *, int);
 int ll_make_kmpc_target_init(OMP_TARGET_MODE);
 
 // AOCC Begin
+/**
+  \brief Generate kmpc_parallel_51 function call
+*/
+int ll_make_kmpc_parallel_51(int global_tid_sptr, std::vector<int> &, SPTR);
+
 #ifdef OMP_OFFLOAD_AMD
 /**
   \brief kernel deinit
@@ -525,6 +533,18 @@ int ll_make_kmpc_nvptx_parallel_reduce_nowait_simple_spmd(int, int, int, SPTR, S
   \brief End of reduction within kernel
 */
 int ll_make_kmpc_nvptx_end_reduce_nowait();
+
+/**
+ \brief Get number of correctly initialized number of symbols.
+*/
+int get_n_symbols(OMPACCEL_TINFO *tinfo);
+
+/**
+ \brief Check if given symbol should be skipped
+ If DTYPE of symbol is 0 then the symbol should not be passed
+ as an argument to kmpc_parallel_51 function
+*/
+bool check_if_skip_symbol(SPTR sym);
 
 /* End OpenMP Accelerator RT - non standard */
 #endif
