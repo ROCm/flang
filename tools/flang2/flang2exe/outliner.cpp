@@ -477,12 +477,16 @@ ll_get_shared_arg(SPTR func_sptr)
 }
 
 void
-ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype)
+ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype, OMPACCEL_TINFO *current_tinfo, bool has_bounds_args)
 {
   int count = 0;
   int sym, dtype;
   char name[MXIDLEN + 2];
   int dpdscp = aux.dpdsc_avl;
+  int cnt = 0;
+  int number_of_prologue_args = 2;
+  if (has_bounds_args)
+    number_of_prologue_args += 2; //lower and upper bounds
 
   PARAMCTP(func_sptr, paramct);
   DPDSCP(func_sptr, dpdscp);
@@ -491,7 +495,11 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype)
        aux.dpdsc_size + paramct + 100);
 
   while (paramct--) {
-    sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
+    if (current_tinfo && cnt >= number_of_prologue_args)
+      sprintf(name, "%s",
+              SYMNAME(ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-number_of_prologue_args].device_sym));
+    else
+      sprintf(name, "%sArg%d", SYMNAME(func_sptr), count++);
     sym = getsymbol(name);
     SCP(sym, SC_DUMMY);
     if (*argtype == DT_CPTR) { /* either i8* or actual type( pass by value). */
@@ -500,9 +508,31 @@ ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype)
       DTYPEP(sym, *argtype);
       PASSBYVALP(sym, 1);
     }
+
     argtype++;
     STYPEP(sym, ST_VAR);
     aux.dpdsc_base[dpdscp++] = sym;
+    //AOC begin
+    if (current_tinfo)
+    {
+      NEED((current_tinfo->n_symbols + 1), current_tinfo->symbols, OMPACCEL_SYM,
+         current_tinfo->sz_symbols, current_tinfo->sz_symbols * 2);
+      if (cnt >= 2) {
+        if (!(PASSBYVALG(sym) && !PASSBYREFG(sym) && DTYPEG(sym) == DT_INT8)) {
+          PASSBYVALP(sym, false);
+          PASSBYREFP(sym, true);
+	}
+        current_tinfo->symbols[current_tinfo->n_symbols].host_sym = 
+          ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
+        current_tinfo->symbols[current_tinfo->n_symbols].device_sym =
+          ompaccel_tinfo_get(gbl.currsub)->symbols[cnt-2].device_sym;
+      }
+      current_tinfo->symbols[current_tinfo->n_symbols].map_type = 0;
+      current_tinfo->symbols[current_tinfo->n_symbols].in_map = 0;
+      current_tinfo->n_symbols++;
+      cnt++;
+    }
+    //AOCC end
   }
 }
 
@@ -1155,6 +1185,7 @@ ll_rewrite_ilms(int lineno, int ilmx, int len)
             /* replace host sptr with device sptrs, PLD keeps sptr in 2nd index
              */
             op1Pld = ILM_OPND(ilmpx, 1);
+	    //replace host sym to device sym 
             ILM_OPND(ilmpx, 2) =
                 ompaccel_tinfo_current_get_devsptr(ILM_SymOPND(ilmpx, 2));
           // AOCC begin
@@ -2416,7 +2447,6 @@ llMakeFtnOutlinedSignatureTarget(SPTR func_sptr, OMPACCEL_TINFO *current_tinfo,
 
   for (i = 0; i < current_tinfo->n_symbols; ++i) {
     SPTR sptr = current_tinfo->symbols[i].host_sym;
-
     // AOCC begin
     if (XBIT(232, 0x1)) {
       if (orig_sptr_map.find(sptr) != orig_sptr_map.end()) {
@@ -2680,6 +2710,78 @@ ompaccel_copy_arraydescriptors(SPTR arg_sptr)
   VARDSCP(dev_midnum, VARDSCG(org_midnum));
 
   return device_symbol;
+}
+
+static bool is_complex_type(DTYPE dt)
+{
+  if (dt == DT_DCMPLX){
+    return true;
+  }
+  else if (dt == DT_CMPLX){
+    return true;
+  }
+  return false;
+}
+
+SPTR
+ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr,
+                                             OMPACCEL_TINFO *orig_tinfo,
+                                             SPTR lower_bound,
+                                             SPTR upper_bound)
+{
+  OMPACCEL_TINFO *current_tinfo;
+  SPTR func_sptr;
+  
+  int max_nargs = orig_tinfo->n_symbols + 
+                  orig_tinfo->n_quiet_symbols +
+		  orig_tinfo->n_reduction_symbols;
+  int func_args_cnt = get_n_symbols(orig_tinfo);
+  func_args_cnt += 2; // global_tid, bound_tid + target_info args
+  if (lower_bound && upper_bound)
+    func_args_cnt += 2; // + lower_bound + upper_bound
+  std::vector<DTYPE> func_args(func_args_cnt);
+  auto *symbols = orig_tinfo->symbols;
+  bool has_bounds_args = lower_bound && upper_bound;
+  int i = 2;
+  func_args[0] = get_type(2, TY_PTR, DT_INT8);// global_tid
+  func_args[1] = get_type(2, TY_PTR, DT_INT8);// bound_tid
+  if (has_bounds_args) {
+    func_args[2] = DT_INT8;                   //lower_bound
+    func_args[3] = DT_INT8;                   //upper_bound
+    i += 2;
+  }
+  for (; i < func_args_cnt; i++) {
+       if(DT_ISSCALAR( DTYPEG(symbols->device_sym))
+          && !is_complex_type(DTYPEG(symbols->device_sym))) {
+	 func_args[i] = DT_CPTR;
+       }
+       else if (STYPEG(symbols->host_sym) == ST_STRUCT) {
+         func_args[i] = DT_CPTR;
+       }
+       else {
+         func_args[i] = DTYPEG(symbols->device_sym);
+       }
+       symbols++;
+  }
+
+  func_sptr = create_target_outlined_func_sptr(scope_sptr, false);
+  CCSYMP(func_sptr,
+         1); /* currently we make all CCSYM func varargs in Fortran. */
+  CFUNCP(func_sptr, 1);
+  TASKFNP(func_sptr, FALSE);
+  ISTASKDUPP(func_sptr, FALSE);
+  OUTLINEDP(func_sptr, gbl.currsub);
+  FUNCLINEP(func_sptr, gbl.lineno);
+  STYPEP(func_sptr, ST_ENTRY);
+  DTYPEP(func_sptr, DT_VOID_NONE);
+  DEFDP(func_sptr, 1);
+  SCP(func_sptr, SC_STATIC);
+  ADDRTKNP(func_sptr, 1);
+  OMPACCFUNCDEVP(func_sptr, 1);
+  current_tinfo = ompaccel_tinfo_create(func_sptr, max_nargs);
+  ll_make_ftn_outlined_params(func_sptr, func_args_cnt, func_args.data(), current_tinfo, has_bounds_args);
+  ll_process_routine_parameters(func_sptr);
+  return func_sptr;
 }
 
 SPTR

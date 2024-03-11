@@ -26,6 +26,7 @@
 #include "symtab.h"
 #include "ili.h"
 #include <stdio.h>
+#include "kmpcutil.h"
 
 extern FILE *par_file1;
 extern FILE *par_file2;
@@ -246,7 +247,11 @@ void ilm_outlined_pad_ilm(int curilm);
 /**
    \brief ...
  */
-void ll_make_ftn_outlined_params(int func_sptr, int paramct, DTYPE *argtype);
+void ll_make_ftn_outlined_params(int func_sptr,
+                                 int paramct,
+                                 DTYPE *argtype,
+                                 OMPACCEL_TINFO *current_tinfo = nullptr,
+                                 bool has_bound_args = false);
 
 /**
    \brief ...
@@ -398,4 +403,9 @@ bool outlined_is_eliminated(ILM_OP opc);
 bool outlined_need_recompile();
 
 void ll_set_ompaccel_currfunc(bool isILMrecompile);
+SPTR
+ll_make_helper_function_for_kmpc_parallel_51(SPTR scope_sptr,
+                                             OMPACCEL_TINFO *orig_tinfo,
+                                             SPTR lower_bound = SPTR(0),
+                                             SPTR upper_bound = SPTR(0));
 #endif /* OUTLINER_H_ */

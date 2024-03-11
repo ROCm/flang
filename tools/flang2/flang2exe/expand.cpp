@@ -54,6 +54,8 @@
 #ifdef OMP_OFFLOAD_LLVM
 #include "tgtutil.h"
 #include "kmpcutil.h"
+#include <vector>
+#include <map>
 #endif
 extern int in_extract_inline; /* Bottom-up auto-inlining */
 
@@ -62,6 +64,8 @@ static int create_ref(SPTR sym, int *pnmex, int basenm, int baseilix,
                       int *pclen, int *pmxlen, int *prestype);
 static int jsr2qjsr(int);
 
+SPTR
+eval_ilm_check_if_skip(int ilmx, int *skip_expand = nullptr, int *process_expanded = nullptr);
 #define DO_PFO ((XBIT(148, 0x1000) && !XBIT(148, 0x4000)) || XBIT(148, 1))
 
 /***************************************************************/
@@ -215,7 +219,6 @@ parse_im_file(const ILM *ilmp, int *lineno_out, int *findex_out, int *ftag_out)
 }
 
 /***************************************************************/
-
 /** \brief Expand ILMs to ILIs */
 int
 expand(void)
@@ -229,12 +232,39 @@ expand(void)
   int last_ftag = 0;
   int nextftag = 0, nextfindex = 0;
   int last_cpp_branch = 0;
+  static int skip_expand;
+  static int skip_expand_sptr;
+  static std::map<int, int> process_expanded_map = std::map<int,int>();
+  auto it = process_expanded_map.find(gbl.currsub);
+  int process_expanded = 0;
 
+  //we are at the beginning of pragma expansion
+  //make sure that mploop_counter equals to zero
+  reset_mploop_counter();
+  // we reset flag because we do not know if we generate initialization
+  // function for SPMD kernel (the function with kmpc_parallel_51 call)
+  // or the proper kernel code (the function which is passed as an argument
+  // to kmpc_parallel_51 call or generic kernel
+  gbl.is_init_spmd_kernel = false;
+  if (it != process_expanded_map.end())
+  {
+	  process_expanded = it->second;
+  }
+  else
+  {
+	 process_expanded = 0;
+  }
   /*
    * NOTE, for an ILM: ilmx is needed to access the ILM_AUX area, ilmp is
    * needed to access the ILM area
    */
   exp_init();
+
+  //set current target info if given target region was already processed
+  if(ompaccel_tinfo_get(gbl.currsub))
+  {
+	  ompaccel_tinfo_current_set(ompaccel_tinfo_get(gbl.currsub));
+  }
   /* During expand, we want to generate unique proc ili each time a
    * proc ILM is processed.  The assumption is that the scheduler will
    * cse a proc ili if it appears multiple times in a block. E.g.,
@@ -299,7 +329,13 @@ expand(void)
 
       ilmp = (ILM *)(ilmb.ilm_base + ilmx);
       opc = ILM_OPC(ilmp);
-
+      /* Do not expand map statements for helper function for kmpc_parallel_51 */
+      if ((opc == IM_MP_MAP || opc == IM_MP_EMAP) && process_expanded)
+	      continue;
+      if (process_expanded)
+      {
+	      gbl.ompoutlinedfunc = gbl.currsub;
+      }
       if (opc == IM_BR) {
         last_cpp_branch = ILM_OPND(ilmp, 1);
       } else if (opc == IM_LABEL) {
@@ -318,8 +354,17 @@ expand(void)
                                    * variable operands */
       if (IM_TRM(opc)) {
         int cur_label = BIH_LABEL(expb.curbih);
-        eval_ilm(ilmx);
-      }
+	if (!skip_expand){
+          SPTR sptr1 = eval_ilm_check_if_skip(ilmx, &skip_expand, &process_expanded);
+	if (skip_expand) {
+          skip_expand_sptr = sptr1;
+          process_expanded_map[skip_expand_sptr] = 1;
+          ll_write_ilm_header((int)sptr1, ilmx);
+          restartRewritingILM(ilmx);
+	}
+	} else {
+	  ll_rewrite_ilms(-1, ilmx, len);
+	}}
       else if (flg.smp && len) {
         ll_rewrite_ilms(-1, ilmx, len);
       }
@@ -366,7 +411,6 @@ expand(void)
     new_callee_scope = 0;
   }
   while (opc != IM_END && opc != IM_ENDF);
-
   if (DBGBIT(10, 2) && (bihb.stg_avail != 1)) {
     int bih;
     for (bih = 1; bih != 0; bih = BIH_NEXT(bih)) {
@@ -423,6 +467,13 @@ expand(void)
   } else {
     fihb.nextfindex = fihb.currfindex = 1;
   }
+  if (skip_expand && !process_expanded)
+  {
+	process_expanded = 1;
+	unsetRewritingILM();
+  }
+  skip_expand = 0;
+
   return expb.nilms;
 }
 
@@ -451,16 +502,65 @@ eval_ilm_argument1(int opr, ILM *ilmpx, int ilmx)
   }
 } /* eval_ilm_argument1 */
 
-void
-eval_ilm(int ilmx)
+static std::vector<int> get_allocated_symbols(OMPACCEL_TINFO *orig_symbols)
+{
+  int num_of_symbols = orig_symbols->n_symbols;
+  char allocated_symbol_name[128];
+  SPTR allocated_symbol;
+  std::vector<int> init_symbols{};
+  int store_instr;
+  int load_instr;
+  for (unsigned i = 0; i < num_of_symbols; ++i) {
+    if (PASSBYVALG(orig_symbols->symbols[i].device_sym) &&
+              !PASSBYREFG(orig_symbols->symbols[i].device_sym))
+	    continue;
+    if (!DT_ISSCALAR(DTYPEG(orig_symbols->symbols[i].device_sym))
+         && STYPEG(orig_symbols->symbols[i].host_sym) != ST_STRUCT) {
+	    continue;
+    }
+    snprintf(allocated_symbol_name, sizeof(allocated_symbol_name),
+            ".allocated_symbol_%d", i);
+    allocated_symbol = getsymbol(allocated_symbol_name);
+    STYPEP(allocated_symbol, ST_VAR);
+    if (STYPEG(orig_symbols->symbols[i].host_sym) == ST_STRUCT)
+      DTYPEP(allocated_symbol,DT_CPTR);
+    else
+      DTYPEP(allocated_symbol,
+           get_type(2,TY_PTR,DTYPEG(orig_symbols->symbols[i].device_sym)));
+    SCP(allocated_symbol, SC_AUTO);
+    store_instr = ad4ili(IL_ST,
+                         ad_acon(orig_symbols->symbols[i].device_sym,0),
+                         ad_acon(allocated_symbol,0),
+                         addnme(NT_VAR, allocated_symbol, 0,0),
+                         MSZ_I8);
+    chk_block(store_instr);
+    load_instr = mk_ompaccel_ldsptr(allocated_symbol);
+    chk_block(load_instr);
+
+    init_symbols.push_back(load_instr);
+  }
+  return init_symbols;
+
+}
+void eval_ilm(int ilmx)
+{
+  eval_ilm_check_if_skip(ilmx, nullptr, nullptr);
+}
+
+SPTR
+eval_ilm_check_if_skip(int ilmx, int *skip_expand, int *process_expanded)
 {
 
+		SPTR sptr1 = SPTR_NULL;
   ILM *ilmpx;
   int noprs,   /* number of operands in the ILM	 */
       ilix,    /* ili index				 */
       tmp,     /* temporary				 */
       op1;     /* operand 1				 */
   ILM_OP opcx; /**< ILM opcode of the ILM */
+  static int mp_loop_nest_level;
+  const int mp_loop_second_nest_level = 2;
+  static bool omit_loop_nesting;
 
   int first_op = 0;
 
@@ -478,13 +578,31 @@ eval_ilm(int ilmx)
         /* Set line no for EPARx */
         gbl.lineno = ILM_OPND(ilmpx, 1);
       }
-      return;
+      return sptr1;
     }
   }
 
   if (EXPDBG(8, 2))
     fprintf(gbl.dbgfil, "---------- eval ilm  %d\n", ilmx);
 
+  if (flg.omptarget && gbl.ompaccel_intarget && !ll_ilm_is_rewriting()) {
+    if (opcx == IM_MPLOOP) {
+      if (++mp_loop_nest_level == mp_loop_second_nest_level) {
+        omit_loop_nesting = true;
+      }
+    }
+  else if ((opcx == IM_MPLOOPFINI) &&
+           (mp_loop_nest_level == mp_loop_second_nest_level)) {
+    if (omit_loop_nesting) {
+      omit_loop_nesting = false;
+    }
+  }
+  else if (omit_loop_nesting)
+  {
+    //Do not expand ilm instructions for 2nd level of parallelism
+    return sptr1;
+  }
+ }
   if (!ll_ilm_is_rewriting())
   {
 #ifdef OMP_OFFLOAD_LLVM
@@ -510,12 +628,12 @@ eval_ilm(int ilmx)
           }
         } else if (opcx == IM_MP_EREDUCTION) {
           ompaccel_notify_reduction(false);
-          return;
+          return sptr1;
         }
       }
 
       if (ompaccel_is_reduction_region())
-        return;
+        return sptr1;
     }
 #endif
     /*-
@@ -614,7 +732,7 @@ eval_ilm(int ilmx)
     if (IM_I8(opcx))
       ILM_RESTYPE(ilmx) = ILM_ISI8;
 
-    return;
+    return sptr1;
   }
   switch (IM_TYPE(opcx)) { /* special-cased ILM		 */
 
@@ -645,7 +763,10 @@ eval_ilm(int ilmx)
     break;
 
   case IMTY_MISC: /* miscellaneous  */
-    exp_misc(opcx, ilmpx, ilmx);
+    if (process_expanded && *process_expanded)
+      exp_misc(opcx, ilmpx, ilmx, true);
+    else
+      exp_misc(opcx, ilmpx, ilmx);
     break;
 
   case IMTY_FSTR: /* fortran string */
@@ -687,7 +808,12 @@ eval_ilm(int ilmx)
     /* We do not initialize spmd kernel library since we do not use spmd data
      * sharing model. It does extra work and allocates device on-chip memory.
      * */
-    if (XBIT(232, 0x40) && gbl.ompaccel_intarget) {
+    if (XBIT(232, 0x40) && gbl.ompaccel_intarget && !*process_expanded) {
+      //TODO move initialization to separate function
+      std::vector<int> allocated_symbols;
+      if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
+	  allocated_symbols = get_allocated_symbols(ompaccel_tinfo_get(gbl.currsub));
+      }
       ilix = ll_make_kmpc_target_init(ompaccel_tinfo_get(gbl.currsub)->mode);
 
       /* Generate new control flow for generic kernel */
@@ -714,9 +840,24 @@ eval_ilm(int ilmx)
       exp_label(target_code_lab);
 
       if (is_SPMD_mode(ompaccel_tinfo_get(gbl.currsub)->mode)) {
-        iltb.callfg = 1;
         ilix = ll_make_kmpc_global_thread_num();
+        iltb.callfg = 1;
         chk_block(ilix);
+        gbl.is_init_spmd_kernel = true;
+        sptr1 = ll_make_helper_function_for_kmpc_parallel_51((SPTR)0, ompaccel_tinfo_get(gbl.currsub));
+        ilix = ll_make_kmpc_parallel_51(ilix, allocated_symbols, sptr1);
+        iltb.callfg = 1;
+        chk_block(ilix);
+        ilix = ll_make_kmpc_target_deinit(ompaccel_tinfo_get(gbl.currsub)->mode);
+        iltb.callfg = 1;
+        chk_block(ilix);
+        expb.curilt = addilt(expb.curilt, ad1ili(IL_EXIT, gbl.currsub));
+        BIH_XT(expb.curbih) = 1;
+        BIH_LAST(expb.curbih) = 1;
+        wr_block();
+	if (skip_expand && process_expanded && (*process_expanded == 0)){
+	  *skip_expand = 1;
+	} 
       }
 
       iltb.callfg = 1;
@@ -727,6 +868,7 @@ eval_ilm(int ilmx)
 #endif
   if (IM_I8(opcx))
     ILM_RESTYPE(ilmx) = ILM_ISI8;
+  return sptr1;
 }
 
 /***************************************************************/

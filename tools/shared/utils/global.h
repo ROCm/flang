@@ -162,6 +162,7 @@ typedef struct {
   bool ompaccel_intarget;  /* set when expander is in the openmp target construct */
   bool ompaccel_isdevice;  /* set when generating code for openmp target device */
   SPTR teamPrivateArgs;    /* keeps sptr that holds team private array */
+  bool is_init_spmd_kernel; /* if TRUE, we generate initialization proceudre of SPMD kernel */
 #endif
 } GBL;
 

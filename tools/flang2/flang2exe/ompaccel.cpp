@@ -66,6 +66,9 @@
 // Should be in sync with clang::GPU::AMDGPUGpuGridValues in clang
 int warp_size_log2;
 int warp_size_log2_mask;
+// count if we expand the second MPLOOP instruction
+// inside single OpenMP pragma
+int mploop_counter;
 // AOCC End
 #include "../../flang1/flang1exe/global.h"
 
@@ -2758,7 +2761,25 @@ exp_ompaccel_mploop(ILM *ilmp, int curilm)
       ili = ll_make_kmpc_for_static_init(&loop_args);
     // AOCC end
     } else {
-      ili = ll_make_kmpc_for_static_init_simple_spmd(&loop_args, sched);
+      mploop_counter++;
+      if (mploop_counter != 2)
+        ili = ll_make_kmpc_for_static_init_simple_spmd(&loop_args, sched);
+      else {
+        std::vector<int> allocated_symbols;
+        SPTR func_ptr = ll_make_helper_function_for_kmpc_parallel_51
+                          ((SPTR)0,
+                           ompaccel_tinfo_get(gbl.currsub),
+                           loop_args.lower,
+                           loop_args.upper);
+        int ilix = ll_make_kmpc_global_thread_num();
+        ilix = ll_make_kmpc_parallel_51(ilix,
+			                allocated_symbols,
+                                        func_ptr,
+                                        loop_args.lower,
+                                        loop_args.upper);
+        iltb.callfg = 1;
+        chk_block(ilix);
+      }
     }
     break;
   default:
@@ -3726,11 +3747,15 @@ ompaccel_set_target_declare() {
 }
 
 bool is_SPMD_mode(OMP_TARGET_MODE mode) {
-  if (mode >= mode_target_teams_distribute_parallel_for
-      && mode <= mode_target_parallel_for_simd) {
+  if (mode == mode_target_parallel) {
     return true;
   }
   return false;
+}
+
+void reset_mploop_counter()
+{
+  mploop_counter = 0;
 }
 
 // AOCC End

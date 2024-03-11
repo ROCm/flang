@@ -27,6 +27,7 @@
 
 #define _GNU_SOURCE // for vasprintf()
 #include <stdio.h>
+#include <vector>
 #undef _GNU_SOURCE
 #include "kmpcutil.h"
 #include "error.h"
@@ -188,10 +189,13 @@ public:
       break;
     case KMPC_API_SPMD_KERNEL_INIT:
       return {"__kmpc_spmd_kernel_init", IL_NONE, DT_VOID_NONE, 0};
+    // AOCC Begin
     case KMPC_API_TARGET_INIT:
       return {"__kmpc_target_init_v1", IL_NONE, DT_INT, 0};
       break;
-    // AOCC Begin
+    case KMPC_API_PARALLEL_51:
+      return {"__kmpc_parallel_51", IL_NONE, DT_INT, 0};
+      break;
 #ifdef OMP_OFFLOAD_AMD
     case KMPC_API_TARGET_DEINIT:
       return {"__kmpc_target_deinit_v1", IL_NONE, DT_VOID_NONE, 0};
@@ -313,9 +317,11 @@ static const struct kmpc_api_entry_t kmpc_api_calls[] = {
          KMPC_FLAG_STR_FMT},
     [KMPC_API_SPMD_KERNEL_INIT] = {"__kmpc_spmd_kernel_init", 0, DT_VOID_NONE,
                                    0},
+    // AOCC Begin
     [KMPC_API_TARGET_INIT] = {"__kmpc_target_init_v1", 0, DT_INT,
                                    0},
-    // AOCC Begin
+    [KMPC_API_PARALLEL_51] = {"__kmpc_parallel_51", 0, DT_INT,
+                                   0},
 #ifdef OMP_OFFLOAD_AMD
     [KMPC_API_TARGET_DEINIT] = {"__kmpc_target_deinit_v1", 0, DT_VOID_NONE,
                                    0},
@@ -1730,10 +1736,19 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
   int args[4];
 
   args[3] = gen_null_arg(); /* ident */
-  if (is_SPMD_mode(mode)) {
+  if (mode >= mode_target_teams_distribute_parallel_for &&
+      mode <= mode_target_parallel_for_simd) {
     args[2] = ad_icon(2); /* SPMD Mode */
     args[1] = ad_icon(0); /* UseGenericStateMachine */
-    args[0] = ad_icon(0); /* RequiresFullRuntime */
+    if (mode == mode_target_parallel) {
+     /* RequiresFullRuntime - kmpc_parallel_51 requires full runtime */
+     args[0] = ad_icon(1);
+    }
+    else {
+     /* RequiresFullRuntime - Old Fortran OpenMP API does not require
+      * full runtime */
+       args[0] = ad_icon(0);
+    }
   } else {
     args[2] = ad_icon(1); /* Generic mode */
     args[1] = ad_icon(1); /* UseGenericStateMachine */
@@ -1742,9 +1757,129 @@ ll_make_kmpc_target_init(OMP_TARGET_MODE mode)
   return mk_kmpc_api_call(KMPC_API_TARGET_INIT, 4, arg_types, args);
 }
 
+int get_n_symbols(OMPACCEL_TINFO *tinfo)
+{
+  int orig_n_symbols = tinfo->n_symbols;
+  int n_symbols = orig_n_symbols;
+  for (int i = 0; i < orig_n_symbols; ++i) {
+    //skip uninitialized symbols
+    if (DTYPEG(tinfo->symbols[i].device_sym) == 0) {
+      n_symbols--;
+    }
+  }
+  return n_symbols;
+}
+
+bool check_if_skip_symbol(SPTR sym)
+{
+  if (DTYPEG(sym) == 0)
+    return true;
+  return false;
+}
+
+int
+ll_make_kmpc_parallel_51(int global_tid_sptr,
+                         std::vector<int> &symbols,
+                         SPTR helper_func,
+                         SPTR lower,
+                         SPTR upper)
+{
+  static int id;
+  int n_symbols = get_n_symbols(ompaccel_tinfo_get(gbl.currsub));
+  DTYPE arg_types[9];
+  DTYPE void_ptr_t = DT_ADDR;//create_dtype_funcprototype();
+  DTYPE void_ptr_ptr_t = get_type(2, TY_PTR, void_ptr_t);
+  DTYPE arr_dtype;
+  int args[9];
+
+  if (lower && upper)
+    n_symbols += 2;
+
+  SPTR captured_vars = make_array_sptr(const_cast<char*>("captured_vars_addrs"),
+                                                         void_ptr_t,
+                                                         n_symbols);
+  int ilix;
+  int nme_args = add_arrnme(NT_ARR,
+                            captured_vars,
+                            addnme(NT_VAR, captured_vars, 0, 0),
+                            0,
+                            ad_icon(0),
+                            FALSE);
+  int j = 0;
+  int i = 0;
+  /* Store lower and upper bounds for loop distribution */
+  if (lower && upper) {
+    ilix = mk_ompaccel_ldsptr(lower);
+    ilix = mk_ompaccel_store(ilix,
+                             DT_INT8,
+                             nme_args,
+                             ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    chk_block(ilix);
+    i++;
+    ilix = mk_ompaccel_ldsptr(upper);
+    ilix = mk_ompaccel_store(ilix,
+                             DT_INT8,
+                             nme_args,
+                             ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    chk_block(ilix);
+    i++;
+  }
+  for (; i < n_symbols; ++i) {
+    if (check_if_skip_symbol(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym))
+      continue;
+    else if (PASSBYVALG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym) &&
+              !PASSBYREFG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym)) {
+      ilix = mk_ompaccel_ldsptr(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym);
+      ilix = mk_ompaccel_store(ilix,
+                               DT_INT8,
+                               nme_args,
+                               ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    }
+    else if (DT_ISSCALAR(DTYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym)) ||
+        STYPEG(ompaccel_tinfo_get(gbl.currsub)->symbols[i].host_sym) == ST_STRUCT) {
+      ilix = mk_ompaccel_store(symbols[j++],
+                               DT_INT8,
+                               nme_args,
+                               ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    }
+    else {
+      ilix = mk_ompaccel_ldsptr(ompaccel_tinfo_get(gbl.currsub)->symbols[i].device_sym);
+      ilix = mk_ompaccel_store(ilix,
+                               DT_INT8,
+                               nme_args,
+                               ad_acon(captured_vars, i * TARGET_PTRSIZE));
+    }
+    chk_block(ilix);
+  }
+
+  arg_types[0] = DT_CPTR;        /* ident */
+  arg_types[1] = DT_INT;         /* global_tid */
+  arg_types[2] = DT_INT;         /* if_expr */
+  arg_types[3] = DT_INT;         /* num_threads */
+  arg_types[4] = DT_INT;         /* proc_bind */
+  arg_types[5] = void_ptr_t;     /* fn */
+  arg_types[6] = void_ptr_t;     /* wrapper_fn */
+  arg_types[7] = void_ptr_ptr_t; /* args */
+  arg_types[8] = DT_INT8;        /* n_args */
+
+  args[8] = gen_null_arg();            /* ident */
+  args[7] = global_tid_sptr;           /* global_tid */
+  args[6] = ad_icon(1);                /* if_expr */
+  args[5] = ad_icon(-1);               /* num_threads */
+  args[4] = ad_icon(-1);               /* proc_bind */
+  if (helper_func)
+    args[3] = ad_acon(helper_func, 0);
+  else
+    args[3] = gen_null_arg();
+  args[2] = gen_null_arg();            /* wrapper_fn */
+  args[1] = ad_acon(captured_vars, 0); /* args */
+  args[0] = ad_icon(n_symbols);        /* n_args */
+
+  return mk_kmpc_api_call(KMPC_API_PARALLEL_51, 9, arg_types, args);
+}
+
 // AOCC Begin
 #ifdef OMP_OFFLOAD_AMD
-
 int
 ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
 {
@@ -1752,9 +1887,18 @@ ll_make_kmpc_target_deinit(OMP_TARGET_MODE mode)
   int args[3];
 
   args[2] = gen_null_arg(); /* ident */
-  if (is_SPMD_mode(mode)) {
+  if (mode >= mode_target_teams_distribute_parallel_for &&
+      mode <= mode_target_parallel_for_simd) {
     args[1] = ad_icon(2); /* SPMD Mode */
-    args[0] = ad_icon(0); /* RequiresFullRuntime */
+    if (mode == mode_target_parallel) {
+     /* RequiresFullRuntime - kmpc_parallel_51 requires full runtime */
+     args[0] = ad_icon(1);
+    }
+    else {
+     /* RequiresFullRuntime - Old Fortran OpenMP API does not require
+      * full runtime */
+       args[0] = ad_icon(0);
+    }
   } else {
     args[1] = ad_icon(1); /* Generic mode */
     args[0] = ad_icon(1); /* RequiresFullRuntime */
