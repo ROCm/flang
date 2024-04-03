@@ -11634,8 +11634,9 @@ ref_pd(SST *stktop, ITEM *list)
       goto exit_;
 
     // AOCC begin
-    if (STYPEG(SST_SYMG(ARG_STK(0))) == ST_PROC ||
-        is_procedure_ptr(SST_SYMG(ARG_STK(0)))) {
+    if (SST_IDG(ARG_STK(0)) == S_IDENT &&
+        (STYPEG(SST_SYMG(ARG_STK(0))) == ST_PROC ||
+         is_procedure_ptr(SST_SYMG(ARG_STK(0))))) {
       error(4, 3, gbl.lineno,
             "Procedure unexpected as argument", NULL);
       goto exit_;
