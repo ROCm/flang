@@ -5596,8 +5596,8 @@ addarth(ILI *ilip)
   case IL_FMOD:
  #ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-    (void)mk_prototype("modff", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
-      ilix = ad_func(IL_DFRSP, IL_QJSR, "modff", 2, op1, op2);
+    (void)mk_prototype("fmodf", "f pure", DT_FLOAT, 2, DT_FLOAT, DT_FLOAT);
+      ilix = ad_func(IL_DFRSP, IL_QJSR, "fmodf", 2, op1, op2);
       return ad2altili(opc, op1, op2, ilix);
     }
 #endif
@@ -5622,8 +5622,8 @@ addarth(ILI *ilip)
   case IL_DMOD:
  #ifdef OMP_OFFLOAD_LLVM
     if (flg.amdgcn_target && gbl.ompaccel_intarget) {
-    (void)mk_prototype("modf", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
-      ilix = ad_func(IL_DFRDP, IL_QJSR, "modf", 2, op1, op2);
+    (void)mk_prototype("fmod", "f pure", DT_DBLE, 2, DT_DBLE, DT_DBLE);
+      ilix = ad_func(IL_DFRDP, IL_QJSR, "fmod", 2, op1, op2);
       return ad2altili(opc, op1,op2, ilix);
     }
 #endif
