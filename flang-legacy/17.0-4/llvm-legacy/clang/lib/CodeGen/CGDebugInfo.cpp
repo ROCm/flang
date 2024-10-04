@@ -4624,8 +4624,11 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                                                 std::optional<unsigned> ArgNo,
                                                 CGBuilderTy &Builder,
                                                 const bool UsePointerValue) {
+  /*
   if (CGM.getCodeGenOpts().HeterogeneousDwarf)
     return EmitDef(VD, Storage, ArgNo, Builder, UsePointerValue);
+    */
+  assert(false);
 
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
@@ -4812,8 +4815,11 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
                                             const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo() &&
          "Call to EmitDef below ReducedDebugInfo");
+  /*
   assert(CGM.getCodeGenOpts().HeterogeneousDwarf &&
          "Call to EmitDef without HeterogeneousDwarf enabled");
+         */
+  assert(false);
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   if (VD->hasAttr<NoDebugAttr>())
     return nullptr;
@@ -5442,7 +5448,10 @@ CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
     const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
     StringRef LinkageName, llvm::dwarf::MemorySpace MS,
     llvm::GlobalVariable *Var, llvm::DIScope *DContext) {
+  /*
   assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+  */
+  assert(false);
 
   llvm::DIGlobalVariable *GV = nullptr;
 
@@ -5695,8 +5704,11 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
 
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
+  /*
   if (CGM.getCodeGenOpts().HeterogeneousDwarf)
     return EmitGlobalVariableForHeterogeneousDwarf(Var, D);
+    */
+  assert(false);
 
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (D->hasAttr<NoDebugAttr>())
@@ -5767,7 +5779,10 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     llvm::GlobalVariable *Var, const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  /*
   assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+  */
+  assert(false);
   if (D->hasAttr<NoDebugAttr>())
     return;
 
@@ -5844,8 +5859,11 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
+  /*
   if (CGM.getCodeGenOpts().HeterogeneousDwarf)
     return EmitGlobalVariableForHeterogeneousDwarf(VD, Init);
+    */
+  assert(false);
 
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
@@ -6095,8 +6113,11 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   // FIXME: Implement for heterogeneous debug info
+  /*
   if (CGM.getCodeGenOpts().HeterogeneousDwarf)
     return;
+  */
+  assert(false);
 
   SourceLocation Loc = S->getStrTokenLoc(0);
   PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
