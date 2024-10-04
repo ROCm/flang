@@ -939,8 +939,10 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
       LibSuffix.append("/asan");
   }
   std::string CandidateRPath = FindDebugPerfInLibraryPath(LibSuffix);
+  std::string CandidateRPathRocmPath = FindDebugPerfInLibraryPath(LibSuffix);
   if (CandidateRPath.empty())
     CandidateRPath = D.Dir + "/../" + LibSuffix;
+    CandidateRPathRocmPath = D.Dir + "/../../../" + LibSuffix;
 
   if (Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
                    options::OPT_fno_openmp_implicit_rpath, true)) {
@@ -951,6 +953,15 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    std::string rocmPath = Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
+    if (rocmPath.size() != 0){
+      rocmPath = rocmPath + "/lib";
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(rocmPath.c_str()));
+    }
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPathRocmPath.c_str()));
+
   }
 }
 
