@@ -1159,7 +1159,9 @@ ompaccel_create_device_symbol(SPTR sptr, int count)
 
   // AOCC Begin
   // Interpreting all int args as int64 values
-#ifdef OMP_OFFLOAD_AMD
+  // This is leading to misaligned/oversized atomic ops being executed in
+  // zero-copy mode.  FIXME.
+#if 0 && defined(OMP_OFFLOAD_AMD)
   if (dtype == DT_INT || dtype == DT_BINT || dtype == DT_SINT) {
     dtype = DT_INT8;
   }
