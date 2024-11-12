@@ -297,6 +297,9 @@ const char *amdgpu::dlr::getLinkCommandArgs(
     else if (llvm::sys::fs::exists(bc_file_lib))
       // In case a LibSuffix version not found, use suffix "lib"
       BCLibs.push_back(Args.MakeArgString(bc_file_lib));
+    else
+      C.getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
+        << "libomptarget-amdgpu-" + GPUArch.str() + ".bc";
     }
 
   // Add the generic set of libraries, OpenMP subset only
