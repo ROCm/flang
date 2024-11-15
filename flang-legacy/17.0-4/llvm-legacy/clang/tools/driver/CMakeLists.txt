@@ -88,6 +88,9 @@ foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
     install(SCRIPT ${INSTALL_SYMLINK}
             CODE "install_symlink(flang flang-legacy bin create_symlink)"
             COMPONENT ${component})
+    install(SCRIPT ${INSTALL_SYMLINK}
+            CODE "install_symlink(flang-classic flang-legacy bin create_symlink)"
+            COMPONENT ${component})
   else()
     add_clang_symlink(${link} clang)
   endif()
