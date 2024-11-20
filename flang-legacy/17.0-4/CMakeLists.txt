@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-# If we are not building as a part of LLVM, which is usual for flang-legacy,
-# build flang-legacy as a standalone project, using LLVM as an external library:
+# If we are not building as a part of LLVM, which is usual for flang-classic,
+# build flang-classic as a standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  project(flang-legacy)
+  project(flang-classic)
   set(FLANG_LEGACY_STANDALONE TRUE)
   if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
     message(WARNING
@@ -14,12 +14,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 endif()
 
-add_executable(flang-legacy
-    flang-legacy.cpp
+add_executable(flang-classic
+    flang-classic.cpp
 )
 
 
-target_include_directories(flang-legacy
+target_include_directories(flang-classic
    PUBLIC
    ${CMAKE_SOURCE_DIR}/llvm-legacy/llvm/include
    ${CMAKE_SOURCE_DIR}/llvm-legacy/clang/include
@@ -27,7 +27,7 @@ target_include_directories(flang-legacy
    ${CMAKE_BINARY_DIR}/llvm-legacy/include
 )
 
-target_link_libraries(flang-legacy
+target_link_libraries(flang-classic
   PRIVATE 
       ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAggressiveInstCombine.a
       ${CMAKE_BINARY_DIR}/llvm-legacy/lib/libLLVMAMDGPUAsmParser.a
@@ -95,4 +95,4 @@ target_link_libraries(flang-legacy
   tinfo
   z
 )
-install(TARGETS flang-legacy DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS flang-classic DESTINATION "${CMAKE_INSTALL_BINDIR}")
