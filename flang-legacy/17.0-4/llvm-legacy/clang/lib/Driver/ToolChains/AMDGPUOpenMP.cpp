@@ -238,6 +238,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // Last link brings in libomptarget and subset of user-option bc files.
   // This link uses --internalize to internalize libomptarget symbols.
   // --internalize ignores the first bc file which came from previous link.
+  LastLinkArgs.push_back(Args.MakeArgString("--load-bitcode-into-experimental-debuginfo-iterators=false"));
   LastLinkArgs.push_back(Args.MakeArgString("--internalize"));
   LastLinkArgs.push_back(Args.MakeArgString("--only-needed"));
 
