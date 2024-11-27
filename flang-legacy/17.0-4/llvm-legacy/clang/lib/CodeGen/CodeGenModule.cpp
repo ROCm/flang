@@ -960,12 +960,15 @@ void CodeGenModule::Release() {
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).
+    /*
     uint32_t DebugMetadataVersion =
       CodeGenOpts.HeterogeneousDwarf ?
         llvm::DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF :
         llvm::DEBUG_METADATA_VERSION;
     getModule().addModuleFlag(llvm::Module::Warning, "Debug Info Version",
                               DebugMetadataVersion);
+                              */
+    assert(false);
   }
 
   // We need to record the widths of enums and wchar_t, so that we can generate
