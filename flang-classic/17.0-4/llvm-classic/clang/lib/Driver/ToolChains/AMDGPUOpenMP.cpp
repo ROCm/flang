@@ -271,7 +271,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // the look-up of the libomptarget bc lib to happen and if not present
   // where it is expected it means we are using the build tree compiler
   // not the installed compiler.
-  std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+  std::string LibDeviceName = "/libomptarget-amdgpu.bc";
 
   // Check if the device library can be found in
   // one of the LIBRARY_PATH directories.
