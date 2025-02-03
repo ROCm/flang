@@ -2496,11 +2496,15 @@ void ll_build_metadata_device(FILE *out, LLVMModuleRef module)
     if (!function->is_kernel)
     continue;
 
-    mdb = llmd_init(module);
-    llmd_add_value(mdb, ll_get_function_pointer(module, function));
-    llmd_add_string(mdb, "kernel");
-    llmd_add_i32(mdb, 1);
-    ll_extend_named_md_node(module, MD_nvvm_annotations, llmd_finish(mdb));
+#ifdef OMP_OFFLOAD_AMD
+    if (!flg.amdgcn_target) {
+      mdb = llmd_init(module);
+      llmd_add_value(mdb, ll_get_function_pointer(module, function));
+      llmd_add_string(mdb, "kernel");
+      llmd_add_i32(mdb, 1);
+      ll_extend_named_md_node(module, MD_nvvm_annotations, llmd_finish(mdb));
+    }
+#endif
 
     mdb = llmd_init(module);
     llmd_add_value(mdb, ll_get_function_pointer(module, function));
