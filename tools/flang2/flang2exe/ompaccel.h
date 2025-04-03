@@ -590,4 +590,8 @@ void ompaccel_set_target_declare();
  */
 bool is_SPMD_mode(OMP_TARGET_MODE mode);
 // AOCC End
+/**
+ \brief Reset counts of MPLOOP instruction
+ */
+void reset_mploop_counter();
 #endif

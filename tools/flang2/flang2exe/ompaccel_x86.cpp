@@ -170,7 +170,7 @@ void ompaccel_x86_fix_arg_types(SPTR func_sptr) {
   }
 
   OMPACCEL_TINFO *tinfo = ompaccel_tinfo_get(func_sptr);
-
+  if (!tinfo) return;
   // Remember all the reduction symbols of func_sptr so that we can blacklist
   // them during the type update.
   std::set<SPTR> reduc_syms;

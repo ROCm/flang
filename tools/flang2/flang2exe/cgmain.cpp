@@ -4301,7 +4301,7 @@ make_stmt(STMT_Type stmt_type, int ilix, bool deletable, SPTR next_bih_label,
   int alignment;
   INSTR_LIST *Curr_Instr;
 
-  DBGTRACEIN2(" type: %s ilix: %d", stmt_names[stmt_type], ilix)
+  DBGTRACEIN2(" type: %s ilix: %d", stmt_names[stmt_type], ilix);
 
   curr_stmt_type = stmt_type;
   if (last_stmt_is_branch && stmt_type != STMT_LABEL) {
@@ -12292,7 +12292,7 @@ process_sptr_offset(SPTR sptr, ISZ_T off)
     }
     if ((flg.smp || (XBIT(34, 0x200) || gbl.usekmpc)) &&
         (gbl.outlined || ISTASKDUPG(GBL_CURRFUNC))) {
-      if (sptr == ll_get_shared_arg(gbl.currsub)) {
+      if (sptr == ll_get_shared_arg(gbl.currsub) && !gbl.is_init_spmd_kernel) {
         LLTYPE(sptr) = make_ptr_lltype(make_lltype_from_dtype(DT_INT8));
       }
     }
@@ -14081,7 +14081,6 @@ process_formal_arguments(LL_ABI_Info *abi)
       /* Other by-value kinds. */
       break;
     }
-
     /* This op represents the real LLVM argument, not the local variable. */
     arg_op = make_operand();
     arg_op->ot_type = OT_VAR;
@@ -14423,7 +14422,8 @@ INLINE void static add_property_struct(char *func_name,
   print_token("@");
   print_token(func_name);
 
-  if (is_SPMD_mode(mode)) {
+  if (mode >= mode_target_teams_distribute_parallel_for
+	        && mode <= mode_target_parallel_for_simd) {
     print_token("__exec_mode = weak constant i8 2\n");
   }
   else {
