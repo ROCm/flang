@@ -229,7 +229,8 @@ const char *amdgpu::dlr::getLinkCommandArgs(
     llvm::opt::ArgStringList &LastLinkArgs, const ToolChain &TC,
     const llvm::Triple &Triple, llvm::StringRef TargetID,
     llvm::StringRef OutputFilePrefix, const char *InputFileName,
-    const RocmInstallationDetector &RocmInstallation) {
+    const RocmInstallationDetector &RocmInstallation,
+    llvm::opt::ArgStringList &EnvironmentLibraryPaths) {
   LastLinkArgs.push_back(Args.MakeArgString(InputFileName));
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
@@ -251,12 +252,6 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       LibSuffix.append("/asan");
   }
 
-  // If device debugging turned on, add specially built bc files
-  StringRef libpath = Args.MakeArgString(C.getDriver().Dir + "/../" + LibSuffix);
-  std::string lib_debug_perf_path = FindDebugPerfInLibraryPath(LibSuffix);
-  if (!lib_debug_perf_path.empty())
-    libpath = lib_debug_perf_path;
-
   llvm::SmallVector<std::string, 12> BCLibs;
 
   if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
@@ -272,8 +267,37 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
 
-  BCLibs.push_back(Args.MakeArgString(
-      libpath + "/libomptarget-amdgpu-" + GPUArch + ".bc"));
+  // When the base lib directory is called `lib` we enable
+  // the look-up of the libomptarget bc lib to happen and if not present
+  // where it is expected it means we are using the build tree compiler
+  // not the installed compiler.
+  std::string LibDeviceName = "/libomptarget-amdgpu.bc";
+
+  // Check if the device library can be found in
+  // one of the LIBRARY_PATH directories.
+  bool EnvOmpLibDeviceFound = false;
+  for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
+    std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
+    if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
+      EnvOmpLibDeviceFound = true;
+      BCLibs.push_back(EnvOmpLibDevice);
+      break;
+    }
+  }
+
+  // If LIBRARY_PATH doesn't point to the device library,
+  // then use the default one.
+  if (!EnvOmpLibDeviceFound) {
+    StringRef bc_file_suf = Args.MakeArgString(C.getDriver().Dir + "/../" +
+                                               LibSuffix + LibDeviceName);
+    StringRef bc_file_lib =
+        Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
+    if (llvm::sys::fs::exists(bc_file_suf))
+      BCLibs.push_back(Args.MakeArgString(bc_file_suf));
+    else if (llvm::sys::fs::exists(bc_file_lib))
+      // In case a LibSuffix version not found, use suffix "lib"
+      BCLibs.push_back(Args.MakeArgString(bc_file_lib));
+    }
 
   // Add the generic set of libraries, OpenMP subset only
   BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
@@ -399,12 +423,16 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // ---------- llvm-link internalize as-needed -----------
   ArgStringList LastLinkArgs;
+  // Find all directories pointed to by the environment variable
+  // LIBRARY_PATH.
+  ArgStringList EnvLibraryPaths;
+  addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
   RocmInstallationDetector RocmInstallation(
       C.getDriver(), getToolChain().getTriple(), Args, true, true);
 
   auto OutputFileName = amdgpu::dlr::getLinkCommandArgs(
       C, Args, LastLinkArgs, getToolChain(), getToolChain().getTriple(),
-      TargetID, OutputFilePrefix, PreLinkFileName, RocmInstallation);
+      TargetID, OutputFilePrefix, PreLinkFileName, RocmInstallation, EnvLibraryPaths);
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));

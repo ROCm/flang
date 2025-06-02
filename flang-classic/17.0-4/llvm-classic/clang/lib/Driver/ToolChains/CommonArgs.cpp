@@ -900,29 +900,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                          /*IsLTO=*/true, PluginOptPrefix);
 }
 
-std::string tools::FindDebugPerfInLibraryPath(const std::string &RLib) {
-  const char *DirList = ::getenv("LIBRARY_PATH");
-  if (!DirList)
-    return "";
-  StringRef Dirs(DirList);
-  if (Dirs.empty()) // Empty string should not add '.'.
-    return "";
-
-  StringRef::size_type Delim;
-  while ((Delim = Dirs.find(llvm::sys::EnvPathSeparator)) != StringRef::npos) {
-    if (Delim != 0) { // Leading colon.
-      if (Dirs.substr(0, Delim).endswith(RLib))
-        return Dirs.substr(0, Delim).str();
-    }
-    Dirs = Dirs.substr(Delim + 1);
-  }
-  if (!Dirs.empty()) {
-    if (Dirs.endswith(RLib))
-      return Dirs.str();
-  }
-  return "";
-}
-
 void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
                                           const ArgList &Args,
                                           ArgStringList &CmdArgs) {
@@ -938,9 +915,19 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     if (TC.getSanitizerArgs(Args).needsAsanRt())
       LibSuffix.append("/asan");
   }
-  std::string CandidateRPath = FindDebugPerfInLibraryPath(LibSuffix);
-  if (CandidateRPath.empty())
-    CandidateRPath = D.Dir + "/../" + LibSuffix;
+  // Check if the device library can be found in
+  // one of the LIBRARY_PATH directories.
+  ArgStringList EnvLibraryPaths;
+  addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
+  for (auto &EnvLibraryPath : EnvLibraryPaths) {
+    if (llvm::sys::fs::exists(EnvLibraryPath)) {
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(EnvLibraryPath));
+    }
+  }
+
+  std::string CandidateRPath = D.Dir + "/../lib";
+  std::string CandidateRPathRocmPath = D.Dir + "/../../../" + LibSuffix;
 
   if (Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
                    options::OPT_fno_openmp_implicit_rpath, true)) {
@@ -949,8 +936,41 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     SmallString<256> DefaultLibPath =
         llvm::sys::path::parent_path(TC.getDriver().Dir);
     llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
+
+    // In case LibSuffix was not built, try lib
+    std::string CandidateRPath_suf = D.Dir + "/../" + LibSuffix;
+    std::string CandidateRPath_lib = D.Dir + "/../lib";
+    if (llvm::sys::fs::exists(CandidateRPath_suf)) {
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(CandidateRPath_suf.c_str()));
+    } else if (llvm::sys::fs::exists(CandidateRPath_lib)) {
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(CandidateRPath_lib.c_str()));
+    }
+
+    std::string rocmPath =
+        Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
+    if (rocmPath.size() != 0) {
+      std::string rocmPath_lib = rocmPath + "/lib";
+      std::string rocmPath_suf = rocmPath + "/" + LibSuffix;
+      if (llvm::sys::fs::exists(rocmPath_suf)) {
+        CmdArgs.push_back("-rpath");
+        CmdArgs.push_back(Args.MakeArgString(rocmPath_suf.c_str()));
+      } else if (llvm::sys::fs::exists(rocmPath_lib)) {
+        CmdArgs.push_back("-rpath");
+        CmdArgs.push_back(Args.MakeArgString(rocmPath_lib.c_str()));
+      }
+    }
+
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPathRocmPath.c_str()));
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+
+    if (llvm::find_if(CmdArgs, [](StringRef str) {
+      return !str.compare("--enable-new-dtags");
+      }) == CmdArgs.end())
+      CmdArgs.push_back("--disable-new-dtags");
   }
 }
 
@@ -2589,8 +2609,8 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
   std::string LibOmpTargetName =
       Triple.isAMDGCN()
-          ? ("libomptarget-old-amdgpu-" + BitcodeSuffix + ".bc").str()
-          : ("libomptarget-nvptx-" + BitcodeSuffix + ".bc").str();
+          ? ("libomptarget-old-amdgpu.bc")
+          : ("libomptarget-nvptx.bc");
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
